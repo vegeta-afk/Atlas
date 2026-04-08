@@ -56,7 +56,7 @@ const StudentExamPage = () => {
     setLoading(true);
     try {
       const token = getToken();
-      const res = await fetch(`/api/exam/tests/${testId}/start`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/exam/tests/${testId}/start`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -107,7 +107,7 @@ const StudentExamPage = () => {
       const token = getToken();
       const answersArray = questions.map((_, i) => answers[i] || "");
 
-      const res = await fetch(`/api/exam/tests/${testId}/submit`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/exam/tests/${testId}/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

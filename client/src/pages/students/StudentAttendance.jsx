@@ -115,7 +115,7 @@ const [qrLoading, setQRLoading] = useState(false);
     setLoading(true);
     try {
       const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-      const response = await fetch('/api/faculty/admin/with-batches', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/faculty/admin/with-batches', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -419,7 +419,7 @@ const handleBatchSelect = (batch) => {
       };
 
       const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-      const response = await fetch('/api/attendance/teacher/mark', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/attendance/teacher/mark', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -481,7 +481,7 @@ const handleBatchSelect = (batch) => {
   setQRLoading(true);
   try {
     const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-    const response = await fetch('/api/attendance/qr/generate', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/attendance/qr/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

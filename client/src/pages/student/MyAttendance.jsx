@@ -44,7 +44,7 @@ const MyAttendance = () => {
       const headers = { Authorization: `Bearer ${token}` };
 
       // Step 1: Get student by studentId to get MongoDB _id
-      const studentRes = await fetch(`/api/students?studentId=${studentId}`, { headers });
+      const studentRes = await fetch(`${import.meta.env.VITE_API_URL}/api/students?studentId=${studentId}`, { headers });
       const studentData = await studentRes.json();
       
       // Find matching student
@@ -60,7 +60,7 @@ const MyAttendance = () => {
       setStudent(matched);
 
       // Step 2: Fetch attendance using MongoDB _id
-      const attRes = await fetch(`/api/attendance/student/${matched._id}`, { headers });
+      const attRes = await fetch(`${import.meta.env.VITE_API_URL}/api/attendance/student/${matched._id}`, { headers });
       const attData = await attRes.json();
 
       if (attData.success) {

@@ -32,14 +32,14 @@ const MyFees = () => {
       const headers = { Authorization: `Bearer ${token}` };
 
       // Get student by studentId
-      const studentRes = await fetch(`/api/students`, { headers });
+      const studentRes = await fetch(`${import.meta.env.VITE_API_URL}/api/students`, { headers });
       const studentData = await studentRes.json();
       const matched = (studentData.data || []).find(s => s.studentId === studentId);
       if (!matched) { setLoading(false); return; }
       setStudent(matched);
 
       // Get fee data
-      const feeRes = await fetch(`/api/students/${matched._id}/fees`, { headers });
+      const feeRes = await fetch(`${import.meta.env.VITE_API_URL}/api/students/${matched._id}/fees`, { headers });
       const feeJson = await feeRes.json();
       if (feeJson.success) setFeeData(feeJson.data);
     } catch (error) {

@@ -193,7 +193,7 @@ const StudentFees = () => {
 
   const fetchStudentFeeSchedule = async (studentId, studentData) => {
     try {
-      const response = await authFetch(`/api/students/${studentId}/fees`);
+      const response = await authfetch(`${import.meta.env.VITE_API_URL}/api/students/${studentId}/fees`);
       if (response.status === 401) {
         localStorage.removeItem("token");
         window.location.href = "/login";
@@ -256,7 +256,7 @@ const StudentFees = () => {
       const primaryFees = await fetchStudentFeeSchedule(student._id, student.originalData || student);
 
       // Fetch full student data to get additionalCourses
-      const res = await authFetch(`/api/students/${student._id}`);
+      const res = await authfetch(`${import.meta.env.VITE_API_URL}/api/students/${student._id}`);
       const data = await res.json();
       const fullStudent = data.data || data;
 
@@ -438,7 +438,7 @@ const StudentFees = () => {
   const performSearch = async (searchQuery = searchTerm) => {
     try {
       setLoading(true);
-      const response = await authFetch(`/api/students/search?q=${encodeURIComponent(searchQuery)}`);
+      const response = await authfetch(`${import.meta.env.VITE_API_URL}/api/students/search?q=${encodeURIComponent(searchQuery)}`);
       if (response.status === 401) {
         localStorage.removeItem("token");
         window.location.href = "/login";

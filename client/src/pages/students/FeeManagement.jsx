@@ -432,7 +432,7 @@ const calcTotals = (schedule) => ({
   try {
     setLoading(true);
     const token = localStorage.getItem("token");
-    const response = await fetch(`/api/students/${studentId}/fees`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/students/${studentId}/fees`, {
       headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" }
     });
 
@@ -658,7 +658,7 @@ const openMonthModal = (fee = null, action = "add") => {
       });
       
       // Save to backend using schedule endpoint (more reliable)
-      const saveResponse = await fetch(`/api/students/${studentId}/fees/schedule`, {
+      const saveResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/students/${studentId}/fees/schedule`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -792,7 +792,7 @@ const openMonthModal = (fee = null, action = "add") => {
       updatedFeeSchedule.sort((a, b) => a.monthNumber - b.monthNumber);
       
       // Save to backend
-      const saveResponse = await fetch(`/api/students/${studentId}/fees/schedule`, {
+      const saveResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/students/${studentId}/fees/schedule`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -849,7 +849,7 @@ const updateMonthViaSchedule = async (monthNumber, updateData) => {
     const balanceAmount = Math.max(0, totalCourseFee - totalPaid);
     
     // Save entire schedule
-    const response = await fetch(`/api/students/${studentId}/fees/schedule`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/students/${studentId}/fees/schedule`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -978,7 +978,7 @@ const deleteMonth = async (monthNumber) => {
     const totals  = calcTotals(updatedSchedule);
     const token   = localStorage.getItem("token");
 
-    const response = await fetch(`/api/students/${studentId}/fees/schedule`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/students/${studentId}/fees/schedule`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -1193,7 +1193,7 @@ const response = await fetch(endpoint, {
       }
       
       // If API exists, use it
-      const response = await fetch(`/api/students/${studentId}/fees/pay`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/students/${studentId}/fees/pay`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -1326,7 +1326,7 @@ const response = await fetch(endpoint, {
     const totals = calcTotals(updatedSchedule);
     const token  = localStorage.getItem("token");
 
-    const response = await fetch(`/api/students/${studentId}/fees/schedule`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/students/${studentId}/fees/schedule`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -1396,7 +1396,7 @@ const deletePaymentViaUpdate = async (fee) => {
 
     // Save updated schedule to backend
     const token = localStorage.getItem("token");
-    const response = await fetch(`/api/students/${studentId}/fees/schedule`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/students/${studentId}/fees/schedule`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

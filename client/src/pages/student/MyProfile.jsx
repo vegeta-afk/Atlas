@@ -35,7 +35,7 @@ const MyProfile = () => {
         return;
       }
 
-      const res = await fetch(`/api/students`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/students`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
