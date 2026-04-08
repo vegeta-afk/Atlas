@@ -18,7 +18,7 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 // CORS middleware
 app.use(
   cors({
-    origin: "http://localhost:5173", // Your React app URL
+    origin: ["http://localhost:5173", "https://atlas-green-two.vercel.app"], // Your React app URL
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept"],
