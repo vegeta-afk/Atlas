@@ -14,6 +14,8 @@ const holidays = [
   { date: "December 25, 2026",name:"Christmas",              type: "National" },
 ];
 
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const StudentDashboard = () => {
   const [student, setStudent]     = useState(null);
   const [attendance, setAttendance] = useState(null);
@@ -39,9 +41,9 @@ const StudentDashboard = () => {
       const headers = { Authorization: `Bearer ${token}` };
 
       const [studentRes, attendanceRes, feesRes] = await Promise.allSettled([
-        fetch(`/api/students/${studentId}`, { headers }),
-        fetch(`/api/attendance/student/${studentId}`, { headers }),
-        fetch(`/api/students/${studentId}/fees`, { headers }),
+        fetch(`${BASE_URL}/api/students/${studentId}`, { headers }),
+fetch(`${BASE_URL}/api/attendance/student/${studentId}`, { headers }),
+fetch(`${BASE_URL}/api/students/${studentId}/fees`, { headers }),
       ]);
 
       if (studentRes.status === "fulfilled") {

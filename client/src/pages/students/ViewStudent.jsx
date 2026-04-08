@@ -50,6 +50,8 @@ const ViewStudent = () => {
   const [selectedAdditionalCourse, setSelectedAdditionalCourse] = useState(null);
   const [showAdditionalCourseModal, setShowAdditionalCourseModal] = useState(false);
 
+  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   useEffect(() => {
     fetchStudentDetails();
     fetchStudentAttendance();
@@ -75,7 +77,7 @@ const ViewStudent = () => {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`/api/students/${id}`, {
+      const response = await fetch(`${BASE_URL}/api/students/${id}`,{
         headers: headers,
       });
 
@@ -111,7 +113,7 @@ const ViewStudent = () => {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`/api/attendance/student/${id}`, {
+    const response = await fetch(`${BASE_URL}/api/attendance/student/${id}`, {
       headers: headers,
     });
 

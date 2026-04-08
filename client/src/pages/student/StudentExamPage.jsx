@@ -23,6 +23,8 @@ const StudentExamPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const timerRef = useRef(null);
 
+  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   const getToken = () =>
     sessionStorage.getItem("token") || localStorage.getItem("token");
 
@@ -56,7 +58,7 @@ const StudentExamPage = () => {
     setLoading(true);
     try {
       const token = getToken();
-      const res = await fetch(`/api/exam/tests/${testId}/start`, {
+      const res = await fetch(`${BASE_URL}/api/exam/tests/${testId}/start`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -107,7 +109,7 @@ const StudentExamPage = () => {
       const token = getToken();
       const answersArray = questions.map((_, i) => answers[i] || "");
 
-      const res = await fetch(`/api/exam/tests/${testId}/submit`, {
+      const res = await fetch(`${BASE_URL}/api/exam/tests/${testId}/submit`,{
         method: "POST",
         headers: {
           "Content-Type": "application/json",

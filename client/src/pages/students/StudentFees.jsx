@@ -19,10 +19,14 @@ import {
   Minus
 } from "lucide-react";
 
+
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 // Auth fetch helper
 const authFetch = (url, options = {}) => {
   const token = localStorage.getItem("token");
-  return fetch(url, {
+  const fullUrl = url.startsWith('/') ? `${BASE_URL}${url}` : url;
+  return fetch(fullUrl, {
     ...options,
     headers: {
       "Content-Type": "application/json",
