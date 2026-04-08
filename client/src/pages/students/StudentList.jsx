@@ -22,6 +22,8 @@ const StudentList = () => {
   const [refreshing, setRefreshing] = useState(false);
   const basePath = "/admin";
 
+  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   useEffect(() => {
     fetchStudents();
   }, []);
@@ -33,7 +35,7 @@ const StudentList = () => {
       const headers = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const response = await fetch("/api/students", { headers });
+      const response = await fetch(`${BASE_URL}/api/students`, { headers });
 
       if (response.status === 401) {
         setError("Authentication failed. Please login again.");

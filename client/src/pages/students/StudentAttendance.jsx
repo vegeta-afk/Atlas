@@ -53,6 +53,9 @@ const StudentAttendance = () => {
     late: 0,
     attendancePercentage: 0,
   });
+
+
+  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
   
   // Admin-specific states
   const [isAdmin, setIsAdmin] = useState(false);
@@ -115,7 +118,7 @@ const [qrLoading, setQRLoading] = useState(false);
     setLoading(true);
     try {
       const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-      const response = await fetch('/api/faculty/admin/with-batches', {
+      const response = await fetch(`${BASE_URL}/api/faculty/admin/with-batches`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -148,10 +151,10 @@ const [qrLoading, setQRLoading] = useState(false);
     let apiUrl;
     if (isAdmin) {
       // Admin views any faculty
-      apiUrl = `/api/faculty/${facultyId}/batches`;
+      apiUrl = `${BASE_URL}/api/faculty/${facultyId}/batches`;
     } else {
       // Faculty views their own batches via /me/batches endpoint
-      apiUrl = `/api/faculty/me/batches`;
+      apiUrl = `${BASE_URL}/api/faculty/me/batches`;
     }
     
     console.log(`📡 Fetching batches from: ${apiUrl}`);
@@ -218,9 +221,9 @@ const fetchBatchStudents = async (batchId) => {
     let apiUrl;
     
     if (isAdmin && selectedFaculty?._id) {
-      apiUrl = `/api/faculty/${selectedFaculty._id}/batches/${batchId}/students`;
+      apiUrl = `${BASE_URL}/api/faculty/${selectedFaculty._id}/batches/${batchId}/students`;
     } else {
-      apiUrl = `/api/faculty/me/batches/${batchId}/students`;
+      apiUrl = `${BASE_URL}/api/faculty/me/batches/${batchId}/students`;
     }
     
     if (selectedDate) {
@@ -419,7 +422,7 @@ const handleBatchSelect = (batch) => {
       };
 
       const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-      const response = await fetch('/api/attendance/teacher/mark', {
+      const response = await fetch(`${BASE_URL}/api/attendance/teacher/mark`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -481,7 +484,7 @@ const handleBatchSelect = (batch) => {
   setQRLoading(true);
   try {
     const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-    const response = await fetch('/api/attendance/qr/generate', {
+    const response = await fetch(`${BASE_URL}/api/attendance/qr/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
