@@ -32,6 +32,8 @@ const BatchTransferList = () => {
     rejected: 0,
   });
 
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   const isAdmin = basePath === "/admin";
 
   // Filters
@@ -92,7 +94,7 @@ const BatchTransferList = () => {
       }
 
       // Build URL without undefined parameters
-      let url = 'http://localhost:5000/api/batch-transfers';
+      let url = `${API_BASE}/api/batch-transfers`;
       const params = [];
       
       if (pagination.page) params.push(`page=${pagination.page}`);
@@ -171,7 +173,7 @@ const handleApprove = async (id) => {
       userId = "69467820905ab5150b26667a";
     }
     
-    const response = await fetch(`http://localhost:5000/api/batch-transfers/${id}/approve`, {
+    const response = await fetch(`${API_BASE}/api/batch-transfers/${id}/approve`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -227,7 +229,7 @@ const handleApprove = async (id) => {
       userId = "69467820905ab5150b26667a";
     }
     
-    const response = await fetch(`http://localhost:5000/api/batch-transfers/${id}/reject`, {
+    const response = await fetch(`${API_BASE}/api/batch-transfers/${id}/reject`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,

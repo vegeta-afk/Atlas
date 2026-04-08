@@ -13,7 +13,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   // API URL - Make sure this matches your backend
-  const API_URL = "http://localhost:5000/api";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
  const handleSubmit = async (e) => {
   e.preventDefault();
