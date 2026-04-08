@@ -75,7 +75,7 @@ const ViewStudent = () => {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/students/${id}`, {
+      const response = await fetch(`/api/students/${id}`, {
         headers: headers,
       });
 
@@ -111,7 +111,7 @@ const ViewStudent = () => {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/attendance/student/${id}`, {
+    const response = await fetch(`/api/attendance/student/${id}`, {
       headers: headers,
     });
 

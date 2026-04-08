@@ -39,9 +39,9 @@ const StudentDashboard = () => {
       const headers = { Authorization: `Bearer ${token}` };
 
       const [studentRes, attendanceRes, feesRes] = await Promise.allSettled([
-        fetch(`${import.meta.env.VITE_API_URL}/api/students/${studentId}`, { headers }),
-        fetch(`${import.meta.env.VITE_API_URL}/api/attendance/student/${studentId}`, { headers }),
-        fetch(`${import.meta.env.VITE_API_URL}/api/students/${studentId}/fees`, { headers }),
+        fetch(`/api/students/${studentId}`, { headers }),
+        fetch(`/api/attendance/student/${studentId}`, { headers }),
+        fetch(`/api/students/${studentId}/fees`, { headers }),
       ]);
 
       if (studentRes.status === "fulfilled") {
