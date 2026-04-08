@@ -1,0 +1,64 @@
+/* components/layout/AdminLayout.css */
+
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f8f9fa;
+  position: relative;
+}
+
+/* ─── Main content shifts right on desktop to make room for sidebar ─── */
+.main-content {
+  flex: 1;
+  margin-left: 220px; /* matches new sidebar width */
+  min-width: 0;       /* prevents flex overflow */
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.3s ease;
+}
+
+.content-wrapper {
+  flex: 1;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* ─── Backdrop overlay (mobile only) ─── */
+.sidebar-backdrop {
+  display: none;
+}
+
+/* ─────────────────────────────────────
+   TABLET  (≤ 1024px)
+   Sidebar still visible but narrower
+───────────────────────────────────── */
+@media (max-width: 1024px) {
+  .main-content {
+    margin-left: 220px;
+  }
+}
+
+/* ─────────────────────────────────────
+   MOBILE  (≤ 768px)
+   Sidebar becomes a slide-in drawer
+───────────────────────────────────── */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0; /* full width — sidebar is off-canvas */
+  }
+
+  /* Semi-transparent backdrop when drawer is open */
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 998;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+}

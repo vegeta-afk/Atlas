@@ -1,0 +1,1437 @@
+/* pages/frontoffice/enquiry/EnquiryList.css */
+.enquiry-list-container {
+  padding: 24px;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+/* Header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  font-size: 28px;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+}
+
+.page-header p {
+  color: #64748b;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.btn-primary:hover {
+  background: #4338ca;
+}
+
+/* Stats Cards */
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-card h3 {
+  font-size: 24px;
+  margin: 0 0 4px 0;
+  color: #1e293b;
+}
+
+.stat-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+/* Filters */
+.filters-section {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.search-box {
+  flex: 1;
+  min-width: 300px;
+  position: relative;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 16px 10px 40px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+
+.search-box svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.filter-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-select {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+}
+
+.filter-select select {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: #475569;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.filter-select svg:last-child {
+  color: #94a3b8;
+}
+
+/* Table */
+.table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+
+  /* ✅ correct overflow handling */
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1200px;
+}
+
+/* Center only the table headings */
+.data-table th {
+  text-align: center !important;
+  vertical-align: middle;
+}
+
+/* Keep table data (td) as it was */
+.data-table td {
+  /* Keep existing alignment (probably left-aligned) */
+  text-align: left;
+  vertical-align: middle;
+}
+
+/* Specifically target each header cell */
+.data-table thead th {
+  text-align: center !important;
+}
+
+/* Center the sort indicators in the header */
+.sortable {
+  text-align: center !important;
+  cursor: pointer;
+}
+
+.sortable:hover {
+  background-color: #f3f4f6;
+}
+/* Avatar */
+.avatar {
+  width: 40px;
+  height: 40px;
+  background: #4f46e5;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.student-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.student-info div:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.student-info strong {
+  color: #1e293b;
+  font-size: 15px;
+}
+
+.student-info small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+/* Contact Info */
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.contact-info div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #475569;
+  font-size: 13px;
+}
+
+/* Enquiry Details */
+.enquiry-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.enquiry-details strong {
+  color: #475569;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Date Info */
+.date-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.date-info div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.follow-up-date {
+  color: #f97316;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+/* Prospectus */
+.prospectus-paid {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #10b981;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.prospectus-not-paid {
+  color: #ef4444;
+  font-size: 13px;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.action-btn.view {
+  color: #3b82f6;
+}
+
+.action-btn.view:hover {
+  background: #dbeafe;
+}
+
+.action-btn.convert {
+  color: #10b981;
+}
+
+.action-btn.convert:hover {
+  background: #d1fae5;
+}
+
+.action-btn.more {
+  color: #64748b;
+}
+
+.action-btn.more:hover {
+  background: #f1f5f9;
+}
+
+/* Enquiry ID */
+.enquiry-id {
+  font-weight: 600;
+  color: #4f46e5;
+  font-size: 14px;
+}
+
+/* Empty State */
+.empty-state {
+  padding: 60px 20px;
+  text-align: center;
+  color: #64748b;
+}
+
+.empty-state svg {
+  margin-bottom: 16px;
+  color: #94a3b8;
+}
+
+.empty-state h3 {
+  margin: 0 0 8px 0;
+  color: #475569;
+}
+
+.empty-state p {
+  margin: 0 0 20px 0;
+}
+
+/* Pagination */
+/* Enquiry-specific pagination classes */
+.enquiry-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  margin-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.enquiry-pagination-info {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.enquiry-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.enquiry-page-number {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.enquiry-current-page {
+  font-weight: 600;
+  color: #111827;
+}
+
+.enquiry-total-pages {
+  color: #6b7280;
+}
+
+.enquiry-pagination-btn {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  background-color: white;
+  color: #374151;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.enquiry-pagination-btn:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.enquiry-pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.enquiry-pagination-btn.prev {
+  order: 1;
+}
+
+.enquiry-page-number {
+  order: 2;
+}
+
+.enquiry-pagination-btn.next {
+  order: 3;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .filters-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-box {
+    min-width: 100%;
+  }
+
+  .stats-cards {
+    grid-template-columns: 1fr;
+  }
+}
+/* Add to EnquiryList.css */
+
+/* Date Range Filter Styles */
+.date-filter-section {
+  position: relative;
+}
+
+.date-filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 200px;
+}
+
+.date-filter-toggle:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.date-filter-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  width: 320px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.date-filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.date-filter-header h4 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 16px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  color: #64748b;
+}
+
+.date-range-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.date-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.date-input-group label {
+  font-size: 14px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.date-input-group input {
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.date-input-group input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.quick-date-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quick-date-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  min-width: 80px;
+}
+
+.quick-date-btn:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.quick-date-btn.clear {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.quick-date-btn.clear:hover {
+  background: #fecaca;
+}
+
+/* Updated Filters Section Layout */
+.filters-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.search-filter-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 300px;
+}
+
+@media (max-width: 768px) {
+  .filters-section {
+    flex-direction: column;
+  }
+
+  .date-filter-toggle {
+    width: 100%;
+  }
+
+  .date-filter-dropdown {
+    width: 100%;
+    left: 0;
+  }
+}
+
+/* Loading and Error States */
+.loading-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: white;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top: 3px solid #4f46e5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  margin: 20px 0;
+  color: #dc2626;
+}
+
+.error-alert svg {
+  flex-shrink: 0;
+}
+
+.btn-retry {
+  padding: 6px 12px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: auto;
+}
+
+.btn-retry:hover {
+  background: #b91c1c;
+}
+
+/* Spinning refresh icon */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* Empty row */
+.empty-row {
+  text-align: center;
+  padding: 40px !important;
+}
+
+/* Disabled states */
+button:disabled,
+select:disabled,
+input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Delete button */
+.action-btn.delete {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.action-btn.delete:hover {
+  background: #fee2e2;
+}
+
+/* WhatsApp icon styling */
+.whatsapp-icon {
+  color: #25d366; /* WhatsApp green color */
+  margin-right: 6px;
+}
+
+/* Dropdown menu styling */
+.dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 180px;
+  margin-top: 2px;
+  
+  /* Add these lines to fix table overflow */
+  position: fixed; /* Change from absolute to fixed */
+  z-index: 9999; /* Very high z-index */
+}
+
+/* OR Alternative solution with absolute positioning but higher z-index */
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 9999; /* Very high z-index */
+  min-width: 180px;
+  margin-top: 2px;
+}
+
+/* Add overflow visible to the table cell */
+.data-table td:last-child {
+  position: relative;
+  overflow: visible !important;
+}
+
+/* Add to the table container */
+.table-container {
+  position: relative;
+  overflow: visible !important;
+}
+
+/* Ensure the table row doesn't cut off dropdown */
+.data-table tr {
+  position: relative;
+}
+
+/* Better fix: Use JavaScript positioning */
+.dropdown-menu.positioned {
+  position: fixed;
+  z-index: 9999;
+}
+
+.dropdown-container.open-up .dropdown-menu {
+  top: auto;
+  bottom: 100%;
+  margin-bottom: 6px;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: #374151;
+  font-size: 14px;
+  gap: 10px;
+  transition: background-color 0.2s;
+}
+
+
+.dropdown-item:hover {
+  background-color: #f3f4f6;
+}
+
+.dropdown-item:first-child {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+
+.dropdown-item:last-child {
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+}
+
+/* More button styling */
+.action-btn.more {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.action-btn.more:hover {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+/* Dustbin icon styling */
+.action-btn.delete {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.action-btn.delete:hover {
+  background-color: #fecaca;
+}
+
+/* Contact info styling */
+.contact-info div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+/* Update search placeholder text */
+.search-box input::placeholder {
+  color: #9ca3af;
+}
+
+/* Delete option styling in dropdown */
+.dropdown-item.delete-option {
+  color: #dc2626; /* Red color for delete */
+}
+
+.dropdown-item.delete-option:hover {
+  background-color: #fef2f2; /* Light red background on hover */
+}
+
+.dropdown-item.delete-option svg {
+  color: #dc2626; /* Red icon for delete */
+}
+
+/* Dropdown menu styling - FIX for table overflow */
+
+/* Add these new styles for the quick action buttons */
+
+/* Follow Up Button */
+.action-btn.followup {
+  color: #f97316; /* Orange color for Follow Up */
+}
+
+.action-btn.followup:hover {
+  background: #ffedd5; /* Light orange background on hover */
+}
+
+/* Reject Button */
+.action-btn.reject {
+  color: #dc2626; /* Red color for Reject */
+}
+
+.action-btn.reject:hover {
+  background: #fee2e2; /* Light red background on hover */
+}
+
+/* Reset to New Button */
+.action-btn.reset {
+  color: #3b82f6; /* Blue color for Reset */
+}
+
+.action-btn.reset:hover {
+  background: #dbeafe; /* Light blue background on hover */
+}
+
+/* Ensure all action buttons are in one line and don't wrap */
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap; /* Prevent wrapping to new line */
+  align-items: center;
+  justify-content: center;
+  min-width: 200px; /* Ensure enough width for all buttons */
+}
+
+/* Make sure table cell can accommodate all buttons */
+.data-table td:last-child {
+  min-width: 220px;
+  white-space: nowrap;
+}
+
+/* Keep dropdown container in line with other buttons */
+.dropdown-container {
+  display: inline-flex;
+}
+
+/* Responsive adjustments for action buttons */
+@media (max-width: 1400px) {
+  .action-buttons {
+    gap: 4px;
+  }
+  
+  .action-btn {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .data-table td:last-child {
+    min-width: 200px;
+  }
+}
+
+/* Ensure buttons don't overflow on mobile */
+@media (max-width: 768px) {
+  .action-buttons {
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-start;
+  }
+  
+  .data-table td:last-child {
+    min-width: auto;
+  }
+}
+
+/* Tooltip styles for button titles */
+.action-btn {
+  position: relative;
+}
+
+.action-btn:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 10;
+  margin-bottom: 5px;
+}
+
+/* Add this to prevent tooltip from appearing on disabled buttons */
+.action-btn:disabled:hover::after {
+  content: none;
+}
+
+/* Update existing convert button style if needed */
+.action-btn.convert {
+  color: #10b981; /* Green color for Convert */
+}
+
+.action-btn.convert:hover {
+  background: #d1fae5; /* Light green background on hover */
+}
+
+/* Update the status badges for new statuses */
+.status-badge.bg-orange-100 {
+  background-color: #ffedd5 !important;
+  color: #9a3412 !important;
+}
+
+.status-badge.bg-red-100 {
+  background-color: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+/* Add spacing for the new stats card */
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr); /* Changed from 4 to 5 columns */
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+/* Responsive adjustments for stats cards */
+@media (max-width: 1400px) {
+  .stats-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.filters-section-horizontal {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+/* Search box styling for horizontal layout */
+.filters-section-horizontal .search-box {
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+}
+
+.filters-section-horizontal .search-box input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  width: 100%;
+}
+
+/* Date filter for horizontal layout */
+.filters-section-horizontal .date-filter-section {
+  position: relative;
+}
+
+.filters-section-horizontal .date-filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Filter selects for horizontal layout */
+.filters-section-horizontal .filter-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  min-width: 180px;
+}
+
+.filters-section-horizontal .filter-select select {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+
+/* ================================================================
+   PASTE THIS ENTIRE BLOCK AT THE VERY BOTTOM OF:
+   - EnquiryList.css
+   - AdmissionList.css
+   
+   This ONLY changes sizes/spacing. Zero logic changes.
+================================================================ */
+
+/* ── Container ───────────────────────────────────────────────── */
+.enquiry-list-container,
+.admission-list-container {
+  padding: 14px 18px;
+}
+
+/* ── Page header ─────────────────────────────────────────────── */
+.page-header {
+  margin-bottom: 12px;
+}
+.page-header h1 {
+  font-size: 18px !important;
+  margin: 0 0 2px 0 !important;
+}
+.page-header p {
+  font-size: 12px !important;
+  margin: 0 !important;
+}
+
+/* ── Header buttons ──────────────────────────────────────────── */
+.btn-primary,
+.btn-secondary {
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+  gap: 5px !important;
+  border-radius: 6px !important;
+}
+
+/* ── Stats cards grid — force ALL 5 into one row ─────────────── */
+.stats-cards {
+  display: grid !important;
+  grid-template-columns: repeat(5, 1fr) !important;
+  gap: 10px !important;
+  margin-bottom: 12px !important;
+}
+
+/* Fallback for 4-card pages (AdmissionList) */
+.stats-cards:has(.stat-card:nth-child(4):last-child) {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+
+.stat-card {
+  padding: 10px 12px !important;
+  gap: 8px !important;
+  border-radius: 8px !important;
+  align-items: center !important;
+}
+
+.stat-icon {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+.stat-icon svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+.stat-card h3 {
+  font-size: 16px !important;
+  margin: 0 0 1px 0 !important;
+  line-height: 1.2 !important;
+}
+
+.stat-card p {
+  font-size: 11px !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+}
+
+/* ── Filters bar ─────────────────────────────────────────────── */
+.filters-section-horizontal {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 12px !important;
+  margin-bottom: 12px !important;
+  border-radius: 8px !important;
+  flex-wrap: nowrap !important;
+}
+
+/* Search box */
+.filters-section-horizontal .search-box {
+  padding: 6px 10px !important;
+  gap: 6px !important;
+  border-radius: 7px !important;
+}
+.filters-section-horizontal .search-box input {
+  font-size: 13px !important;
+  padding: 0 !important;
+}
+.filters-section-horizontal .search-box svg {
+  width: 15px !important;
+  height: 15px !important;
+}
+
+/* Search box horizontal variant */
+.search-box-horizontal {
+  min-width: 200px !important;
+}
+.search-box-horizontal input {
+  padding: 6px 10px 6px 32px !important;
+  font-size: 13px !important;
+}
+.search-box-horizontal svg {
+  left: 10px !important;
+}
+
+/* Date range toggle */
+.date-filter-toggle,
+.date-filter-toggle-horizontal {
+  padding: 6px 10px !important;
+  font-size: 13px !important;
+  border-radius: 7px !important;
+  white-space: nowrap !important;
+  min-width: unset !important;
+}
+.date-filter-toggle svg,
+.date-filter-toggle-horizontal svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* Filter selects */
+.filter-select,
+.filter-select-horizontal {
+  padding: 6px 8px !important;
+  min-width: 120px !important;
+  border-radius: 7px !important;
+}
+.filter-select select,
+.filter-select-horizontal select {
+  font-size: 13px !important;
+}
+.filter-select svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* ── Table ───────────────────────────────────────────────────── */
+.table-container {
+  border-radius: 8px !important;
+  margin-bottom: 12px !important;
+}
+
+.data-table th {
+  padding: 8px 8px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+}
+
+.data-table td {
+  padding: 8px 8px !important;
+  font-size: 12.5px !important;
+}
+
+/* ── Avatar ──────────────────────────────────────────────────── */
+.avatar {
+  width: 30px !important;
+  height: 30px !important;
+  font-size: 12px !important;
+  flex-shrink: 0 !important;
+}
+
+.student-info {
+  gap: 7px !important;
+}
+.student-info strong {
+  font-size: 13px !important;
+  line-height: 1.3 !important;
+}
+.student-info small {
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+}
+
+/* ── Contact / Enquiry info ──────────────────────────────────── */
+.contact-info {
+  gap: 2px !important;
+}
+.contact-info div {
+  font-size: 12px !important;
+  gap: 4px !important;
+  line-height: 1.4 !important;
+}
+.contact-info svg {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.enquiry-details {
+  font-size: 12px !important;
+  gap: 2px !important;
+}
+
+.date-info {
+  font-size: 12px !important;
+  gap: 3px !important;
+}
+.date-info svg {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+/* ── Badges ──────────────────────────────────────────────────── */
+.status-badge,
+.batch-badge,
+.faculty-badge,
+.admission-status-badge {
+  padding: 3px 8px !important;
+  font-size: 11px !important;
+  border-radius: 12px !important;
+  gap: 4px !important;
+}
+.status-badge svg,
+.admission-status-badge svg {
+  width: 11px !important;
+  height: 11px !important;
+}
+
+/* ── Action buttons ──────────────────────────────────────────── */
+.action-btn {
+  width: 27px !important;
+  height: 27px !important;
+  border-radius: 5px !important;
+}
+.action-btn svg {
+  width: 13px !important;
+  height: 13px !important;
+}
+.action-buttons {
+  gap: 3px !important;
+  min-width: unset !important;
+}
+.data-table td:last-child {
+  min-width: unset !important;
+}
+
+/* ── Dropdown ────────────────────────────────────────────────── */
+.dropdown-item {
+  padding: 7px 12px !important;
+  font-size: 12.5px !important;
+  gap: 8px !important;
+}
+.dropdown-item svg {
+  width: 13px !important;
+  height: 13px !important;
+}
+
+/* ── Pagination ──────────────────────────────────────────────── */
+.pagination,
+.enquiry-pagination {
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+}
+.pagination-info,
+.enquiry-pagination-info {
+  font-size: 12px !important;
+}
+.pagination-btn,
+.enquiry-pagination-btn {
+  padding: 5px 10px !important;
+  font-size: 12px !important;
+}
+.enquiry-page-number {
+  font-size: 13px !important;
+}
+
+/* ── Responsive: keep 5 cols down to 1100px ──────────────────── */
+@media (max-width: 1100px) {
+  .stats-cards {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+@media (max-width: 768px) {
+  .enquiry-list-container,
+  .admission-list-container {
+    padding: 10px 12px !important;
+  }
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .filters-section-horizontal {
+    flex-wrap: wrap !important;
+  }
+  .filters-section-horizontal .search-box,
+  .search-box-horizontal {
+    min-width: 100% !important;
+  }
+}
+@media (max-width: 480px) {
+  .stats-cards {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}

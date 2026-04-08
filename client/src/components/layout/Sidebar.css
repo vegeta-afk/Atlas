@@ -1,0 +1,252 @@
+/* =========================
+   SIDEBAR CONTAINER
+========================= */
+
+@charset "UTF-8";
+* { box-sizing: border-box; }
+
+:root {
+  --sidebar-width: 220px;       /* tighter than before → matches 90%-zoom look at 100% */
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e2e8f0;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --active-bg: #eff6ff;
+  --active-color: #1d4ed8;
+  --active-border: #1d4ed8;
+  --hover-bg: #f1f5f9;
+  --sub-active-bg: #e0f2fe;
+  --sub-active-color: #0369a1;
+  --nested-active-bg: #dbeafe;
+  --transition: 0.25s ease;
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 999;
+  transition: transform var(--transition);
+}
+
+/* Thin scrollbar */
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+/* =========================
+   HEADER
+========================= */
+.sidebar-header {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--sidebar-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: var(--sidebar-bg);
+  z-index: 1;
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 15px;       /* was 18px → now matches 90%-zoom */
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* Close button — hidden on desktop, shown on mobile */
+.sidebar-close-btn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.sidebar-close-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
+
+/* =========================
+   NAV CONTAINER
+========================= */
+.sidebar-nav {
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-item { width: 100%; }
+
+/* =========================
+   MAIN NAV LINK  (level 0)
+========================= */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;          /* was 12px 20px */
+  text-decoration: none;
+  font-size: 13px;             /* was 14px */
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-left: 3px solid transparent;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.nav-link:hover  { background: var(--hover-bg); color: var(--text-primary); }
+.nav-link.active { background: var(--active-bg); color: var(--active-color); border-left-color: var(--active-border); }
+
+.nav-icon { min-width: 18px; display: flex; justify-content: center; }
+.nav-label { overflow: hidden; text-overflow: ellipsis; }
+
+/* =========================
+   DROPDOWN BUTTON (level 0)
+========================= */
+.dropdown-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-align: left;
+  transition: all var(--transition);
+}
+.dropdown-toggle:hover { background: var(--hover-bg); color: var(--text-primary); }
+.dropdown-toggle svg:last-child { margin-left: auto; flex-shrink: 0; }
+
+/* =========================
+   SUB MENU  (level 1)
+========================= */
+.sub-menu {
+  display: flex;
+  flex-direction: column;
+  padding-left: 12px;
+}
+
+.sub-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;          /* was 8px 20px */
+  font-size: 12.5px;           /* was 13px */
+  text-decoration: none;
+  color: var(--text-muted);
+  border-radius: 5px;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.sub-nav-link:hover  { background: #f8fafc; color: var(--text-secondary); }
+.sub-nav-link.active { background: var(--sub-active-bg); color: var(--sub-active-color); }
+
+.sub-nav-icon  { min-width: 15px; display: flex; justify-content: center; }
+.sub-nav-label { overflow: hidden; text-overflow: ellipsis; }
+
+/* =========================
+   NESTED DROPDOWN (Setup)
+========================= */
+.nested-dropdown-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  text-align: left;
+  transition: all var(--transition);
+}
+.nested-dropdown-toggle:hover { background: #f8fafc; color: var(--text-secondary); }
+.nested-dropdown-toggle svg:last-child { margin-left: auto; flex-shrink: 0; }
+
+/* =========================
+   NESTED SUB MENU  (level 2)
+========================= */
+.nested-sub-menu {
+  display: flex;
+  flex-direction: column;
+  padding-left: 10px;
+  margin-left: 16px;
+  border-left: 2px solid #e5e7eb;
+}
+
+.nested-sub-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-radius: 5px;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.nested-sub-nav-link:hover  { background: var(--hover-bg); color: #334155; }
+.nested-sub-nav-link.active { background: var(--nested-active-bg); color: var(--active-color); }
+
+.nested-sub-nav-icon { min-width: 13px; display: flex; justify-content: center; }
+
+/* =========================
+   DIVIDER
+========================= */
+.menu-divider {
+  height: 1px;
+  background: var(--sidebar-border);
+  margin: 6px 16px;
+}
+
+/* ─────────────────────────────────────
+   MOBILE  (≤ 768px)
+   Sidebar becomes a slide-in drawer
+───────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);   /* hidden off-screen by default */
+    width: 240px;
+    min-width: 240px;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Slide in when .sidebar--open is added */
+  .sidebar.sidebar--open {
+    transform: translateX(0);
+  }
+
+  /* Show the × close button */
+  .sidebar-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* ─────────────────────────────────────
+   SMALL MOBILE  (≤ 480px)
+───────────────────────────────────── */
+@media (max-width: 480px) {
+  .sidebar {
+    width: 85vw;          /* take most of the screen on very small phones */
+    min-width: unset;
+  }
+}

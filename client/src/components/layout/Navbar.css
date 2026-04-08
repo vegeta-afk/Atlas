@@ -1,0 +1,65 @@
+/* components/layout/Navbar.css */
+.navbar {
+  background: white;
+  padding: 12px 20px;        /* slightly tighter to match new compact feel */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.navbar-left h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 17px;           /* matches the compact sidebar sizing */
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-profile {
+  background: #f1f5f9;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 13px;
+  color: #475569;
+}
+
+/* ── Hamburger button ─────────────────────────────── */
+.navbar-hamburger {
+  display: none;             /* hidden on desktop */
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #475569;
+  padding: 6px;
+  border-radius: 6px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.navbar-hamburger:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+@media (max-width: 768px) {
+  .navbar-hamburger {
+    display: flex;           /* show on mobile */
+    align-items: center;
+    justify-content: center;
+  }
+}

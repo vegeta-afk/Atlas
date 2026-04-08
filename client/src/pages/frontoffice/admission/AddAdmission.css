@@ -1,0 +1,794 @@
+/* pages/frontoffice/admission/AddAdmission.css */
+.add-admission-container {
+  padding: 24px;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+/* Header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  font-size: 28px;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+}
+
+.page-header p {
+  color: #64748b;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: none;
+  font-size: 14px;
+}
+
+.btn-primary {
+  background: #4f46e5;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: white;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* Form */
+.admission-form {
+  max-width: 1200px;
+}
+
+.form-section {
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.section-header {
+  background: #f8fafc;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-header h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  padding-left: 2px;
+}
+
+.section-content {
+  padding: 24px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.form-group label::after {
+  content: "*";
+  color: #ef4444;
+  margin-left: 4px;
+  display: none;
+}
+
+.form-group label[for*="*"]::after,
+.form-group input:required + label::after {
+  display: inline;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1e293b;
+  transition: border-color 0.2s;
+  outline: none;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.form-group input.error,
+.form-group select.error {
+  border-color: #ef4444;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+/* Documents Upload */
+.documents-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.upload-area {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.upload-area:hover {
+  border-color: #4f46e5;
+  background: #f1f5f9;
+}
+
+.upload-area svg {
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+
+.upload-area p {
+  margin: 0 0 8px 0;
+  color: #475569;
+  font-weight: 500;
+}
+
+.upload-area span {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.file-input {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.document-list {
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.document-note {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Add to AddAdmission.css */
+.enquiry-info-banner {
+  display: flex;
+  gap: 20px;
+  padding: 12px 16px;
+  background: #e0f2fe;
+  border-radius: 8px;
+  margin-top: 12px;
+  border: 1px solid #bae6fd;
+  flex-wrap: wrap;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-item span {
+  font-size: 12px;
+  color: #0369a1;
+  font-weight: 500;
+}
+
+.info-item strong {
+  color: #0c4a6e;
+  font-size: 14px;
+}
+
+/* Add these styles to your AddAdmission.css file */
+
+/* Error styling */
+.error-text {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Highlight field with error */
+.error-field {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2 !important;
+  animation: shake 0.5s ease-in-out;
+}
+
+.error-field:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Shake animation for error fields */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.btn-reset,
+.btn-submit {
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: none;
+  font-size: 16px;
+  min-width: 150px;
+}
+
+.btn-reset {
+  background: white;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-reset:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.btn-submit {
+  background: #4f46e5;
+  color: white;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Header actions fixes */
+.header-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+@media (max-width: 480px) {
+  .header-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .header-actions button,
+  .header-actions a {
+    flex: 1 0 calc(50% - 6px);
+    min-width: 0;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn-reset,
+  .btn-submit {
+    width: 100%;
+  }
+}
+
+/* Add to AddAdmission.css */
+
+/* Admission Details Grid */
+.admission-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 30px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .admission-details-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+/* Student Photo Section */
+.student-photo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* Read-only fields */
+.readonly-field {
+  position: relative;
+}
+
+.readonly-input {
+  background: #f1f5f9;
+  color: #475569;
+  cursor: not-allowed;
+}
+
+/* Form Grid adjustments */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+/* Checkbox container alignment */
+.checkbox-container {
+  display: flex;
+  align-items: flex-end;
+  margin-top: 10px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #475569;
+  margin: 0;
+  padding: 8px 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #cbd5e1;
+  border-radius: 4px;
+  cursor: pointer;
+  accent-color: #4f46e5;
+}
+
+.checkbox-label:hover input[type="checkbox"] {
+  border-color: #94a3b8;
+}
+
+/* Admission Info Section */
+.admission-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Error field styling */
+.error-field {
+  border-color: #ef4444 !important;
+  background: #fef2f2 !important;
+}
+
+.error-text {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .admission-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .photo-preview {
+    width: 150px;
+    height: 180px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Form actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-reset {
+  padding: 10px 24px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-reset:hover {
+  background: #e5e7eb;
+}
+
+.btn-submit {
+  padding: 10px 24px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Add to AddAdmission.css */
+
+/* Admission Details Grid */
+.admission-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 30px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .admission-details-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+/* Student Photo Section */
+.student-photo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.photo-upload-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+}
+
+.photo-preview {
+  width: 200px;
+  height: 250px;
+  border: 2px dashed #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: #94a3b8;
+}
+
+.photo-upload-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.photo-upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.photo-upload-btn:hover {
+  background: #4338ca;
+}
+
+.photo-upload-btn input[type="file"] {
+  display: none;
+}
+
+.photo-note {
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+  margin: 0;
+}
+
+.photo-info {
+  font-size: 12px;
+  color: #059669;
+  text-align: center;
+  margin: 0;
+}
+
+/* Read-only fields */
+.readonly-field {
+  position: relative;
+}
+
+.readonly-input {
+  background: #f1f5f9;
+  color: #475569;
+  cursor: not-allowed;
+}
+
+/* Form Grid adjustments */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+/* Checkbox container alignment */
+.checkbox-container {
+  display: flex;
+  align-items: flex-end;
+  margin-top: 10px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #475569;
+  margin: 0;
+  padding: 8px 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #cbd5e1;
+  border-radius: 4px;
+  cursor: pointer;
+  accent-color: #4f46e5;
+}
+
+.checkbox-label:hover input[type="checkbox"] {
+  border-color: #94a3b8;
+}
+
+/* Admission Info Section */
+.admission-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Error field styling */
+.error-field {
+  border-color: #ef4444 !important;
+  background: #fef2f2 !important;
+}
+
+.error-text {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .admission-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .photo-preview {
+    width: 150px;
+    height: 180px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Form actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-reset {
+  padding: 10px 24px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-reset:hover {
+  background: #e5e7eb;
+}
+
+.btn-submit {
+  padding: 10px 24px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

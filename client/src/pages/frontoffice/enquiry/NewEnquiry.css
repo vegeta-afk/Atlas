@@ -1,0 +1,457 @@
+/* pages/frontoffice/enquiry/NewEnquiry.css */
+.new-enquiry-container {
+  padding: 24px;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+/* Header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.page-header h1 {
+  font-size: 28px;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+}
+
+.page-header p {
+  color: #64748b;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-convert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: none;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: #4f46e5;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: white;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.btn-convert {
+  background: #10b981;
+  color: white;
+}
+
+.btn-convert:hover {
+  background: #059669;
+}
+
+/* Form Layout */
+.enquiry-form {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* FIX 1: Make columns equal width in form-sections-row */
+.form-sections-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+  .form-sections-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* FIX 2: Ensure both form-columns are equal height */
+.form-column {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.form-column .form-card {
+  flex: 1; /* This makes both cards take equal height */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.form-column .form-card .card-content {
+  flex: 1;
+}
+
+/* Form Cards */
+.form-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
+  min-height: 100%; /* Ensure minimum height */
+}
+
+.card-header {
+  background: #f8fafc;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+}
+
+/* Title immediately after icon */
+.card-header h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  padding-left: 2px;
+}
+
+/* Icon right next to text */
+.card-header svg {
+  color: #4f46e5;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-right: 0; /* No right margin */
+}
+.card-content {
+  padding: 24px;
+  flex: 1; /* Allow content to take available space */
+}
+
+/* Form Rows */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-row:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* FIX 6: Make form-grid consistent across both cards */
+
+.new-enquiry-container .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 20px;
+  align-items: start;
+}
+/* For the course details card which has only 2 fields */
+
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.form-group label[required]::after {
+  content: " *";
+  color: #ef4444;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1e293b;
+  transition: border-color 0.2s;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box; /* Include padding in width */
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.form-group input.enquiry-no {
+  background: #f1f5f9;
+  font-weight: 600;
+  color: #4f46e5;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+/* For full-width textarea */
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+/* Radio Group */
+.radio-group {
+  display: flex;
+  gap: 20px;
+  margin-top: 8px;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 400;
+}
+
+.radio-group input[type="radio"] {
+  width: 16px;
+  height: 16px;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.btn-reset,
+.btn-submit {
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: none;
+  font-size: 16px;
+  min-width: 150px;
+}
+
+.btn-reset {
+  background: white;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-reset:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.btn-submit {
+  background: #4f46e5;
+  color: white;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Auto-capitalization for name fields */
+.form-group input[type="text"] {
+  text-transform: capitalize;
+}
+
+/* Make the text-transform only for display, not for actual value */
+.form-group input[type="text"]::placeholder {
+  text-transform: none;
+}
+
+/* Make city field more prominent */
+.form-group input[name="city"] {
+  font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .card-header {
+    padding: 12px 16px;
+  }
+
+  .card-content {
+    padding: 16px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-convert {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Add to your NewEnquiry.css file */
+
+/* Error styling */
+.error-text {
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Highlight field with error */
+.error-field {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2 !important;
+  animation: shake 0.5s ease-in-out;
+}
+
+.error-field:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Shake animation for error fields */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+/* Make the enquiry method dropdown show error properly */
+select.error-field {
+  color: #ef4444;
+}
+
+/* Optional: Add a red asterisk for required fields */
+.form-group label[required]::after {
+  content: " *";
+  color: #ef4444;
+}
+
+/* Red star for required fields */
+.required-star {
+  color: #dc2626; /* Red color */
+  font-weight: bold;
+  margin-left: 4px;
+}
+
+/* Make sure error fields are highlighted */
+.error-field {
+  border-color: #dc2626 !important;
+}
+
+.error-text {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+/* Course Info Styling */
+.course-info {
+  margin-top: 4px;
+  color: #4CAF50;
+  font-size: 12px;
+}
+
+.course-info small {
+  font-style: italic;
+}
+
+/* Error styling for course dropdown */
+select.error-field {
+  border-color: #f44336;
+}
