@@ -142,6 +142,18 @@ exports.getAdmission = async (req, res) => {
 // @access  Private (Admin, Front Office)
 exports.createAdmission = async (req, res) => {
 
+
+  let scholarshipBody = req.body.scholarship;
+if (typeof scholarshipBody === 'string') {
+  try {
+    scholarshipBody = JSON.parse(scholarshipBody);
+  } catch (e) {
+    scholarshipBody = null;
+  }
+}
+
+const hasScholarship = req.body.hasScholarship === true || req.body.hasScholarship === 'true';
+
   console.log("req.file:", req.file);        // should print file info now
   console.log("Content-Type:", req.headers["content-type"]); // should show boundary
   try {
@@ -214,23 +226,23 @@ exports.createAdmission = async (req, res) => {
       enquiryId: req.body.enquiryId || null,
       createdBy: req.user ? req.user.id : null,
       isActive: req.body.isActive !== undefined ? req.body.isActive : true,
-      hasScholarship: req.body.hasScholarship || false,
-      scholarship: req.body.hasScholarship && req.body.scholarship
-    ? {
-        applied:           true,
-        scholarshipId:     req.body.scholarship.scholarshipId || null,
-        scholarshipName:   req.body.scholarship.scholarshipName || "",
-        scholarshipCode:   req.body.scholarship.scholarshipCode || "",
-        percent:           req.body.scholarship.percent || 0,
-        type:              req.body.scholarship.type || "percentage",
-        originalTotalFee:  req.body.scholarship.originalTotalFee || 0,
-        originalMonthlyFee: req.body.scholarship.originalMonthlyFee || 0,
-        scholarshipValue:  req.body.scholarship.scholarshipValue || 0,
-        finalTotalFee:     req.body.scholarship.finalTotalFee || 0,
-        finalMonthlyFee:   req.body.scholarship.finalMonthlyFee || 0,
-        documents:         req.body.scholarship.documents || [],
-      }
-    : null,
+      hasScholarship: hasScholarship,
+scholarship: hasScholarship && scholarshipBody
+  ? {
+      applied:            true,
+      scholarshipId:      scholarshipBody.scholarshipId || null,
+      scholarshipName:    scholarshipBody.scholarshipName || "",
+      scholarshipCode:    scholarshipBody.scholarshipCode || "",
+      percent:            scholarshipBody.percent || 0,
+      type:               scholarshipBody.type || "percentage",
+      originalTotalFee:   scholarshipBody.originalTotalFee || 0,
+      originalMonthlyFee: scholarshipBody.originalMonthlyFee || 0,
+      scholarshipValue:   scholarshipBody.scholarshipValue || 0,
+      finalTotalFee:      scholarshipBody.finalTotalFee || 0,
+      finalMonthlyFee:    scholarshipBody.finalMonthlyFee || 0,
+      documents:          scholarshipBody.documents || [],
+    }
+  : null,
 
     photo: photoUrl,
     };
