@@ -21,17 +21,7 @@ const enquirySchema = new mongoose.Schema(
     },
     enquiryMethod: {
       type: String,
-      enum: [
-        "walkin",
-        "phone_call",
-        "website",
-        "reference",
-        "social_media",
-        "newspaper",
-        "seminar",
-        "exhibition",
-        "other",
-      ],
+      
       required: true,
     },
 
