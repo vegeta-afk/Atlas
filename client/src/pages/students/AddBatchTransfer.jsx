@@ -97,51 +97,32 @@ const fetchBatches = async () => {
   };
 
   const searchStudent = async () => {
-    if (!searchQuery.trim()) {
-      alert("Please enter a roll number or student name");
-      return;
-    }
+  if (!searchQuery.trim()) {
+    alert("Please enter a roll number or student name");
+    return;
+  }
 
-    try {
-      setSearching(true);
-      
-      // Use the same search logic as in StudentList
-      const token = localStorage.getItem("token");
-      const headers = {
-        "Content-Type": "application/json",
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
+  try {
+    setSearching(true);
 
-      const response = await fetch("/api/students", { headers });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data) {
-          // Filter students based on search query
-          const results = data.data.filter(student => 
-            (student.fullName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (student.studentId || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (student.admissionNo || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (student.rollNo || "").toLowerCase().includes(searchQuery.toLowerCase())
-          );
-          setSearchResults(results);
-        }
-      } else {
-        // Fallback to studentAPI if fetch fails
-        const apiResponse = await studentAPI.searchStudents({ query: searchQuery });
-        if (apiResponse.data.success) {
-          setSearchResults(apiResponse.data.data || []);
-        }
-      }
-    } catch (err) {
-      console.error("Error searching students:", err);
-      alert("Failed to search students. Please try again.");
-    } finally {
-      setSearching(false);
+    // ✅ Use studentAPI instead of raw fetch("/api/students")
+    const response = await studentAPI.getStudents({ 
+      search: searchQuery, 
+      limit: 20 
+    });
+
+    if (response.data.success && response.data.data) {
+      setSearchResults(response.data.data);
+    } else {
+      setSearchResults([]);
     }
-  };
+  } catch (err) {
+    console.error("Error searching students:", err);
+    alert("Failed to search students. Please try again.");
+  } finally {
+    setSearching(false);
+  }
+};
 
  // In AddBatchTransfer.jsx, update the selectStudent function:
 
