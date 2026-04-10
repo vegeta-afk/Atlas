@@ -15,6 +15,8 @@ const MyExams = () => {
   const getToken = () =>
     sessionStorage.getItem("token") || localStorage.getItem("token");
 
+  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   useEffect(() => {
     fetchExams();
   }, []);
@@ -23,7 +25,7 @@ const MyExams = () => {
     setLoading(true);
     try {
       const token = getToken();
-      const res = await fetch("/api/exam/tests/student/available", {
+      const res = await fetch(`${BASE_URL}/api/exam/tests/student/available`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
