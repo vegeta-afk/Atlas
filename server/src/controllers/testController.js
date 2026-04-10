@@ -806,15 +806,24 @@ exports.getStudentTests = async (req, res) => {
   try {
     const Student = require('../models/Student');
     const { Batch } = require('../models/Setup');
+    const User = require('../models/user'); // ← add this
+
     console.log('👤 req.user:', JSON.stringify(req.user));
 
+    // ✅ FIX: Get studentId from User record since JWT doesn't have it
+    const userRecord = await User.findById(req.user.id).select('studentId');
+    if (!userRecord?.studentId) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Student ID not found on user account" 
+      });
+    }
 
-    // ✅ FIX — find student by studentId field, not _id
-    const student = await Student.findOne({ studentId: req.user.studentId })
+    const student = await Student.findOne({ studentId: userRecord.studentId })
       .select('batchTime enrolledBatches studentId _id');
 
-      console.log('📚 Student found:', JSON.stringify(student));
- 
+    console.log('📚 Student found:', JSON.stringify(student));
+
     if (!student) {
       return res.status(404).json({
         success: false,

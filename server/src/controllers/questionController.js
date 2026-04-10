@@ -109,11 +109,11 @@ exports.getQuestions = async (req, res) => {
       topic,
       questionType,
       difficulty,
-      isActive = true
+      isActive = "true" 
     } = req.query;
 
     // Build filter
-    const filter = { isActive };
+    const filter = { isActive: isActive === "true" };
 
     if (search) {
       filter.questionText = { $regex: search, $options: 'i' };
@@ -139,8 +139,15 @@ exports.getQuestions = async (req, res) => {
       .select('_id courseFullName')
       .sort('courseFullName');
 
-    const semesters = await Question.distinct('semester', { courseId, isActive: true });
-    const topics = await Question.distinct('topic', { courseId, semester, isActive: true });
+    const semesters = await Question.distinct('semester', { 
+  ...(courseId && { courseId }), 
+  isActive: true 
+});
+    const topics = await Question.distinct('topic', { 
+  ...(courseId && { courseId }), 
+  ...(semester && { semester }), 
+  isActive: true 
+});
 
     res.json({
       success: true,

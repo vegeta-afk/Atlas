@@ -20,7 +20,7 @@ const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "default-secret-key");
     
     // Get user from database to verify
-    const user = await User.findById(decoded.userId);
+    const user = await User.findById(decoded.userId || decoded.id);
     
     if (!user) {
       return res.status(401).json({
@@ -47,7 +47,8 @@ const protect = async (req, res, next) => {
     console.log("🔐 Authenticated user:", {
       id: req.user.id,
       role: req.user.role,
-      facultyId: req.user.facultyId  // Should be "697493e7be301eba08798704"
+      facultyId: req.user.facultyId, // Should be "697493e7be301eba08798704"
+      studentId: req.user.studentId 
     });
     
     next();
