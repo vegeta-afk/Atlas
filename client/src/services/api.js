@@ -184,6 +184,7 @@ export const setupAPI = {
   createQualification: (data) => api.post("/setup/qualifications", data),
   updateQualification: (id, data) => api.put(`/setup/qualifications/${id}`, data),
   deleteQualification: (id) => api.delete(`/setup/qualifications/${id}`),
+  updateQualificationOrder: (data) => api.put("/setup/qualifications/order", data), 
 
   // Areas
   createArea: (data) => api.post("/setup/areas", data),

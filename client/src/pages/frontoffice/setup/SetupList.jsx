@@ -78,6 +78,14 @@ const SetupList = () => {
     order: 0,
   });
 
+  const capitalizeFirst = (value) => {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
+
+
+
+
   // Fee form - REMOVED feeType field
   const [feeForm, setFeeForm] = useState({
     feeName: "",
@@ -269,60 +277,81 @@ const SetupList = () => {
   };
 
   // Separate change handlers for each form
-  const handleQualificationChange = (e) => {
-    const { name, value } = e.target;
-    setQualificationForm((prev) => ({ ...prev, [name]: value }));
-  };
+ const handleQualificationChange = (e) => {
+  const { name, value } = e.target;
+  setQualificationForm((prev) => ({ 
+    ...prev, 
+    [name]: name === "qualificationName" || name === "description" ? capitalizeFirst(value) : value 
+  }));
+};
 
   const handleAreaChange = (e) => {
-    const { name, value } = e.target;
-    setAreaForm((prev) => ({ ...prev, [name]: value }));
-  };
+  const { name, value } = e.target;
+  setAreaForm((prev) => ({ 
+    ...prev, 
+    [name]: name === "areaName" || name === "city" ? capitalizeFirst(value) : value 
+  }));
+};
 
   const handleHolidayChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setHolidayForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
+  const { name, value, type, checked } = e.target;
+  setHolidayForm((prev) => ({
+    ...prev,
+    [name]: type === "checkbox" ? checked : name === "holidayName" || name === "description" ? capitalizeFirst(value) : value,
+  }));
+};
 
   const handleBatchChange = (e) => {
-    const { name, value } = e.target;
-    setBatchForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleEnquiryMethodChange = (e) => {
-    const { name, value } = e.target;
-    setEnquiryMethodForm((prev) => ({ ...prev, [name]: value }));
-  };
+  const { name, value } = e.target;
+  setBatchForm((prev) => ({ 
+    ...prev, 
+    [name]: name === "batchName" ? capitalizeFirst(value) : value 
+  }));
+};
+  
+const handleEnquiryMethodChange = (e) => {
+  const { name, value } = e.target;
+  setEnquiryMethodForm((prev) => ({ 
+    ...prev, 
+    [name]: name === "methodName" || name === "description" ? capitalizeFirst(value) : value 
+  }));
+};
 
   const handleFeeChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    if (name === "feeName") {
-      const error = validateFeeName(value);
-      setFeeNameError(error);
-    }
-    setFeeForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  };
+  const { name, value, type, checked } = e.target;
+  if (name === "feeName") {
+    const error = validateFeeName(value);
+    setFeeNameError(error);
+  }
+  setFeeForm((prev) => ({
+    ...prev,
+    [name]: type === "checkbox" ? checked : name === "feeName" || name === "description" ? capitalizeFirst(value) : value,
+  }));
+};
 
   const handleCallStatusChange = (e) => {
-    const { name, value } = e.target;
-    setCallStatusForm((prev) => ({ ...prev, [name]: value }));
-  };
+  const { name, value } = e.target;
+  setCallStatusForm((prev) => ({ 
+    ...prev, 
+    [name]: name === "name" || name === "description" ? capitalizeFirst(value) : value 
+  }));
+};
 
   const handleCallReasonChange = (e) => {
-    const { name, value } = e.target;
-    setCallReasonForm((prev) => ({ ...prev, [name]: value }));
-  };
+  const { name, value } = e.target;
+  setCallReasonForm((prev) => ({ 
+    ...prev, 
+    [name]: name === "name" || name === "description" ? capitalizeFirst(value) : value 
+  }));
+};
 
   const handleNextActionChange = (e) => {
-    const { name, value } = e.target;
-    setNextActionForm((prev) => ({ ...prev, [name]: value }));
-  };
+  const { name, value } = e.target;
+  setNextActionForm((prev) => ({ 
+    ...prev, 
+    [name]: name === "name" || name === "description" ? capitalizeFirst(value) : value 
+  }));
+};
 
   const handleEdit = (item) => {
     setEditingId(item._id);
@@ -878,6 +907,7 @@ const SetupList = () => {
             <input
               type="text"
               name="qualificationName"
+              autoCapitalize="sentences"
               value={qualificationForm.qualificationName}
               onChange={handleQualificationChange}
               required
@@ -920,6 +950,7 @@ const SetupList = () => {
             <input
               type="text"
               name="areaName"
+              autoCapitalize="sentences"
               value={areaForm.areaName}
               onChange={handleAreaChange}
               required
@@ -972,6 +1003,7 @@ const SetupList = () => {
             <input
               type="text"
               name="holidayName"
+              autoCapitalize="sentences"
               value={holidayForm.holidayName}
               onChange={handleHolidayChange}
               required
@@ -1003,6 +1035,7 @@ const SetupList = () => {
             <input
               type="text"
               name="batchName"
+              autoCapitalize="sentences"
               value={batchForm.batchName}
               onChange={handleBatchChange}
               required
@@ -1044,6 +1077,7 @@ const SetupList = () => {
             <input
               type="text"
               name="methodName"
+              autoCapitalize="sentences"
               value={enquiryMethodForm.methodName}
               onChange={handleEnquiryMethodChange}
               required
@@ -1075,6 +1109,7 @@ const SetupList = () => {
             <input
               type="text"
               name="feeName"
+              autoCapitalize="sentences"
               value={feeForm.feeName}
               onChange={handleFeeChange}
               required
@@ -1322,7 +1357,7 @@ const SetupList = () => {
             {data.map((item) => (
               <tr key={item._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">{item.batchName}</td>
-                <td className="px-6 py-4">{item.displayName || `${item.startTime} to ${item.endTime}`}</td>
+                <td className="px-6 py-4">{`${item.startTime} to ${item.endTime}`}</td>
                 <td className="px-6 py-4">{item.order}</td>
                 {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
                 <td className="px-6 py-4">
