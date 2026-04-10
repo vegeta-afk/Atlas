@@ -45,6 +45,7 @@ const SetupList = () => {
   const [qualificationForm, setQualificationForm] = useState({
     qualificationName: "",
     description: "",
+    order: 0,
   });
 
   // Area form
@@ -132,7 +133,7 @@ const SetupList = () => {
           callReasons,
           nextActions,
         } = response.data.data;
-        setQualifications(qualifications);
+        setQualifications(qualifications.sort((a, b) => a.order - b.order));
         setAreas(areas);
         setHolidays(holidays);
         setBatches(batches.sort((a, b) => a.order - b.order));
@@ -166,6 +167,7 @@ const SetupList = () => {
       setQualificationForm({
         qualificationName: "",
         description: "",
+        order: 0,
       });
     } else if (activeTab === "areas") {
       setAreaForm({
@@ -330,6 +332,7 @@ const SetupList = () => {
       setQualificationForm({
         qualificationName: item.qualificationName,
         description: item.description || "",
+        order: item.order || 0,
       });
     } else if (activeTab === "areas") {
       setAreaForm({
@@ -405,6 +408,7 @@ const SetupList = () => {
         const submitData = {
           qualificationName: qualificationForm.qualificationName.trim(),
           description: qualificationForm.description.trim() || "",
+          order: parseInt(qualificationForm.order) || 0,
         };
         if (editingId) {
           await setupAPI.updateQualification(editingId, submitData);
@@ -674,6 +678,25 @@ const SetupList = () => {
     }
   };
 
+  const handleQualificationOrder = async (id, direction) => {
+    const qualIndex = qualifications.findIndex((q) => q._id === id);
+    if ((direction === "up" && qualIndex === 0) || (direction === "down" && qualIndex === qualifications.length - 1)) return;
+    const newQualifications = [...qualifications];
+    const newOrder = direction === "up" ? qualIndex - 1 : qualIndex + 1;
+    [newQualifications[qualIndex], newQualifications[newOrder]] = [newQualifications[newOrder], newQualifications[qualIndex]];
+    const updatedQualifications = newQualifications.map((qual, index) => ({
+      id: qual._id,
+      order: index,
+    }));
+    try {
+      await setupAPI.updateQualificationOrder({ qualifications: updatedQualifications });
+      setQualifications(newQualifications);
+      toast.success("Qualification order updated");
+    } catch (error) {
+      toast.error("Failed to update order");
+    }
+  };
+
   const getFilteredData = () => {
     let data = [];
     if (activeTab === "qualifications") data = qualifications;
@@ -707,7 +730,7 @@ const SetupList = () => {
       columns = [
         { key: "name", label: "Status Name" },
         { key: "value", label: "Status Value" },
-        { key: "description", label: "Description" },
+        // { key: "description", label: "Description" }, // Commented out
         { key: "order", label: "Order" },
       ];
     } else if (callLogSubTab === "call-reasons") {
@@ -715,7 +738,7 @@ const SetupList = () => {
       columns = [
         { key: "name", label: "Reason Name" },
         { key: "value", label: "Reason Value" },
-        { key: "description", label: "Description" },
+        // { key: "description", label: "Description" }, // Commented out
         { key: "order", label: "Order" },
       ];
     } else if (callLogSubTab === "next-actions") {
@@ -723,7 +746,7 @@ const SetupList = () => {
       columns = [
         { key: "name", label: "Action Name" },
         { key: "value", label: "Action Value" },
-        { key: "description", label: "Description" },
+        // { key: "description", label: "Description" }, // Commented out
         { key: "order", label: "Order" },
       ];
     }
@@ -748,7 +771,7 @@ const SetupList = () => {
               <td className="px-6 py-4">
                 <code className="px-2 py-1 bg-gray-100 rounded text-sm">{item.value}</code>
               </td>
-              <td className="px-6 py-4">{item.description || "-"}</td>
+              {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
               <td className="px-6 py-4">{item.order}</td>
               <td className="px-6 py-4">
                 <span className={`px-2 py-1 text-xs rounded-full ${item.isActive !== false ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
@@ -860,6 +883,29 @@ const SetupList = () => {
               required
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g., Bachelor's Degree"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Order</label>
+            <input
+              type="number"
+              name="order"
+              value={qualificationForm.order}
+              onChange={handleQualificationChange}
+              min="0"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Display order"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea
+              name="description"
+              value={qualificationForm.description}
+              onChange={handleQualificationChange}
+              rows="2"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Optional description..."
             />
           </div>
         </div>
@@ -1132,8 +1178,9 @@ const SetupList = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
@@ -1141,20 +1188,37 @@ const SetupList = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {data.map((item) => (
               <tr key={item._id} className="hover:bg-gray-50">
+                <td className="px-6 py-4">{item.order}</td>
                 <td className="px-6 py-4">{item.qualificationName}</td>
-                <td className="px-6 py-4">{item.description || "-"}</td>
+                {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                     {item.isActive ? "Active" : "Inactive"}
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800 mr-3">
-                    <Edit size={16} />
-                  </button>
-                  <button onClick={() => handleDelete(item._id)} className="text-red-600 hover:text-red-800">
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => handleQualificationOrder(item._id, "up")} 
+                      className="text-gray-600 hover:text-gray-800" 
+                      disabled={qualifications.findIndex((q) => q._id === item._id) === 0}
+                    >
+                      <ChevronUp size={16} />
+                    </button>
+                    <button 
+                      onClick={() => handleQualificationOrder(item._id, "down")} 
+                      className="text-gray-600 hover:text-gray-800" 
+                      disabled={qualifications.findIndex((q) => q._id === item._id) === qualifications.length - 1}
+                    >
+                      <ChevronDown size={16} />
+                    </button>
+                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800">
+                      <Edit size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(item._id)} className="text-red-600 hover:text-red-800">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -1171,6 +1235,7 @@ const SetupList = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Area Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">City</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pincode</th>
+              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
@@ -1181,6 +1246,7 @@ const SetupList = () => {
                 <td className="px-6 py-4">{item.areaName}</td>
                 <td className="px-6 py-4">{item.city || "-"}</td>
                 <td className="px-6 py-4">{item.pincode || "-"}</td>
+                {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                     {item.isActive ? "Active" : "Inactive"}
@@ -1208,7 +1274,7 @@ const SetupList = () => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Holiday Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recurring</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
@@ -1218,7 +1284,7 @@ const SetupList = () => {
               <tr key={item._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">{new Date(item.holidayDate).toLocaleDateString()}</td>
                 <td className="px-6 py-4">{item.holidayName}</td>
-                <td className="px-6 py-4">{item.description || "-"}</td>
+                {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isRecurring ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}>
                     {item.isRecurring ? "Yes" : "No"}
@@ -1247,6 +1313,7 @@ const SetupList = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Batch Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time Slot</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order</th>
+              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
@@ -1257,6 +1324,7 @@ const SetupList = () => {
                 <td className="px-6 py-4">{item.batchName}</td>
                 <td className="px-6 py-4">{item.displayName || `${item.startTime} to ${item.endTime}`}</td>
                 <td className="px-6 py-4">{item.order}</td>
+                {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                     {item.isActive ? "Active" : "Inactive"}
@@ -1292,7 +1360,7 @@ const SetupList = () => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
@@ -1302,7 +1370,7 @@ const SetupList = () => {
               <tr key={item._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">{item.order}</td>
                 <td className="px-6 py-4">{item.methodName}</td>
-                <td className="px-6 py-4">{item.description || "-"}</td>
+                {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                     {item.isActive ? "Active" : "Inactive"}
@@ -1338,7 +1406,7 @@ const SetupList = () => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fee Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
@@ -1348,7 +1416,7 @@ const SetupList = () => {
               <tr key={item._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">{item.feeName}</td>
                 <td className="px-6 py-4">₹{item.amount}</td>
-                <td className="px-6 py-4">{item.description || "-"}</td>
+                {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                     {item.isActive ? "Active" : "Inactive"}
