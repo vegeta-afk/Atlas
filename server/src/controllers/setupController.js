@@ -809,7 +809,7 @@ exports.updateBatchOrder = async (req, res) => {
 };
 
 
-const updateQualificationOrder = async (req, res) => {
+exports.updateQualificationOrder = async (req, res) => {
   try {
     const { qualifications } = req.body;
     
