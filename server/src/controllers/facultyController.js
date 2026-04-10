@@ -570,13 +570,20 @@ exports.getFacultyWithBatches = async (req, res) => {
     // Create map of userId -> batches
     const userBatchesMap = {};
     teacherBatches.forEach(tb => {
+
+
+      if (!tb.batch) {
+    console.warn(`⚠️ Skipping TeacherBatch ${tb._id} — batch reference is null`);
+    return;
+  }
+
       const userId = tb.teacher.toString();
       if (!userBatchesMap[userId]) {
         userBatchesMap[userId] = [];
       }
       
       // Count active students
-      const activeStudents = tb.assignedStudents.filter(s => s.isActive).length;
+      const activeStudents = (tb.assignedStudents || []).filter(s => s && s.isActive).length;
       
       userBatchesMap[userId].push({
         _id: tb.batch._id,
