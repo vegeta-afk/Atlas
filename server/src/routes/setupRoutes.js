@@ -8,8 +8,6 @@ const {
   createQualification,
   updateQualification,
   deleteQualification,
-
-  updateQualificationOrder,
   createArea,
   updateArea,
   deleteArea,
