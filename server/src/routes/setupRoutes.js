@@ -8,6 +8,8 @@ const {
   createQualification,
   updateQualification,
   deleteQualification,
+
+  updateQualificationOrder,
   createArea,
   updateArea,
   deleteArea,
@@ -38,6 +40,8 @@ const {
   getNextActions,
   updateNextAction,
   deleteNextAction,
+  // ✅ Add qualification order controller (you need to create this)
+  updateQualificationOrder,
 } = require("../controllers/setupController");
 
 router.use(protect);
@@ -50,6 +54,7 @@ router.get("/active", getActiveData);
 
 // Qualification routes
 router.post("/qualifications", createQualification);
+router.put("/qualifications/order", updateQualificationOrder); // ⚠️ MUST be BEFORE /:id
 router.put("/qualifications/:id", updateQualification);
 router.delete("/qualifications/:id", deleteQualification);
 

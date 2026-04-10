@@ -12,6 +12,11 @@ const qualificationSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+
+    order: {                           // ← ADD THIS FIELD
+      type: Number,
+      default: 0,
+    },
     isActive: {
       type: Boolean,
       default: true,

@@ -15,7 +15,7 @@ exports.getAllSetupData = async (req, res) => {
   try {
     const [qualifications, areas, holidays, batches, enquiryMethods, fees, callStatuses, callReasons, nextActions] =
       await Promise.all([
-        Qualification.find().sort({ qualificationName: 1 }),
+        Qualification.find().sort({ order: 1, qualificationName: 1 }),
         Area.find().sort({ areaName: 1 }),
         Holiday.find().sort({ holidayDate: 1 }),
         Batch.find().sort({ order: 1, startTime: 1 }),
@@ -804,6 +804,38 @@ exports.updateBatchOrder = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Failed to update batch order",
+    });
+  }
+};
+
+
+const updateQualificationOrder = async (req, res) => {
+  try {
+    const { qualifications } = req.body;
+    
+    if (!qualifications || !Array.isArray(qualifications)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid data format. Expected { qualifications: [] }"
+      });
+    }
+    
+    // Update each qualification's order
+    const updatePromises = qualifications.map(({ id, order }) => 
+      Qualification.findByIdAndUpdate(id, { order }, { new: true })
+    );
+    
+    await Promise.all(updatePromises);
+    
+    res.json({ 
+      success: true, 
+      message: "Qualification order updated successfully" 
+    });
+  } catch (error) {
+    console.error("Error updating qualification order:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
     });
   }
 };
