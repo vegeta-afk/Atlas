@@ -55,6 +55,8 @@ const StudentFees = () => {
   const [otherFeeAmount, setOtherFeeAmount] = useState(0);
   const [otherFeeDescription, setOtherFeeDescription] = useState("");
 
+
+
   // ✅ NEW: Course tab states
   const [selectedCourseTab, setSelectedCourseTab] = useState(0);
   const [allCourseFeeSchedules, setAllCourseFeeSchedules] = useState([]);
