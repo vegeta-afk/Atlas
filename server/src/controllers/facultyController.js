@@ -770,22 +770,27 @@ exports.getFacultyBatches = async (req, res) => {
     
     const Attendance = require("../models/Attendance");
     
-    const batchesWithStats = await Promise.all(teacherBatches.map(async (tb) => {
-      const batch = tb.batch;
-      
-      // Check if assignedStudents exists
-      const assignedStudents = tb.assignedStudents || [];
-      const activeStudents = assignedStudents.filter(s => {
-        const isActive = s.isActive !== undefined ? s.isActive : true;
-        return isActive;
-      }).length;
-      
-      // Get today's attendance
-      const todayAttendance = await Attendance.find({
-        teacher: facultyUser._id,
-        batch: batch._id,
-        date: { $gte: todayStart, $lte: todayEnd }
-      }).lean();
+    const batchesWithStats = await Promise.all(teacherBatches
+  .filter(tb => {
+    if (!tb.batch) {
+      console.warn(`⚠️ Skipping TeacherBatch ${tb._id} — batch is null`);
+      return false;
+    }
+    return true;
+  })
+  .map(async (tb) => {
+    const batch = tb.batch;
+    const assignedStudents = tb.assignedStudents || [];
+    const activeStudents = assignedStudents.filter(s => {
+      const isActive = s.isActive !== undefined ? s.isActive : true;
+      return isActive;
+    }).length;
+    
+    const todayAttendance = await Attendance.find({
+      teacher: user._id,
+      batch: batch._id,
+      date: { $gte: todayStart, $lte: todayEnd }
+    }).lean();
       
       const todayPresent = todayAttendance.filter(a => a.status === "present").length;
       const todayAbsent = todayAttendance.filter(a => a.status === "absent").length;
@@ -1161,20 +1166,27 @@ exports.getMyBatches = async (req, res) => {
     
     const Attendance = require("../models/Attendance");
     
-    const batchesWithStats = await Promise.all(teacherBatches.map(async (tb) => {
-      const batch = tb.batch;
-      const assignedStudents = tb.assignedStudents || [];
-      const activeStudents = assignedStudents.filter(s => {
-        const isActive = s.isActive !== undefined ? s.isActive : true;
-        return isActive;
-      }).length;
-      
-      // Get today's attendance
-      const todayAttendance = await Attendance.find({
-        teacher: user._id,
-        batch: batch._id,
-        date: { $gte: todayStart, $lte: todayEnd }
-      }).lean();
+    const batchesWithStats = await Promise.all(teacherBatches
+  .filter(tb => {
+    if (!tb.batch) {
+      console.warn(`⚠️ Skipping TeacherBatch ${tb._id} — batch is null`);
+      return false;
+    }
+    return true;
+  })
+  .map(async (tb) => {
+    const batch = tb.batch;
+    const assignedStudents = tb.assignedStudents || [];
+    const activeStudents = assignedStudents.filter(s => {
+      const isActive = s.isActive !== undefined ? s.isActive : true;
+      return isActive;
+    }).length;
+    
+    const todayAttendance = await Attendance.find({
+      teacher: facultyUser._id,
+      batch: batch._id,
+      date: { $gte: todayStart, $lte: todayEnd }
+    }).lean();
       
       const todayPresent = todayAttendance.filter(a => a.status === "present").length;
       const todayAbsent = todayAttendance.filter(a => a.status === "absent").length;
