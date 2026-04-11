@@ -45,9 +45,15 @@ const attendanceSchema = new mongoose.Schema({
   // Attendance Status
   status: {
     type: String,
-    enum: ['present', 'absent', 'sick_leave', 'casual_leave', 'official_leave', 'late', 'half_day'],
+    enum: ['present', 'absent', 'sick_leave', 'casual_leave', 'official_leave', 'late', 'half_day', 'not_marked'],
     default: 'absent',
     required: true
+  },
+
+  courseType: {
+    type: String,
+    enum: ['primary', 'additional'],
+    default: 'primary'
   },
   
   // Time Tracking
@@ -69,6 +75,8 @@ const attendanceSchema = new mongoose.Schema({
       message: 'Invalid time format (HH:MM)'
     }
   },
+
+  
   
   // Additional Information
   reason: {
