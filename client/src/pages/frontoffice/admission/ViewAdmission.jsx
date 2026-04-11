@@ -29,25 +29,25 @@ const ViewAdmission = () => {
       const response = await admissionAPI.getAdmission(id);
 
       if (response.data.success) {
-        const d = response.data.data; // short alias
+        const d = response.data.data;
 
-        const transformedData = {
+        setAdmission({
           id:           d._id,
           studentId:    d.admissionNo || `ADM${d._id.substring(0, 8)}`,
           fullName:     d.fullName || "N/A",
           photo:        d.photo || null,
 
-          // ── Personal ──────────────────────────────────────
+          // Personal
           dateOfBirth:    d.dateOfBirth  || null,
           gender:         d.gender       || "N/A",
           fatherName:     d.fatherName   || "N/A",
-          fatherNumber:   d.fatherNumber || "N/A",   // ✅ schema field
+          fatherNumber:   d.fatherNumber || "N/A",
           motherName:     d.motherName   || "N/A",
-          motherNumber:   d.motherNumber || "N/A",   // ✅ schema field
-          cast:           d.cast         || "N/A",   // ✅ schema field
-          speciallyAbled: d.speciallyAbled ? "Yes" : "No", // ✅ schema field
+          motherNumber:   d.motherNumber || "N/A",
+          cast:           d.cast         || "N/A",
+          speciallyAbled: d.speciallyAbled ? "Yes" : "No",
 
-          // ── Contact ───────────────────────────────────────
+          // Contact
           email:           d.email           || "N/A",
           mobileNumber:    d.mobileNumber    || "N/A",
           alternateNumber: d.alternateNumber || "N/A",
@@ -57,59 +57,56 @@ const ViewAdmission = () => {
           state:           d.state           || "N/A",
           pincode:         d.pincode         || "N/A",
 
-          // ── Academic ──────────────────────────────────────
+          // Academic
           lastQualification: d.lastQualification || "N/A",
           percentage:        d.percentage        || "N/A",
           yearOfPassing:     d.yearOfPassing     || "N/A",
           schoolCollege:     d.schoolCollege     || "N/A",
 
-          // ── Course ────────────────────────────────────────
-          interestedCourse: d.course         || "N/A",  // ✅ schema: course
+          // Course
+          interestedCourse: d.course         || "N/A",
           specialization:   d.specialization || "N/A",
-          preferredBatch:   d.batchTime      || "N/A",  // ✅ schema: batchTime
-          admissionYear:    d.admissionYear  || "N/A",  // ✅ FIXED: was admissionForYear
-          courseType:       d.courseType     || "N/A",  // ✅ schema field
+          preferredBatch:   d.batchTime      || "N/A",
+          admissionYear:    d.admissionYear  || "N/A",
+          courseType:       d.courseType     || "N/A",
           facultyAllot:     d.facultyAllot   || "Not Allotted",
 
-          // ── Source ────────────────────────────────────────
+          // Source
           source:            d.source            || "N/A",
           referenceName:     d.referenceName     || "N/A",
           referenceContact:  d.referenceContact  || "N/A",
-          referenceRelation: d.referenceRelation || "N/A", // ✅ schema field
+          referenceRelation: d.referenceRelation || "N/A",
 
-          // ── Fees ──────────────────────────────────────────
-          totalFees:           d.totalFees           ?? "N/A", // ✅ schema: totalFees
-          paidFees:            d.paidFees            ?? 0,     // ✅ FIXED: was paidAmount
-          balanceFees:         d.balanceFees         ?? 0,     // ✅ FIXED: was remainingAmount
+          // Fees
+          totalFees:           d.totalFees           ?? "N/A",
+          paidFees:            d.paidFees            ?? 0,
+          balanceFees:         d.balanceFees         ?? 0,
           nextInstallmentDate: d.nextInstallmentDate || null,
 
-          // ── Scholarship ───────────────────────────────────
+          // Scholarship
           hasScholarship: d.hasScholarship || false,
           scholarship:    d.scholarship    || null,
 
-          // ── Status / Meta ─────────────────────────────────
-          status:        d.status      || "admitted",
-          priority:      d.priority    || "medium",
-          remarks:       d.remarks     || "No remarks available.",
+          // Status / Meta
+          status:        d.status       || "admitted",
+          priority:      d.priority     || "medium",
+          remarks:       d.remarks      || "No remarks available.",
           admissionDate: d.admissionDate || d.createdAt,
-          admissionBy:   d.admissionBy  || "N/A",   // ✅ FIXED: was assignedTo (doesn't exist)
+          admissionBy:   d.admissionBy  || "N/A",
           enquiryNo:     d.enquiryNo    || "N/A",
-          createdAt:     d.createdAt,
 
-          // ── Documents & Activity ──────────────────────────
+          // Documents & Activity
           documents: d.documents || [],
           activities: d.activities || [
             {
-              id: 1,
+              id:     1,
               action: "Admission Created",
-              by:    d.admissionBy || "System",
-              date:  d.createdAt ? new Date(d.createdAt).toLocaleString("en-GB") : "N/A",
-              notes: "Admission record created successfully.",
+              by:     d.admissionBy || "System",
+              date:   d.createdAt ? new Date(d.createdAt).toLocaleString("en-GB") : "N/A",
+              notes:  "Admission record created successfully.",
             },
           ],
-        };
-
-        setAdmission(transformedData);
+        });
       } else {
         throw new Error(response.data.message || "Failed to fetch admission details");
       }
@@ -127,26 +124,31 @@ const ViewAdmission = () => {
     switch (status) {
       case "admitted":
       case "approved":
-      case "completed":  return <CheckCircle className="status-icon converted" />;
+      case "completed":     return <CheckCircle className="status-icon converted" />;
       case "rejected":
-      case "cancelled":  return <XCircle className="status-icon rejected" />;
+      case "cancelled":     return <XCircle className="status-icon rejected" />;
       case "under_process": return <Clock className="status-icon follow_up" />;
-      default:           return <Clock className="status-icon new" />;
+      default:              return <Clock className="status-icon new" />;
     }
   };
 
   const getStatusLabel = (status) => ({
-    new:          "New",
-    under_process:"Under Process",
-    approved:     "Approved",
-    rejected:     "Rejected",
-    admitted:     "Admitted",
-    completed:    "Completed",
-    cancelled:    "Cancelled",
+    new:           "New",
+    under_process: "Under Process",
+    approved:      "Approved",
+    rejected:      "Rejected",
+    admitted:      "Admitted",
+    completed:     "Completed",
+    cancelled:     "Cancelled",
   }[status] || status.replace(/_/g, " ").toUpperCase());
 
   const getPriorityBadge = (priority) => {
-    const cls = { low: "priority-low", medium: "priority-medium", high: "priority-high", urgent: "priority-urgent" };
+    const cls = {
+      low:    "priority-low",
+      medium: "priority-medium",
+      high:   "priority-high",
+      urgent: "priority-urgent",
+    };
     return (
       <span className={`priority-badge ${cls[priority] || "priority-medium"}`}>
         {priority.charAt(0).toUpperCase() + priority.slice(1)}
@@ -162,6 +164,28 @@ const ViewAdmission = () => {
   const formatCurrency = (amount) => {
     if (amount === "N/A" || amount === undefined || amount === null) return "N/A";
     return `₹${Number(amount).toLocaleString("en-IN")}`;
+  };
+
+  // ✅ handlePrint and handleExport defined BEFORE any early returns
+  const handlePrint = () => window.print();
+
+  const handleExport = async () => {
+    try {
+      const response = await admissionAPI.exportAdmission(id);
+      if (response.data) {
+        const blob = new Blob([response.data], { type: "application/pdf" });
+        const url  = window.URL.createObjectURL(blob);
+        const a    = document.createElement("a");
+        a.href     = url;
+        a.download = `admission-${admission?.studentId || id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch (err) {
+      alert("Failed to export admission details");
+    }
   };
 
   // ── Sub-components ─────────────────────────────────────────────────────────
@@ -180,7 +204,7 @@ const ViewAdmission = () => {
     </div>
   );
 
-  // ── States ─────────────────────────────────────────────────────────────────
+  // ── Early returns (AFTER all hooks and function definitions) ───────────────
 
   if (loading) return (
     <div className="loading-container">
@@ -304,17 +328,16 @@ const ViewAdmission = () => {
 
         {/* LEFT */}
         <div className="left-column">
-
           <InfoCard title="Personal Information" icon={User}>
             <div className="info-grid">
-              <InfoItem label="Date of Birth"    value={formatDate(admission.dateOfBirth)} />
-              <InfoItem label="Gender"           value={admission.gender} />
-              <InfoItem label="Father's Name"    value={admission.fatherName} />
-              <InfoItem label="Father's Number"  value={admission.fatherNumber} />
-              <InfoItem label="Mother's Name"    value={admission.motherName} />
-              <InfoItem label="Mother's Number"  value={admission.motherNumber} />
-              <InfoItem label="Caste"            value={admission.cast} />
-              <InfoItem label="Specially Abled"  value={admission.speciallyAbled} />
+              <InfoItem label="Date of Birth"   value={formatDate(admission.dateOfBirth)} />
+              <InfoItem label="Gender"          value={admission.gender} />
+              <InfoItem label="Father's Name"   value={admission.fatherName} />
+              <InfoItem label="Father's Number" value={admission.fatherNumber} />
+              <InfoItem label="Mother's Name"   value={admission.motherName} />
+              <InfoItem label="Mother's Number" value={admission.motherNumber} />
+              <InfoItem label="Caste"           value={admission.cast} />
+              <InfoItem label="Specially Abled" value={admission.speciallyAbled} />
             </div>
           </InfoCard>
 
@@ -338,12 +361,10 @@ const ViewAdmission = () => {
               <InfoItem label="Pincode"          value={admission.pincode} />
             </div>
           </InfoCard>
-
         </div>
 
         {/* RIGHT */}
         <div className="right-column">
-
           <InfoCard title="Course & Batch Information" icon={BookOpen}>
             <div className="info-grid">
               <InfoItem label="Course"         value={admission.interestedCourse} />
@@ -383,7 +404,6 @@ const ViewAdmission = () => {
               <InfoItem label="Reference Relation" value={admission.referenceRelation} />
             </div>
           </InfoCard>
-
         </div>
       </div>
 
