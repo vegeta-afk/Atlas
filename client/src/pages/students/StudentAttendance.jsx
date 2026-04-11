@@ -263,7 +263,8 @@ const fetchBatchStudents = async (batchId) => {
       // Initialize attendance status
       const initialAttendance = {};
       studentsData.forEach((student) => {
-        initialAttendance[student._id] = student.todayStatus || 'present';
+        const todayStatus = student.todayStatus === 'not_marked' ? 'absent' : student.todayStatus;
+initialAttendance[student._id] = todayStatus;
       });
       setAttendance(initialAttendance);
       updateStats(initialAttendance);
@@ -435,6 +436,8 @@ const handleBatchSelect = (batch) => {
       if (result.success) {
         alert(result.message);
         sessionStorage.setItem(`attendance_${selectedDate}_${selectedBatch._id}`, "marked");
+
+        await fetchBatchStudents(selectedBatch._id);
       } else {
         alert('Error saving attendance: ' + result.message);
       }
