@@ -1669,9 +1669,8 @@ const deletePaymentLocally = (fee) => {
             {formatCurrency(feeData.summary.totalCourseFee)}
           </div>
           <div className="text-xs text-gray-500 mt-1">
-            {feeData.course?.duration || feeData.summary.totalInstallments}{" "}
-            months
-          </div>
+  {feeData.summary.totalInstallments} months
+</div>
         </div>
         <div className="bg-green-50 p-4 rounded-lg border border-green-100">
           <div className="flex items-center gap-2 text-green-600 font-semibold mb-2">
