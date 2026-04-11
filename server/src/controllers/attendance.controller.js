@@ -598,75 +598,22 @@ const attendanceRecords = await Promise.all(attendance.map(async (record) => {
 
     // Use bulkWrite for efficiency
     const operations = attendanceRecords.map(record => ({
-      updateOne: {
-        filter: {
-          student: record.student,
-          teacher: teacherId,
-          batch: batchId,
-          date: attendanceDate
-        },
-        update: { $set: record },
-        upsert: true
-      }
-    }));
-
-    const result = await Attendance.bulkWrite(operations);
-
-await Promise.all(attendance.map(async (record) => {
-  const student = await Student.findById(record.studentId);
-  if (!student) return;
-
-  // Determine primary vs additional
-  let additionalCourseIndex = -1;
-  if (student.additionalCourses && student.additionalCourses.length > 0) {
-    additionalCourseIndex = student.additionalCourses.findIndex(ac => {
-      if (ac.batchId && batchId) {
-        return ac.batchId.toString() === batchId.toString();
-      }
-      return normalize(ac.batchTime) === normalize(batchDisplayName) ||
-             normalize(ac.batchTime) === normalize(batchTimeString);
-    });
-  }
-
-  const courseType = additionalCourseIndex !== -1 ? 'additional' : 'primary';
-  console.log(`📌 Student ${record.studentId} → courseType: ${courseType}`);
-
-  // ✅ Update the Attendance record with courseType in ONE step
-  await Attendance.findOneAndUpdate(
-    {
-      student: record.studentId,
+  updateOne: {
+    filter: {
+      student: record.student,
       teacher: teacherId,
       batch: batchId,
       date: attendanceDate
     },
-    { $set: { courseType } }
-  );
-
-  // ✅ Update student document
-  if (additionalCourseIndex !== -1) {
-    await Student.findByIdAndUpdate(record.studentId, {
-      $push: {
-        [`additionalCourses.${additionalCourseIndex}.attendance`]: {
-          date: attendanceDate,
-          status: record.status,
-          markedBy: teacherName,
-          remarks: record.remarks || ''
-        }
-      }
-    });
-  } else {
-    await Student.findByIdAndUpdate(record.studentId, {
-      $push: {
-        attendance: {
-          date: attendanceDate,
-          status: record.status,
-          markedBy: teacherName,
-          remarks: record.remarks || ''
-        }
-      }
-    });
+    update: { $set: record },  // record already has courseType ✅
+    upsert: true
   }
 }));
+
+const result = await Attendance.bulkWrite(operations);
+
+
+
     // Update monthly summary
     const d = new Date(date);
     const month = d.getMonth() + 1;
