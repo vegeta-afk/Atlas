@@ -472,13 +472,27 @@ const calcTotals = (schedule) => ({
     const data = await response.json();
 
     if (data.success) {
-      const apiStudent = data.data.student; // ← get student from API response
-      const processedData = {
-        ...data.data,
-        feeSchedule: processFeeSchedule(data.data.feeSchedule || [], apiStudent) // ← pass it
-      };
-      setFeeData(processedData);
+  const apiStudent = data.data.student;
+  const processedSchedule = processFeeSchedule(data.data.feeSchedule || [], apiStudent);
+  
+  const totalCourseFee = processedSchedule.reduce((s, f) => 
+    s + (f.baseFee || 0) + (f.isExamMonth ? (f.examFee || 0) : 0), 0);
+  const paidAmount = processedSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
+
+  const processedData = {
+    ...data.data,
+    feeSchedule: processedSchedule,
+    summary: {
+      ...data.data.summary,
+      totalCourseFee,
+      paidAmount,
+      balanceAmount: totalCourseFee - paidAmount,
+      totalMonthlyFees: processedSchedule.reduce((s, f) => s + (f.baseFee || 0), 0),
+      totalExamFees: processedSchedule.reduce((s, f) => s + (f.isExamMonth ? (f.examFee || 0) : 0), 0),
     }
+  };
+  setFeeData(processedData);
+}
   } catch (error) {
     console.error("Error fetching fees:", error);
     createFeeDataFromProps();
