@@ -56,7 +56,6 @@ const StudentFees = () => {
   const [otherFeeDescription, setOtherFeeDescription] = useState("");
 
 
-
   // ✅ NEW: Course tab states
   const [selectedCourseTab, setSelectedCourseTab] = useState(0);
   const [allCourseFeeSchedules, setAllCourseFeeSchedules] = useState([]);
@@ -145,7 +144,7 @@ const StudentFees = () => {
           fatherName: student.fatherName || "N/A",
           dateOfJoining: student.admissionDate || student.dateOfJoining,
           course: student.course || student.courseName || "N/A",
-          batch: student.batch || "N/A",
+          batch: student.batch || student.batchName || student.batchTime || student.originalData?.batch || "N/A",
           status: student.status || "Active",
           monthlyFee: student.monthlyFee || student.feeAmount || 0,
           paidAmount: student.paidAmount || 0,
@@ -299,13 +298,13 @@ const StudentFees = () => {
       }
 
       setAllCourseFeeSchedules(schedules);
-      setSelectedStudent({ ...student, feeSchedule: primaryFees || [] });
+      setSelectedStudent({ ...student, batch: student.batch || fullStudent.batch || fullStudent.batchName || "N/A", feeSchedule: primaryFees || [] });
       setReceiptNo(generateReceiptNo());
     } catch (error) {
       console.error("Error selecting student:", error);
       const primaryFees = await fetchStudentFeeSchedule(student._id, student.originalData || student);
       setAllCourseFeeSchedules([{ courseName: student.course || "Primary Course", fees: primaryFees || [] }]);
-      setSelectedStudent({ ...student, feeSchedule: primaryFees || [] });
+      setSelectedStudent({ ...student, batch: student.batch || student.originalData?.batch || student.originalData?.batchName || "N/A", feeSchedule: primaryFees || [] });
       setReceiptNo(generateReceiptNo());
     }
   };
@@ -460,7 +459,7 @@ const StudentFees = () => {
           fatherName: student.fatherName || "N/A",
           dateOfJoining: student.admissionDate || student.dateOfJoining,
           course: student.course || "N/A",
-          batch: student.batch || "N/A",
+          batch: student.batch || student.batchName || student.batchTime || "N/A",
           status: student.status || "Active",
           monthlyFee: student.monthlyFee || 0,
           paidAmount: student.paidAmount || 0,

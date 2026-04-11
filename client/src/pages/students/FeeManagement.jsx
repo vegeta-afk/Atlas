@@ -419,7 +419,7 @@ const cleanFeeForBackend = (fee) => ({
 });
 
 const calcTotals = (schedule) => ({
-  totalCourseFee: schedule.reduce((s, f) => s + (f.totalFee     || 0), 0),
+  totalCourseFee: schedule.reduce((s, f) => s + ((f.baseFee || 0) + (f.isExamMonth ? (f.examFee || 0) : 0)), 0),
   paidAmount:     schedule.reduce((s, f) => s + (f.paidAmount   || 0), 0),
   balanceAmount:  schedule.reduce((s, f) => s + (f.balanceAmount|| 0), 0),
 });
@@ -1935,7 +1935,7 @@ const deletePaymentLocally = (fee) => {
             <div className="text-sm text-gray-600">Exam Fees</div>
             <div className="font-medium">
               {formatCurrency(feeData.summary.examFee)} ×{" "}
-              {feeData.course?.examMonths?.split(",").length || 0} exams
+              {feeData.feeSchedule?.filter(f => f.isExamMonth).length || 0} exams
             </div>
           </div>
           <div>
