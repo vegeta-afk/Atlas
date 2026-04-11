@@ -787,10 +787,10 @@ exports.getFacultyBatches = async (req, res) => {
     }).length;
     
     const todayAttendance = await Attendance.find({
-      teacher: user._id,
-      batch: batch._id,
-      date: { $gte: todayStart, $lte: todayEnd }
-    }).lean();
+  teacher: facultyUser._id,  // ✅ FIXED: was user._id
+  batch: batch._id,
+  date: { $gte: todayStart, $lte: todayEnd }
+}).lean();
       
       const todayPresent = todayAttendance.filter(a => a.status === "present").length;
       const todayAbsent = todayAttendance.filter(a => a.status === "absent").length;
@@ -798,10 +798,10 @@ exports.getFacultyBatches = async (req, res) => {
       // Calculate monthly attendance rate
       const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const monthAttendance = await Attendance.find({
-        teacher: facultyUser._id,
-        batch: batch._id,
-        date: { $gte: firstDay }
-      }).lean();
+  teacher: facultyUser._id,  // ✅ FIXED: was user._id
+  batch: batch._id,
+  date: { $gte: firstDay }
+}).lean();
       
       const totalDays = currentDate.getDate();
       const presentDays = monthAttendance.filter(a => a.status === "present").length;
@@ -1183,10 +1183,10 @@ exports.getMyBatches = async (req, res) => {
     }).length;
     
     const todayAttendance = await Attendance.find({
-      teacher: facultyUser._id,
-      batch: batch._id,
-      date: { $gte: todayStart, $lte: todayEnd }
-    }).lean();
+  teacher: user._id,   // ← use req.user directly
+  batch: batch._id,
+  date: { $gte: todayStart, $lte: todayEnd }
+}).lean();
       
       const todayPresent = todayAttendance.filter(a => a.status === "present").length;
       const todayAbsent = todayAttendance.filter(a => a.status === "absent").length;
