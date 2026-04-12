@@ -911,3 +911,179 @@ tests.forEach(t => console.log(`  - ${t.testName} | status: ${t.status} | batchI
     });
   }
 };
+
+// @desc    Admin publishes a student's result
+// @route   PUT /api/exam/submissions/:submissionId/publish
+// @access  Private (Admin)
+exports.publishResult = async (req, res) => {
+  try {
+    const { submissionId } = req.params;
+    const { publish } = req.body; // true or false
+
+    const submission = await TestSubmission.findByIdAndUpdate(
+      submissionId,
+      {
+        isPublished: publish,
+        publishedAt: publish ? new Date() : null,
+        publishedBy: publish ? req.user.id : null
+      },
+      { new: true }
+    ).populate('studentId', 'fullName studentId');
+
+    if (!submission) {
+      return res.status(404).json({
+        success: false,
+        message: "Submission not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      message: publish
+        ? `Result published for ${submission.studentId?.fullName}`
+        : `Result hidden for ${submission.studentId?.fullName}`,
+      data: submission
+    });
+
+  } catch (error) {
+    console.error("Publish result error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Get all submissions for a test (admin view)
+// @route   GET /api/exam/tests/:id/submissions
+// @access  Private (Admin)
+exports.getTestSubmissions = async (req, res) => {
+  try {
+    const submissions = await TestSubmission.find({ testId: req.params.id })
+      .populate('studentId', 'fullName studentId admissionNo course batchTime')
+      .sort({ submittedAt: -1 })
+      .select('-answers');
+
+    const test = await Test.findById(req.params.id)
+      .select('testName maxMarks status');
+
+    if (!test) {
+      return res.status(404).json({ success: false, message: "Test not found" });
+    }
+
+    res.json({
+      success: true,
+      count: submissions.length,
+      data: {
+        test,
+        submissions: submissions.map(s => ({
+          _id: s._id,
+          student: s.studentId,
+          studentName: s.studentName,
+          marksObtained: s.marksObtained,
+          maxMarks: s.maxMarks,
+          percentage: s.percentage,
+          grade: s.grade,
+          isPassed: s.isPassed,
+          submittedAt: s.submittedAt,
+          isPublished: s.isPublished,
+          publishedAt: s.publishedAt
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error("Get submissions error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Student gets their published results
+// @route   GET /api/exam/tests/student/my-results
+// @access  Private (Student)
+exports.getMyResults = async (req, res) => {
+  try {
+    const User = require('../models/user');
+    const userRecord = await User.findById(req.user.id).select('studentId');
+    const student = await Student.findOne({ studentId: userRecord.studentId });
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    // Only return PUBLISHED results
+    const results = await TestSubmission.find({
+      studentId: student._id,
+      isPublished: true        // ← key filter
+    })
+    .sort({ submittedAt: -1 })
+    .select('-answers');
+
+    res.json({
+      success: true,
+      count: results.length,
+      data: results
+    });
+
+  } catch (error) {
+    console.error("Get my results error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Student marksheet (all published results)
+// @route   GET /api/exam/tests/student/marksheet
+// @access  Private (Student)
+exports.getMyMarksheet = async (req, res) => {
+  try {
+    const User = require('../models/user');
+    const userRecord = await User.findById(req.user.id).select('studentId');
+    const student = await Student.findOne({ studentId: userRecord.studentId })
+      .select('fullName studentId admissionNo course batchTime admissionDate fatherName');
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    const results = await TestSubmission.find({
+      studentId: student._id,
+      isPublished: true
+    }).sort({ submittedAt: 1 }).select('-answers');
+
+    const monthlyExams  = results.filter(r => r.examType === 'monthly');
+    const semesterExams = results.filter(r => r.examType === 'semester');
+
+    const totalMarksObtained = results.reduce((s, r) => s + r.marksObtained, 0);
+    const totalMaxMarks      = results.reduce((s, r) => s + r.maxMarks, 0);
+    const overallPercentage  = totalMaxMarks
+      ? Math.round((totalMarksObtained / totalMaxMarks) * 100)
+      : 0;
+
+    let overallGrade = 'F';
+    if      (overallPercentage >= 90) overallGrade = 'A+';
+    else if (overallPercentage >= 80) overallGrade = 'A';
+    else if (overallPercentage >= 70) overallGrade = 'B+';
+    else if (overallPercentage >= 60) overallGrade = 'B';
+    else if (overallPercentage >= 50) overallGrade = 'C';
+    else if (overallPercentage >= 40) overallGrade = 'D';
+
+    res.json({
+      success: true,
+      data: {
+        student,
+        monthlyExams,
+        semesterExams,
+        summary: {
+          totalExams: results.length,
+          passed: results.filter(r => r.isPassed).length,
+          failed: results.filter(r => !r.isPassed).length,
+          totalMarksObtained,
+          totalMaxMarks,
+          overallPercentage,
+          overallGrade
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("Marksheet error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

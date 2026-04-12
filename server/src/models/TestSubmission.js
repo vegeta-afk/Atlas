@@ -67,7 +67,19 @@ const testSubmissionSchema = new mongoose.Schema(
     // ── Timing ────────────────────────────────────────
     startedAt:   { type: Date },
     submittedAt: { type: Date, default: Date.now },
-    timeTaken:   { type: Number, default: 0 }, // total seconds
+    timeTaken:   { type: Number, default: 0 },
+    
+    isPublished: {
+  type: Boolean,
+  default: false  // hidden from student until admin approves
+},
+publishedAt: {
+  type: Date
+},
+publishedBy: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'User'
+},// total seconds
 
     // ── Status ────────────────────────────────────────
     status: {
@@ -80,6 +92,9 @@ const testSubmissionSchema = new mongoose.Schema(
     attemptNumber: { type: Number, default: 1 },
   },
   { timestamps: true }
+
+
+  
 );
 
 // ── Auto-calculate grade before save ──────────────────

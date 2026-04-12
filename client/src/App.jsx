@@ -9,6 +9,9 @@ import MyAttendance from "./pages/student/MyAttendance";
 import MyFees from "./pages/student/MyFees";
 import MyProfile from "./pages/student/MyProfile";
 import MyExams from "./pages/student/MyExams";
+import MyMarksheet from "./pages/student/Mymarksheet";
+
+
 
 // Faculty imports
 import FacultyLayout from "./components/layout/FacultyLayout";
@@ -110,6 +113,7 @@ function App() {
           <Route path="batch-transfer/add" element={<AddBatchTransfer />} />
           <Route path="course-conversion" element={<CourseConversion />} />
           <Route path="course-extension" element={<CourseExtension />} />
+          <Route path="exams" element={<ExamResults />} />
         </Route>
 
         <Route path="exam">
@@ -160,6 +164,7 @@ function App() {
           <Route path="fees/:id" element={<StudentFees />} />
           <Route path="batch-transfer" element={<BatchTransferList />} />
           <Route path="batch-transfer/add" element={<AddBatchTransfer />} />
+          <Route path="marksheet" element={<MyMarksheet />} />  
         </Route>
 
         {/* QR Attendance Scan */}
