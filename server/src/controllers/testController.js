@@ -821,7 +821,7 @@ exports.getStudentTests = async (req, res) => {
     }
 
     const student = await Student.findOne({ studentId: userRecord.studentId })
-      .select('batchTime enrolledBatches studentId _id');
+      .select('batchTime enrolledBatches studentId _id fullName');
 
     console.log('📚 student:', student?.fullName, student?.batchTime);
 
