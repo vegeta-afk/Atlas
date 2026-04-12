@@ -7,6 +7,7 @@ import StudentLayout from "./components/layout/StudentLayout";
 import StudentDashboard from "./pages/dashboard/StudentDashboard";
 import MyAttendance from "./pages/student/MyAttendance";
 import MyFees from "./pages/student/MyFees";
+import StudentExamResults from "./pages/admin/ExamResults";
 import MyProfile from "./pages/student/MyProfile";
 import MyExams from "./pages/student/MyExams";
 import MyMarksheet from "./pages/student/Mymarksheet";
@@ -113,7 +114,7 @@ function App() {
           <Route path="batch-transfer/add" element={<AddBatchTransfer />} />
           <Route path="course-conversion" element={<CourseConversion />} />
           <Route path="course-extension" element={<CourseExtension />} />
-          <Route path="exams" element={<ExamResults />} />
+          <Route path="exams" element={<StudentExamResults />} />
         </Route>
 
         <Route path="exam">
@@ -164,7 +165,6 @@ function App() {
           <Route path="fees/:id" element={<StudentFees />} />
           <Route path="batch-transfer" element={<BatchTransferList />} />
           <Route path="batch-transfer/add" element={<AddBatchTransfer />} />
-          <Route path="marksheet" element={<MyMarksheet />} />  
         </Route>
 
         {/* QR Attendance Scan */}
@@ -190,6 +190,7 @@ function App() {
         <Route path="fees" element={<MyFees />} />
         <Route path="profile" element={<MyProfile />} />
         <Route path="exams" element={<MyExams />} />
+        <Route path="marksheet" element={<MyMarksheet />} />
         <Route path="exam/:testId" element={<StudentExamPage />} />
         <Route path="scan-qr" element={<StudentScanQR />} />
       </Route>
