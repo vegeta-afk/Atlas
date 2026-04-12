@@ -812,6 +812,7 @@ exports.getStudentTests = async (req, res) => {
 
     // ✅ FIX: Get studentId from User record since JWT doesn't have it
     const userRecord = await User.findById(req.user.id).select('studentId');
+    console.log('👤 userRecord:', userRecord);
     if (!userRecord?.studentId) {
       return res.status(404).json({ 
         success: false, 
@@ -822,7 +823,7 @@ exports.getStudentTests = async (req, res) => {
     const student = await Student.findOne({ studentId: userRecord.studentId })
       .select('batchTime enrolledBatches studentId _id');
 
-    console.log('📚 Student found:', JSON.stringify(student));
+    console.log('📚 student:', student?.fullName, student?.batchTime);
 
     if (!student) {
       return res.status(404).json({
@@ -860,9 +861,9 @@ exports.getStudentTests = async (req, res) => {
       .select('-questionPool')
       .sort({ scheduledDate: -1 });
 
-    console.log(`✅ Found ${tests.length} tests`);
+    console.log(`✅ Tests found: ${tests.length}`);
 
-    console.log(`📝 Tests found: ${tests.length}`);
+
 tests.forEach(t => console.log(`  - ${t.testName} | status: ${t.status} | batchId: ${t.batchId}`));
 
 
