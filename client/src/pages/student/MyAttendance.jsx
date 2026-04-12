@@ -22,6 +22,8 @@ const MyAttendance = () => {
   const [dateFilter, setDateFilter] = useState("all");
   const [expandedDate, setExpandedDate] = useState(null);
 
+  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   const getUser = () => {
     const userStr = sessionStorage.getItem("user") || localStorage.getItem("user");
     if (!userStr) return null;
