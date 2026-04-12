@@ -7,7 +7,7 @@ import StudentLayout from "./components/layout/StudentLayout";
 import StudentDashboard from "./pages/dashboard/StudentDashboard";
 import MyAttendance from "./pages/student/MyAttendance";
 import MyFees from "./pages/student/MyFees";
-import StudentExamResults from "./pages/admin/ExamResults";
+import StudentExamResults from "./pages/students/Examresults";
 import MyProfile from "./pages/student/MyProfile";
 import MyExams from "./pages/student/MyExams";
 import MyMarksheet from "./pages/student/Mymarksheet";
