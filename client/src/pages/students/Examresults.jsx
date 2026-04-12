@@ -68,7 +68,7 @@ const ExamResults = () => {
     setPublishing((p) => ({ ...p, [submissionId]: true }));
     try {
       const res = await fetch(
-        `${BASE_URL}/api/exam/submissions/${submissionId}/publish`,
+  `${BASE_URL}/api/exam/tests/submissions/${submissionId}/publish`,
         {
           method: "PUT",
           headers: {
