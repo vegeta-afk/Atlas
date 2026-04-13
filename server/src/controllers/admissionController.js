@@ -199,6 +199,7 @@ const hasScholarship = req.body.hasScholarship === true || req.body.hasScholarsh
       city: req.body.city,
       state: req.body.state,
       pincode: req.body.pincode,
+      place: req.body.place || "",
       lastQualification: req.body.lastQualification,
       percentage: req.body.percentage || "",
       yearOfPassing: req.body.yearOfPassing,
@@ -310,57 +311,60 @@ scholarship: hasScholarship && scholarshipBody
 // @desc    Update admission (WITH AUTO STUDENT CREATION ON STATUS CHANGE)
 // @route   PUT /api/admissions/:id
 // @access  Private (Admin, Front Office)
+// admissionController.js — updateAdmission — replace the current handler body:
+
 exports.updateAdmission = async (req, res) => {
   try {
     const admission = await Admission.findById(req.params.id);
 
     if (!admission) {
-      return res.status(404).json({
-        success: false,
-        message: "Admission not found",
-      });
+      return res.status(404).json({ success: false, message: "Admission not found" });
     }
 
-    // Save old status
     const oldStatus = admission.status;
 
-    // Update admission
-    Object.assign(admission, req.body);
+    // Handle photo upload if a new file was sent
+    if (req.file) {
+      const { uploadToCloudinary } = require("../config/cloudinary");
+      const result = await uploadToCloudinary(req.file.buffer);
+      req.body.photo = result.secure_url;
+    }
+
+    // FIX: Never let scholarship: null reach Mongoose — remove key if null/falsy
+    const bodyToApply = { ...req.body };
+    if (bodyToApply.scholarship === null || bodyToApply.scholarship === undefined) {
+      delete bodyToApply.scholarship;   // ← don't touch the existing subdocument
+    }
+    // If hasScholarship explicitly false, unset scholarship cleanly
+    if (bodyToApply.hasScholarship === false || bodyToApply.hasScholarship === "false") {
+      admission.scholarship = undefined;
+    }
+
+    Object.assign(admission, bodyToApply);
     await admission.save();
 
-    // 🔥 AUTO CREATE STUDENT if status changed to approved/admitted
+    // Auto-create student if status changed to admitted/approved
     if (
-      oldStatus !== "approved" &&
-      oldStatus !== "admitted" &&
+      oldStatus !== "approved" && oldStatus !== "admitted" &&
       (admission.status === "approved" || admission.status === "admitted")
     ) {
       try {
-        const existingStudent = await Student.findOne({
-          admissionId: admission._id,
-        });
+        const existingStudent = await Student.findOne({ admissionId: admission._id });
         if (!existingStudent) {
           await autoCreateStudentFromAdmission(admission, req.user);
-          console.log(
-            `✅ AUTO: Student created after status update: ${admission.admissionNo}`
-          );
         }
       } catch (studentError) {
         console.error("❌ Auto student creation failed:", studentError.message);
       }
     }
 
-    res.json({
-      success: true,
-      message: "Admission updated successfully",
-      data: admission,
-    });
+    res.json({ success: true, message: "Admission updated successfully", data: admission });
   } catch (error) {
     console.error("Update admission error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: error.message,
-    });
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ success: false, message: "Validation Error", errors: error.errors });
+    }
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
 

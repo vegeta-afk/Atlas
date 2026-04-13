@@ -341,39 +341,46 @@ const EditAdmission = () => {
 
     setIsSubmitting(true);
     try {
-      const updateData = {
-        fullName: formData.fullName, dateOfBirth: formData.dateOfBirth,
-        gender: formData.gender, fatherName: formData.fatherName, motherName: formData.motherName,
-        email: formData.email || "", mobileNumber: formData.mobileNumber,
-        fatherNumber: formData.fatherNumber, motherNumber: formData.motherNumber,
-        aadharNumber: formData.aadharNumber, place: formData.place,
-        address: formData.address, city: formData.city, state: formData.state, pincode: formData.pincode,
-        lastQualification: formData.lastQualification, yearOfPassing: formData.yearOfPassing,
-        course: formData.interestedCourse, courseId: formData.courseId,
-        specialization: formData.specialization || "",
-        batchTime: formData.preferredBatch, facultyAllot: formData.facultyAllot,
-        cast: formData.cast, speciallyAbled: formData.speciallyAbled,
-        referenceName: formData.referenceName || "",
-        referenceContact: formData.referenceContact || "",
-        referenceRelation: formData.referenceRelation || "",
-        remarks: formData.remarks || "",
-        admissionBy: formData.admissionBy, admissionDate: formData.admissionDate,
-        hasScholarship: formData.hasScholarship,
-        scholarship: formData.hasScholarship ? {
-          applied: true,
-          scholarshipName: formData.scholarshipName,
-          scholarshipCode: formData.scholarshipCode,
-          percent: formData.scholarshipPercent || 0,
-          type: "percentage",
-          originalTotalFee: formData.originalTotalFee,
-          originalMonthlyFee: formData.originalMonthlyFee,
-          scholarshipValue: formData.scholarshipValue,
-          finalTotalFee: formData.finalTotalFee,
-          finalMonthlyFee: formData.finalMonthlyFee,
-          documents: formData.scholarshipDocuments,
-        } : null,
-        totalFees: formData.finalTotalFee || 0,
-      };
+     // EditAdmission.jsx — handleSubmit → updateData object
+
+const updateData = {
+  fullName: formData.fullName, dateOfBirth: formData.dateOfBirth,
+  gender: formData.gender, fatherName: formData.fatherName, motherName: formData.motherName,
+  email: formData.email || "", mobileNumber: formData.mobileNumber,
+  fatherNumber: formData.fatherNumber, motherNumber: formData.motherNumber,
+  aadharNumber: formData.aadharNumber,
+  place: formData.place,          // ← FIX 1: was missing entirely
+  address: formData.address, city: formData.city, state: formData.state, pincode: formData.pincode,
+  lastQualification: formData.lastQualification, yearOfPassing: formData.yearOfPassing,
+  course: formData.interestedCourse, courseId: formData.courseId,
+  specialization: formData.specialization || "",
+  batchTime: formData.preferredBatch, facultyAllot: formData.facultyAllot,
+  cast: formData.cast, speciallyAbled: formData.speciallyAbled,
+  referenceName: formData.referenceName || "",
+  referenceContact: formData.referenceContact || "",
+  referenceRelation: formData.referenceRelation || "",
+  remarks: formData.remarks || "",
+  admissionBy: formData.admissionBy, admissionDate: formData.admissionDate,
+  hasScholarship: formData.hasScholarship,
+  totalFees: formData.finalTotalFee || 0,
+  // ← FIX 3: Never send scholarship: null — omit key entirely when not applicable.
+  // Sending null triggers Mongoose subdocument validation → 500 error.
+  ...(formData.hasScholarship && {
+    scholarship: {
+      applied: true,
+      scholarshipName: formData.scholarshipName,
+      scholarshipCode: formData.scholarshipCode,
+      percent: formData.scholarshipPercent || 0,
+      type: "percentage",
+      originalTotalFee: formData.originalTotalFee,
+      originalMonthlyFee: formData.originalMonthlyFee,
+      scholarshipValue: formData.scholarshipValue,
+      finalTotalFee: formData.finalTotalFee,
+      finalMonthlyFee: formData.finalMonthlyFee,
+      documents: formData.scholarshipDocuments,
+    },
+  }),
+};
 
       let payload;
       if (studentPhoto) {
@@ -631,17 +638,30 @@ const EditAdmission = () => {
         <FormSection title="Course Information" icon={BookOpen}>
           <div className="form-grid">
             <div className="form-group">
-              <label>Course *</label>
-              <select name="courseId" value={formData.courseId} onChange={handleChange} className={errors.interestedCourse ? "error-field" : ""}>
-                <option value="">Select Course</option>
-                {courses.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.courseFullName} ({c.courseShortName})
-                  </option>
-                ))}
-              </select>
-              {errors.interestedCourse && <span className="error-text">{errors.interestedCourse}</span>}
-            </div>
+  <label>Course *</label>
+  <select
+    name="courseId"
+    value={formData.courseId}
+    onChange={handleChange}
+    className={errors.interestedCourse ? "error-field" : ""}
+  >
+    <option value="">Select Course</option>
+
+    {/* Fallback: show saved course even if it's inactive or missing from active list */}
+    {formData.courseId && !courses.find((c) => c._id === formData.courseId) && (
+      <option value={formData.courseId}>
+        {formData.interestedCourse || formData.courseId}
+      </option>
+    )}
+
+    {courses.map((c) => (
+      <option key={c._id} value={c._id}>
+        {c.courseFullName} ({c.courseShortName})
+      </option>
+    ))}
+  </select>
+  {errors.interestedCourse && <span className="error-text">{errors.interestedCourse}</span>}
+</div>
 
             {formData.courseId && (
               <div className="form-group scholarship-action">
