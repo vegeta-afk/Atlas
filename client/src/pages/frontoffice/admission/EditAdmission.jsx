@@ -1,28 +1,14 @@
 // pages/frontoffice/admission/EditAdmission.jsx
 import React, { useState, useEffect } from "react";
-import {
-  admissionAPI,
-  setupAPI,
-  courseAPI,
-} from "../../../services/api";
+import { admissionAPI, setupAPI, courseAPI } from "../../../services/api";
 import { useParams, useNavigate } from "react-router-dom";
 import { facultyAPI } from "../../../services/api";
 import {
-  User,
-  Phone,
-  BookOpen,
-  Camera,
-  AlertCircle,
-  Save,
-  X,
-  Upload,
-  FileDigit,
-  Hash,
-  Gift,
-  Award,
+  User, Phone, BookOpen, Camera, AlertCircle, Save,
+  X, Upload, FileDigit, Hash, Gift, Award,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import "./AddAdmission.css"; // reuse the same CSS
+import "./AddAdmission.css";
 
 const FormSection = ({ title, icon: Icon, children }) => (
   <div className="form-section">
@@ -37,90 +23,63 @@ const FormSection = ({ title, icon: Icon, children }) => (
 const EditAdmission = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user"));
-const basePath = user?.role === "faculty" || user?.role === "instructor"
-  ? "/faculty"
-  : "/admin";
 
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(null);
+  // ── basePath from logged-in user ─────────────────────────────
+  const user = JSON.parse(localStorage.getItem("user"));
+  const basePath =
+    user?.role === "faculty" || user?.role === "instructor"
+      ? "/faculty"
+      : "/admin";
+
+  const [loading, setLoading]           = useState(true);
+  const [fetchError, setFetchError]     = useState(null);
   const [studentPhoto, setStudentPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
-  
 
-  // Setup data
   const [qualifications, setQualifications] = useState([]);
-  const [batches, setBatches] = useState([]);
-  const [areas, setAreas] = useState([]);
-  const [loadingSetup, setLoadingSetup] = useState(false);
-  const [setupError, setSetupError] = useState(null);
+  const [batches, setBatches]               = useState([]);
+  const [areas, setAreas]                   = useState([]);
+  const [loadingSetup, setLoadingSetup]     = useState(false);
+  const [setupError, setSetupError]         = useState(null);
 
-  // Faculty
-  const [facultyMembers, setFacultyMembers] = useState([]);
-  const [loadingFaculty, setLoadingFaculty] = useState(false);
-  const [facultyError, setFacultyError] = useState(null);
+  const [facultyMembers, setFacultyMembers]   = useState([]);
+  const [loadingFaculty, setLoadingFaculty]   = useState(false);
+  const [facultyError, setFacultyError]       = useState(null);
 
-  // Courses
-  const [courses, setCourses] = useState([]);
+  const [courses, setCourses]               = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
 
-  // Scholarship
-  const [showScholarshipModal, setShowScholarshipModal] = useState(false);
   const [selectedCourseDetails, setSelectedCourseDetails] = useState(null);
-  const [calculatedFees, setCalculatedFees] = useState(null);
-  const [scholarshipPercent, setScholarshipPercent] = useState("");
+  const [showScholarshipModal, setShowScholarshipModal]   = useState(false);
+  const [calculatedFees, setCalculatedFees]               = useState(null);
+  const [scholarshipPercent, setScholarshipPercent]       = useState("");
 
-  const [formData, setFormData] = useState({
-    admissionNo: "",
-    admissionBy: "",
-    admissionDate: "",
-    enquiryNo: "",
-    fullName: "",
-    dateOfBirth: "",
-    gender: "",
-    fatherName: "",
-    motherName: "",
-    email: "",
-    mobileNumber: "",
-    fatherNumber: "",
-    motherNumber: "",
-    aadharNumber: "",
-    place: "",
-    address: "",
-    city: "",
-    state: "",
-    pincode: "",
-    lastQualification: "",
-    yearOfPassing: "",
-    interestedCourse: "",
-    courseId: "",
-    specialization: "",
-    preferredBatch: "",
-    facultyAllot: "",
-    cast: "",
-    speciallyAbled: false,
-    referenceName: "",
-    referenceContact: "",
-    referenceRelation: "",
-    remarks: "",
-    hasScholarship: false,
-    scholarshipApplied: false,
-    scholarshipId: "",
-    scholarshipName: "",
-    scholarshipCode: "",
-    originalTotalFee: 0,
-    originalMonthlyFee: 0,
-    scholarshipValue: 0,
-    finalTotalFee: 0,
-    finalMonthlyFee: 0,
-    scholarshipPercent: 0,
-    scholarshipDocuments: [],
-  });
-
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors]         = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ─── Fetch everything on mount ───────────────────────────────────────────
+  const [formData, setFormData] = useState({
+    admissionNo: "", admissionBy: "", admissionDate: "", enquiryNo: "",
+    fullName: "", dateOfBirth: "", gender: "",
+    fatherName: "", motherName: "",
+    email: "", mobileNumber: "", fatherNumber: "", motherNumber: "",
+    aadharNumber: "", place: "", address: "",
+    city: "", state: "", pincode: "",
+    lastQualification: "", yearOfPassing: "",
+    interestedCourse: "", courseId: "",
+    specialization: "", preferredBatch: "", facultyAllot: "",
+    cast: "", speciallyAbled: false,
+    referenceName: "", referenceContact: "", referenceRelation: "",
+    remarks: "",
+    hasScholarship: false, scholarshipApplied: false,
+    scholarshipId: "", scholarshipName: "", scholarshipCode: "",
+    originalTotalFee: 0, originalMonthlyFee: 0,
+    scholarshipValue: 0, finalTotalFee: 0, finalMonthlyFee: 0,
+    scholarshipPercent: 0, scholarshipDocuments: [],
+  });
+
+  // ════════════════════════════════════════════════════════════
+  // Fetch all on mount
+  // ════════════════════════════════════════════════════════════
   useEffect(() => {
     fetchSetupData();
     fetchCourses();
@@ -128,28 +87,17 @@ const basePath = user?.role === "faculty" || user?.role === "instructor"
     fetchAdmission();
   }, []);
 
-  // ─── When courseId changes fetch course details ──────────────────────────
+  // ════════════════════════════════════════════════════════════
+  // KEY FIX: Watch BOTH courseId AND courses together.
+  // Fires when either changes — solves the race condition.
+  // ════════════════════════════════════════════════════════════
   useEffect(() => {
-    if (formData.courseId) fetchCourseDetails(formData.courseId);
-  }, [formData.courseId]);
-
-  useEffect(() => {
-  if (courses.length > 0 && formData.courseId && !selectedCourseDetails) {
-    fetchCourseDetails(formData.courseId);
-  }
-}, [courses]);
-
-// ─── ADD HERE: Warn if saved place doesn't match any area in the list ───────────
-useEffect(() => {
-  if (areas.length > 0 && formData.place) {
-    const match = areas.find(a => a.areaName === formData.place);
-    if (!match) {
-      console.warn("Saved place not found in areas list:", formData.place);
+    if (formData.courseId && courses.length > 0) {
+      fetchCourseDetails(formData.courseId);
     }
-  }
-}, [areas]);
+  }, [formData.courseId, courses]);
 
-  // ─── Fetch the existing admission ────────────────────────────────────────
+  // ─── Fetch existing admission ─────────────────────────────────────────────
   const fetchAdmission = async () => {
     try {
       setLoading(true);
@@ -159,65 +107,69 @@ useEffect(() => {
       if (response.data.success) {
         const d = response.data.data;
 
+        // ── FIX: MongoDB may return courseId as a populated object ──
+        // { _id: "abc123", courseFullName: "BCA" } — extract just the _id string
+        const rawCourseId = d.courseId;
+        const resolvedCourseId =
+          rawCourseId && typeof rawCourseId === "object"
+            ? rawCourseId._id?.toString() || ""
+            : rawCourseId?.toString() || "";
+
         const formatDate = (val) => {
           if (!val) return "";
           try {
             const dt = new Date(val);
             return isNaN(dt.getTime()) ? "" : dt.toISOString().split("T")[0];
-          } catch {
-            return "";
-          }
+          } catch { return ""; }
         };
 
         setFormData({
-          admissionNo: d.admissionNo || "",
-          admissionBy: d.admissionBy || "Admin",
-          admissionDate: formatDate(d.admissionDate),
-          enquiryNo: d.enquiryNo || "",
-          fullName: d.fullName || "",
-          dateOfBirth: formatDate(d.dateOfBirth),
-          gender: d.gender || "",
-          fatherName: d.fatherName || "",
-          motherName: d.motherName || "",
-          email: d.email || "",
-          mobileNumber: d.mobileNumber || "",
-          fatherNumber: d.fatherNumber || "",
-          motherNumber: d.motherNumber || "",
-          aadharNumber: d.aadharNumber || "",
-          place: d.place || "",
-          address: d.address || "",
-          city: d.city || "",
-          state: d.state || "",
-          pincode: d.pincode || "",
+          admissionNo:       d.admissionNo || "",
+          admissionBy:       d.admissionBy || "Admin",
+          admissionDate:     formatDate(d.admissionDate),
+          enquiryNo:         d.enquiryNo || "",
+          fullName:          d.fullName || "",
+          dateOfBirth:       formatDate(d.dateOfBirth),
+          gender:            d.gender || "",
+          fatherName:        d.fatherName || "",
+          motherName:        d.motherName || "",
+          email:             d.email || "",
+          mobileNumber:      d.mobileNumber || "",
+          fatherNumber:      d.fatherNumber || "",
+          motherNumber:      d.motherNumber || "",
+          aadharNumber:      d.aadharNumber || "",
+          place:             d.place || "",
+          address:           d.address || "",
+          city:              d.city || "",
+          state:             d.state || "",
+          pincode:           d.pincode || "",
           lastQualification: d.lastQualification || "",
-          yearOfPassing: d.yearOfPassing || "",
-          interestedCourse: d.course || d.interestedCourse || "",
-          courseId: d.courseId || "",
-          specialization: d.specialization || "",
-          preferredBatch: d.batchTime || d.preferredBatch || "",
-          facultyAllot: d.facultyAllot || "",
-          cast: d.cast || "",
-          speciallyAbled: d.speciallyAbled || false,
-          referenceName: d.referenceName || "",
-          referenceContact: d.referenceContact || "",
+          yearOfPassing:     d.yearOfPassing || "",
+          interestedCourse:  d.course || d.interestedCourse || "",
+          courseId:          resolvedCourseId,   // ← plain string _id
+          specialization:    d.specialization || "",
+          preferredBatch:    d.batchTime || d.preferredBatch || "",
+          facultyAllot:      d.facultyAllot || "",
+          cast:              d.cast || "",
+          speciallyAbled:    d.speciallyAbled || false,
+          referenceName:     d.referenceName || "",
+          referenceContact:  d.referenceContact || "",
           referenceRelation: d.referenceRelation || "",
-          remarks: d.remarks || "",
-          // Scholarship
-          hasScholarship: d.hasScholarship || false,
-          scholarshipApplied: d.scholarship?.applied || false,
-          scholarshipId: d.scholarship?.scholarshipId || "",
-          scholarshipName: d.scholarship?.scholarshipName || "",
-          scholarshipCode: d.scholarship?.scholarshipCode || "",
-          originalTotalFee: d.scholarship?.originalTotalFee || 0,
-          originalMonthlyFee: d.scholarship?.originalMonthlyFee || 0,
-          scholarshipValue: d.scholarship?.scholarshipValue || 0,
-          finalTotalFee: d.scholarship?.finalTotalFee || d.totalFees || 0,
-          finalMonthlyFee: d.scholarship?.finalMonthlyFee || 0,
-          scholarshipPercent: d.scholarship?.percent || 0,
+          remarks:           d.remarks || "",
+          hasScholarship:       d.hasScholarship || false,
+          scholarshipApplied:   d.scholarship?.applied || false,
+          scholarshipId:        d.scholarship?.scholarshipId || "",
+          scholarshipName:      d.scholarship?.scholarshipName || "",
+          scholarshipCode:      d.scholarship?.scholarshipCode || "",
+          originalTotalFee:     d.scholarship?.originalTotalFee || 0,
+          originalMonthlyFee:   d.scholarship?.originalMonthlyFee || 0,
+          scholarshipValue:     d.scholarship?.scholarshipValue || 0,
+          finalTotalFee:        d.scholarship?.finalTotalFee || d.totalFees || 0,
+          finalMonthlyFee:      d.scholarship?.finalMonthlyFee || 0,
+          scholarshipPercent:   d.scholarship?.percent || 0,
           scholarshipDocuments: d.scholarship?.documents || [],
         });
 
-        // Show existing photo
         if (d.photo) setPhotoPreview(d.photo);
       } else {
         throw new Error(response.data.message || "Failed to load admission");
@@ -231,11 +183,10 @@ useEffect(() => {
   };
 
   const fetchCourseDetails = async (courseId) => {
+    if (!courseId) return;
     try {
       const response = await courseAPI.getCourse(courseId);
-      if (response.data.success) {
-        setSelectedCourseDetails(response.data.data);
-      }
+      if (response.data.success) setSelectedCourseDetails(response.data.data);
     } catch (err) {
       console.error("Failed to fetch course details:", err);
     }
@@ -283,7 +234,6 @@ useEffect(() => {
     }
   };
 
-  // ─── Photo upload ─────────────────────────────────────────────────────────
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -297,218 +247,131 @@ useEffect(() => {
     reader.readAsDataURL(file);
   };
 
-  // ─── Helpers ──────────────────────────────────────────────────────────────
-  const validatePhoneFormat = (phone) => {
-    const d = phone.replace(/\D/g, "");
-    if (d.length !== 10) return "Phone number must be exactly 10 digits";
-    if (!/^[6-9]\d{9}$/.test(d)) return "Phone number must start with 6, 7, 8, or 9";
-    return null;
-  };
-
   const castOptions = [
-    { value: "general", label: "General" },
-    { value: "sc", label: "SC" },
-    { value: "st", label: "ST" },
-    { value: "obc", label: "OBC" },
+    { value: "general",  label: "General" },
+    { value: "sc",       label: "SC" },
+    { value: "st",       label: "ST" },
+    { value: "obc",      label: "OBC" },
     { value: "minority", label: "Minority" },
   ];
 
   const relationOptions = [
-    { value: "", label: "Select Relation" },
-    { value: "parent", label: "Parent" },
+    { value: "",         label: "Select Relation" },
+    { value: "parent",   label: "Parent" },
     { value: "relative", label: "Relative" },
-    { value: "friend", label: "Friend" },
-    { value: "teacher", label: "Teacher" },
-    { value: "other", label: "Other" },
+    { value: "friend",   label: "Friend" },
+    { value: "teacher",  label: "Teacher" },
+    { value: "other",    label: "Other" },
   ];
 
-  // ─── Input handler ────────────────────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-
     if (errors[name]) setErrors((p) => ({ ...p, [name]: "" }));
 
-    if (type === "checkbox") {
-      setFormData((p) => ({ ...p, [name]: checked }));
-      return;
+    if (type === "checkbox") { setFormData((p) => ({ ...p, [name]: checked })); return; }
+    if (["mobileNumber","fatherNumber","motherNumber","referenceContact"].includes(name)) {
+      setFormData((p) => ({ ...p, [name]: value.replace(/\D/g, "").slice(0, 10) })); return;
     }
-
-    if (["mobileNumber", "fatherNumber", "motherNumber", "referenceContact"].includes(name)) {
-      setFormData((p) => ({ ...p, [name]: value.replace(/\D/g, "").slice(0, 10) }));
-      return;
-    }
-    if (name === "aadharNumber") {
-      setFormData((p) => ({ ...p, [name]: value.replace(/\D/g, "").slice(0, 12) }));
-      return;
-    }
-    if (name === "pincode") {
-      setFormData((p) => ({ ...p, [name]: value.replace(/\D/g, "").slice(0, 6) }));
-      return;
-    }
+    if (name === "aadharNumber") { setFormData((p) => ({ ...p, [name]: value.replace(/\D/g, "").slice(0, 12) })); return; }
+    if (name === "pincode")      { setFormData((p) => ({ ...p, [name]: value.replace(/\D/g, "").slice(0, 6) }));  return; }
     if (name === "courseId") {
       const selected = courses.find((c) => c._id === value);
-      setFormData((p) => ({
-        ...p,
-        courseId: value,
-        interestedCourse: selected ? selected.courseFullName : "",
-      }));
+      setFormData((p) => ({ ...p, courseId: value, interestedCourse: selected ? selected.courseFullName : "" }));
       return;
     }
-
     setFormData((p) => ({ ...p, [name]: value }));
   };
 
   const handleBlur = (e) => {
     const { name, value } = e.target;
-
-    if (["mobileNumber", "fatherNumber", "motherNumber", "referenceContact"].includes(name) && value) {
-      const err = validatePhoneFormat(value);
-      if (err) setErrors((p) => ({ ...p, [name]: err }));
-    }
-
-    const capitalize = ["fullName", "fatherName", "motherName", "place", "city", "state", "referenceName", "admissionBy"];
+    const capitalize = ["fullName","fatherName","motherName","place","city","state","referenceName","admissionBy"];
     if (capitalize.includes(name) && value.trim()) {
       const cap = value.toLowerCase().split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
       if (cap !== value) setFormData((p) => ({ ...p, [name]: cap }));
     }
   };
 
-  // ─── Scholarship ──────────────────────────────────────────────────────────
   const removeScholarship = () => {
     if (window.confirm("Remove the scholarship?")) {
       setFormData((p) => ({
         ...p,
-        hasScholarship: false,
-        scholarshipApplied: false,
-        scholarshipId: "",
-        scholarshipName: "",
-        scholarshipCode: "",
-        finalTotalFee: p.originalTotalFee,
-        finalMonthlyFee: p.originalMonthlyFee,
-        scholarshipDocuments: [],
-        scholarshipPercent: 0,
+        hasScholarship: false, scholarshipApplied: false,
+        scholarshipId: "", scholarshipName: "", scholarshipCode: "",
+        finalTotalFee: p.originalTotalFee, finalMonthlyFee: p.originalMonthlyFee,
+        scholarshipDocuments: [], scholarshipPercent: 0,
       }));
       setCalculatedFees(null);
     }
   };
 
-  // ─── Validation ───────────────────────────────────────────────────────────
-  const validateForm = () => {
-    const newErrors = {};
-    const required = [
-      "fullName", "dateOfBirth", "gender", "fatherName", "motherName",
-      "mobileNumber", "fatherNumber", "motherNumber", "aadharNumber",
-      "place", "address", "city", "state", "pincode",
-      "lastQualification", "yearOfPassing", "interestedCourse",
-      "preferredBatch", "facultyAllot", "cast",
-    ];
+  // ─── Submit ───────────────────────────────────────────────────────────────
+  const handleSubmit = async (e) => {
+    // ── FIX 1: ALWAYS prevent default — without this the page reloads ──
+    if (e && e.preventDefault) e.preventDefault();
 
+    // ── FIX 2: Inline validation — never call validateForm() here ──
+    // (setState is async; reading errors state right after setErrors is stale)
+    const formErrors = {};
+    const required = [
+      "fullName","dateOfBirth","gender","fatherName","motherName",
+      "mobileNumber","fatherNumber","motherNumber","aadharNumber",
+      "place","address","city","state","pincode",
+      "lastQualification","yearOfPassing","interestedCourse",
+      "preferredBatch","facultyAllot","cast",
+    ];
     required.forEach((f) => {
       if (!formData[f] || formData[f].toString().trim() === "")
-        newErrors[f] = `${f.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase())} is required`;
+        formErrors[f] = `${f.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())} is required`;
     });
+    if (!formData.admissionDate) formErrors.admissionDate = "Admission date is required";
+    if (formData.email?.trim() && !/\S+@\S+\.\S+/.test(formData.email)) formErrors.email = "Please enter a valid email";
+    if (formData.mobileNumber?.length !== 10) formErrors.mobileNumber = "Must be 10 digits";
+    if (formData.fatherNumber?.length !== 10) formErrors.fatherNumber = "Must be 10 digits";
+    if (formData.motherNumber?.length !== 10) formErrors.motherNumber = "Must be 10 digits";
+    if (formData.aadharNumber?.length !== 12) formErrors.aadharNumber = "Must be 12 digits";
+    if (formData.pincode?.length !== 6)       formErrors.pincode = "Must be 6 digits";
 
-    if (!formData.admissionDate) newErrors.admissionDate = "Admission date is required";
-    if (formData.email?.trim() && !/\S+@\S+\.\S+/.test(formData.email))
-      newErrors.email = "Please enter a valid email address";
-
-    if (formData.mobileNumber?.length !== 10) newErrors.mobileNumber = "Mobile number must be 10 digits";
-    if (formData.fatherNumber?.length !== 10) newErrors.fatherNumber = "Father's number must be 10 digits";
-    if (formData.motherNumber?.length !== 10) newErrors.motherNumber = "Mother's number must be 10 digits";
-    if (formData.aadharNumber?.length !== 12) newErrors.aadharNumber = "Aadhar number must be 12 digits";
-    if (formData.pincode?.length !== 6) newErrors.pincode = "Pincode must be 6 digits";
-
-    const currentYear = new Date().getFullYear();
-    if (formData.yearOfPassing && (formData.yearOfPassing < 2000 || formData.yearOfPassing > currentYear))
-      newErrors.yearOfPassing = `Year must be between 2000 and ${currentYear}`;
-
-    if (formData.referenceContact?.trim() && formData.referenceContact.length !== 10)
-      newErrors.referenceContact = "Reference contact must be 10 digits";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // ─── Submit (UPDATE) ──────────────────────────────────────────────────────
-  const handleSubmit = async (e) => {
-    const formErrors = {};
-const required = [
-  "fullName", "dateOfBirth", "gender", "fatherName", "motherName",
-  "mobileNumber", "fatherNumber", "motherNumber", "aadharNumber",
-  "place", "address", "city", "state", "pincode",
-  "lastQualification", "yearOfPassing", "interestedCourse",
-  "preferredBatch", "facultyAllot", "cast",
-];
-required.forEach((f) => {
-  if (!formData[f] || formData[f].toString().trim() === "")
-    formErrors[f] = `${f.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())} is required`;
-});
-if (!formData.admissionDate) formErrors.admissionDate = "Admission date is required";
-if (formData.email?.trim() && !/\S+@\S+\.\S+/.test(formData.email))
-  formErrors.email = "Please enter a valid email";
-if (formData.mobileNumber?.length !== 10) formErrors.mobileNumber = "Must be 10 digits";
-if (formData.fatherNumber?.length !== 10) formErrors.fatherNumber = "Must be 10 digits";
-if (formData.motherNumber?.length !== 10) formErrors.motherNumber = "Must be 10 digits";
-if (formData.aadharNumber?.length !== 12) formErrors.aadharNumber = "Must be 12 digits";
-if (formData.pincode?.length !== 6) formErrors.pincode = "Must be 6 digits";
-
-if (Object.keys(formErrors).length > 0) {
-  setErrors(formErrors);
-  const firstField = Object.keys(formErrors)[0];
-  const el = document.querySelector(`[name="${firstField}"]`);
-  if (el) { el.focus(); el.scrollIntoView({ behavior: "smooth", block: "center" }); }
-  return;
-}
+    if (Object.keys(formErrors).length > 0) {
+      setErrors(formErrors);
+      const firstField = Object.keys(formErrors)[0];
+      const el = document.querySelector(`[name="${firstField}"]`);
+      if (el) { el.focus(); el.scrollIntoView({ behavior: "smooth", block: "center" }); }
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       const updateData = {
-        fullName: formData.fullName,
-        dateOfBirth: formData.dateOfBirth,
-        gender: formData.gender,
-        fatherName: formData.fatherName,
-        motherName: formData.motherName,
-        email: formData.email || "",
-        mobileNumber: formData.mobileNumber,
-        fatherNumber: formData.fatherNumber,
-        motherNumber: formData.motherNumber,
-        aadharNumber: formData.aadharNumber,
-        place: formData.place,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        pincode: formData.pincode,
-        lastQualification: formData.lastQualification,
-        yearOfPassing: formData.yearOfPassing,
-        course: formData.interestedCourse,
-        courseId: formData.courseId,
+        fullName: formData.fullName, dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender, fatherName: formData.fatherName, motherName: formData.motherName,
+        email: formData.email || "", mobileNumber: formData.mobileNumber,
+        fatherNumber: formData.fatherNumber, motherNumber: formData.motherNumber,
+        aadharNumber: formData.aadharNumber, place: formData.place,
+        address: formData.address, city: formData.city, state: formData.state, pincode: formData.pincode,
+        lastQualification: formData.lastQualification, yearOfPassing: formData.yearOfPassing,
+        course: formData.interestedCourse, courseId: formData.courseId,
         specialization: formData.specialization || "",
-        batchTime: formData.preferredBatch,
-        facultyAllot: formData.facultyAllot,
-        cast: formData.cast,
-        speciallyAbled: formData.speciallyAbled,
+        batchTime: formData.preferredBatch, facultyAllot: formData.facultyAllot,
+        cast: formData.cast, speciallyAbled: formData.speciallyAbled,
         referenceName: formData.referenceName || "",
         referenceContact: formData.referenceContact || "",
         referenceRelation: formData.referenceRelation || "",
         remarks: formData.remarks || "",
-        admissionBy: formData.admissionBy,
-        admissionDate: formData.admissionDate,
+        admissionBy: formData.admissionBy, admissionDate: formData.admissionDate,
         hasScholarship: formData.hasScholarship,
-        scholarship: formData.hasScholarship
-          ? {
-              applied: true,
-              scholarshipName: formData.scholarshipName,
-              scholarshipCode: formData.scholarshipCode,
-              percent: formData.scholarshipPercent || 0,
-              type: "percentage",
-              originalTotalFee: formData.originalTotalFee,
-              originalMonthlyFee: formData.originalMonthlyFee,
-              scholarshipValue: formData.scholarshipValue,
-              finalTotalFee: formData.finalTotalFee,
-              finalMonthlyFee: formData.finalMonthlyFee,
-              documents: formData.scholarshipDocuments,
-            }
-          : null,
+        scholarship: formData.hasScholarship ? {
+          applied: true,
+          scholarshipName: formData.scholarshipName,
+          scholarshipCode: formData.scholarshipCode,
+          percent: formData.scholarshipPercent || 0,
+          type: "percentage",
+          originalTotalFee: formData.originalTotalFee,
+          originalMonthlyFee: formData.originalMonthlyFee,
+          scholarshipValue: formData.scholarshipValue,
+          finalTotalFee: formData.finalTotalFee,
+          finalMonthlyFee: formData.finalMonthlyFee,
+          documents: formData.scholarshipDocuments,
+        } : null,
         totalFees: formData.finalTotalFee || 0,
       };
 
@@ -528,12 +391,7 @@ if (Object.keys(formErrors).length > 0) {
 
       if (response.data.success) {
         alert("✅ Admission updated successfully!");
-        const user = JSON.parse(localStorage.getItem("user"));
-        const role = user?.role;
-        if (role === "faculty" || role === "instructor")
-          navigate("/faculty/front-office/admissions");
-        else
-          navigate("/admin/front-office/admissions");
+        navigate(`${basePath}/front-office/admissions`);
       } else {
         throw new Error(response.data.message || "Failed to update admission");
       }
@@ -541,8 +399,7 @@ if (Object.keys(formErrors).length > 0) {
       console.error("Update error:", err);
       if (err.response?.data?.errors) {
         const be = err.response.data.errors;
-        const msg = Object.keys(be).map((f) => `• ${f}: ${be[f].message || be[f]}`).join("\n");
-        alert(`Server validation failed:\n${msg}`);
+        alert(`Server validation failed:\n${Object.keys(be).map(f => `• ${f}: ${be[f].message || be[f]}`).join("\n")}`);
         const newErrors = {};
         Object.keys(be).forEach((f) => { newErrors[f] = be[f].message || "Invalid value"; });
         setErrors(newErrors);
@@ -554,7 +411,6 @@ if (Object.keys(formErrors).length > 0) {
     }
   };
 
-  // ─── Loading / Error states ────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="add-admission-container">
@@ -571,39 +427,26 @@ if (Object.keys(formErrors).length > 0) {
       <div className="add-admission-container">
         <div className="error-alert">
           <AlertCircle size={20} />
-          <div>
-            <strong>Failed to load admission</strong>
-            <p>{fetchError}</p>
-          </div>
+          <div><strong>Failed to load admission</strong><p>{fetchError}</p></div>
           <button onClick={fetchAdmission} className="btn-retry">Retry</button>
         </div>
       </div>
     );
   }
 
-  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="add-admission-container">
-      {/* Header */}
       <div className="page-header">
         <div>
           <h1>Edit Admission</h1>
-          <p>
-            Editing admission <strong>{formData.admissionNo}</strong> for{" "}
-            <strong>{formData.fullName}</strong>
-          </p>
+          <p>Editing <strong>{formData.admissionNo}</strong> — <strong>{formData.fullName}</strong></p>
         </div>
         <div className="header-actions">
           <Link to={`${basePath}/front-office/admissions`} className="btn-secondary">
             <X size={18} /> Cancel
           </Link>
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting || loadingSetup}
-            className="btn-primary"
-          >
-            <Save size={18} />
-            {isSubmitting ? "Saving..." : "Save Changes"}
+          <button onClick={handleSubmit} disabled={isSubmitting || loadingSetup} className="btn-primary">
+            <Save size={18} />{isSubmitting ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>
@@ -616,20 +459,16 @@ if (Object.keys(formErrors).length > 0) {
       )}
 
       <form onSubmit={handleSubmit} className="admission-form">
-        {/* ── Admission Details ─────────────────────────────────────── */}
+
         <FormSection title="Admission Details" icon={FileDigit}>
           <div className="admission-details-grid">
             <div className="student-photo-section">
               <div className="photo-upload-container">
                 <div className="photo-preview">
-                  {photoPreview ? (
-                    <img src={photoPreview} alt="Student Preview" />
-                  ) : (
-                    <div className="photo-placeholder">
-                      <Camera size={48} />
-                      <span>Student Photo</span>
-                    </div>
-                  )}
+                  {photoPreview
+                    ? <img src={photoPreview} alt="Student Preview" />
+                    : <div className="photo-placeholder"><Camera size={48} /><span>Student Photo</span></div>
+                  }
                 </div>
                 <div className="photo-upload-controls">
                   <label className="photo-upload-btn">
@@ -640,7 +479,6 @@ if (Object.keys(formErrors).length > 0) {
                 </div>
               </div>
             </div>
-
             <div className="admission-info-section">
               <div className="form-grid">
                 <div className="form-group">
@@ -657,10 +495,7 @@ if (Object.keys(formErrors).length > 0) {
                 </div>
                 <div className="form-group">
                   <label>Admission Date *</label>
-                  <input
-                    type="date" name="admissionDate" value={formData.admissionDate}
-                    onChange={handleChange} className={errors.admissionDate ? "error-field" : ""}
-                  />
+                  <input type="date" name="admissionDate" value={formData.admissionDate} onChange={handleChange} className={errors.admissionDate ? "error-field" : ""} />
                   {errors.admissionDate && <span className="error-text">{errors.admissionDate}</span>}
                 </div>
               </div>
@@ -668,7 +503,6 @@ if (Object.keys(formErrors).length > 0) {
           </div>
         </FormSection>
 
-        {/* ── Personal Information ──────────────────────────────────── */}
         <FormSection title="Personal Information" icon={User}>
           <div className="form-grid">
             <div className="form-group">
@@ -704,7 +538,6 @@ if (Object.keys(formErrors).length > 0) {
           </div>
         </FormSection>
 
-        {/* ── Contact Information ───────────────────────────────────── */}
         <FormSection title="Contact Information" icon={Phone}>
           <div className="form-grid">
             <div className="form-group">
@@ -736,9 +569,13 @@ if (Object.keys(formErrors).length > 0) {
               <label>Place *</label>
               <select name="place" value={formData.place} onChange={handleChange} className={errors.place ? "error-field" : ""} disabled={loadingSetup}>
                 <option value="">{loadingSetup ? "Loading..." : "Select Place/Area"}</option>
+                {/* Fallback: if saved value isn't in the list yet, show it anyway */}
+                {formData.place && !areas.find(a => a.areaName === formData.place) && (
+                  <option value={formData.place}>{formData.place}</option>
+                )}
                 {areas.map((area) => (
                   <option key={area._id} value={area.areaName}>
-                    {area.areaName} {area.city ? `(${area.city})` : ""}
+                    {area.areaName}{area.city ? ` (${area.city})` : ""}
                   </option>
                 ))}
               </select>
@@ -767,13 +604,16 @@ if (Object.keys(formErrors).length > 0) {
           </div>
         </FormSection>
 
-        {/* ── Academic Information ──────────────────────────────────── */}
         <FormSection title="Academic Information" icon={BookOpen}>
           <div className="form-grid">
             <div className="form-group">
               <label>Last Qualification *</label>
               <select name="lastQualification" value={formData.lastQualification} onChange={handleChange} className={errors.lastQualification ? "error-field" : ""} disabled={loadingSetup}>
                 <option value="">{loadingSetup ? "Loading..." : "Select Qualification"}</option>
+                {/* Fallback for saved value */}
+                {formData.lastQualification && !qualifications.find(q => q.qualificationName === formData.lastQualification) && (
+                  <option value={formData.lastQualification}>{formData.lastQualification}</option>
+                )}
                 {qualifications.map((q) => (
                   <option key={q._id} value={q.qualificationName}>{q.qualificationName}</option>
                 ))}
@@ -788,7 +628,6 @@ if (Object.keys(formErrors).length > 0) {
           </div>
         </FormSection>
 
-        {/* ── Course Information ────────────────────────────────────── */}
         <FormSection title="Course Information" icon={BookOpen}>
           <div className="form-grid">
             <div className="form-group">
@@ -804,7 +643,6 @@ if (Object.keys(formErrors).length > 0) {
               {errors.interestedCourse && <span className="error-text">{errors.interestedCourse}</span>}
             </div>
 
-            {/* Scholarship button */}
             {formData.courseId && (
               <div className="form-group scholarship-action">
                 {!formData.hasScholarship ? (
@@ -829,6 +667,10 @@ if (Object.keys(formErrors).length > 0) {
               <label>Batch *</label>
               <select name="preferredBatch" value={formData.preferredBatch} onChange={handleChange} className={errors.preferredBatch ? "error-field" : ""} disabled={loadingSetup}>
                 <option value="">{loadingSetup ? "Loading..." : "Select Batch"}</option>
+                {/* Fallback for saved batch */}
+                {formData.preferredBatch && !batches.find(b => (b.displayName || `${b.startTime} to ${b.endTime}`) === formData.preferredBatch) && (
+                  <option value={formData.preferredBatch}>{formData.preferredBatch}</option>
+                )}
                 {batches.map((b) => {
                   const display = b.displayName || `${b.startTime} to ${b.endTime}`;
                   return <option key={b._id} value={display}>{b.batchName} ({display})</option>;
@@ -841,6 +683,10 @@ if (Object.keys(formErrors).length > 0) {
               <label>Faculty Allotment *</label>
               <select name="facultyAllot" value={formData.facultyAllot} onChange={handleChange} className={errors.facultyAllot ? "error-field" : ""} disabled={loadingFaculty}>
                 <option value="">{loadingFaculty ? "Loading..." : "Select Faculty"}</option>
+                {/* Fallback for saved faculty */}
+                {formData.facultyAllot && formData.facultyAllot !== "not_allotted" && !facultyMembers.find(f => f.facultyName === formData.facultyAllot) && (
+                  <option value={formData.facultyAllot}>{formData.facultyAllot}</option>
+                )}
                 {facultyMembers.map((f) => (
                   <option key={f._id} value={f.facultyName}>
                     {f.facultyName} ({f.facultyNo}){f.courseAssigned ? ` - ${f.courseAssigned}` : ""}
@@ -854,7 +700,6 @@ if (Object.keys(formErrors).length > 0) {
           </div>
         </FormSection>
 
-        {/* ── Other Information ─────────────────────────────────────── */}
         <FormSection title="Other Information" icon={Hash}>
           <div className="form-grid">
             <div className="form-group">
@@ -874,7 +719,6 @@ if (Object.keys(formErrors).length > 0) {
           </div>
         </FormSection>
 
-        {/* ── Reference (Optional) ──────────────────────────────────── */}
         <FormSection title="Reference (Optional)" icon={User}>
           <div className="form-grid">
             <div className="form-group">
@@ -895,7 +739,6 @@ if (Object.keys(formErrors).length > 0) {
           </div>
         </FormSection>
 
-        {/* ── Remarks ───────────────────────────────────────────────── */}
         <FormSection title="Remarks (Optional)" icon={AlertCircle}>
           <div className="form-grid">
             <div className="form-group full-width">
@@ -905,18 +748,14 @@ if (Object.keys(formErrors).length > 0) {
           </div>
         </FormSection>
 
-        {/* ── Actions ───────────────────────────────────────────────── */}
         <div className="form-actions">
-          <Link to={`${basePath}/front-office/admissions`} className="btn-reset">
-            Cancel
-          </Link>
+          <Link to={`${basePath}/front-office/admissions`} className="btn-reset">Cancel</Link>
           <button type="submit" disabled={isSubmitting || loadingSetup} className="btn-submit">
             {isSubmitting ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </form>
 
-      {/* ── Scholarship Modal ──────────────────────────────────────── */}
       {showScholarshipModal && (
         <div className="modal-overlay">
           <div className="modal-content scholarship-modal" style={{ maxWidth: "450px" }}>
@@ -930,55 +769,30 @@ if (Object.keys(formErrors).length > 0) {
               <div className="form-group">
                 <label>Scholarship Percentage (%)</label>
                 <input
-                  type="number"
-                  value={scholarshipPercent}
+                  type="number" value={scholarshipPercent} min="0" max="100" step="any"
+                  placeholder="e.g. 25"
                   onChange={(e) => {
                     const pct = parseFloat(e.target.value) || 0;
                     setScholarshipPercent(pct);
                     if (selectedCourseDetails && pct > 0) {
                       const base = selectedCourseDetails.totalFee || 0;
-                      const dur = selectedCourseDetails.duration || 1;
+                      const dur  = selectedCourseDetails.duration || 1;
                       const disc = (base * pct) / 100;
                       const final = base - disc;
-                      setCalculatedFees({
-                        originalTotal: base,
-                        originalMonthly: selectedCourseDetails.monthlyFee || 0,
-                        finalTotal: final,
-                        finalMonthly: final / dur,
-                        scholarshipValue: disc,
-                        savings: disc,
-                        percent: pct,
-                      });
-                    } else {
-                      setCalculatedFees(null);
-                    }
+                      setCalculatedFees({ originalTotal: base, originalMonthly: selectedCourseDetails.monthlyFee || 0, finalTotal: final, finalMonthly: final / dur, scholarshipValue: disc, savings: disc, percent: pct });
+                    } else { setCalculatedFees(null); }
                   }}
-                  placeholder="e.g. 25"
-                  min="0" max="100" step="any"
                   style={{ width: "100%", padding: "9px 12px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px" }}
                 />
               </div>
-
               {calculatedFees && calculatedFees.percent > 0 && (
                 <div style={{ marginTop: "16px", padding: "16px", background: "#eff6ff", borderRadius: "8px", border: "1px solid #bfdbfe" }}>
                   <strong style={{ color: "#1d4ed8" }}>Fee Calculation</strong>
                   <div style={{ marginTop: "10px", fontSize: "14px", display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#6b7280" }}>Original Total:</span>
-                      <span>₹{calculatedFees.originalTotal}</span>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", color: "#16a34a" }}>
-                      <span>Scholarship ({calculatedFees.percent}%):</span>
-                      <span>- ₹{calculatedFees.scholarshipValue.toFixed(2)}</span>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "600", borderTop: "1px solid #bfdbfe", paddingTop: "6px" }}>
-                      <span>Final Total:</span>
-                      <span style={{ color: "#1d4ed8" }}>₹{calculatedFees.finalTotal.toFixed(2)}</span>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#6b7280" }}>New Monthly Fee:</span>
-                      <span style={{ color: "#16a34a", fontWeight: "600" }}>₹{calculatedFees.finalMonthly.toFixed(2)}</span>
-                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#6b7280" }}>Original Total:</span><span>₹{calculatedFees.originalTotal}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#16a34a" }}><span>Scholarship ({calculatedFees.percent}%):</span><span>- ₹{calculatedFees.scholarshipValue.toFixed(2)}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "600", borderTop: "1px solid #bfdbfe", paddingTop: "6px" }}><span>Final Total:</span><span style={{ color: "#1d4ed8" }}>₹{calculatedFees.finalTotal.toFixed(2)}</span></div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#6b7280" }}>New Monthly:</span><span style={{ color: "#16a34a", fontWeight: "600" }}>₹{calculatedFees.finalMonthly.toFixed(2)}</span></div>
                   </div>
                 </div>
               )}
@@ -986,12 +800,13 @@ if (Object.keys(formErrors).length > 0) {
             <div className="modal-footer">
               <button onClick={() => { setShowScholarshipModal(false); setScholarshipPercent(""); setCalculatedFees(null); }} className="btn-secondary">Cancel</button>
               <button
+                disabled={!calculatedFees || calculatedFees.percent <= 0}
+                className="btn-primary"
                 onClick={() => {
                   if (calculatedFees && calculatedFees.percent > 0) {
                     setFormData((p) => ({
                       ...p,
-                      hasScholarship: true,
-                      scholarshipApplied: true,
+                      hasScholarship: true, scholarshipApplied: true,
                       scholarshipName: `${calculatedFees.percent}% Scholarship`,
                       scholarshipCode: `SCH${calculatedFees.percent}`,
                       originalTotalFee: calculatedFees.originalTotal,
@@ -1007,8 +822,6 @@ if (Object.keys(formErrors).length > 0) {
                     alert("Please enter a valid percentage");
                   }
                 }}
-                disabled={!calculatedFees || calculatedFees.percent <= 0}
-                className="btn-primary"
               >
                 Apply Scholarship
               </button>
