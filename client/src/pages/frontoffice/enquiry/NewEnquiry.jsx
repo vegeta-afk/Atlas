@@ -421,7 +421,7 @@ const NewEnquiry = () => {
       {/* Header */}
       <div className="page-header">
         <div className="header-left">
-          <button onClick={handleCancel} className="back-link" type="button">
+          <button onClick={() => navigate(-1)} className="back-link" type="button">
   <X size={20} />
   Cancel
 </button>
