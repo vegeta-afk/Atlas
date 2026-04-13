@@ -406,15 +406,17 @@ const NewEnquiry = () => {
   };
 
   const handleConvertToAdmission = () => {
-    if (!validateForm()) {
-      alert("Please fill all required fields before converting to admission.");
-      return;
-    }
+  if (!validateForm()) {
+    alert("Please fill all required fields before converting to admission.");
+    return;
+  }
 
-    localStorage.setItem("enquiryData", JSON.stringify(formData));
-    window.location.href =
-      `${basePath}/front-office/admissions/add?fromEnquiry=true`;
-  };
+  const role = loggedInUser?.role;
+  const prefix = role === "faculty" || role === "instructor" ? "/faculty" : "/admin";
+  
+  localStorage.setItem("enquiryData", JSON.stringify(formData));
+  navigate(`${prefix}/front-office/admissions/add?fromEnquiry=true`);
+};
 
   return (
     <div className="new-enquiry-container">
