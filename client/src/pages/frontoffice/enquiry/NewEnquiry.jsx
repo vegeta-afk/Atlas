@@ -15,6 +15,7 @@ import { Link } from "react-router-dom";
 import "./NewEnquiry.css";
 
 const NewEnquiry = () => {
+  const basePath = "";
   const loggedInUser = JSON.parse(localStorage.getItem("user"));
   
   const [formData, setFormData] = useState({
