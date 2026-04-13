@@ -316,48 +316,98 @@ scholarship: hasScholarship && scholarshipBody
 
 exports.updateAdmission = async (req, res) => {
   try {
-
+    // ── Parse FormData strings ──────────────────────────────────────
     if (typeof req.body.scholarship === "string") {
-      try {
-        req.body.scholarship = JSON.parse(req.body.scholarship);
-      } catch (e) {
-        req.body.scholarship = undefined; // invalid string, ignore it
-      }
+      try { req.body.scholarship = JSON.parse(req.body.scholarship); }
+      catch (e) { req.body.scholarship = undefined; }
     }
-
-    // ── FIX: Parse hasScholarship boolean (FormData sends strings) ──
     if (typeof req.body.hasScholarship === "string") {
       req.body.hasScholarship = req.body.hasScholarship === "true";
     }
-    const admission = await Admission.findById(req.params.id);
 
+    const admission = await Admission.findById(req.params.id);
     if (!admission) {
       return res.status(404).json({ success: false, message: "Admission not found" });
     }
 
     const oldStatus = admission.status;
 
-    // Handle photo upload if a new file was sent
+    // ── Handle photo upload ─────────────────────────────────────────
     if (req.file) {
       const { uploadToCloudinary } = require("../config/cloudinary");
       const result = await uploadToCloudinary(req.file.buffer);
       req.body.photo = result.secure_url;
     }
 
-    // FIX: Never let scholarship: null reach Mongoose — remove key if null/falsy
+    // ── Clean bodyToApply ───────────────────────────────────────────
     const bodyToApply = { ...req.body };
     if (bodyToApply.scholarship === null || bodyToApply.scholarship === undefined) {
-      delete bodyToApply.scholarship;   // ← don't touch the existing subdocument
+      delete bodyToApply.scholarship;
     }
-    // If hasScholarship explicitly false, unset scholarship cleanly
-    if (bodyToApply.hasScholarship === false || bodyToApply.hasScholarship === "false") {
-  admission.set("scholarship", null);
-}
+    if (bodyToApply.hasScholarship === false) {
+      admission.set("scholarship", null);
+    }
 
     Object.assign(admission, bodyToApply);
     await admission.save();
 
-    // Auto-create student if status changed to admitted/approved
+    // ── SYNC STUDENT ────────────────────────────────────────────────
+    try {
+      const student = await Student.findOne({ admissionId: admission._id });
+      if (student) {
+        // Personal info
+        student.fullName       = admission.fullName;
+        student.dateOfBirth    = admission.dateOfBirth;
+        student.gender         = admission.gender;
+        student.fatherName     = admission.fatherName;
+        student.motherName     = admission.motherName;
+        student.email          = admission.email;
+        student.mobileNumber   = admission.mobileNumber;
+        student.fatherNumber   = admission.fatherNumber;
+        student.motherNumber   = admission.motherNumber;
+        student.aadharNumber   = admission.aadharNumber;
+
+        // Address
+        student.address        = admission.address;
+        student.city           = admission.city;
+        student.state          = admission.state;
+        student.pincode        = admission.pincode;
+
+        // Course & batch
+        student.course         = admission.course;
+        student.courseCode     = admission.courseId || student.courseCode;
+        student.batchTime      = admission.batchTime;
+        student.facultyAllot   = admission.facultyAllot;
+
+        // Other
+        student.cast           = admission.cast;
+        student.speciallyAbled = admission.speciallyAbled;
+        student.remarks        = admission.remarks;
+
+        // ── Photo sync (this fixes STU20260070's old photo) ──
+        if (admission.photo) {
+          student.photo = admission.photo;
+        }
+
+        // ── Scholarship/fees sync ──
+        if (admission.hasScholarship && admission.scholarship) {
+          student.hasScholarship = true;
+          student.scholarship    = admission.scholarship;
+          student.totalCourseFee = admission.scholarship.finalTotalFee  || student.totalCourseFee;
+          student.monthlyFee     = admission.scholarship.finalMonthlyFee || student.monthlyFee;
+          student.balanceAmount  = student.totalCourseFee - (student.paidAmount || 0);
+        }
+
+        await student.save();
+        console.log(`✅ Student ${student.studentId} synced with admission`);
+      }
+    } catch (syncError) {
+      console.error("⚠️ Student sync failed:", syncError.message);
+      // Don't fail the whole request if sync fails
+    }
+    // ───────────────────────────────────────────────────────────────
+
+    // ── Auto-create student if status changed ───────────────────────
     if (
       oldStatus !== "approved" && oldStatus !== "admitted" &&
       (admission.status === "approved" || admission.status === "admitted")
@@ -373,6 +423,7 @@ exports.updateAdmission = async (req, res) => {
     }
 
     res.json({ success: true, message: "Admission updated successfully", data: admission });
+
   } catch (error) {
     console.error("Update admission error:", error);
     if (error.name === "ValidationError") {

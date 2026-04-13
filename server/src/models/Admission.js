@@ -103,6 +103,12 @@ const admissionSchema = new mongoose.Schema(
       match: [/^\d{6}$/, "Please enter a valid 6-digit pincode"],
     },
 
+    place: {                    // ← ADD THIS
+  type: String,
+  trim: true,
+  default: "",
+},
+
     courseType: {
   type: String,
   enum: ['primary', 'additional'],
@@ -137,6 +143,12 @@ photo: {
       type: String,
       trim: true,
     },
+
+    courseId: {                 // ← ADD THIS
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "Course",
+  default: null,
+},
     batchTime: {
       type: String,
       trim: true,
