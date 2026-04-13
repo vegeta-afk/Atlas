@@ -37,12 +37,16 @@ const FormSection = ({ title, icon: Icon, children }) => (
 const EditAdmission = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const basePath = "";
+  const user = JSON.parse(localStorage.getItem("user"));
+const basePath = user?.role === "faculty" || user?.role === "instructor"
+  ? "/faculty"
+  : "/admin";
 
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [studentPhoto, setStudentPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
+  
 
   // Setup data
   const [qualifications, setQualifications] = useState([]);

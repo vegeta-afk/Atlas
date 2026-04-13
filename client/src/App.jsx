@@ -88,7 +88,6 @@ function App() {
           <Route path="admissions" element={<AdmissionList />} />
           <Route path="admissions/add" element={<AddAdmission />} />
           <Route path="admissions/view/:id" element={<ViewAdmission />} />
-          <Route path="admissions/edit/:id" element={<AddAdmission />} />
           <Route path="calls" element={<CallLogs />} />
            <Route path="admissions/edit/:id" element={<EditAdmission />} />
 
