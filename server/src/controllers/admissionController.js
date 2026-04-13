@@ -205,6 +205,7 @@ const hasScholarship = req.body.hasScholarship === true || req.body.hasScholarsh
       yearOfPassing: req.body.yearOfPassing,
       schoolCollege: req.body.schoolCollege || "",
       course: req.body.course || req.body.interestedCourse,
+      courseId: req.body.courseId || null,
       specialization: req.body.specialization || "",
       batchTime: req.body.batchTime || req.body.preferredBatch,
       facultyAllot: req.body.facultyAllot || "Not Allotted",
@@ -315,6 +316,19 @@ scholarship: hasScholarship && scholarshipBody
 
 exports.updateAdmission = async (req, res) => {
   try {
+
+    if (typeof req.body.scholarship === "string") {
+      try {
+        req.body.scholarship = JSON.parse(req.body.scholarship);
+      } catch (e) {
+        req.body.scholarship = undefined; // invalid string, ignore it
+      }
+    }
+
+    // ── FIX: Parse hasScholarship boolean (FormData sends strings) ──
+    if (typeof req.body.hasScholarship === "string") {
+      req.body.hasScholarship = req.body.hasScholarship === "true";
+    }
     const admission = await Admission.findById(req.params.id);
 
     if (!admission) {
@@ -337,8 +351,8 @@ exports.updateAdmission = async (req, res) => {
     }
     // If hasScholarship explicitly false, unset scholarship cleanly
     if (bodyToApply.hasScholarship === false || bodyToApply.hasScholarship === "false") {
-      admission.scholarship = undefined;
-    }
+  admission.set("scholarship", null);
+}
 
     Object.assign(admission, bodyToApply);
     await admission.save();
