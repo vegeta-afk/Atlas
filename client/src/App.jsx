@@ -30,6 +30,7 @@ import EditAdmission from "./pages/frontoffice/admission/EditAdmission";
 import EnquiryList from "./pages/frontoffice/enquiry/EnquiryList";
 import NewEnquiry from "./pages/frontoffice/enquiry/NewEnquiry";
 import ViewEnquiry from "./pages/frontoffice/enquiry/ViewEnquiry";
+import EditEnquiry from "./pages/frontoffice/enquiry/EditEnquiry";
 
 // Course components
 import CourseList from "./pages/frontoffice/setup/Courses/CourseList";
@@ -85,6 +86,7 @@ function App() {
           <Route path="enquiries" element={<EnquiryList />} />
           <Route path="enquiries/add" element={<NewEnquiry />} />
           <Route path="enquiries/view/:id" element={<ViewEnquiry />} />
+          <Route path="enquiries/edit/:id" element={<EditEnquiry />} />
           <Route path="admissions" element={<AdmissionList />} />
           <Route path="admissions/add" element={<AddAdmission />} />
           <Route path="admissions/view/:id" element={<ViewAdmission />} />
@@ -151,6 +153,7 @@ function App() {
           <Route path="enquiries" element={<EnquiryList />} />
           <Route path="enquiries/add" element={<NewEnquiry />} />
           <Route path="enquiries/view/:id" element={<ViewEnquiry />} />
+          <Route path="enquiries/edit/:id" element={<EditEnquiry />} />
           <Route path="admissions" element={<AdmissionList />} />
           <Route path="admissions/add" element={<AddAdmission />} />
           <Route path="admissions/view/:id" element={<ViewAdmission />} />
