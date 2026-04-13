@@ -1034,10 +1034,10 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
           </p>
         </div>
         <div className="header-actions">
-          <Link to={`${basePath}/front-office/admissions`} className="btn-secondary">
-            <X size={18} />
-            Cancel
-          </Link>
+          <button onClick={() => navigate(-1)} className="btn-secondary" type="button">
+  <X size={18} />
+  Cancel
+</button>
           <button
             onClick={handleSubmit}
             disabled={isSubmitting || loadingSetup}
