@@ -133,6 +133,22 @@ const basePath = user?.role === "faculty" || user?.role === "instructor"
     if (formData.courseId) fetchCourseDetails(formData.courseId);
   }, [formData.courseId]);
 
+  useEffect(() => {
+  if (courses.length > 0 && formData.courseId && !selectedCourseDetails) {
+    fetchCourseDetails(formData.courseId);
+  }
+}, [courses]);
+
+// ─── ADD HERE: Warn if saved place doesn't match any area in the list ───────────
+useEffect(() => {
+  if (areas.length > 0 && formData.place) {
+    const match = areas.find(a => a.areaName === formData.place);
+    if (!match) {
+      console.warn("Saved place not found in areas list:", formData.place);
+    }
+  }
+}, [areas]);
+
   // ─── Fetch the existing admission ────────────────────────────────────────
   const fetchAdmission = async () => {
     try {
@@ -415,15 +431,34 @@ const basePath = user?.role === "faculty" || user?.role === "instructor"
 
   // ─── Submit (UPDATE) ──────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) {
-      const firstField = Object.keys(errors)[0];
-      if (firstField) {
-        const el = document.querySelector(`[name="${firstField}"]`);
-        if (el) { el.focus(); el.scrollIntoView({ behavior: "smooth", block: "center" }); }
-      }
-      return;
-    }
+    const formErrors = {};
+const required = [
+  "fullName", "dateOfBirth", "gender", "fatherName", "motherName",
+  "mobileNumber", "fatherNumber", "motherNumber", "aadharNumber",
+  "place", "address", "city", "state", "pincode",
+  "lastQualification", "yearOfPassing", "interestedCourse",
+  "preferredBatch", "facultyAllot", "cast",
+];
+required.forEach((f) => {
+  if (!formData[f] || formData[f].toString().trim() === "")
+    formErrors[f] = `${f.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())} is required`;
+});
+if (!formData.admissionDate) formErrors.admissionDate = "Admission date is required";
+if (formData.email?.trim() && !/\S+@\S+\.\S+/.test(formData.email))
+  formErrors.email = "Please enter a valid email";
+if (formData.mobileNumber?.length !== 10) formErrors.mobileNumber = "Must be 10 digits";
+if (formData.fatherNumber?.length !== 10) formErrors.fatherNumber = "Must be 10 digits";
+if (formData.motherNumber?.length !== 10) formErrors.motherNumber = "Must be 10 digits";
+if (formData.aadharNumber?.length !== 12) formErrors.aadharNumber = "Must be 12 digits";
+if (formData.pincode?.length !== 6) formErrors.pincode = "Must be 6 digits";
+
+if (Object.keys(formErrors).length > 0) {
+  setErrors(formErrors);
+  const firstField = Object.keys(formErrors)[0];
+  const el = document.querySelector(`[name="${firstField}"]`);
+  if (el) { el.focus(); el.scrollIntoView({ behavior: "smooth", block: "center" }); }
+  return;
+}
 
     setIsSubmitting(true);
     try {
