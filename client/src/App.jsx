@@ -24,6 +24,7 @@ import CallLogs from "./pages/frontoffice/calls/CallLogs";
 import AdmissionList from "./pages/frontoffice/admission/AdmissionList";
 import AddAdmission from "./pages/frontoffice/admission/AddAdmission";
 import ViewAdmission from "./pages/frontoffice/admission/ViewAdmission";
+import EditAdmission from "./pages/frontoffice/admission/EditAdmission";
 
 // Enquiry components
 import EnquiryList from "./pages/frontoffice/enquiry/EnquiryList";
@@ -89,6 +90,8 @@ function App() {
           <Route path="admissions/view/:id" element={<ViewAdmission />} />
           <Route path="admissions/edit/:id" element={<AddAdmission />} />
           <Route path="calls" element={<CallLogs />} />
+           <Route path="admissions/edit/:id" element={<EditAdmission />} />
+
         </Route>
 
         <Route path="setup">
@@ -153,6 +156,7 @@ function App() {
           <Route path="admissions/add" element={<AddAdmission />} />
           <Route path="admissions/view/:id" element={<ViewAdmission />} />
           <Route path="calls" element={<CallLogs />} />
+          <Route path="admissions/edit/:id" element={<EditAdmission />} />
         </Route>
 
         {/* ✅ FIXED: Faculty Student section - READ ONLY */}

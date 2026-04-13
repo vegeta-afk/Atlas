@@ -81,7 +81,14 @@ export const admissionAPI = {
   }
   return api.post("/admissions", data);
 },
-  updateAdmission: (id, data) => api.put(`/admissions/${id}`, data),
+  updateAdmission: (id, data) => {
+  if (data instanceof FormData) {
+    return api.put(`/admissions/${id}`, data, {
+      headers: { "Content-Type": undefined },
+    });
+  }
+  return api.put(`/admissions/${id}`, data);
+},
   deleteAdmission: (id) => api.delete(`/admissions/${id}`),
 
   // Special Operations
@@ -113,6 +120,8 @@ export const admissionAPI = {
   // Reactivate cancelled/on-hold admission
   reactivateAdmission: (id, reason) => 
     api.put(`/admissions/${id}/reactivate`, { reason }),
+
+  
   
   // Generic function that calls the appropriate endpoint based on action
   updateAdmissionStatus: (id, data) => {
