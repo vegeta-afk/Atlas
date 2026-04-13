@@ -11,11 +11,12 @@ import {
   FileText,
   Book,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link , useNavigate } from "react-router-dom";
 import "./NewEnquiry.css";
 
 const NewEnquiry = () => {
   const basePath = "";
+  const navigate = useNavigate();
   const loggedInUser = JSON.parse(localStorage.getItem("user"));
   
   const [formData, setFormData] = useState({
@@ -45,6 +46,17 @@ const NewEnquiry = () => {
     prospectusFees: "no",
     prospectusAmount: "",
   });
+
+  const handleCancel = () => {
+  const role = loggedInUser?.role;
+  if (role === "admin") {
+    navigate("/admin/front-office/enquiries");
+  } else if (role === "faculty" || role === "instructor") {
+    navigate("/faculty/front-office/enquiries");
+  } else {
+    navigate("/admin/front-office/enquiries");
+  }
+};
 
   // States for dynamic data
   const [qualifications, setQualifications] = useState([]);
@@ -348,7 +360,7 @@ const NewEnquiry = () => {
       console.log("Backend response:", response.data);
 
       alert("Enquiry submitted successfully!");
-      window.location.href = `${basePath}/front-office/enquiries`;
+      handleCancel();
     } catch (error) {
       console.error("Error submitting enquiry:", error.response?.data || error);
       alert(
@@ -409,10 +421,10 @@ const NewEnquiry = () => {
       {/* Header */}
       <div className="page-header">
         <div className="header-left">
-          <Link to={`${basePath}/front-office/enquiries`} className="back-link">
-            <X size={20} />
-            Cancel
-          </Link>
+          <button onClick={handleCancel} className="back-link" type="button">
+  <X size={20} />
+  Cancel
+</button>
           <div>
             <h1>New Enquiry Form</h1>
             <p>Fill in the details for new enquiry</p>
