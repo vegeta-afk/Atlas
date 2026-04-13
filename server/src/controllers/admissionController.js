@@ -400,6 +400,21 @@ exports.updateAdmission = async (req, res) => {
 
         await student.save();
         console.log(`✅ Student ${student.studentId} synced with admission`);
+
+        try {
+          const User = require("../models/user");
+          const userAccount = await User.findOne({ studentId: student.studentId });
+          if (userAccount) {
+            userAccount.fullName = student.fullName;
+            if (student.email && !student.email.includes("@student.lms")) {
+              userAccount.email = student.email;
+            }
+            await userAccount.save();
+            console.log(`✅ User account synced for ${student.studentId}`);
+          }
+        } catch (userSyncError) {
+          console.error("⚠️ User sync failed:", userSyncError.message);
+        }
       }
     } catch (syncError) {
       console.error("⚠️ Student sync failed:", syncError.message);
