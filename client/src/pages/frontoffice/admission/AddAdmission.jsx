@@ -75,12 +75,14 @@ const AddAdmission = () => {
 const [scholarshipPercent, setScholarshipPercent] = useState("");
   // ============================================
 
+const loggedInUser = JSON.parse(localStorage.getItem("user"));
+
   const [formData, setFormData] = useState({
     // Admission Details
     admissionNo: `ADM${new Date().getFullYear()}${Math.floor(
       1000 + Math.random() * 9000
     )}`,
-    admissionBy: "Admin",
+    admissionBy: loggedInUser?.name || "Admin",
     admissionDate: new Date().toISOString().split("T")[0],
     enquiryNo: "",
 
@@ -965,7 +967,7 @@ const [scholarshipPercent, setScholarshipPercent] = useState("");
       admissionNo: `ADM${new Date().getFullYear()}${Math.floor(
         1000 + Math.random() * 9000
       )}`,
-      admissionBy: "Admin",
+      admissionBy: loggedInUser?.name || "Admin",
       admissionDate: new Date().toISOString().split("T")[0],
       enquiryNo: "",
       fullName: "",
@@ -1110,16 +1112,15 @@ const [scholarshipPercent, setScholarshipPercent] = useState("");
                   />
                 </div>
                 <div className="form-group">
-                  <label>Admission By *</label>
-                  <input
-                    type="text"
-                    name="admissionBy"
-                    value={formData.admissionBy}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    placeholder="Admin"
-                  />
-                </div>
+  <label>Admission By *</label>
+  <input
+    type="text"
+    name="admissionBy"
+    value={formData.admissionBy}
+    readOnly
+    className="readonly-input"
+  />
+</div>
                 <div className="form-group">
                   <label>Admission Date *</label>
                   <input

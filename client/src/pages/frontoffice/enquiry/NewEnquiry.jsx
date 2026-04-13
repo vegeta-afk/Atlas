@@ -15,10 +15,12 @@ import { Link } from "react-router-dom";
 import "./NewEnquiry.css";
 
 const NewEnquiry = () => {
+  const loggedInUser = JSON.parse(localStorage.getItem("user"));
+  
   const [formData, setFormData] = useState({
     enquiryNo: "3479",
     enquiryDate: new Date().toISOString().split("T")[0],
-    enquiryBy: "",
+    enquiryBy: loggedInUser?.name || loggedInUser?.username || loggedInUser?.fullName || "Admin",
     enquiryMethod: "",
     applicantName: "",
     contactNo: "",
@@ -345,7 +347,7 @@ const NewEnquiry = () => {
       console.log("Backend response:", response.data);
 
       alert("Enquiry submitted successfully!");
-      window.location.href = "/admin/front-office/enquiries";
+      window.location.href = `${basePath}/front-office/enquiries`;
     } catch (error) {
       console.error("Error submitting enquiry:", error.response?.data || error);
       alert(
@@ -398,7 +400,7 @@ const NewEnquiry = () => {
 
     localStorage.setItem("enquiryData", JSON.stringify(formData));
     window.location.href =
-      "/admin/front-office/admissions/add?fromEnquiry=true";
+      `${basePath}/front-office/admissions/add?fromEnquiry=true`;
   };
 
   return (
@@ -406,7 +408,7 @@ const NewEnquiry = () => {
       {/* Header */}
       <div className="page-header">
         <div className="header-left">
-          <Link to="/admin/front-office/enquiries" className="back-link">
+          <Link to={`${basePath}/front-office/enquiries`} className="back-link">
             <X size={20} />
             Cancel
           </Link>
@@ -479,14 +481,12 @@ const NewEnquiry = () => {
                   Enquiry By <span className="required-star">*</span>
                 </label>
                 <input
-                  type="text"
-                  name="enquiryBy"
-                  value={formData.enquiryBy}
-                  onChange={handleChange}
-                  placeholder="Staff name who took enquiry"
-                  onKeyDown={handleKeyDown}
-                  className={errors.enquiryBy ? "error-field" : ""}
-                />
+  type="text"
+  name="enquiryBy"
+  value={formData.enquiryBy}
+  readOnly
+  className="readonly-input"
+/>
                 {errors.enquiryBy && (
                   <span className="error-text">{errors.enquiryBy}</span>
                 )}
