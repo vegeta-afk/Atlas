@@ -23,7 +23,7 @@ import {
   Bell,
   RotateCcw,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link , useNavigate } from "react-router-dom";
 import "./EnquiryList.css";
 import { enquiryAPI } from "../../../services/api";
 
@@ -39,8 +39,6 @@ const EnquiryList = () => {
     new: 0,
     rejectedLost: 0,
   });
-
-  const basePath = "";
 
   // Filters state
   const [searchTerm, setSearchTerm] = useState("");
@@ -367,7 +365,7 @@ const handleConvertToAdmission = (enquiry) => {
   );
 
   // Redirect to AddAdmission page
-  window.location.href = `/front-office/admissions/add?fromEnquiry=true`;
+navigate(`/front-office/admissions/add?fromEnquiry=true`);
 };
 
   const handleDeleteEnquiry = async (id) => {
@@ -859,7 +857,7 @@ const handleConvertToAdmission = (enquiry) => {
                                 <button
                                   className="dropdown-item"
                                   onClick={() => {
-                                    window.location.href = `/front-office/enquiries/edit/${enquiry._id}`;
+                                    navigate(`/front-office/enquiries/edit/${enquiry._id}`);
                                   }}
                                 >
                                   <Edit size={14} />
@@ -899,12 +897,7 @@ const handleConvertToAdmission = (enquiry) => {
                         <Search size={48} />
                         <h3>No enquiries found</h3>
                         <p>Try adjusting your search or filter criteria.</p>
-                        {/* <Link
-                          to={`${basePath}/front-office/enquiries/add`}
-                          className="btn-primary"
-                        >
-                          Create New Enquiry
-                        </Link> */}
+                        
                       </div>
                     </td>
                   </tr>
