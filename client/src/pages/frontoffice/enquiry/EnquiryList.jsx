@@ -40,6 +40,8 @@ const EnquiryList = () => {
     rejectedLost: 0,
   });
 
+  const basePath = "";
+
   // Filters state
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
