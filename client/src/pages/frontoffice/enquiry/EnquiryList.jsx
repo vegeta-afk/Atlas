@@ -23,7 +23,7 @@ import {
   Bell,
   RotateCcw,
 } from "lucide-react";
-import { Link , useNavigate } from "react-router-dom";
+import { Link , useNavigate , useLocation } from "react-router-dom";
 import "./EnquiryList.css";
 import { enquiryAPI } from "../../../services/api";
 
@@ -39,6 +39,10 @@ const EnquiryList = () => {
     new: 0,
     rejectedLost: 0,
   });
+
+  const navigate = useNavigate();
+  const location = useLocation();
+const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
 
   // Filters state
   const [searchTerm, setSearchTerm] = useState("");
@@ -365,7 +369,7 @@ const handleConvertToAdmission = (enquiry) => {
   );
 
   // Redirect to AddAdmission page
-navigate(`/front-office/admissions/add?fromEnquiry=true`);
+navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
 };
 
   const handleDeleteEnquiry = async (id) => {
@@ -448,7 +452,7 @@ navigate(`/front-office/admissions/add?fromEnquiry=true`);
             <RefreshCw size={18} className={loading ? "spinning" : ""} />
             Refresh
           </button>
-          <Link to="/front-office/enquiries/add" className="btn-primary">
+          <Link to={`${basePath}/front-office/enquiries/add`} className="btn-primary">
             <UserPlus size={18} />
             New Enquiry
           </Link>
@@ -829,7 +833,7 @@ navigate(`/front-office/admissions/add?fromEnquiry=true`);
 
                           {/* View Button */}
                           <Link
-                            to={`/front-office/enquiries/view/${enquiry._id}`}
+                            to={`${basePath}/front-office/enquiries/view/${enquiry._id}`}
                             className="action-btn view"
                             title="View Enquiry"
                           >
@@ -857,7 +861,8 @@ navigate(`/front-office/admissions/add?fromEnquiry=true`);
                                 <button
                                   className="dropdown-item"
                                   onClick={() => {
-                                    navigate(`/front-office/enquiries/edit/${enquiry._id}`);
+                                    navigate(`${basePath}/front-office/enquiries/edit/${enquiry._id}`);
+
                                   }}
                                 >
                                   <Edit size={14} />
