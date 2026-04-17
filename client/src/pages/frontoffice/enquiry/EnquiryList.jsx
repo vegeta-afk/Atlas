@@ -365,7 +365,7 @@ const handleConvertToAdmission = (enquiry) => {
   );
 
   // Redirect to AddAdmission page
-  window.location.href = `/admin/front-office/admissions/add?fromEnquiry=true`;
+  window.location.href = `${basePath}/front-office/admissions/add?fromEnquiry=true`;
 };
 
   const handleDeleteEnquiry = async (id) => {
@@ -448,7 +448,7 @@ const handleConvertToAdmission = (enquiry) => {
             <RefreshCw size={18} className={loading ? "spinning" : ""} />
             Refresh
           </button>
-          <Link to="/admin/front-office/enquiries/add" className="btn-primary">
+          <Link to={`${basePath}/front-office/enquiries/add`} className="btn-primary">
             <UserPlus size={18} />
             New Enquiry
           </Link>
@@ -829,7 +829,7 @@ const handleConvertToAdmission = (enquiry) => {
 
                           {/* View Button */}
                           <Link
-                            to={`/admin/front-office/enquiries/view/${enquiry._id}`}
+                            to={`${basePath}/front-office/enquiries/view/${enquiry._id}`}
                             className="action-btn view"
                             title="View Enquiry"
                           >
@@ -857,7 +857,7 @@ const handleConvertToAdmission = (enquiry) => {
                                 <button
                                   className="dropdown-item"
                                   onClick={() => {
-                                    window.location.href = `/admin/front-office/enquiries/edit/${enquiry._id}`;
+                                    window.location.href = `${basePath}/front-office/enquiries/edit/${enquiry._id}`;
                                   }}
                                 >
                                   <Edit size={14} />
@@ -898,7 +898,7 @@ const handleConvertToAdmission = (enquiry) => {
                         <h3>No enquiries found</h3>
                         <p>Try adjusting your search or filter criteria.</p>
                         <Link
-                          to="/admin/front-office/enquiries/add"
+                          to={`${basePath}/front-office/enquiries/add`}
                           className="btn-primary"
                         >
                           Create New Enquiry
