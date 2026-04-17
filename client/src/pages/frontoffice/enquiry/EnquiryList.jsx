@@ -899,12 +899,12 @@ const handleConvertToAdmission = (enquiry) => {
                         <Search size={48} />
                         <h3>No enquiries found</h3>
                         <p>Try adjusting your search or filter criteria.</p>
-                        <Link
+                        {/* <Link
                           to={`${basePath}/front-office/enquiries/add`}
                           className="btn-primary"
                         >
                           Create New Enquiry
-                        </Link>
+                        </Link> */}
                       </div>
                     </td>
                   </tr>
