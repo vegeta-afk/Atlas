@@ -195,13 +195,6 @@ const StudentList = () => {
                 ? "Create an admission and approve it. Students are automatically created from approved admissions."
                 : "No students match your search criteria."}
             </p>
-            <Link
-              to={`${basePath}/front-office/admissions/add`}
-              className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-            >
-              <User size={16} />
-              Create New Admission
-            </Link>
           </div>
         ) : (
           <div className="overflow-x-auto">
