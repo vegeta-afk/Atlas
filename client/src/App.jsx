@@ -36,6 +36,8 @@ import EditEnquiry from "./pages/frontoffice/enquiry/EditEnquiry";
 import CourseList from "./pages/frontoffice/setup/Courses/CourseList";
 import AddCourse from "./pages/frontoffice/setup/Courses/AddCourse";
 import SetupList from "./pages/frontoffice/setup/SetupList";
+import EditCourse from "./pages/frontoffice/setup/Courses/EditCourse";
+import ViewCourse from "./pages/frontoffice/setup/Courses/ViewCourse";
 
 // Faculty components
 import FacultyList from "./pages/Faculty/FacultyList";
@@ -102,6 +104,8 @@ function App() {
         <Route path="setup">
           <Route path="courses" element={<CourseList />} />
           <Route path="courses/add" element={<AddCourse />} />
+          <Route path="courses/edit/:id" element={<EditCourse />} />
+  <Route path="courses/view/:id" element={<ViewCourse />} />
           <Route path="management" element={<SetupList />} />
         </Route>
 
