@@ -51,6 +51,8 @@ const AddAdmission = () => {
   const basePath = "";
   const navigate = useNavigate();
 
+  const [isCourseScholarshipEligible, setIsCourseScholarshipEligible] = useState(false);
+
   // NEW: States for dynamic data
   const [qualifications, setQualifications] = useState([]);
   const [batches, setBatches] = useState([]);
@@ -162,29 +164,30 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
     }
   }, [formData.courseId]);
 
-  const fetchCourseDetails = async (courseId) => {
-    try {
-      const response = await courseAPI.getCourse(courseId);
-      if (response.data.success) {
-        setSelectedCourseDetails(response.data.data);
-        
-        // Set original fees
-        setFormData(prev => ({
-          ...prev,
-          interestedCourse: response.data.data.courseFullName || prev.interestedCourse,
-          originalTotalFee: response.data.data.totalFee || 0,
-          originalMonthlyFee: response.data.data.monthlyFee || 0,
-          finalTotalFee: response.data.data.totalFee || 0,
-          finalMonthlyFee: response.data.data.monthlyFee || 0,
-        }));
-        
-        // Fetch eligible scholarships
-       
-      }
-    } catch (err) {
-      console.error("Failed to fetch course details:", err);
+ const fetchCourseDetails = async (courseId) => {
+  try {
+    const response = await courseAPI.getCourse(courseId);
+    if (response.data.success) {
+      const courseData = response.data.data;
+      setSelectedCourseDetails(courseData);
+
+      // ✅ ADD THIS ONE LINE
+      setIsCourseScholarshipEligible(courseData.courseType === "scholarship_based");
+
+      setFormData(prev => ({
+        ...prev,
+        interestedCourse: courseData.courseFullName || prev.interestedCourse,
+        originalTotalFee: courseData.totalFee || 0,
+        originalMonthlyFee: courseData.monthlyFee || 0,
+        finalTotalFee: courseData.totalFee || 0,
+        finalMonthlyFee: courseData.monthlyFee || 0,
+      }));
     }
-  };
+  } catch (err) {
+    console.error("Failed to fetch course details:", err);
+    setIsCourseScholarshipEligible(false); // ✅ ADD THIS TOO
+  }
+};
 
   // ========== NEW: Fetch eligible scholarships ==========
  
@@ -479,14 +482,22 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
 
     // Handle course selection
     if (name === "courseId") {
-      const selectedCourse = courses.find(c => c._id === value);
-      setFormData((prev) => ({
-        ...prev,
-        courseId: value,
-        interestedCourse: selectedCourse ? selectedCourse.courseFullName : "",
-      }));
-      return;
-    }
+  const selectedCourse = courses.find(c => c._id === value);
+  setFormData((prev) => ({
+    ...prev,
+    courseId: value,
+    interestedCourse: selectedCourse ? selectedCourse.courseFullName : "",
+    hasScholarship: false,      // ✅ reset scholarship on course change
+    scholarshipApplied: false,
+    scholarshipId: "",
+    scholarshipName: "",
+    scholarshipCode: "",
+  }));
+  setIsCourseScholarshipEligible(false); // ✅ ADD THIS
+  setSelectedScholarship(null);          // ✅ ADD THIS
+  setCalculatedFees(null);               // ✅ ADD THIS
+  return;
+}
 
     setFormData((prev) => ({
       ...prev,
@@ -1462,7 +1473,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
             </div>
             
             {/* ========== NEW SCHOLARSHIP BUTTON ========== */}
-            {formData.courseId && (
+            {formData.courseId && isCourseScholarshipEligible && (
               <div className="form-group scholarship-action">
                 {!formData.hasScholarship ? (
                   <button
