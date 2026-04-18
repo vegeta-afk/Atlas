@@ -236,13 +236,6 @@ const ManageTests = () => {
           <BookOpen className="mx-auto text-gray-400 mb-3" size={48} />
           <h3 className="text-lg font-medium text-gray-900 mb-1">No tests found</h3>
           <p className="text-gray-500 mb-6">Create your first test to get started</p>
-          <Link
-            to={`${basePath}/exam/create-test`}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Play size={20} />
-            Create Test
-          </Link>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

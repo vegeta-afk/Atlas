@@ -355,11 +355,11 @@ const FacultyList = () => {
   };
 
   const handleViewFaculty = (facultyId) => {
-    navigate(`/admin/faculty/view/${facultyId}`);
+    navigate(`${basePath}/faculty/view/${facultyId}`);
   };
 
   const handleEditFaculty = (facultyId) => {
-    navigate(`/admin/faculty/edit/${facultyId}`);
+    navigate(`${basePath}/faculty/edit/${facultyId}`);
   };
 
   const handleRefresh = () => {
@@ -461,7 +461,7 @@ const FacultyList = () => {
             <Download size={18} />
             Export
           </button>
-          <Link to="/admin/faculty/add" className="btn-primary">
+          <Link to={`${basePath}/faculty/add`} className="btn-primary">
             <UserPlus size={18} />
             Add New Faculty
           </Link>
@@ -927,9 +927,6 @@ const FacultyList = () => {
                       <Search size={48} />
                       <h3>No faculty members found</h3>
                       <p>Try adjusting your search or filter criteria.</p>
-                      <Link to="/admin/faculty/add" className="btn-primary">
-                        Add New Faculty
-                      </Link>
                     </div>
                   </td>
                 </tr>
