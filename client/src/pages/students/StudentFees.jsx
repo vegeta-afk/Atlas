@@ -767,10 +767,10 @@ const StudentFees = () => {
   </div>
 </div>
 
-{/* ✅ Fee List with Course Tabs */}
+{/* Fee Table */}
 <div className="border border-gray-200 rounded-lg overflow-hidden">
 
-  {/* ✅ Course Tabs - only show if multiple courses */}
+  {/* Course Tabs - only show if multiple courses */}
   {allCourseFeeSchedules.length > 1 && (
     <div className="flex border-b bg-gray-50 overflow-x-auto">
       {allCourseFeeSchedules.map((schedule, idx) => (
@@ -835,29 +835,26 @@ const StudentFees = () => {
                 </div>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <div className="font-bold text-gray-900">
-                  {formatCurrency(fee.pendingAmount || 0)}
-                  {fee.status === "partial" && (
-                    <span className="text-sm font-normal text-gray-500 ml-1">remaining</span>
-                  )}
-                </div>
-                <div className="text-sm">
-                  {fee.status === "partial" ? (
-                    <div className="text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
-                  ) : (
-                    <div className="text-red-600">Due: {formatCurrency(fee.pendingAmount || 0)}</div>
-                  )}
-                </div>
+            <div className="text-right">
+              <div className="font-bold text-gray-900">
+                {formatCurrency(fee.pendingAmount || 0)}
                 {fee.status === "partial" && (
-                  <div className="text-xs text-gray-500 mt-1">Original: {formatCurrency(fee.totalAmount)}</div>
+                  <span className="text-sm font-normal text-gray-500 ml-1">remaining</span>
                 )}
               </div>
+              <div className="text-sm">
+                {fee.status === "partial" ? (
+                  <div className="text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
+                ) : (
+                  <div className="text-red-600">Due: {formatCurrency(fee.pendingAmount || 0)}</div>
+                )}
+              </div>
+              {fee.status === "partial" && (
+                <div className="text-xs text-gray-500 mt-1">Original: {formatCurrency(fee.totalAmount)}</div>
+              )}
             </div>
           </div>
 
-          {/* Amount Input - shows when checked */}
           {fee.selected && (
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center space-x-4">
