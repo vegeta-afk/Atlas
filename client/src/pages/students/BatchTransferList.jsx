@@ -530,13 +530,6 @@ const handleApprove = async (id) => {
                       <ArrowLeftRight size={48} className="mb-3" />
                       <p className="text-sm font-medium text-gray-600 mb-1">No transfer requests found</p>
                       <p className="text-xs text-gray-400 mb-4">Get started by creating a new batch transfer request</p>
-                      <Link
-                        to={`${basePath}/students/batch-transfer/add`}
-                        className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors text-sm flex items-center gap-2"
-                      >
-                        <Plus size={16} />
-                        New Transfer Request
-                      </Link>
                     </div>
                   </td>
                 </tr>
