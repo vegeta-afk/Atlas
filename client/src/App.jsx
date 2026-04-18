@@ -40,6 +40,8 @@ import SetupList from "./pages/frontoffice/setup/SetupList";
 // Faculty components
 import FacultyList from "./pages/Faculty/FacultyList";
 import AddFaculty from "./pages/Faculty/AddFaculty";
+import EditFaculty from "./pages/Faculty/EditFaculty";
+import ViewFaculty from "./pages/Faculty/ViewFaculty";
 
 // Student components
 import StudentList from "./pages/students/StudentList";
@@ -48,6 +50,8 @@ import StudentAttendance from "./pages/students/StudentAttendance";
 import StudentFees from "./pages/students/StudentFees";
 import CourseConversion from "./pages/students/CourseConversion";
 import CourseExtension from "./pages/students/CourseExtension";
+
+
 
 // Exam components
 import CreateTest from './pages/admin/exam/CreateTest';
@@ -104,6 +108,8 @@ function App() {
         <Route path="faculty">
           <Route index element={<FacultyList />} />
           <Route path="add" element={<AddFaculty />} />
+          <Route path="view/:facultyId" element={<ViewFaculty />} />  // ← new
+  <Route path="edit/:facultyId" element={<EditFaculty />} />  // ← new
         </Route>
 
         <Route path="students">
