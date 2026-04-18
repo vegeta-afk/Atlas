@@ -1,6 +1,6 @@
 // pages/admin/courses/EditCourse.jsx
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Save,
@@ -44,6 +44,8 @@ const NumberInput = ({
 const EditCourse = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
+  const basePath = "/" + location.pathname.split("/")[1]; // "/admin" or "/faculty"
 
   const [loading, setLoading] = useState(false);
   const [fetchingCourse, setFetchingCourse] = useState(true);

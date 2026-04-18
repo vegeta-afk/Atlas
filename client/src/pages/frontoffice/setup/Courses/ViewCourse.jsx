@@ -1,6 +1,6 @@
 // pages/admin/courses/ViewCourse.jsx
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams, Link, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Edit,
@@ -68,6 +68,8 @@ const Badge = ({ children, variant = "default" }) => {
 const ViewCourse = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
+  const basePath = "/" + location.pathname.split("/")[1]; // "/admin" or "/faculty"
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
