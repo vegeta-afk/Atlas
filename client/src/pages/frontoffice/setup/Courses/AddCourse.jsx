@@ -1,6 +1,6 @@
 // pages/admin/courses/AddCourse.jsx
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Save,
@@ -11,19 +11,12 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  Award, // Added Award icon
+  Award,
 } from "lucide-react";
 import { courseAPI } from "../../../../services/api";
 import toast from "react-hot-toast";
 
-// FIXED: Create a separate NumberInput component OUTSIDE the main component
-const NumberInput = ({
-  name,
-  value,
-  onChange,
-  placeholder,
-  required = false,
-}) => (
+const NumberInput = ({ name, value, onChange, placeholder, required = false }) => (
   <input
     type="text"
     inputMode="decimal"
@@ -38,10 +31,11 @@ const NumberInput = ({
 
 const AddCourse = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const basePath = "/" + location.pathname.split("/")[1]; // "/admin" or "/faculty"
+
   const [loading, setLoading] = useState(false);
   const [courseCodeSuggestions, setCourseCodeSuggestions] = useState([]);
-
-  // NEW STATE FOR SEMESTER-BASED SYLLABUS WITH SUBTOPICS
   const [semesters, setSemesters] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -55,12 +49,11 @@ const AddCourse = () => {
     otherCharges: "",
     description: "",
     eligibilityCriteria: "",
-    syllabus: "", // This will now store the structured syllabus data
+    syllabus: "",
     careerOpportunities: "",
     seatsAvailable: "60",
     availableBatches: ["morning"],
     isActive: true,
-    // NEW FIELDS ADDED HERE
     totalFee: "",
     discount: "",
     netFee: "",
@@ -68,118 +61,81 @@ const AddCourse = () => {
     numberOfExams: "",
     examMonths: "",
     courseType: "",
+    isScholarshipBased: false, // ← NEW separate field
   });
 
-  // Calculate net fee and monthly fee whenever totalFee or discount changes
+  // ─── Auto-calculate net fee & monthly fee ─────────────────────────────────
   useEffect(() => {
-    const calculateFees = () => {
-      const totalFee = parseFloat(formData.totalFee) || 0;
-      const discount = parseFloat(formData.discount) || 0; // Default to 0 if no discount
-      const duration = parseFloat(formData.duration) || 1; // Default to 1 if no duration
+    const totalFee = parseFloat(formData.totalFee) || 0;
+    const discount = parseFloat(formData.discount) || 0;
+    const duration = parseFloat(formData.duration) || 1;
 
-      let netFee = 0;
-      let monthlyFee = 0;
+    let netFee = 0;
+    let monthlyFee = 0;
 
-      // Calculate Net Fee: totalFee ÷ discount
-      if (totalFee > 0 && discount > 0) {
-        const discountAmount = (totalFee * discount) / 100;
-        netFee = totalFee - discountAmount;
-      } else if (totalFee > 0) {
-        netFee = totalFee; // If no discount, net fee equals total fee
-      }
+    if (totalFee > 0 && discount > 0) {
+      const discountAmount = (totalFee * discount) / 100;
+      netFee = totalFee - discountAmount;
+    } else if (totalFee > 0) {
+      netFee = totalFee;
+    }
 
-      // Calculate Monthly Fee: netFee ÷ duration
-      if (netFee > 0 && duration > 0) {
-        monthlyFee = netFee / duration;
-      }
+    if (netFee > 0 && duration > 0) {
+      monthlyFee = netFee / duration;
+    }
 
-      // Update form data only if calculations are valid
-      if (!isNaN(netFee) && netFee > 0) {
-        setFormData((prev) => ({
-          ...prev,
-          netFee: netFee.toFixed(2),
-          monthlyFee: monthlyFee.toFixed(2),
-        }));
-      } else {
-        // Reset if invalid
-        setFormData((prev) => ({
-          ...prev,
-          netFee: "",
-          monthlyFee: "",
-        }));
-      }
-    };
-
-    calculateFees();
+    if (!isNaN(netFee) && netFee > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        netFee: netFee.toFixed(2),
+        monthlyFee: monthlyFee.toFixed(2),
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, netFee: "", monthlyFee: "" }));
+    }
   }, [formData.totalFee, formData.discount, formData.duration]);
 
-  // Convert semesters array to JSON string for form submission
+  // ─── Sync semesters → formData.syllabus ───────────────────────────────────
   useEffect(() => {
     if (semesters.length > 0) {
-      const syllabusJSON = JSON.stringify(semesters);
-      setFormData((prev) => ({ ...prev, syllabus: syllabusJSON }));
+      setFormData((prev) => ({ ...prev, syllabus: JSON.stringify(semesters) }));
     } else {
       setFormData((prev) => ({ ...prev, syllabus: "" }));
     }
   }, [semesters]);
 
-  // Generate course code suggestions based on course name
+  // ─── Course code suggestions ───────────────────────────────────────────────
   useEffect(() => {
     if (formData.courseFullName.trim() && !formData.courseCode) {
       const words = formData.courseFullName.split(" ");
-      let suggestions = [];
-
-      if (words.length > 1) {
-        const code1 = words
-          .map((word) => word.charAt(0).toUpperCase())
-          .join("");
-        suggestions.push(code1);
-      }
-
-      if (words[0].length >= 3) {
-        const code2 = words[0].substring(0, 3).toUpperCase() + "101";
-        suggestions.push(code2);
-      }
-
-      const currentYear = new Date().getFullYear().toString().slice(-2);
-      if (formData.courseShortName) {
-        const code3 = formData.courseShortName.toUpperCase() + currentYear;
-        suggestions.push(code3);
-      }
-
+      const suggestions = [];
+      if (words.length > 1)
+        suggestions.push(words.map((w) => w.charAt(0).toUpperCase()).join(""));
+      if (words[0].length >= 3)
+        suggestions.push(words[0].substring(0, 3).toUpperCase() + "101");
+      const yr = new Date().getFullYear().toString().slice(-2);
+      if (formData.courseShortName)
+        suggestions.push(formData.courseShortName.toUpperCase() + yr);
       setCourseCodeSuggestions(suggestions);
     } else {
       setCourseCodeSuggestions([]);
     }
   }, [formData.courseFullName, formData.courseShortName, formData.courseCode]);
 
-  // FIXED: Use useCallback to prevent unnecessary re-renders
+  // ─── Handlers ─────────────────────────────────────────────────────────────
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
 
     const numberFields = [
-      "semesterFee",
-      "admissionFee",
-      "examFee",
-      "otherCharges",
-      "totalSemesters",
-      "seatsAvailable",
-      // NEW NUMBER FIELDS
-      "totalFee",
-      "discount",
-      "numberOfExams",
+      "semesterFee", "admissionFee", "examFee", "otherCharges",
+      "totalSemesters", "seatsAvailable", "totalFee", "discount", "numberOfExams",
     ];
 
-    // Handle number fields
     if (numberFields.includes(name)) {
-      // Allow empty OR valid number pattern
-      if (value === "" || /^\d*\.?\d*$/.test(value)) {
+      if (value === "" || /^\d*\.?\d*$/.test(value))
         setFormData((prev) => ({ ...prev, [name]: value }));
-      }
       return;
     }
-
-    // Handle course code
     if (name === "courseCode") {
       setFormData((prev) => ({
         ...prev,
@@ -187,232 +143,134 @@ const AddCourse = () => {
       }));
       return;
     }
-
-    // Handle exam months field (allow numbers, commas, spaces)
     if (name === "examMonths") {
-      // Allow only numbers, commas, spaces
-      if (value === "" || /^[\d\s,]*$/.test(value)) {
+      if (value === "" || /^[\d\s,]*$/.test(value))
         setFormData((prev) => ({ ...prev, [name]: value }));
-      }
       return;
     }
-
-    // Handle all other fields
     setFormData((prev) => ({ ...prev, [name]: value }));
   }, []);
 
-  // NEW FUNCTIONS FOR SEMESTER MANAGEMENT WITH SUBTOPICS
-
-  // Add semester
-  const addSemester = () => {
-    const semesterNumber = semesters.length + 1;
-    const newSemester = {
-      id: Date.now(),
-      name: `Semester ${semesterNumber}`,
-      isExpanded: true,
-      topics: [],
-    };
-    setSemesters([...semesters, newSemester]);
-  };
-
-  // Remove semester
-  const removeSemester = (semesterId) => {
-    setSemesters(semesters.filter((sem) => sem.id !== semesterId));
-  };
-
-  // Add topic to semester
-  const addTopicToSemester = (semesterId) => {
-    setSemesters(
-      semesters.map((sem) => {
-        if (sem.id === semesterId) {
-          const newTopic = {
-            id: Date.now(),
-            name: "",
-            isExpanded: true,
-            subtopics: [],
-          };
-          return {
-            ...sem,
-            topics: [...sem.topics, newTopic],
-          };
-        }
-        return sem;
-      })
-    );
-  };
-
-  // Remove topic from semester
-  const removeTopicFromSemester = (semesterId, topicId) => {
-    setSemesters(
-      semesters.map((sem) => {
-        if (sem.id === semesterId) {
-          return {
-            ...sem,
-            topics: sem.topics.filter((topic) => topic.id !== topicId),
-          };
-        }
-        return sem;
-      })
-    );
-  };
-
-  // Update topic name
-  const updateTopicName = (semesterId, topicId, value) => {
-    setSemesters(
-      semesters.map((sem) => {
-        if (sem.id === semesterId) {
-          return {
-            ...sem,
-            topics: sem.topics.map((topic) =>
-              topic.id === topicId ? { ...topic, name: value } : topic
-            ),
-          };
-        }
-        return sem;
-      })
-    );
-  };
-
-  // Toggle semester expansion
-  const toggleSemesterExpand = (semesterId) => {
-    setSemesters(
-      semesters.map((sem) => {
-        if (sem.id === semesterId) {
-          return {
-            ...sem,
-            isExpanded: !sem.isExpanded,
-          };
-        }
-        return sem;
-      })
-    );
-  };
-
-  // Toggle topic expansion
-  const toggleTopicExpand = (semesterId, topicId) => {
-    setSemesters(
-      semesters.map((sem) => {
-        if (sem.id === semesterId) {
-          return {
-            ...sem,
-            topics: sem.topics.map((topic) =>
-              topic.id === topicId
-                ? { ...topic, isExpanded: !topic.isExpanded }
-                : topic
-            ),
-          };
-        }
-        return sem;
-      })
-    );
-  };
-
-  // Add subtopic to a topic
-  const addSubtopicToTopic = (semesterId, topicId) => {
-    setSemesters(
-      semesters.map((sem) => {
-        if (sem.id === semesterId) {
-          return {
-            ...sem,
-            topics: sem.topics.map((topic) => {
-              if (topic.id === topicId) {
-                const newSubtopicId = Date.now();
-                return {
-                  ...topic,
-                  subtopics: [
-                    ...topic.subtopics,
-                    { id: newSubtopicId, name: "" },
-                  ],
-                  isExpanded: true, // Auto-expand when adding subtopic
-                };
-              }
-              return topic;
-            }),
-          };
-        }
-        return sem;
-      })
-    );
-  };
-
-  // Update subtopic name
-  const updateSubtopicName = (semesterId, topicId, subtopicId, value) => {
-    setSemesters(
-      semesters.map((sem) => {
-        if (sem.id === semesterId) {
-          return {
-            ...sem,
-            topics: sem.topics.map((topic) => {
-              if (topic.id === topicId) {
-                return {
-                  ...topic,
-                  subtopics: topic.subtopics.map((subtopic) =>
-                    subtopic.id === subtopicId
-                      ? { ...subtopic, name: value }
-                      : subtopic
-                  ),
-                };
-              }
-              return topic;
-            }),
-          };
-        }
-        return sem;
-      })
-    );
-  };
-
-  // Remove subtopic
-  const removeSubtopicFromTopic = (semesterId, topicId, subtopicId) => {
-    setSemesters(
-      semesters.map((sem) => {
-        if (sem.id === semesterId) {
-          return {
-            ...sem,
-            topics: sem.topics.map((topic) => {
-              if (topic.id === topicId) {
-                return {
-                  ...topic,
-                  subtopics: topic.subtopics.filter(
-                    (subtopic) => subtopic.id !== subtopicId
-                  ),
-                };
-              }
-              return topic;
-            }),
-          };
-        }
-        return sem;
-      })
-    );
-  };
-
-  // Update semester name
-  const updateSemesterName = (semesterId, value) => {
-    setSemesters(
-      semesters.map((sem) =>
-        sem.id === semesterId ? { ...sem, name: value } : sem
-      )
-    );
-  };
-
-  const handleSuggestionClick = (suggestion) => {
-    setFormData((prev) => ({ ...prev, courseCode: suggestion }));
-  };
-
-  const handleBatchToggle = (batch) => {
+  // ─── Scholarship toggle ────────────────────────────────────────────────────
+  const handleScholarshipToggle = () => {
     setFormData((prev) => ({
       ...prev,
-      availableBatches: prev.availableBatches.includes(batch)
-        ? prev.availableBatches.filter((b) => b !== batch)
-        : [...prev.availableBatches, batch],
+      isScholarshipBased: !prev.isScholarshipBased,
+      // Clear discount when scholarship is enabled
+      discount: !prev.isScholarshipBased ? "" : prev.discount,
     }));
   };
 
+  // ─── Semester helpers ──────────────────────────────────────────────────────
+  const addSemester = () => {
+    setSemesters((prev) => [
+      ...prev,
+      { id: Date.now(), name: `Semester ${prev.length + 1}`, isExpanded: true, topics: [] },
+    ]);
+  };
+
+  const removeSemester = (semId) =>
+    setSemesters((prev) => prev.filter((s) => s.id !== semId));
+
+  const updateSemesterName = (semId, value) =>
+    setSemesters((prev) =>
+      prev.map((s) => (s.id === semId ? { ...s, name: value } : s))
+    );
+
+  const toggleSemesterExpand = (semId) =>
+    setSemesters((prev) =>
+      prev.map((s) => (s.id === semId ? { ...s, isExpanded: !s.isExpanded } : s))
+    );
+
+  const addTopicToSemester = (semId) =>
+    setSemesters((prev) =>
+      prev.map((s) =>
+        s.id === semId
+          ? { ...s, topics: [...s.topics, { id: Date.now(), name: "", isExpanded: true, subtopics: [] }] }
+          : s
+      )
+    );
+
+  const removeTopicFromSemester = (semId, topicId) =>
+    setSemesters((prev) =>
+      prev.map((s) =>
+        s.id === semId ? { ...s, topics: s.topics.filter((t) => t.id !== topicId) } : s
+      )
+    );
+
+  const updateTopicName = (semId, topicId, value) =>
+    setSemesters((prev) =>
+      prev.map((s) =>
+        s.id === semId
+          ? { ...s, topics: s.topics.map((t) => (t.id === topicId ? { ...t, name: value } : t)) }
+          : s
+      )
+    );
+
+  const toggleTopicExpand = (semId, topicId) =>
+    setSemesters((prev) =>
+      prev.map((s) =>
+        s.id === semId
+          ? { ...s, topics: s.topics.map((t) => (t.id === topicId ? { ...t, isExpanded: !t.isExpanded } : t)) }
+          : s
+      )
+    );
+
+  const addSubtopicToTopic = (semId, topicId) =>
+    setSemesters((prev) =>
+      prev.map((s) =>
+        s.id === semId
+          ? {
+              ...s,
+              topics: s.topics.map((t) =>
+                t.id === topicId
+                  ? { ...t, isExpanded: true, subtopics: [...t.subtopics, { id: Date.now(), name: "" }] }
+                  : t
+              ),
+            }
+          : s
+      )
+    );
+
+  const updateSubtopicName = (semId, topicId, subId, value) =>
+    setSemesters((prev) =>
+      prev.map((s) =>
+        s.id === semId
+          ? {
+              ...s,
+              topics: s.topics.map((t) =>
+                t.id === topicId
+                  ? { ...t, subtopics: t.subtopics.map((sub) => (sub.id === subId ? { ...sub, name: value } : sub)) }
+                  : t
+              ),
+            }
+          : s
+      )
+    );
+
+  const removeSubtopicFromTopic = (semId, topicId, subId) =>
+    setSemesters((prev) =>
+      prev.map((s) =>
+        s.id === semId
+          ? {
+              ...s,
+              topics: s.topics.map((t) =>
+                t.id === topicId
+                  ? { ...t, subtopics: t.subtopics.filter((sub) => sub.id !== subId) }
+                  : t
+              ),
+            }
+          : s
+      )
+    );
+
+  const handleSuggestionClick = (suggestion) =>
+    setFormData((prev) => ({ ...prev, courseCode: suggestion }));
+
+  // ─── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate required fields
     const requiredFields = [
       { name: "courseFullName", label: "Course Full Name" },
       { name: "courseShortName", label: "Course Short Name" },
@@ -420,28 +278,20 @@ const AddCourse = () => {
       { name: "totalFee", label: "Total Fee" },
     ];
 
-    const missingFields = requiredFields.filter(
-      (field) =>
-        !formData[field.name] || formData[field.name].toString().trim() === ""
+    const missing = requiredFields.filter(
+      (f) => !formData[f.name] || formData[f.name].toString().trim() === ""
     );
-
-    if (missingFields.length > 0) {
-      toast.error(
-        `Please fill: ${missingFields.map((f) => f.label).join(", ")}`
-      );
+    if (missing.length > 0) {
+      toast.error(`Please fill: ${missing.map((f) => f.label).join(", ")}`);
       return;
     }
 
     setLoading(true);
-
     try {
-      // Clean the syllabus data before sending
-      let cleanedSyllabus = "[]"; // Default to empty array
-
+      let cleanedSyllabus = "[]";
       if (semesters.length > 0) {
-        // Remove temporary fields (id, isExpanded) and keep only necessary structure
-        const structuredSyllabus = semesters.map((semester) => ({
-          name: semester.name || `Semester ${semesters.indexOf(semester) + 1}`,
+        const structured = semesters.map((semester) => ({
+          name: semester.name,
           topics: (semester.topics || []).map((topic) => ({
             name: topic.name || "",
             subtopics: (topic.subtopics || []).map((subtopic) => ({
@@ -449,9 +299,7 @@ const AddCourse = () => {
             })),
           })),
         }));
-
-        cleanedSyllabus = JSON.stringify(structuredSyllabus);
-        console.log("📝 Cleaned syllabus structure:", structuredSyllabus);
+        cleanedSyllabus = JSON.stringify(structured);
       }
 
       const submitData = {
@@ -459,79 +307,57 @@ const AddCourse = () => {
         courseShortName: formData.courseShortName.trim(),
         duration: formData.duration.trim(),
         totalSemesters: parseFloat(formData.totalSemesters) || 6,
-        admissionFee: formData.admissionFee
-          ? parseFloat(formData.admissionFee)
-          : 0,
-        examFee: formData.examFee ? parseFloat(formData.examFee) : 0,
-        otherCharges: formData.otherCharges
-          ? parseFloat(formData.otherCharges)
-          : 0,
+        admissionFee: parseFloat(formData.admissionFee) || 0,
+        examFee: parseFloat(formData.examFee) || 0,
+        otherCharges: parseFloat(formData.otherCharges) || 0,
         description: formData.description.trim(),
         eligibilityCriteria: formData.eligibilityCriteria.trim(),
-        syllabus: cleanedSyllabus, // Use the cleaned syllabus
+        syllabus: cleanedSyllabus,
         careerOpportunities: formData.careerOpportunities.trim(),
         seatsAvailable: parseInt(formData.seatsAvailable) || 60,
         availableBatches: formData.availableBatches,
         isActive: formData.isActive,
-        totalFee: formData.totalFee ? parseFloat(formData.totalFee) : 0,
-        discount: formData.discount ? parseFloat(formData.discount) : 0,
-        netFee: formData.netFee ? parseFloat(formData.netFee) : 0,
-        monthlyFee: formData.monthlyFee ? parseFloat(formData.monthlyFee) : 0,
-        numberOfExams: formData.numberOfExams
-          ? parseInt(formData.numberOfExams)
-          : 0,
+        totalFee: parseFloat(formData.totalFee) || 0,
+        discount: parseFloat(formData.discount) || 0,
+        netFee: parseFloat(formData.netFee) || 0,
+        monthlyFee: parseFloat(formData.monthlyFee) || 0,
+        numberOfExams: parseInt(formData.numberOfExams) || 0,
         examMonths: formData.examMonths.trim(),
-        courseType: formData.courseType || "",
+        courseType: formData.isScholarshipBased ? "scholarship_based" : formData.courseType,
+        isScholarshipBased: formData.isScholarshipBased,
       };
-
-      console.log(
-        "📤 Sending data to backend:",
-        JSON.stringify(submitData, null, 2)
-      );
 
       const response = await courseAPI.createCourse(submitData);
 
       if (response.data.success) {
         toast.success("Course created successfully!");
-        navigate("/admin/setup/courses");
+        navigate(`${basePath}/setup/courses`);
       } else {
         toast.error(response.data.message || "Failed to create course");
       }
     } catch (error) {
-      console.error("❌ Create course error:", error);
-      console.error("🔍 Error response data:", error.response?.data);
-      console.error("🔍 Error status:", error.response?.status);
-      console.error("🔍 Error headers:", error.response?.headers);
-
-      if (error.response) {
-        const errorMsg =
-          error.response.data?.message ||
-          error.response.data?.error ||
-          "Failed to create course";
-        toast.error(errorMsg);
-
-        if (error.response.data?.errors) {
-          error.response.data.errors.forEach((err) => {
-            toast.error(`${err.msg} (${err.param})`);
-          });
-        }
-      } else if (error.request) {
-        console.error("🔍 No response received:", error.request);
-        toast.error("No response from server. Check your connection.");
-      } else {
-        console.error("🔍 Request setup error:", error.message);
-        toast.error("Error: " + error.message);
+      console.error("Create course error:", error);
+      const errorMsg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to create course";
+      toast.error(errorMsg);
+      if (error.response?.data?.errors) {
+        error.response.data.errors.forEach((err) =>
+          toast.error(`${err.msg} (${err.param})`)
+        );
       }
     } finally {
       setLoading(false);
     }
   };
+
   return (
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => navigate("/admin/setup/courses")}
+          onClick={() => navigate(`${basePath}/setup/courses`)}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4"
         >
           <ArrowLeft size={20} />
@@ -548,53 +374,37 @@ const AddCourse = () => {
         </div>
       </div>
 
-      {/* Form */}
       <form onSubmit={handleSubmit}>
-        {/* Two Cards Layout */}
+        {/* Row 1: Basic Info + Fee Structure */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Card 1: Basic Information - FIXED LAYOUT */}
+
+          {/* Card 1: Basic Information */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b">
               <div className="p-2 bg-blue-50 rounded-lg">
                 <BookOpen className="text-blue-600" size={20} />
               </div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                Basic Information
-              </h2>
+              <h2 className="text-lg font-semibold text-gray-800">Basic Information</h2>
             </div>
 
-            <div>
-              {/* <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Course Code
-                </label>
-                <input
-                  type="text"
-                  name="courseCode"
-                  value={formData.courseCode}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., BCA2024"
-                /> */}
-
-              {/* Course Code Suggestions */}
-              {courseCodeSuggestions.length > 0 && !formData.courseCode && (
-                <div className="mt-2">
-                  <p className="text-xs text-gray-500 mb-1">Suggestions:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {courseCodeSuggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => handleSuggestionClick(suggestion)}
-                        className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
+            {/* Course code suggestions */}
+            {courseCodeSuggestions.length > 0 && !formData.courseCode && (
+              <div className="mb-4">
+                <p className="text-xs text-gray-500 mb-1">Suggestions:</p>
+                <div className="flex flex-wrap gap-2">
+                  {courseCodeSuggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => handleSuggestionClick(s)}
+                      className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100"
+                    >
+                      {s}
+                    </button>
+                  ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             <div className="space-y-4">
               <div>
@@ -627,24 +437,18 @@ const AddCourse = () => {
                 />
               </div>
 
-              {/* ADDED COURSE CODE FIELD HERE TO BALANCE THE LAYOUT */}
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Duration *
+                    Duration (months) *
                   </label>
                   <NumberInput
                     name="duration"
                     value={formData.duration}
                     onChange={handleChange}
-                    placeholder="e.g., 3 "
+                    placeholder="e.g., 3"
                   />
-                  {/* <p className="text-xs text-gray-500 mt-1">
-                  Enter discount percentage or amount
-                </p> */}
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Total Semesters *
@@ -653,13 +457,13 @@ const AddCourse = () => {
                     name="totalSemesters"
                     value={formData.totalSemesters}
                     onChange={handleChange}
-                    placeholder="e.g. 6"
+                    placeholder="e.g., 6"
                     required
                   />
                 </div>
               </div>
 
-              {/* UPDATED: Course Type with Scholarship Option */}
+              {/* Course Type — diploma & certificate only */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Course Type
@@ -673,198 +477,187 @@ const AddCourse = () => {
                   <option value="">Select Course Type</option>
                   <option value="diploma">Diploma</option>
                   <option value="certificate">Certificate</option>
-                  <option value="scholarship_based">Scholarship Based</option>
                 </select>
-                {formData.courseType === "scholarship_based" && (
-                  <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
-                    <Award size={12} />
-                    Students can apply scholarships to this course
-                  </p>
-                )}
+              </div>
+
+              {/* ── Scholarship checkbox ── */}
+              <div>
+                <button
+                  type="button"
+                  onClick={handleScholarshipToggle}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all ${
+                    formData.isScholarshipBased
+                      ? "border-purple-400 bg-purple-50"
+                      : "border-gray-200 bg-gray-50 hover:border-gray-300"
+                  }`}
+                >
+                  {/* Custom checkbox */}
+                  <div
+                    className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 transition-all ${
+                      formData.isScholarshipBased
+                        ? "bg-purple-600 border-purple-600"
+                        : "bg-white border-gray-300"
+                    }`}
+                  >
+                    {formData.isScholarshipBased && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+
+                  <Award
+                    size={18}
+                    className={formData.isScholarshipBased ? "text-purple-600" : "text-gray-400"}
+                  />
+
+                  <div className="text-left">
+                    <p className={`text-sm font-medium ${formData.isScholarshipBased ? "text-purple-800" : "text-gray-700"}`}>
+                      Scholarship Based Course
+                    </p>
+                    <p className={`text-xs mt-0.5 ${formData.isScholarshipBased ? "text-purple-600" : "text-gray-400"}`}>
+                      {formData.isScholarshipBased
+                        ? "✨ Students can apply scholarships — direct discount is disabled"
+                        : "Enable if students can apply scholarships to this course"}
+                    </p>
+                  </div>
+                </button>
               </div>
             </div>
           </div>
 
           {/* Card 2: Fee Structure */}
-<div className="bg-white rounded-lg shadow p-6">
-  <div className="flex items-center gap-3 mb-6 pb-4 border-b">
-    <div className="p-2 bg-green-50 rounded-lg">
-      <DollarSign className="text-green-600" size={20} />
-    </div>
-    <h2 className="text-lg font-semibold text-gray-800">
-      Fee Structure
-    </h2>
-  </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b">
+              <div className="p-2 bg-green-50 rounded-lg">
+                <DollarSign className="text-green-600" size={20} />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-800">Fee Structure</h2>
+            </div>
 
-  <div className="space-y-4">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Total Fee *
-      </label>
-      <NumberInput
-        name="totalFee"
-        value={formData.totalFee}
-        onChange={handleChange}
-        placeholder="e.g., 25000"
-        required
-      />
-    </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Total Fee *
+                </label>
+                <NumberInput
+                  name="totalFee"
+                  value={formData.totalFee}
+                  onChange={handleChange}
+                  placeholder="e.g., 25000"
+                  required
+                />
+              </div>
 
-    {/* DISCOUNT FIELD - CONDITIONALLY DISABLED */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Discount (in %)
-      </label>
-      <input
-        type="text"
-        inputMode="decimal"
-        name="discount"
-        value={formData.discount}
-        onChange={handleChange}
-        placeholder="e.g., 10 (for 10% discount)"
-        disabled={formData.courseType === "scholarship_based"}
-        className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-          formData.courseType === "scholarship_based" 
-            ? "bg-gray-100 cursor-not-allowed" 
-            : "bg-white"
-        }`}
-      />
-      {formData.courseType === "scholarship_based" ? (
-        <p className="text-xs text-blue-600 mt-1">
-          ✨ Discounts are applied via scholarships, not direct discount
-        </p>
-      ) : (
-        <p className="text-xs text-gray-500 mt-1">
-          Enter discount percentage
-        </p>
-      )}
-    </div>
+              {/* Discount — disabled when scholarship is on */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Discount (in %)
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  name="discount"
+                  value={formData.discount}
+                  onChange={handleChange}
+                  placeholder="e.g., 10 (for 10% discount)"
+                  disabled={formData.isScholarshipBased}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    formData.isScholarshipBased
+                      ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                      : "bg-white border-gray-300"
+                  }`}
+                />
+                {formData.isScholarshipBased ? (
+                  <p className="text-xs text-purple-600 mt-1 flex items-center gap-1">
+                    <Award size={11} />
+                    Discounts are applied via scholarships for this course
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter discount percentage
+                  </p>
+                )}
+              </div>
 
+              {/* Net Fee (auto calculated) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Net Fee (Auto Calculated)
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.netFee ? `₹${formData.netFee}` : ""}
+                    readOnly
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none"
+                    placeholder="Will calculate automatically"
+                  />
+                  <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                </div>
+              </div>
 
-               {/* NET FEE (AUTO CALCULATED) */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Net Fee (Auto Calculated)
-      </label>
-      <div className="relative">
-        <input
-          type="text"
-          value={formData.netFee ? `₹${formData.netFee}` : ""}
-          readOnly
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Will calculate automatically"
-        />
-        <Calculator
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-          size={18}
-        />
-      </div>
-    </div>
+              {/* Monthly Fee (auto calculated) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Monthly Fee (Auto Calculated)
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.monthlyFee ? `₹${formData.monthlyFee}` : ""}
+                    readOnly
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none"
+                    placeholder="Will calculate automatically"
+                  />
+                  <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                </div>
+              </div>
 
-
-              {/* MONTHLY FEE (AUTO CALCULATED) */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Monthly Fee (Auto Calculated)
-      </label>
-      <div className="relative">
-        <input
-          type="text"
-          value={formData.monthlyFee ? `₹${formData.monthlyFee}` : ""}
-          readOnly
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Will calculate automatically"
-        />
-        <Calculator
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-          size={18}
-        />
-      </div>
-    </div>
-
-             {/* EXISTING FEE FIELDS */}
-<div className="grid grid-cols-2 gap-4">
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      Admission Fee
-    </label>
-    <NumberInput
-      name="admissionFee"
-      value={formData.admissionFee}
-      onChange={handleChange}
-      placeholder="e.g., 5000"
-    />
-  </div>
-
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      Exam Fee
-    </label>
-    <NumberInput
-      name="examFee"
-      value={formData.examFee}
-      onChange={handleChange}
-      placeholder="e.g., 2000"
-    />
-  </div>
-</div>
-
-<div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Other Charges
-  </label>
-  <NumberInput
-    name="otherCharges"
-    value={formData.otherCharges}
-    onChange={handleChange}
-    placeholder="e.g., 1000"
-  />
-</div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Admission Fee
+                  </label>
+                  <NumberInput name="admissionFee" value={formData.admissionFee} onChange={handleChange} placeholder="e.g., 5000" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Exam Fee
+                  </label>
+                  <NumberInput name="examFee" value={formData.examFee} onChange={handleChange} placeholder="e.g., 2000" />
+                </div>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Other Charges
                 </label>
-                <NumberInput
-                  name="otherCharges"
-                  value={formData.otherCharges}
-                  onChange={handleChange}
-                  placeholder="e.g., 1000"
-                />
+                <NumberInput name="otherCharges" value={formData.otherCharges} onChange={handleChange} placeholder="e.g., 1000" />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Card 3: Course Details (Full width) - UPDATED WITH EXAM FIELDS */}
+        {/* Card 3: Course Details (full width) */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex items-center gap-3 mb-6 pb-4 border-b">
             <div className="p-2 bg-purple-50 rounded-lg">
               <BookOpen className="text-purple-600" size={20} />
             </div>
-            <h2 className="text-lg font-semibold text-gray-800">
-              Course Details
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-800">Course Details</h2>
           </div>
 
           <div className="space-y-4">
-            {/* NEW EXAM FIELDS ADDED HERE */}
+            {/* Exam fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Number of Exams in Full Course
                 </label>
-                <NumberInput
-                  name="numberOfExams"
-                  value={formData.numberOfExams}
-                  onChange={handleChange}
-                  placeholder="e.g., 2"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Total number of exams throughout the course
-                </p>
+                <NumberInput name="numberOfExams" value={formData.numberOfExams} onChange={handleChange} placeholder="e.g., 2" />
+                <p className="text-xs text-gray-500 mt-1">Total number of exams throughout the course</p>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Exam Months
@@ -877,21 +670,15 @@ const AddCourse = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="e.g., 6, 9, 12"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Enter months when exams occur (comma separated)
-                </p>
+                <p className="text-xs text-gray-500 mt-1">Enter months when exams occur (comma separated)</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Example: For a 15-month course where exams are at month 6 and
-                  9, enter "6, 9"
+                  Example: For a 15-month course with exams at month 6 and 9, enter "6, 9"
                 </p>
               </div>
             </div>
 
-            {/* EXISTING COURSE DETAILS FIELDS */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <textarea
                 name="description"
                 value={formData.description}
@@ -903,9 +690,7 @@ const AddCourse = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Eligibility Criteria
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Eligibility Criteria</label>
               <textarea
                 name="eligibilityCriteria"
                 value={formData.eligibilityCriteria}
@@ -916,7 +701,7 @@ const AddCourse = () => {
               />
             </div>
 
-            {/* UPDATED: SEMESTER-BASED SYLLABUS BUILDER WITH SUBTOPICS */}
+            {/* Semester-based Syllabus */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <label className="block text-sm font-medium text-gray-700">
@@ -936,38 +721,23 @@ const AddCourse = () => {
                 <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
                   <BookOpen className="mx-auto text-gray-400 mb-2" size={32} />
                   <p className="text-gray-500 mb-2">No semesters added yet</p>
-                  <p className="text-gray-400 text-sm">
-                    Click "Add Semester" to start building your course syllabus
-                  </p>
+                  <p className="text-gray-400 text-sm">Click "Add Semester" to start building your course syllabus</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {semesters.map((semester) => (
-                    <div
-                      key={semester.id}
-                      className="border border-gray-200 rounded-lg overflow-hidden"
-                    >
+                    <div key={semester.id} className="border border-gray-200 rounded-lg overflow-hidden">
                       {/* Semester Header */}
                       <div className="flex items-center justify-between p-4 bg-gray-50 border-b">
                         <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => toggleSemesterExpand(semester.id)}
-                            className="text-gray-500 hover:text-gray-700"
-                          >
-                            {semester.isExpanded ? (
-                              <ChevronUp size={18} />
-                            ) : (
-                              <ChevronDown size={18} />
-                            )}
+                          <button type="button" onClick={() => toggleSemesterExpand(semester.id)} className="text-gray-500 hover:text-gray-700">
+                            {semester.isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                           </button>
                           <div className="flex items-center gap-2">
                             <input
                               type="text"
                               value={semester.name}
-                              onChange={(e) =>
-                                updateSemesterName(semester.id, e.target.value)
-                              }
+                              onChange={(e) => updateSemesterName(semester.id, e.target.value)}
                               className="font-medium text-gray-800 bg-transparent border-b border-transparent hover:border-gray-300 focus:outline-none focus:border-blue-500 px-1"
                             />
                             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
@@ -985,142 +755,81 @@ const AddCourse = () => {
                             Add Topic
                           </button>
                           {semesters.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeSemester(semester.id)}
-                              className="p-1 text-red-600 hover:text-red-800"
-                            >
+                            <button type="button" onClick={() => removeSemester(semester.id)} className="p-1 text-red-600 hover:text-red-800">
                               <Trash2 size={16} />
                             </button>
                           )}
                         </div>
                       </div>
 
-                      {/* Semester Content (Topics with Subtopics) */}
+                      {/* Topics */}
                       {semester.isExpanded && (
                         <div className="p-4 space-y-4">
-                          {semester.topics.map((topic) => (
-                            <div
-                              key={topic.id}
-                              className="border border-gray-200 rounded-lg"
-                            >
-                              {/* Topic Header */}
-                              <div className="flex items-center justify-between p-3 bg-gray-50 border-b">
-                                <div className="flex items-center gap-3">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      toggleTopicExpand(semester.id, topic.id)
-                                    }
-                                    className="text-gray-500 hover:text-gray-700"
-                                  >
-                                    {topic.isExpanded ? (
-                                      <ChevronUp size={16} />
-                                    ) : (
-                                      <ChevronDown size={16} />
-                                    )}
-                                  </button>
-                                  <div className="flex-1">
+                          {semester.topics.length === 0 ? (
+                            <p className="text-center py-3 text-gray-400 text-sm">No topics yet. Click "Add Topic" to add one.</p>
+                          ) : (
+                            semester.topics.map((topic) => (
+                              <div key={topic.id} className="border border-gray-200 rounded-lg">
+                                {/* Topic Header */}
+                                <div className="flex items-center justify-between p-3 bg-gray-50 border-b">
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <button type="button" onClick={() => toggleTopicExpand(semester.id, topic.id)} className="text-gray-500 hover:text-gray-700">
+                                      {topic.isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                    </button>
                                     <input
                                       type="text"
                                       value={topic.name}
-                                      onChange={(e) =>
-                                        updateTopicName(
-                                          semester.id,
-                                          topic.id,
-                                          e.target.value
-                                        )
-                                      }
+                                      onChange={(e) => updateTopicName(semester.id, topic.id, e.target.value)}
                                       className="font-medium text-gray-800 bg-transparent border-b border-transparent hover:border-gray-300 focus:outline-none focus:border-blue-500 w-full px-1"
                                       placeholder="Enter topic name"
                                     />
                                   </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      addSubtopicToTopic(semester.id, topic.id)
-                                    }
-                                    className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
-                                  >
-                                    <Plus size={12} />
-                                    Add Subtopic
-                                  </button>
-                                  {semester.topics.length > 1 && (
+                                  <div className="flex items-center gap-2">
                                     <button
                                       type="button"
-                                      onClick={() =>
-                                        removeTopicFromSemester(
-                                          semester.id,
-                                          topic.id
-                                        )
-                                      }
-                                      className="p-1 text-red-600 hover:text-red-800"
+                                      onClick={() => addSubtopicToTopic(semester.id, topic.id)}
+                                      className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
                                     >
-                                      <Trash2 size={14} />
+                                      <Plus size={12} />
+                                      Add Subtopic
                                     </button>
-                                  )}
+                                    {semester.topics.length > 1 && (
+                                      <button type="button" onClick={() => removeTopicFromSemester(semester.id, topic.id)} className="p-1 text-red-600 hover:text-red-800">
+                                        <Trash2 size={14} />
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
 
-                              {/* Subtopic List */}
-                              {topic.isExpanded && (
-                                <div className="p-4 space-y-2">
-                                  {topic.subtopics.length === 0 ? (
-                                    <div className="text-center py-3 text-gray-500 text-sm">
-                                      No subtopics yet. Click "Add Subtopic" to
-                                      add one.
-                                    </div>
-                                  ) : (
-                                    topic.subtopics.map(
-                                      (subtopic, subIndex) => (
-                                        <div
-                                          key={subtopic.id}
-                                          className="flex items-center gap-3 pl-6"
-                                        >
-                                          <span className="text-gray-500 text-sm min-w-6">
-                                            {subIndex + 1}.
-                                          </span>
+                                {/* Subtopics */}
+                                {topic.isExpanded && (
+                                  <div className="p-4 space-y-2">
+                                    {topic.subtopics.length === 0 ? (
+                                      <p className="text-center py-3 text-gray-400 text-sm">No subtopics yet. Click "Add Subtopic" to add one.</p>
+                                    ) : (
+                                      topic.subtopics.map((subtopic, sIdx) => (
+                                        <div key={subtopic.id} className="flex items-center gap-3 pl-6">
+                                          <span className="text-gray-500 text-sm min-w-6">{sIdx + 1}.</span>
                                           <input
                                             type="text"
                                             value={subtopic.name}
-                                            onChange={(e) =>
-                                              updateSubtopicName(
-                                                semester.id,
-                                                topic.id,
-                                                subtopic.id,
-                                                e.target.value
-                                              )
-                                            }
+                                            onChange={(e) => updateSubtopicName(semester.id, topic.id, subtopic.id, e.target.value)}
                                             className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                            placeholder={`Enter subtopic ${
-                                              subIndex + 1
-                                            }`}
+                                            placeholder={`Enter subtopic ${sIdx + 1}`}
                                           />
                                           {topic.subtopics.length > 1 && (
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                removeSubtopicFromTopic(
-                                                  semester.id,
-                                                  topic.id,
-                                                  subtopic.id
-                                                )
-                                              }
-                                              className="p-1 text-red-600 hover:text-red-800"
-                                            >
+                                            <button type="button" onClick={() => removeSubtopicFromTopic(semester.id, topic.id, subtopic.id)} className="p-1 text-red-600 hover:text-red-800">
                                               <Trash2 size={14} />
                                             </button>
                                           )}
                                         </div>
-                                      )
-                                    )
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                                      ))
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          )}
                         </div>
                       )}
                     </div>
@@ -1130,9 +839,7 @@ const AddCourse = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Career Opportunities
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Career Opportunities</label>
               <textarea
                 name="careerOpportunities"
                 value={formData.careerOpportunities}
@@ -1145,87 +852,12 @@ const AddCourse = () => {
           </div>
         </div>
 
-        {/* Card 4: Settings */}
-        {/* <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b">
-            <div className="p-2 bg-orange-50 rounded-lg">
-              <BookOpen className="text-orange-600" size={20} />
-            </div>
-            <h2 className="text-lg font-semibold text-gray-800">Settings</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Seats Available *
-                </label>
-                <NumberInput
-                  name="seatsAvailable"
-                  value={formData.seatsAvailable}
-                  onChange={handleChange}
-                  placeholder="e.g., 60"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Available Batches
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {["morning", "afternoon", "evening", "weekend"].map(
-                    (batch) => (
-                      <button
-                        key={batch}
-                        type="button"
-                        onClick={() => handleBatchToggle(batch)}
-                        className={`px-3 py-1.5 rounded-full text-sm font-medium capitalize ${
-                          formData.availableBatches.includes(batch)
-                            ? "bg-blue-100 text-blue-800 border border-blue-300"
-                            : "bg-gray-100 text-gray-800 border border-gray-300"
-                        }`}
-                      >
-                        {batch}
-                      </button>
-                    )
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={(e) =>
-                    setFormData({ ...formData, isActive: e.target.checked })
-                  }
-                  className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <label
-                  htmlFor="isActive"
-                  className="ml-3 text-sm text-gray-700"
-                >
-                  <span className="font-medium">Active Course</span>
-                  <p className="text-gray-500 text-xs mt-1">
-                    Inactive courses won't be available for new admissions
-                  </p>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div> */}
-
         {/* Form Actions */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex justify-end gap-4">
             <button
               type="button"
-              onClick={() => navigate("/admin/setup/courses")}
+              onClick={() => navigate(`${basePath}/setup/courses`)}
               className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
               disabled={loading}
             >
