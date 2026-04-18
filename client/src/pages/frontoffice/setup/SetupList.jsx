@@ -1605,7 +1605,7 @@ const handleEnquiryMethodChange = (e) => {
         ) : getFilteredData().length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             No {activeTab === "call-log" ? callLogSubTab.replace("-", " ") : activeTab.replace("-", " ")} found.{" "}
-            {!showForm && (
+            {/* {!showForm && (
               <button onClick={() => setShowForm(true)} className="text-blue-600 hover:underline">
                 Add your first{" "}
                 {activeTab === "call-log"
@@ -1620,7 +1620,7 @@ const handleEnquiryMethodChange = (e) => {
                   ? "fee"
                   : activeTab.slice(0, -1)}
               </button>
-            )}
+            )} */}
           </div>
         ) : (
           renderTable()
