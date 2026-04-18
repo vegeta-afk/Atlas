@@ -1581,17 +1581,25 @@ const handleEnquiryMethodChange = (e) => {
         >
           <Plus size={20} />
           Add{" "}
-          {activeTab === "call-log"
-            ? callLogSubTab === "call-status"
-              ? "Call Status"
-              : callLogSubTab === "call-reasons"
-              ? "Call Reason"
-              : "Next Action"
-            : activeTab === "enquiry-methods"
-            ? "Enquiry Method"
-            : activeTab === "fees"
-            ? "Fee"
-            : activeTab.charAt(0).toUpperCase() + activeTab.slice(1, -1)}
+{activeTab === "call-log"
+  ? callLogSubTab === "call-status"
+    ? "Call Status"
+    : callLogSubTab === "call-reasons"
+    ? "Call Reason"
+    : "Next Action"
+  : activeTab === "enquiry-methods"
+  ? "Enquiry Method"
+  : activeTab === "fees"
+  ? "Fee"
+  : activeTab === "batches"
+  ? "Batch"
+  : activeTab === "areas"
+  ? "Area"
+  : activeTab === "holidays"
+  ? "Holiday"
+  : activeTab === "qualifications"
+  ? "Qualification"
+  : activeTab.charAt(0).toUpperCase() + activeTab.slice(1, -1)}
         </button>
       </div>
 
