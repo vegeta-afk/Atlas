@@ -88,27 +88,29 @@ const ViewCourse = () => {
           const data = response.data.data;
           setCourse(data);
 
-          // Parse syllabus
-          if (data.syllabus) {
-            try {
-              const parsed = JSON.parse(data.syllabus);
-              if (Array.isArray(parsed)) {
-                setSemesters(parsed);
-                // Expand all semesters and topics by default
-                const semExp = {};
-                const topicExp = {};
-                parsed.forEach((sem, sIdx) => {
-                  semExp[sIdx] = true;
-                  (sem.topics || []).forEach((_, tIdx) => {
-                    topicExp[`${sIdx}-${tIdx}`] = true;
-                  });
-                });
-                setExpandedSemesters(semExp);
-                setExpandedTopics(topicExp);
-              }
-            } catch (e) {
-              console.warn("Could not parse syllabus:", e);
-            }
+          // Syllabus is a native array from MongoDB — no JSON.parse needed
+          const rawSyllabus = data.syllabus || data.syllabusData;
+          let syllabusArray = [];
+
+          if (Array.isArray(rawSyllabus) && rawSyllabus.length > 0) {
+            syllabusArray = rawSyllabus;
+          } else if (typeof rawSyllabus === "string" && rawSyllabus.trim() !== "") {
+            try { syllabusArray = JSON.parse(rawSyllabus); } catch (e) {}
+          }
+
+          if (syllabusArray.length > 0) {
+            setSemesters(syllabusArray);
+            // Expand all semesters and topics by default
+            const semExp = {};
+            const topicExp = {};
+            syllabusArray.forEach((sem, sIdx) => {
+              semExp[sIdx] = true;
+              (sem.topics || []).forEach((_, tIdx) => {
+                topicExp[`${sIdx}-${tIdx}`] = true;
+              });
+            });
+            setExpandedSemesters(semExp);
+            setExpandedTopics(topicExp);
           }
         } else {
           toast.error("Failed to load course");

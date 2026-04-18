@@ -113,36 +113,32 @@ const EditCourse = () => {
             courseType: course.courseType || "",
           });
 
-          // Parse syllabus JSON into semesters state
-          if (course.syllabus) {
-            try {
-              const parsed = JSON.parse(course.syllabus);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                const hydrated = parsed.map((sem, sIndex) => ({
-                  id: Date.now() + sIndex,
-                  name: sem.name || `Semester ${sIndex + 1}`,
-                  isExpanded: true,
-                  topics: (sem.topics || []).map((topic, tIndex) => ({
-                    id: Date.now() + sIndex * 1000 + tIndex,
-                    name: topic.name || "",
-                    isExpanded: true,
-                    subtopics: (topic.subtopics || []).map(
-                      (subtopic, subIndex) => ({
-                        id:
-                          Date.now() +
-                          sIndex * 100000 +
-                          tIndex * 1000 +
-                          subIndex,
-                        name: subtopic.name || "",
-                      })
-                    ),
-                  })),
-                }));
-                setSemesters(hydrated);
-              }
-            } catch (e) {
-              console.warn("Could not parse syllabus JSON:", e);
-            }
+          // Syllabus comes from MongoDB as a native array — no JSON.parse needed
+          const rawSyllabus = course.syllabus || course.syllabusData;
+          let syllabusArray = [];
+
+          if (Array.isArray(rawSyllabus) && rawSyllabus.length > 0) {
+            syllabusArray = rawSyllabus;
+          } else if (typeof rawSyllabus === "string" && rawSyllabus.trim() !== "") {
+            try { syllabusArray = JSON.parse(rawSyllabus); } catch (e) {}
+          }
+
+          if (syllabusArray.length > 0) {
+            const hydrated = syllabusArray.map((sem, sIndex) => ({
+              id: Date.now() + sIndex,
+              name: sem.name || `Semester ${sIndex + 1}`,
+              isExpanded: true,
+              topics: (sem.topics || []).map((topic, tIndex) => ({
+                id: Date.now() + sIndex * 1000 + tIndex,
+                name: topic.name || "",
+                isExpanded: true,
+                subtopics: (topic.subtopics || []).map((subtopic, subIndex) => ({
+                  id: Date.now() + sIndex * 100000 + tIndex * 1000 + subIndex,
+                  name: subtopic.name || "",
+                })),
+              })),
+            }));
+            setSemesters(hydrated);
           }
         } else {
           toast.error("Failed to load course");
