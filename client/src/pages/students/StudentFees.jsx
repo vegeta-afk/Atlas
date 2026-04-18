@@ -380,8 +380,8 @@ const StudentFees = () => {
           amount: otherFeeAmount,
           description: otherFeeDescription
         }] : [],
-        fineAmount: parseFloat(fineAmount || 0),
-        fineReason: fineAmount > 0 ? fineReason : ""
+        // fineAmount: parseFloat(fineAmount || 0),
+        // fineReason: fineAmount > 0 ? fineReason : ""
       };
 
       const response = await authFetch("/api/students/payment", {
@@ -724,6 +724,47 @@ const StudentFees = () => {
                         </div>
                       )}
 
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700">Date</label>
+                        <div className="relative">
+                          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                          <input
+                            type="date"
+                            value={paymentDate}
+                            onChange={(e) => setPaymentDate(e.target.value)}
+                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700">Receipt No</label>
+                        <div className="relative">
+                          <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                          <input
+                            type="text"
+                            value={receiptNo}
+                            onChange={(e) => setReceiptNo(e.target.value.toUpperCase())}
+                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700">Payment Mode</label>
+                        <select
+                          value={paymentMode}
+                          onChange={(e) => setPaymentMode(e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="cash">Cash</option>
+                          <option value="cheque">Cheque</option>
+                          <option value="bank_transfer">Bank Transfer</option>
+                          <option value="online">Online Payment</option>
+                        </select>
+                      </div>
+
                       <div className="bg-gray-50 p-4 border-b">
                         <h3 className="font-semibold text-gray-700">Select Fees to Pay</h3>
                         <p className="text-sm text-gray-500">Check the fees you want to pay. Enter amount for each selected fee.</p>
@@ -840,47 +881,8 @@ const StudentFees = () => {
                     </div>
 
                     {/* Payment Details */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700">Date</label>
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                          <input
-                            type="date"
-                            value={paymentDate}
-                            onChange={(e) => setPaymentDate(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700">Receipt No</label>
-                        <div className="relative">
-                          <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                          <input
-                            type="text"
-                            value={receiptNo}
-                            onChange={(e) => setReceiptNo(e.target.value.toUpperCase())}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700">Payment Mode</label>
-                        <select
-                          value={paymentMode}
-                          onChange={(e) => setPaymentMode(e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="cash">Cash</option>
-                          <option value="cheque">Cheque</option>
-                          <option value="bank_transfer">Bank Transfer</option>
-                          <option value="online">Online Payment</option>
-                        </select>
-                      </div>
-                      <div>
+                    
+                      {/* <div>
                         <label className="block text-sm font-medium mb-2 text-gray-700">Fine Amount (₹)</label>
                         <div className="relative">
                           <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-red-500" />
@@ -904,7 +906,7 @@ const StudentFees = () => {
                             />
                           </div>
                         )}
-                      </div>
+                      </div> */}
                     </div>
 
                     {/* Other Fees */}
