@@ -739,7 +739,7 @@ const updateData = {
           </div>
         </FormSection>
 
-        <FormSection title="Reference (Optional)" icon={User}>
+        {/* <FormSection title="Reference (Optional)" icon={User}>
           <div className="form-grid">
             <div className="form-group">
               <label>Reference Name</label>
@@ -757,7 +757,7 @@ const updateData = {
               </select>
             </div>
           </div>
-        </FormSection>
+        </FormSection> */}
 
         <FormSection title="Remarks (Optional)" icon={AlertCircle}>
           <div className="form-grid">

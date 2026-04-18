@@ -955,7 +955,7 @@ const handleEnquiryMethodChange = (e) => {
               onChange={handleAreaChange}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., Downtown"
+              placeholder="e.g., Rajiv Nagar"
             />
           </div>
           <div>
@@ -966,7 +966,7 @@ const handleEnquiryMethodChange = (e) => {
               value={areaForm.city}
               onChange={handleAreaChange}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., New York"
+              placeholder="e.g., Delhi"
             />
           </div>
           <div>
@@ -1347,7 +1347,7 @@ const handleEnquiryMethodChange = (e) => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Batch Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time Slot</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order</th>
+              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order</th> */}
               {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -1358,7 +1358,7 @@ const handleEnquiryMethodChange = (e) => {
               <tr key={item._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">{item.batchName}</td>
                 <td className="px-6 py-4">{`${item.startTime} to ${item.endTime}`}</td>
-                <td className="px-6 py-4">{item.order}</td>
+                {/* <td className="px-6 py-4">{item.order}</td> */}
                 {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>

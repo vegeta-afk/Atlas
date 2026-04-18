@@ -300,10 +300,10 @@ const ViewAdmission = () => {
               {getStatusLabel(admission.status)}
             </div>
           </div>
-          <div className="stat">
+          {/* <div className="stat">
             <span className="stat-label">Priority</span>
             {getPriorityBadge(admission.priority)}
-          </div>
+          </div> */}
           <div className="stat">
             <span className="stat-label">Admission Date</span>
             <div className="date-info">
@@ -344,9 +344,9 @@ const ViewAdmission = () => {
           <InfoCard title="Academic Information" icon={BookOpen}>
             <div className="info-grid">
               <InfoItem label="Last Qualification" value={admission.lastQualification} />
-              <InfoItem label="Percentage / CGPA"  value={admission.percentage} />
+              {/* <InfoItem label="Percentage / CGPA"  value={admission.percentage} /> */}
               <InfoItem label="Year of Passing"    value={String(admission.yearOfPassing)} />
-              <InfoItem label="School / College"   value={admission.schoolCollege} fullWidth />
+              {/* <InfoItem label="School / College"   value={admission.schoolCollege} fullWidth /> */}
             </div>
           </InfoCard>
 
@@ -368,7 +368,7 @@ const ViewAdmission = () => {
           <InfoCard title="Course & Batch Information" icon={BookOpen}>
             <div className="info-grid">
               <InfoItem label="Course"         value={admission.interestedCourse} />
-              <InfoItem label="Specialization" value={admission.specialization} />
+              {/* <InfoItem label="Specialization" value={admission.specialization} /> */}
               <InfoItem label="Batch Time"     value={admission.preferredBatch} />
               <InfoItem label="Admission Year" value={String(admission.admissionYear)} />
               <InfoItem label="Course Type"    value={admission.courseType} />
@@ -399,9 +399,9 @@ const ViewAdmission = () => {
           <InfoCard title="Source Information" icon={Globe}>
             <div className="info-grid">
               <InfoItem label="Source"             value={admission.source} />
-              <InfoItem label="Reference Name"     value={admission.referenceName} />
+              {/* <InfoItem label="Reference Name"     value={admission.referenceName} />
               <InfoItem label="Reference Contact"  value={admission.referenceContact} />
-              <InfoItem label="Reference Relation" value={admission.referenceRelation} />
+              <InfoItem label="Reference Relation" value={admission.referenceRelation} /> */}
             </div>
           </InfoCard>
         </div>
