@@ -1104,37 +1104,38 @@ const response = await fetch(endpoint, {
   }
 };
   // Open payment modal for add/edit
-  const openPaymentModal = (fee, action = "add") => {
-    if (!fee) return;
-    
-    setSelectedMonth(fee);
-    
-    if (action === "edit" && fee.status === "paid") {
-      // Editing an existing payment
-      setPaymentData({
-        monthNumber: fee.monthNumber,
-        amount: fee.paidAmount || fee.totalFee || fee.totalAmount || "",
-        paymentDate: fee.paymentDate ? new Date(fee.paymentDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        receiptNo: fee.receiptNo || "",
-        paymentMode: fee.paymentMode || "cash",
-        remarks: fee.remarks || "",
-        action: "edit"
-      });
-    } else {
-      // Adding a new payment
-      setPaymentData({
-        monthNumber: fee.monthNumber,
-        amount: "",
-        paymentDate: new Date().toISOString().split('T')[0],
-        receiptNo: generateReceiptNo(),
-        paymentMode: "cash",
-        remarks: "",
-        action: "add"
-      });
-    }
-    
-    setShowPaymentModal(true);
-  };
+ const openPaymentModal = (fee, action = "add") => {
+  if (!fee) return;
+
+  setSelectedMonth(fee);
+
+  if (action === "edit" && (fee.status === "paid" || fee.status === "partial")) {
+    // ✅ Pre-fill with the CURRENT paid amount (not adding on top)
+    setPaymentData({
+      monthNumber: fee.monthNumber,
+      amount: fee.paidAmount || "",         // show what was already entered
+      paymentDate: fee.paymentDate
+        ? new Date(fee.paymentDate).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+      receiptNo: fee.receiptNo || "",
+      paymentMode: fee.paymentMode || "cash",
+      remarks: fee.remarks || "",
+      action: "edit",
+    });
+  } else {
+    setPaymentData({
+      monthNumber: fee.monthNumber,
+      amount: "",
+      paymentDate: new Date().toISOString().split("T")[0],
+      receiptNo: generateReceiptNo(),
+      paymentMode: "cash",
+      remarks: "",
+      action: "add",
+    });
+  }
+
+  setShowPaymentModal(true);
+};
 
   // Generate receipt number
   const generateReceiptNo = () => {
@@ -1147,21 +1148,21 @@ const response = await fetch(endpoint, {
 
   // Get maximum allowed payment for a month
   const getMaxPaymentAllowed = () => {
-    if (!selectedMonth || !feeData) return 0;
-    
-    const monthFee = selectedMonth.totalFee || selectedMonth.totalAmount || 
-                    (selectedMonth.monthlyFee || selectedMonth.amount || 0) + 
-                    (selectedMonth.isExamMonth ? selectedMonth.examFee || 0 : 0);
-    
-    // If editing, return the full month fee
-    if (paymentData.action === "edit") {
-      return monthFee;
-    }
-    
-    // If adding, check if already paid something
-    const alreadyPaid = selectedMonth.paidAmount || 0;
-    return monthFee - alreadyPaid;
-  };
+  if (!selectedMonth || !feeData) return 0;
+
+  const monthFee =
+    selectedMonth.totalFee ||
+    selectedMonth.totalAmount ||
+    (selectedMonth.monthlyFee || selectedMonth.amount || 0) +
+      (selectedMonth.isExamMonth ? selectedMonth.examFee || 0 : 0);
+
+  if (paymentData.action === "edit") {
+    return monthFee;                        // ✅ full fee — user is replacing, not adding
+  }
+
+  const alreadyPaid = selectedMonth.paidAmount || 0;
+  return monthFee - alreadyPaid;            // remaining balance for new payments
+};
 
   // Check if payment exceeds total course fee - FIXED OVERPAYMENT VALIDATION
   const checkOverpayment = (amount) => {
@@ -1184,67 +1185,129 @@ const response = await fetch(endpoint, {
     return newTotalPaid > feeData.summary.totalCourseFee;
   };
 
-  const handlePayment = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const paymentAmount = parseFloat(paymentData.amount) || 0;
-      
-      // Validation
-      if (!paymentAmount || paymentAmount <= 0) {
-        alert("Please enter a valid payment amount");
-        return;
-      }
-      
-      // Check if payment exceeds maximum allowed for this month
-      const maxAllowed = getMaxPaymentAllowed();
-      if (paymentAmount > maxAllowed) {
-        alert(`Payment cannot exceed ${formatCurrency(maxAllowed)} for this month`);
-        return;
-      }
-      
-      // Check if payment exceeds total course fee
-      if (checkOverpayment(paymentAmount)) {
-        alert("Payment cannot exceed total course fee");
-        return;
-      }
-      
-      // If API exists, use it
-      const response = await fetch(`${BASE_URL}/api/students/${studentId}/fees/pay`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(paymentData),
+ const handlePayment = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const paymentAmount = parseFloat(paymentData.amount) || 0;
+
+    if (!paymentAmount || paymentAmount <= 0) {
+      alert("Please enter a valid payment amount");
+      return;
+    }
+
+    const maxAllowed = getMaxPaymentAllowed();
+    if (paymentAmount > maxAllowed) {
+      alert(`Payment cannot exceed ${formatCurrency(maxAllowed)} for this month`);
+      return;
+    }
+
+    if (checkOverpayment(paymentAmount)) {
+      alert("Payment cannot exceed total course fee");
+      return;
+    }
+
+    // ─── EDIT: Replace the amount via schedule PUT (never adds on top) ───
+    if (paymentData.action === "edit") {
+      const updatedFeeSchedule = feeData.feeSchedule.map((fee) => {
+        if (fee.monthNumber === paymentData.monthNumber) {
+          const totalFee = fee.totalFee || 0;
+          const newBalance = totalFee - paymentAmount;
+          return {
+            ...fee,
+            paidAmount: paymentAmount,                          // ✅ SET, not add
+            balanceAmount: newBalance,
+            pendingAmount: newBalance,
+            status: paymentAmount === 0 ? "pending"
+                  : paymentAmount >= totalFee ? "paid"
+                  : "partial",
+            paymentDate: new Date(paymentData.paymentDate),
+            receiptNo: paymentData.receiptNo,
+            paymentMode: paymentData.paymentMode,
+            remarks: paymentData.remarks,
+          };
+        }
+        return fee;
       });
 
-      if (response.status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login";
-        return;
-      }
+      const totalPaid = updatedFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
+      const balanceAmount = Math.max(0, feeData.summary.totalCourseFee - totalPaid);
+
+      const response = await fetch(
+        `${BASE_URL}/api/students/${studentId}/fees/schedule`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            feeSchedule: updatedFeeSchedule.map(cleanFeeForBackend),
+            totalCourseFee: feeData.summary.totalCourseFee,
+            paidAmount: totalPaid,
+            balanceAmount,
+          }),
+        }
+      );
 
       if (response.ok) {
-        const data = await response.json();
-        alert("Payment recorded successfully!");
+        updateFeeSchedule(updatedFeeSchedule);
+        alert("Payment updated successfully!");
         setShowPaymentModal(false);
 
-        if (data.data?.receipt) {
-          setSelectedReceipt(data.data.receipt);
-          setShowReceiptModal(true);
-        }
-
-        // Refresh data
-        fetchStudentFees();
+        const receipt = {
+          receiptNo: paymentData.receiptNo,
+          date: new Date(paymentData.paymentDate),
+          studentId: feeData.student.studentId,
+          studentName: feeData.student.fullName,
+          course: feeData.course?.courseFullName || feeData.student.course,
+          month: feeData.feeSchedule.find(f => f.monthNumber === paymentData.monthNumber)?.month,
+          amount: paymentAmount,
+          paymentMode: paymentData.paymentMode,
+          balance: balanceAmount,
+          action: "edit",
+        };
+        setSelectedReceipt(receipt);
+        setShowReceiptModal(true);
       } else {
-        // Fallback: Update locally
+        // Fallback: update locally if backend fails
         updateFeeLocally();
       }
-    } catch (error) {
-      console.error("Payment error, updating locally:", error);
+      return;
+    }
+
+    // ─── ADD: Use the existing /fees/pay endpoint as before ───
+    const response = await fetch(`${BASE_URL}/api/students/${studentId}/fees/pay`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(paymentData),
+    });
+
+    if (response.status === 401) {
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+      return;
+    }
+
+    if (response.ok) {
+      const data = await response.json();
+      alert("Payment recorded successfully!");
+      setShowPaymentModal(false);
+      if (data.data?.receipt) {
+        setSelectedReceipt(data.data.receipt);
+        setShowReceiptModal(true);
+      }
+      fetchStudentFees();
+    } else {
       updateFeeLocally();
     }
-  };
+  } catch (error) {
+    console.error("Payment error, updating locally:", error);
+    updateFeeLocally();
+  }
+};
 
   const updateFeeLocally = () => {
     const paymentAmount = parseFloat(paymentData.amount) || 0;
