@@ -724,161 +724,195 @@ const StudentFees = () => {
                         </div>
                       )}
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700">Date</label>
-                        <div className="relative">
-                          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                          <input
-                            type="date"
-                            value={paymentDate}
-                            onChange={(e) => setPaymentDate(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700">Receipt No</label>
-                        <div className="relative">
-                          <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-                          <input
-                            type="text"
-                            value={receiptNo}
-                            onChange={(e) => setReceiptNo(e.target.value.toUpperCase())}
-                            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-gray-700">Payment Mode</label>
-                        <select
-                          value={paymentMode}
-                          onChange={(e) => setPaymentMode(e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="cash">Cash</option>
-                          <option value="cheque">Cheque</option>
-                          <option value="bank_transfer">Bank Transfer</option>
-                          <option value="online">Online Payment</option>
-                        </select>
-                      </div>
+                     {/* Date + Receipt + Payment Mode */}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <div>
+    <label className="block text-sm font-medium mb-2 text-gray-700">Date</label>
+    <div className="relative">
+      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+      <input
+        type="date"
+        value={paymentDate}
+        onChange={(e) => setPaymentDate(e.target.value)}
+        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        required
+      />
+    </div>
+  </div>
+  <div>
+    <label className="block text-sm font-medium mb-2 text-gray-700">Receipt No</label>
+    <div className="relative">
+      <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+      <input
+        type="text"
+        value={receiptNo}
+        onChange={(e) => setReceiptNo(e.target.value.toUpperCase())}
+        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        required
+      />
+    </div>
+  </div>
+  <div>
+    <label className="block text-sm font-medium mb-2 text-gray-700">Payment Mode</label>
+    <select
+      value={paymentMode}
+      onChange={(e) => setPaymentMode(e.target.value)}
+      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+    >
+      <option value="cash">Cash</option>
+      <option value="cheque">Cheque</option>
+      <option value="bank_transfer">Bank Transfer</option>
+      <option value="online">Online Payment</option>
+    </select>
+  </div>
+</div>
 
-                      <div className="bg-gray-50 p-4 border-b">
-                        <h3 className="font-semibold text-gray-700">Select Fees to Pay</h3>
-                        <p className="text-sm text-gray-500">Check the fees you want to pay. Enter amount for each selected fee.</p>
-                        <p className="text-sm text-blue-600 mt-1">
-                          💡 If you pay less than the full amount, remaining will be added to next month.
-                        </p>
-                      </div>
+{/* ✅ Fee List with Course Tabs */}
+<div className="border border-gray-200 rounded-lg overflow-hidden">
 
-                      <div className="divide-y divide-gray-100">
-                        {getCurrentFees().length === 0 ? (
-                          <div className="p-8 text-center">
-                            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900">All Fees Paid!</h3>
-                            <p className="text-gray-600">No pending fees for this course.</p>
-                          </div>
-                        ) : (
-                          getCurrentFees().map((fee) => (
-                            <div key={fee.id} className={`p-4 hover:bg-gray-50 ${fee.isExamMonth ? 'bg-yellow-50' : ''}`}>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                  <input
-                                    type="checkbox"
-                                    checked={fee.selected || false}
-                                    onChange={() => toggleFeeSelection(fee.id)}
-                                    className="h-5 w-5 rounded text-blue-600 cursor-pointer"
-                                  />
-                                  <div>
-                                    <div className="font-medium text-gray-900">{fee.month}</div>
-                                    <div className="text-sm text-gray-600">{fee.description}</div>
-                                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
-                                      <span>Type: {fee.type}</span>
-                                      {fee.isExamMonth && (
-                                        <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">Exam Month</span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center space-x-4">
-                                  <div className="text-right">
-                                    <div className="font-bold text-gray-900">
-                                      {formatCurrency(fee.pendingAmount || 0)}
-                                      {fee.status === "partial" && (
-                                        <span className="text-sm font-normal text-gray-500 ml-1">remaining</span>
-                                      )}
-                                    </div>
-                                    <div className="text-sm">
-                                      {fee.status === "partial" ? (
-                                        <div className="text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
-                                      ) : (
-                                        <div className="text-red-600">Due: {formatCurrency(fee.pendingAmount || 0)}</div>
-                                      )}
-                                    </div>
-                                    {fee.status === "partial" && (
-                                      <div className="text-xs text-gray-500 mt-1">Original: {formatCurrency(fee.totalAmount)}</div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
+  {/* ✅ Course Tabs - only show if multiple courses */}
+  {allCourseFeeSchedules.length > 1 && (
+    <div className="flex border-b bg-gray-50 overflow-x-auto">
+      {allCourseFeeSchedules.map((schedule, idx) => (
+        <button
+          key={idx}
+          type="button"
+          onClick={() => setSelectedCourseTab(idx)}
+          className={`px-5 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex items-center gap-2 ${
+            selectedCourseTab === idx
+              ? "border-blue-600 text-blue-600 bg-white"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <span>{idx === 0 ? "📚" : "➕"}</span>
+          <span>{schedule.courseName}</span>
+          {schedule.fees.filter(f => f.selected).length > 0 && (
+            <span className="bg-blue-100 text-blue-700 text-xs px-1.5 py-0.5 rounded-full">
+              {schedule.fees.filter(f => f.selected).length}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  )}
 
-                              {/* Amount Input - shows when checked */}
-                              {fee.selected && (
-                                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                  <div className="flex items-center space-x-4">
-                                    <div className="flex-1">
-                                      <div className="text-sm text-gray-600 mb-2">Paying for {fee.month}</div>
-                                      <div className="flex items-center space-x-4">
-                                        <div className="flex-1">
-                                          <label className="block text-sm font-medium text-gray-700 mb-1">Amount to Pay</label>
-                                          <input
-                                            type="number"
-                                            value={fee.payingAmount || 0}
-                                            onChange={(e) => handleAmountChange(fee.id, parseFloat(e.target.value) || 0)}
-                                            onWheel={(e) => e.target.blur()}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            min="0"
-                                            max={fee.pendingAmount || 0}
-                                          />
-                                          <div className="text-xs text-gray-500 mt-1">Max: {formatCurrency(fee.pendingAmount || 0)}</div>
-                                        </div>
-                                        <div className="text-sm">
-                                          <div className="text-gray-600">Remaining: {formatCurrency(fee.pendingAmount)}</div>
-                                          {fee.status === "partial" && (
-                                            <div className="text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
-                                          )}
-                                          {fee.payingAmount > 0 && (
-                                            <div className="text-red-600 mt-1">
-                                              Will remain: {formatCurrency((fee.pendingAmount || 0) - (fee.payingAmount || 0))}
-                                              {(fee.pendingAmount || 0) - (fee.payingAmount || 0) > 0 && (
-                                                <span className="text-xs ml-1">(added to next month)</span>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ))
-                        )}
-                      </div>
+  {/* Header */}
+  <div className="bg-gray-50 p-4 border-b">
+    <h3 className="font-semibold text-gray-700">Select Fees to Pay</h3>
+    <p className="text-sm text-gray-500">Check the fees you want to pay. Enter amount for each selected fee.</p>
+    <p className="text-sm text-blue-600 mt-1">
+      💡 If you pay less than the full amount, remaining will be added to next month.
+    </p>
+  </div>
 
-                      {/* Total */}
-                      <div className="p-4 bg-gray-50 border-t">
-                        <div className="flex justify-between items-center">
-                          <div className="font-bold text-lg">Total Selected (All Courses)</div>
-                          <div className="font-bold text-lg text-blue-600">{formatCurrency(calculateMonthlyFeesTotal())}</div>
-                        </div>
-                        <div className="text-sm text-gray-500 mt-1">
-                          {allCourseFeeSchedules.reduce((total, s) => total + s.fees.filter(f => f.selected && f.payingAmount > 0).length, 0)} fee(s) selected across all courses
-                        </div>
-                      </div>
+  {/* Fee Rows */}
+  <div className="divide-y divide-gray-100">
+    {getCurrentFees().length === 0 ? (
+      <div className="p-8 text-center">
+        <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900">All Fees Paid!</h3>
+        <p className="text-gray-600">No pending fees for this course.</p>
+      </div>
+    ) : (
+      getCurrentFees().map((fee) => (
+        <div key={fee.id} className={`p-4 hover:bg-gray-50 ${fee.isExamMonth ? 'bg-yellow-50' : ''}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <input
+                type="checkbox"
+                checked={fee.selected || false}
+                onChange={() => toggleFeeSelection(fee.id)}
+                className="h-5 w-5 rounded text-blue-600 cursor-pointer"
+              />
+              <div>
+                <div className="font-medium text-gray-900">{fee.month}</div>
+                <div className="text-sm text-gray-600">{fee.description}</div>
+                <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                  <span>Type: {fee.type}</span>
+                  {fee.isExamMonth && (
+                    <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">Exam Month</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="text-right">
+                <div className="font-bold text-gray-900">
+                  {formatCurrency(fee.pendingAmount || 0)}
+                  {fee.status === "partial" && (
+                    <span className="text-sm font-normal text-gray-500 ml-1">remaining</span>
+                  )}
+                </div>
+                <div className="text-sm">
+                  {fee.status === "partial" ? (
+                    <div className="text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
+                  ) : (
+                    <div className="text-red-600">Due: {formatCurrency(fee.pendingAmount || 0)}</div>
+                  )}
+                </div>
+                {fee.status === "partial" && (
+                  <div className="text-xs text-gray-500 mt-1">Original: {formatCurrency(fee.totalAmount)}</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Amount Input - shows when checked */}
+          {fee.selected && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center space-x-4">
+                <div className="flex-1">
+                  <div className="text-sm text-gray-600 mb-2">Paying for {fee.month}</div>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Amount to Pay</label>
+                      <input
+                        type="number"
+                        value={fee.payingAmount || 0}
+                        onChange={(e) => handleAmountChange(fee.id, parseFloat(e.target.value) || 0)}
+                        onWheel={(e) => e.target.blur()}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        min="0"
+                        max={fee.pendingAmount || 0}
+                      />
+                      <div className="text-xs text-gray-500 mt-1">Max: {formatCurrency(fee.pendingAmount || 0)}</div>
                     </div>
+                    <div className="text-sm">
+                      <div className="text-gray-600">Remaining: {formatCurrency(fee.pendingAmount)}</div>
+                      {fee.status === "partial" && (
+                        <div className="text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
+                      )}
+                      {fee.payingAmount > 0 && (
+                        <div className="text-red-600 mt-1">
+                          Will remain: {formatCurrency((fee.pendingAmount || 0) - (fee.payingAmount || 0))}
+                          {(fee.pendingAmount || 0) - (fee.payingAmount || 0) > 0 && (
+                            <span className="text-xs ml-1">(added to next month)</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ))
+    )}
+  </div>
+
+  {/* Total */}
+  <div className="p-4 bg-gray-50 border-t">
+    <div className="flex justify-between items-center">
+      <div className="font-bold text-lg">Total Selected (All Courses)</div>
+      <div className="font-bold text-lg text-blue-600">{formatCurrency(calculateMonthlyFeesTotal())}</div>
+    </div>
+    <div className="text-sm text-gray-500 mt-1">
+      {allCourseFeeSchedules.reduce((total, s) => total + s.fees.filter(f => f.selected && f.payingAmount > 0).length, 0)} fee(s) selected across all courses
+    </div>
+  </div>
+
+</div>
 
                     {/* Payment Details */}
                     
