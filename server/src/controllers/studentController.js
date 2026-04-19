@@ -236,34 +236,52 @@ let finalMonthlyFee = 0;
 // @access  Private
 const updateStudent = async (req, res) => {
   try {
-    const student = await Student.findByIdAndUpdate(
+    const student = await Student.findById(req.params.id);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    // ✅ Handle email change/removal — never store empty string
+    if ("email" in req.body) {
+      const newEmail = (req.body.email && req.body.email.trim())
+        ? req.body.email.trim()
+        : `${student.studentId.toLowerCase()}@student.lms`;
+
+      req.body.email = newEmail;
+
+      // Sync user account email
+      const User = require("../models/user");
+      const linkedUser = await User.findOne({ studentId: student.studentId });
+      if (linkedUser) {
+        const emailTaken = await User.findOne({
+          email: newEmail,
+          _id: { $ne: linkedUser._id }
+        });
+        if (emailTaken) {
+          return res.status(400).json({
+            success: false,
+            message: `Email ${newEmail} is already in use by another account`
+          });
+        }
+        await User.findByIdAndUpdate(linkedUser._id, { email: newEmail });
+        console.log(`✅ User email synced: ${linkedUser.email} → ${newEmail}`);
+      }
+    }
+
+    const updatedStudent = await Student.findByIdAndUpdate(
       req.params.id,
-      {
-        ...req.body,
-        updatedBy: req.user?.id,
-      },
+      { ...req.body, updatedBy: req.user?.id },
       { new: true, runValidators: true }
     );
-
-    if (!student) {
-      return res.status(404).json({
-        success: false,
-        message: "Student not found",
-      });
-    }
 
     res.status(200).json({
       success: true,
       message: "Student updated successfully",
-      data: student,
+      data: updatedStudent,
     });
   } catch (error) {
     console.error("Error updating student:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
 

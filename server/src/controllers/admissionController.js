@@ -355,41 +355,34 @@ exports.updateAdmission = async (req, res) => {
     try {
       const student = await Student.findOne({ admissionId: admission._id });
       if (student) {
-        // Personal info
         student.fullName       = admission.fullName;
         student.dateOfBirth    = admission.dateOfBirth;
         student.gender         = admission.gender;
         student.fatherName     = admission.fatherName;
         student.motherName     = admission.motherName;
-        student.email          = admission.email;
+        student.email = (admission.email && admission.email.trim())
+          ? admission.email.trim()
+          : `${student.studentId.toLowerCase()}@student.lms`;
         student.mobileNumber   = admission.mobileNumber;
         student.fatherNumber   = admission.fatherNumber;
         student.motherNumber   = admission.motherNumber;
         student.aadharNumber   = admission.aadharNumber;
-
-        // Address
         student.address        = admission.address;
         student.city           = admission.city;
         student.state          = admission.state;
         student.pincode        = admission.pincode;
-
-        // Course & batch
         student.course         = admission.course;
         student.courseCode     = admission.courseId || student.courseCode;
         student.batchTime      = admission.batchTime;
         student.facultyAllot   = admission.facultyAllot;
-
-        // Other
         student.cast           = admission.cast;
         student.speciallyAbled = admission.speciallyAbled;
         student.remarks        = admission.remarks;
 
-        // ── Photo sync (this fixes STU20260070's old photo) ──
         if (admission.photo) {
           student.photo = admission.photo;
         }
 
-        // ── Scholarship/fees sync ──
         if (admission.hasScholarship && admission.scholarship) {
           student.hasScholarship = true;
           student.scholarship    = admission.scholarship;
@@ -405,22 +398,37 @@ exports.updateAdmission = async (req, res) => {
           const User = require("../models/user");
           const userAccount = await User.findOne({ studentId: student.studentId });
           if (userAccount) {
-            userAccount.fullName = student.fullName;
-            if (student.email && !student.email.includes("@student.lms")) {
-              userAccount.email = student.email;
+            const newEmail = (admission.email && admission.email.trim())
+              ? admission.email.trim()
+              : `${student.studentId.toLowerCase()}@student.lms`;
+
+            const emailTaken = await User.findOne({
+              email: newEmail,
+              _id: { $ne: userAccount._id }
+            });
+
+            if (!emailTaken) {
+              userAccount.email = newEmail;
+              student.email = newEmail;
+            } else {
+              console.log(`⚠️ Email ${newEmail} already taken, skipping email update`);
             }
+
+            userAccount.fullName = student.fullName;
+            userAccount.name = student.fullName;
             await userAccount.save();
-            console.log(`✅ User account synced for ${student.studentId}`);
+            await student.save();
+            console.log(`✅ User account synced for ${student.studentId} → ${newEmail}`);
           }
         } catch (userSyncError) {
           console.error("⚠️ User sync failed:", userSyncError.message);
         }
-      }
+
+      } // ← closes if (student)
     } catch (syncError) {
       console.error("⚠️ Student sync failed:", syncError.message);
-      // Don't fail the whole request if sync fails
     }
-    // ───────────────────────────────────────────────────────────────
+    // ── end SYNC STUDENT ────────────────────────────────────────────
 
     // ── Auto-create student if status changed ───────────────────────
     if (
