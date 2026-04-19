@@ -348,8 +348,8 @@ exports.updateAdmission = async (req, res) => {
       admission.set("scholarship", null);
     }
 
-    if (!bodyToApply.email?.trim()) {
-  delete bodyToApply.email;  // don't overwrite with empty string
+   if (!bodyToApply.email?.trim()) {
+  bodyToApply.email = "";  // ← overwrite old email with empty, fallback will kick in
 }
 
   
