@@ -359,7 +359,11 @@ exports.updateAdmission = async (req, res) => {
   admission.email = "";  // keep as empty string, student sync will use fallback
 }
 
+console.log(`📧 About to save student email as: "${student.email}"`);
+
     await admission.save();
+
+    console.log(`✅ Student saved successfully`);
 
     // ── SYNC STUDENT ────────────────────────────────────────────────
     try {
