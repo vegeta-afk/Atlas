@@ -348,7 +348,17 @@ exports.updateAdmission = async (req, res) => {
       admission.set("scholarship", null);
     }
 
+    if (!bodyToApply.email?.trim()) {
+  delete bodyToApply.email;  // don't overwrite with empty string
+}
+
+  
     Object.assign(admission, bodyToApply);
+
+    if (!admission.email?.trim()) {
+  admission.email = "";  // keep as empty string, student sync will use fallback
+}
+
     await admission.save();
 
     // ── SYNC STUDENT ────────────────────────────────────────────────

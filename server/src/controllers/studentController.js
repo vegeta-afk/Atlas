@@ -241,30 +241,35 @@ const updateStudent = async (req, res) => {
       return res.status(404).json({ success: false, message: "Student not found" });
     }
 
-    // ✅ Handle email change/removal — never store empty string
-    if ("email" in req.body) {
-      const newEmail = (req.body.email && req.body.email.trim())
-        ? req.body.email.trim()
-        : `${student.studentId.toLowerCase()}@student.lms`;
+    // ✅ Always recompute email — even if not sent in body or sent as empty
+    const incomingEmail = req.body.email?.trim() || "";
+    const newEmail = incomingEmail
+      ? incomingEmail
+      : `${student.studentId.toLowerCase()}@student.lms`;
 
-      req.body.email = newEmail;
+    // Always set it — whether real email, fallback, or unchanged
+    req.body.email = newEmail;
 
-      // Sync user account email
+    // Sync user account email if it changed
+    if (newEmail !== student.email) {
       const User = require("../models/user");
       const linkedUser = await User.findOne({ studentId: student.studentId });
+
       if (linkedUser) {
         const emailTaken = await User.findOne({
           email: newEmail,
           _id: { $ne: linkedUser._id }
         });
+
         if (emailTaken) {
           return res.status(400).json({
             success: false,
             message: `Email ${newEmail} is already in use by another account`
           });
         }
+
         await User.findByIdAndUpdate(linkedUser._id, { email: newEmail });
-        console.log(`✅ User email synced: ${linkedUser.email} → ${newEmail}`);
+        console.log(`✅ User email synced: ${student.email} → ${newEmail}`);
       }
     }
 
