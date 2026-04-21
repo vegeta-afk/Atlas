@@ -19,6 +19,7 @@ import "./AddFaculty.css";
 
 const AddFaculty = () => {
   const navigate = useNavigate();
+  const basePath = "/admin";
 
   const [formData, setFormData] = useState({
   dateOfJoining: "",
@@ -373,25 +374,27 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
   };
 
   const handleReset = () => {
-    setFormData({
-      dateOfJoining: "",
-      facultyName: "",
-      fathersName: "",
-      shift: "",
-      lunchTime: "",
-      dateOfBirth: "",
-      email: "",
-      basicStipend: "",
-      mobileNo: "",
-      whatsappNo: "",
-      address: "",
-      fatherContactNo: "",
-      motherContactNo: "",
-      dateOfLeaving: "",
-      courseAllotted: "",
-    });
-    setErrors({});
-  };
+  setFormData({
+    dateOfJoining: "",
+    facultyName: "",
+    fathersName: "",
+    shiftStart: "",      // ✅ updated
+    shiftEnd: "",        // ✅ updated
+    lunchStart: "",      // ✅ updated
+    lunchEnd: "",        // ✅ updated
+    dateOfBirth: "",
+    email: "",
+    basicStipend: "",
+    mobileNo: "",
+    whatsappNo: "",
+    address: "",
+    fatherContactNo: "",
+    motherContactNo: "",
+    courseAllotted: "",
+    // removed dateOfLeaving ✅
+  });
+  setErrors({});
+};
 
   return (
     <div className="new-enquiry-container">
