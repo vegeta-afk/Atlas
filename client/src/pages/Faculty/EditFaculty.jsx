@@ -13,7 +13,7 @@ import {
   RefreshCw,
   AlertCircle,
 } from "lucide-react";
-import "./AddFaculty.css"; // reuse the same CSS
+import "./AddFaculty.css";
 
 const EditFaculty = () => {
   const navigate = useNavigate();
@@ -22,12 +22,15 @@ const EditFaculty = () => {
 
   const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
 
+  // ✅ Updated formData — split shift & lunch into start/end, removed dateOfLeaving
   const [formData, setFormData] = useState({
     dateOfJoining: "",
     facultyName: "",
     fathersName: "",
-    shift: "",
-    lunchTime: "",
+    shiftStart: "",
+    shiftEnd: "",
+    lunchStart: "",
+    lunchEnd: "",
     dateOfBirth: "",
     email: "",
     basicStipend: "",
@@ -36,7 +39,6 @@ const EditFaculty = () => {
     address: "",
     fatherContactNo: "",
     motherContactNo: "",
-    dateOfLeaving: "",
     courseAllotted: "",
   });
 
@@ -46,12 +48,11 @@ const EditFaculty = () => {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
 
-  // Courses state
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [courseError, setCourseError] = useState(null);
 
-  // ─── Format helpers (same as AddFaculty) ───────────────────────────────────
+  // ─── Format helpers ────────────────────────────────────────────────────────
   const formatName = (name) => {
     if (!name) return "";
     return name
@@ -66,6 +67,24 @@ const EditFaculty = () => {
     return phone.replace(/\D/g, "").slice(0, 10);
   };
 
+  // ✅ Helper to convert "HH:MM" 24hr to "H:MM AM/PM"
+  const formatTo12Hour = (time24) => {
+    if (!time24) return "";
+    const [hours, minutes] = time24.split(":").map(Number);
+    const period = hours >= 12 ? "PM" : "AM";
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${String(minutes).padStart(2, "0")} ${period}`;
+  };
+
+  // ✅ Helper to split stored "HH:MM-HH:MM" string back into [start, end]
+  const parseTimeRange = (timeRange) => {
+    if (!timeRange || !timeRange.includes("-")) return ["", ""];
+    const parts = timeRange.split("-");
+    // Handle case where stored value might be old format like "Morning"
+    if (parts.length !== 2 || !parts[0].includes(":")) return ["", ""];
+    return [parts[0].trim(), parts[1].trim()];
+  };
+
   // ─── Fetch existing faculty data ───────────────────────────────────────────
   useEffect(() => {
     const fetchFacultyById = async () => {
@@ -76,14 +95,21 @@ const EditFaculty = () => {
         if (response.data.success) {
           const f = response.data.data;
           setFacultyNo(f.facultyNo || "");
+
+          // ✅ Parse shift and lunchTime back into start/end pairs
+          const [shiftStart, shiftEnd] = parseTimeRange(f.shift);
+          const [lunchStart, lunchEnd] = parseTimeRange(f.lunchTime);
+
           setFormData({
             dateOfJoining: f.dateOfJoining
               ? new Date(f.dateOfJoining).toISOString().split("T")[0]
               : "",
             facultyName: f.facultyName || "",
             fathersName: f.fathersName || "",
-            shift: f.shift || "",
-            lunchTime: f.lunchTime || "",
+            shiftStart,
+            shiftEnd,
+            lunchStart,
+            lunchEnd,
             dateOfBirth: f.dateOfBirth
               ? new Date(f.dateOfBirth).toISOString().split("T")[0]
               : "",
@@ -94,9 +120,6 @@ const EditFaculty = () => {
             address: f.address || "",
             fatherContactNo: f.fatherContactNo || "",
             motherContactNo: f.motherContactNo || "",
-            dateOfLeaving: f.dateOfLeaving
-              ? new Date(f.dateOfLeaving).toISOString().split("T")[0]
-              : "",
             courseAllotted: f.courseAssigned || f.courseAllotted || "",
           });
         } else {
@@ -171,7 +194,7 @@ const EditFaculty = () => {
     }
   };
 
-  // ─── Keyboard navigation (same as AddFaculty) ──────────────────────────────
+  // ─── Keyboard navigation ───────────────────────────────────────────────────
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -192,18 +215,21 @@ const EditFaculty = () => {
     }
   };
 
-  // ─── Validation (same rules as AddFaculty) ─────────────────────────────────
+  // ─── Validation ────────────────────────────────────────────────────────────
   const validateForm = () => {
     const newErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\d{10}$/;
 
+    // ✅ Updated required fields
     const requiredFields = [
       "dateOfJoining",
       "facultyName",
       "fathersName",
-      "shift",
-      "lunchTime",
+      "shiftStart",
+      "shiftEnd",
+      "lunchStart",
+      "lunchEnd",
       "dateOfBirth",
       "email",
       "basicStipend",
@@ -219,6 +245,14 @@ const EditFaculty = () => {
         newErrors[field] = "This field is required";
       }
     });
+
+    // ✅ Time range validations
+    if (formData.shiftStart && formData.shiftEnd && formData.shiftStart >= formData.shiftEnd) {
+      newErrors.shiftEnd = "End time must be after start time";
+    }
+    if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.lunchEnd) {
+      newErrors.lunchEnd = "Lunch end time must be after start time";
+    }
 
     if (formData.email && !emailRegex.test(formData.email)) {
       newErrors.email = "Please enter a valid email address";
@@ -251,7 +285,7 @@ const EditFaculty = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ─── Submit (calls update API instead of create) ───────────────────────────
+  // ─── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -268,8 +302,9 @@ const EditFaculty = () => {
         fathersName: formData.fathersName,
         dateOfJoining: formData.dateOfJoining,
         dateOfBirth: formData.dateOfBirth,
-        shift: formData.shift,
-        lunchTime: formData.lunchTime,
+        // ✅ Combine back into "HH:MM-HH:MM" for the backend
+        shift: `${formData.shiftStart}-${formData.shiftEnd}`,
+        lunchTime: `${formData.lunchStart}-${formData.lunchEnd}`,
         email: formData.email,
         mobileNo: formData.mobileNo,
         whatsappNo: formData.whatsappNo || formData.mobileNo,
@@ -277,8 +312,8 @@ const EditFaculty = () => {
         fatherContactNo: formData.fatherContactNo,
         motherContactNo: formData.motherContactNo,
         basicStipend: parseFloat(formData.basicStipend) || 0,
-        dateOfLeaving: formData.dateOfLeaving || null,
         courseAssigned: formData.courseAllotted,
+        // ✅ dateOfLeaving removed
       };
 
       const response = await facultyAPI.updateFaculty(facultyId, facultyData);
@@ -342,7 +377,7 @@ const EditFaculty = () => {
     );
   }
 
-  // ─── Render (identical structure to AddFaculty form) ──────────────────────
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="new-enquiry-container">
       {/* Header */}
@@ -366,7 +401,6 @@ const EditFaculty = () => {
             onClick={handleSubmit}
             disabled={isSubmitting}
             className="btn-primary"
-            type="submit"
           >
             <Save size={18} />
             {isSubmitting ? "Saving..." : "Save Changes"}
@@ -383,21 +417,13 @@ const EditFaculty = () => {
           </div>
           <div className="card-content">
             <div className="form-grid">
-              {/* Faculty No - read only */}
               <div className="form-group">
                 <label>Faculty No</label>
-                <input
-                  type="text"
-                  value={facultyNo}
-                  readOnly
-                  className="enquiry-no"
-                />
+                <input type="text" value={facultyNo} readOnly className="enquiry-no" />
               </div>
 
               <div className="form-group">
-                <label>
-                  Date of Joining <span className="required-star">*</span>
-                </label>
+                <label>Date of Joining <span className="required-star">*</span></label>
                 <input
                   type="date"
                   name="dateOfJoining"
@@ -407,15 +433,11 @@ const EditFaculty = () => {
                   max={new Date().toISOString().split("T")[0]}
                   className={errors.dateOfJoining ? "error-field" : ""}
                 />
-                {errors.dateOfJoining && (
-                  <span className="error-text">{errors.dateOfJoining}</span>
-                )}
+                {errors.dateOfJoining && <span className="error-text">{errors.dateOfJoining}</span>}
               </div>
 
               <div className="form-group">
-                <label>
-                  Faculty Name <span className="required-star">*</span>
-                </label>
+                <label>Faculty Name <span className="required-star">*</span></label>
                 <input
                   type="text"
                   name="facultyName"
@@ -425,15 +447,11 @@ const EditFaculty = () => {
                   placeholder="Full name of faculty"
                   className={errors.facultyName ? "error-field" : ""}
                 />
-                {errors.facultyName && (
-                  <span className="error-text">{errors.facultyName}</span>
-                )}
+                {errors.facultyName && <span className="error-text">{errors.facultyName}</span>}
               </div>
 
               <div className="form-group">
-                <label>
-                  Father's Name <span className="required-star">*</span>
-                </label>
+                <label>Father's Name <span className="required-star">*</span></label>
                 <input
                   type="text"
                   name="fathersName"
@@ -443,15 +461,11 @@ const EditFaculty = () => {
                   placeholder="Father's name"
                   className={errors.fathersName ? "error-field" : ""}
                 />
-                {errors.fathersName && (
-                  <span className="error-text">{errors.fathersName}</span>
-                )}
+                {errors.fathersName && <span className="error-text">{errors.fathersName}</span>}
               </div>
 
               <div className="form-group">
-                <label>
-                  Date of Birth <span className="required-star">*</span>
-                </label>
+                <label>Date of Birth <span className="required-star">*</span></label>
                 <input
                   type="date"
                   name="dateOfBirth"
@@ -461,15 +475,11 @@ const EditFaculty = () => {
                   max={new Date().toISOString().split("T")[0]}
                   className={errors.dateOfBirth ? "error-field" : ""}
                 />
-                {errors.dateOfBirth && (
-                  <span className="error-text">{errors.dateOfBirth}</span>
-                )}
+                {errors.dateOfBirth && <span className="error-text">{errors.dateOfBirth}</span>}
               </div>
 
               <div className="form-group">
-                <label>
-                  Course Allotted <span className="required-star">*</span>
-                </label>
+                <label>Course Allotted <span className="required-star">*</span></label>
                 <select
                   name="courseAllotted"
                   value={formData.courseAllotted}
@@ -490,17 +500,13 @@ const EditFaculty = () => {
                   <option value="general_subjects">General Subjects</option>
                   <option value="not_allotted">Not Allotted</option>
                 </select>
-                {loadingCourses && (
-                  <span className="loading-text">Loading courses...</span>
-                )}
+                {loadingCourses && <span className="loading-text">Loading courses...</span>}
                 {courseError && !loadingCourses && (
                   <span className="error-text" style={{ color: "orange", fontSize: "12px" }}>
                     ⚠️ {courseError}
                   </span>
                 )}
-                {errors.courseAllotted && (
-                  <span className="error-text">{errors.courseAllotted}</span>
-                )}
+                {errors.courseAllotted && <span className="error-text">{errors.courseAllotted}</span>}
               </div>
             </div>
           </div>
@@ -514,61 +520,75 @@ const EditFaculty = () => {
           </div>
           <div className="card-content">
             <div className="form-grid">
-              <div className="form-group">
-                <label>
-                  Faculty Timing Shift <span className="required-star">*</span>
-                </label>
-                <select
-                  name="shift"
-                  value={formData.shift}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  className={errors.shift ? "error-field" : ""}
-                >
-                  <option value="">Select Shift</option>
-                  <option value="Morning">Morning (7:00 AM - 2:00 PM)</option>
-                  <option value="Afternoon">Afternoon (12:00 PM - 7:00 PM)</option>
-                  <option value="Evening">Evening (2:00 PM - 9:00 PM)</option>
-                  <option value="Full-day">Full Day (9:00 AM - 5:00 PM)</option>
-                </select>
-                {errors.shift && (
-                  <span className="error-text">{errors.shift}</span>
-                )}
+
+              {/* ✅ Shift time range */}
+              <div className="form-group full-width">
+                <label>Faculty Timing Shift <span className="required-star">*</span></label>
+                <div className="time-range-wrapper">
+                  <div className="time-range-inputs">
+                    <input
+                      type="time"
+                      name="shiftStart"
+                      value={formData.shiftStart}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      className={errors.shiftStart ? "error-field" : ""}
+                    />
+                    <span className="time-range-separator">to</span>
+                    <input
+                      type="time"
+                      name="shiftEnd"
+                      value={formData.shiftEnd}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      className={errors.shiftEnd ? "error-field" : ""}
+                    />
+                  </div>
+                  {formData.shiftStart && formData.shiftEnd && (
+                    <span className="time-range-display">
+                      {formatTo12Hour(formData.shiftStart)} to {formatTo12Hour(formData.shiftEnd)}
+                    </span>
+                  )}
+                </div>
+                {errors.shiftStart && <span className="error-text">{errors.shiftStart}</span>}
+                {errors.shiftEnd && <span className="error-text">{errors.shiftEnd}</span>}
+              </div>
+
+              {/* ✅ Lunch time range */}
+              <div className="form-group full-width">
+                <label>Faculty Lunch Time <span className="required-star">*</span></label>
+                <div className="time-range-wrapper">
+                  <div className="time-range-inputs">
+                    <input
+                      type="time"
+                      name="lunchStart"
+                      value={formData.lunchStart}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      className={errors.lunchStart ? "error-field" : ""}
+                    />
+                    <span className="time-range-separator">to</span>
+                    <input
+                      type="time"
+                      name="lunchEnd"
+                      value={formData.lunchEnd}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      className={errors.lunchEnd ? "error-field" : ""}
+                    />
+                  </div>
+                  {formData.lunchStart && formData.lunchEnd && (
+                    <span className="time-range-display">
+                      {formatTo12Hour(formData.lunchStart)} to {formatTo12Hour(formData.lunchEnd)}
+                    </span>
+                  )}
+                </div>
+                {errors.lunchStart && <span className="error-text">{errors.lunchStart}</span>}
+                {errors.lunchEnd && <span className="error-text">{errors.lunchEnd}</span>}
               </div>
 
               <div className="form-group">
-                <label>
-                  Faculty Lunch Time <span className="required-star">*</span>
-                </label>
-                <input
-                  type="time"
-                  name="lunchTime"
-                  value={formData.lunchTime}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  className={errors.lunchTime ? "error-field" : ""}
-                />
-                {errors.lunchTime && (
-                  <span className="error-text">{errors.lunchTime}</span>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label>Date of Leaving</label>
-                <input
-                  type="date"
-                  name="dateOfLeaving"
-                  value={formData.dateOfLeaving}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  min={formData.dateOfJoining}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>
-                  Basic Stipend (₹) <span className="required-star">*</span>
-                </label>
+                <label>Basic Stipend (₹) <span className="required-star">*</span></label>
                 <input
                   type="text"
                   name="basicStipend"
@@ -578,10 +598,9 @@ const EditFaculty = () => {
                   placeholder="Monthly stipend amount"
                   className={errors.basicStipend ? "error-field" : ""}
                 />
-                {errors.basicStipend && (
-                  <span className="error-text">{errors.basicStipend}</span>
-                )}
+                {errors.basicStipend && <span className="error-text">{errors.basicStipend}</span>}
               </div>
+
             </div>
           </div>
         </div>
@@ -597,9 +616,7 @@ const EditFaculty = () => {
               <div className="card-content">
                 <div className="form-grid">
                   <div className="form-group">
-                    <label>
-                      Mobile No <span className="required-star">*</span>
-                    </label>
+                    <label>Mobile No <span className="required-star">*</span></label>
                     <input
                       type="tel"
                       name="mobileNo"
@@ -610,9 +627,7 @@ const EditFaculty = () => {
                       maxLength="10"
                       className={errors.mobileNo ? "error-field" : ""}
                     />
-                    {errors.mobileNo && (
-                      <span className="error-text">{errors.mobileNo}</span>
-                    )}
+                    {errors.mobileNo && <span className="error-text">{errors.mobileNo}</span>}
                   </div>
 
                   <div className="form-group">
@@ -627,15 +642,11 @@ const EditFaculty = () => {
                       maxLength="10"
                       className={errors.whatsappNo ? "error-field" : ""}
                     />
-                    {errors.whatsappNo && (
-                      <span className="error-text">{errors.whatsappNo}</span>
-                    )}
+                    {errors.whatsappNo && <span className="error-text">{errors.whatsappNo}</span>}
                   </div>
 
                   <div className="form-group">
-                    <label>
-                      Email ID <span className="required-star">*</span>
-                    </label>
+                    <label>Email ID <span className="required-star">*</span></label>
                     <input
                       type="email"
                       name="email"
@@ -645,9 +656,7 @@ const EditFaculty = () => {
                       placeholder="email@example.com"
                       className={errors.email ? "error-field" : ""}
                     />
-                    {errors.email && (
-                      <span className="error-text">{errors.email}</span>
-                    )}
+                    {errors.email && <span className="error-text">{errors.email}</span>}
                   </div>
                 </div>
               </div>
@@ -663,9 +672,7 @@ const EditFaculty = () => {
               <div className="card-content">
                 <div className="form-grid">
                   <div className="form-group">
-                    <label>
-                      Father Contact No <span className="required-star">*</span>
-                    </label>
+                    <label>Father Contact No <span className="required-star">*</span></label>
                     <input
                       type="tel"
                       name="fatherContactNo"
@@ -676,15 +683,11 @@ const EditFaculty = () => {
                       maxLength="10"
                       className={errors.fatherContactNo ? "error-field" : ""}
                     />
-                    {errors.fatherContactNo && (
-                      <span className="error-text">{errors.fatherContactNo}</span>
-                    )}
+                    {errors.fatherContactNo && <span className="error-text">{errors.fatherContactNo}</span>}
                   </div>
 
                   <div className="form-group">
-                    <label>
-                      Mother Contact No <span className="required-star">*</span>
-                    </label>
+                    <label>Mother Contact No <span className="required-star">*</span></label>
                     <input
                       type="tel"
                       name="motherContactNo"
@@ -695,15 +698,11 @@ const EditFaculty = () => {
                       maxLength="10"
                       className={errors.motherContactNo ? "error-field" : ""}
                     />
-                    {errors.motherContactNo && (
-                      <span className="error-text">{errors.motherContactNo}</span>
-                    )}
+                    {errors.motherContactNo && <span className="error-text">{errors.motherContactNo}</span>}
                   </div>
 
                   <div className="form-group full-width">
-                    <label>
-                      Address <span className="required-star">*</span>
-                    </label>
+                    <label>Address <span className="required-star">*</span></label>
                     <input
                       type="text"
                       name="address"
@@ -713,9 +712,7 @@ const EditFaculty = () => {
                       placeholder="Complete address"
                       className={errors.address ? "error-field" : ""}
                     />
-                    {errors.address && (
-                      <span className="error-text">{errors.address}</span>
-                    )}
+                    {errors.address && <span className="error-text">{errors.address}</span>}
                   </div>
                 </div>
               </div>
