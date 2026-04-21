@@ -21,22 +21,23 @@ const AddFaculty = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    dateOfJoining: "",
-    facultyName: "",
-    fathersName: "",
-    shift: "",
-    lunchTime: "",
-    dateOfBirth: "",
-    email: "",
-    basicStipend: "",
-    mobileNo: "",
-    whatsappNo: "",
-    address: "",
-    fatherContactNo: "",
-    motherContactNo: "",
-    dateOfLeaving: "",
-    courseAllotted: "",
-  });
+  dateOfJoining: "",
+  facultyName: "",
+  fathersName: "",
+  shiftStart: "",
+  shiftEnd: "",
+  lunchStart: "",
+  lunchEnd: "",
+  dateOfBirth: "",
+  email: "",
+  basicStipend: "",
+  mobileNo: "",
+  whatsappNo: "",
+  address: "",
+  fatherContactNo: "",
+  motherContactNo: "",
+  courseAllotted: "",
+});
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,6 +50,14 @@ const AddFaculty = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [facultyPassword, setFacultyPassword] = useState("");
   const [isPasswordCopied, setIsPasswordCopied] = useState(false);
+
+  const formatTo12Hour = (time24) => {
+  if (!time24) return "";
+  const [hours, minutes] = time24.split(":").map(Number);
+  const period = hours >= 12 ? "PM" : "AM";
+  const hours12 = hours % 12 || 12;
+  return `${hours12}:${String(minutes).padStart(2, "0")} ${period}`;
+};
 
   // Format name to Proper Case
   const formatName = (name) => {
@@ -155,20 +164,29 @@ const AddFaculty = () => {
 
     // Required field validation
     const requiredFields = [
-      "dateOfJoining",
-      "facultyName",
-      "fathersName",
-      "shift",
-      "lunchTime",
-      "dateOfBirth",
-      "email",
-      "basicStipend",
-      "mobileNo",
-      "address",
-      "fatherContactNo",
-      "motherContactNo",
-      "courseAllotted",
-    ];
+  "dateOfJoining",
+  "facultyName",
+  "fathersName",
+  "shiftStart",
+  "shiftEnd",
+  "lunchStart",
+  "lunchEnd",
+  "dateOfBirth",
+  "email",
+  "basicStipend",
+  "mobileNo",
+  "address",
+  "fatherContactNo",
+  "motherContactNo",
+  "courseAllotted",
+];
+
+if (formData.shiftStart && formData.shiftEnd && formData.shiftStart >= formData.shiftEnd) {
+  newErrors.shiftEnd = "End time must be after start time";
+}
+if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.lunchEnd) {
+  newErrors.lunchEnd = "Lunch end time must be after start time";
+}
 
     requiredFields.forEach((field) => {
       if (!formData[field] || !formData[field].toString().trim()) {
@@ -238,7 +256,7 @@ const AddFaculty = () => {
     setIsPasswordCopied(false);
     
     // Navigate back to faculty list
-    navigate("/admin/faculty");
+    navigate(`${basePath}/faculty`);
   };
 
   // UPDATED handleSubmit function
@@ -260,8 +278,8 @@ const AddFaculty = () => {
         fathersName: formData.fathersName,
         dateOfJoining: formData.dateOfJoining,
         dateOfBirth: formData.dateOfBirth,
-        shift: formData.shift,
-        lunchTime: formData.lunchTime,
+        shift: `${formData.shiftStart}-${formData.shiftEnd}`,
+       lunchTime: `${formData.lunchStart}-${formData.lunchEnd}`,
         email: formData.email,
         mobileNo: formData.mobileNo,
         whatsappNo: formData.whatsappNo || formData.mobileNo, // Default to mobile
@@ -270,7 +288,6 @@ const AddFaculty = () => {
         motherContactNo: formData.motherContactNo,
         basicStipend: parseFloat(formData.basicStipend) || 0,
         status: "active", // Default status
-        dateOfLeaving: formData.dateOfLeaving || null,
         courseAssigned: formData.courseAllotted,
       };
 
@@ -292,22 +309,23 @@ const AddFaculty = () => {
         
         // Reset form
         setFormData({
-          dateOfJoining: "",
-          facultyName: "",
-          fathersName: "",
-          shift: "",
-          lunchTime: "",
-          dateOfBirth: "",
-          email: "",
-          basicStipend: "",
-          mobileNo: "",
-          whatsappNo: "",
-          address: "",
-          fatherContactNo: "",
-          motherContactNo: "",
-          dateOfLeaving: "",
-          courseAllotted: "",
-        });
+  dateOfJoining: "",
+  facultyName: "",
+  fathersName: "",
+  shiftStart: "",
+  shiftEnd: "",
+  lunchStart: "",
+  lunchEnd: "",
+  dateOfBirth: "",
+  email: "",
+  basicStipend: "",
+  mobileNo: "",
+  whatsappNo: "",
+  address: "",
+  fatherContactNo: "",
+  motherContactNo: "",
+  courseAllotted: "",
+});
         setErrors({});
         
       } else {
@@ -330,7 +348,7 @@ const AddFaculty = () => {
         "Are you sure you want to cancel? All unsaved changes will be lost."
       )
     ) {
-      navigate("/admin/faculty");
+      navigate(`${basePath}/faculty`);
     }
   };
 
@@ -380,7 +398,7 @@ const AddFaculty = () => {
       {/* Header */}
       <div className="page-header">
         <div className="header-left">
-          <Link to="/admin/faculty" className="back-link">
+          <Link to={`${basePath}/faculty`} className="back-link">
             <X size={20} />
             Cancel
           </Link>
@@ -544,86 +562,106 @@ const AddFaculty = () => {
         </div>
 
         {/* Section 2: Work Details */}
-        <div className="form-card">
-          <div className="card-header">
-            <Calendar size={20} />
-            <h3>Work Details</h3>
+        {/* Section 2: Work Details */}
+<div className="form-card">
+  <div className="card-header">
+    <Calendar size={20} />
+    <h3>Work Details</h3>
+  </div>
+  <div className="card-content">
+    <div className="form-grid">
+
+      {/* Shift time range */}
+      <div className="form-group full-width">
+        <label>
+          Faculty Timing Shift <span className="required-star">*</span>
+        </label>
+        <div className="time-range-wrapper">
+          <div className="time-range-inputs">
+            <input
+              type="time"
+              name="shiftStart"
+              value={formData.shiftStart}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              className={errors.shiftStart ? "error-field" : ""}
+            />
+            <span className="time-range-separator">to</span>
+            <input
+              type="time"
+              name="shiftEnd"
+              value={formData.shiftEnd}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              className={errors.shiftEnd ? "error-field" : ""}
+            />
           </div>
-          <div className="card-content">
-            <div className="form-grid">
-              <div className="form-group">
-                <label>
-                  Faculty Timing Shift <span className="required-star">*</span>
-                </label>
-                <select
-                  name="shift"
-                  value={formData.shift}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  className={errors.shift ? "error-field" : ""}
-                >
-                  <option value="">Select Shift</option>
-                  <option value="Morning">Morning (7:00 AM - 2:00 PM)</option>
-                  <option value="Afternoon">
-                    Afternoon (12:00 PM - 7:00 PM)
-                  </option>
-                  <option value="Evening">Evening (2:00 PM - 9:00 PM)</option>
-                  <option value="Full-day">Full Day (9:00 AM - 5:00 PM)</option>
-                </select>
-                {errors.shift && (
-                  <span className="error-text">{errors.shift}</span>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label>
-                  Faculty Lunch Time <span className="required-star">*</span>
-                </label>
-                <input
-                  type="time"
-                  name="lunchTime"
-                  value={formData.lunchTime}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  className={errors.lunchTime ? "error-field" : ""}
-                />
-                {errors.lunchTime && (
-                  <span className="error-text">{errors.lunchTime}</span>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label>Date of Leaving</label>
-                <input
-                  type="date"
-                  name="dateOfLeaving"
-                  value={formData.dateOfLeaving}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  min={formData.dateOfJoining}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>
-                  Basic Stipend (₹) <span className="required-star">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="basicStipend"
-                  value={formData.basicStipend}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Monthly stipend amount"
-                  className={errors.basicStipend ? "error-field" : ""}
-                />
-                {errors.basicStipend && (
-                  <span className="error-text">{errors.basicStipend}</span>
-                )}
-              </div>
-            </div>
-          </div>
+          {formData.shiftStart && formData.shiftEnd && (
+            <span className="time-range-display">
+              {formatTo12Hour(formData.shiftStart)} to {formatTo12Hour(formData.shiftEnd)}
+            </span>
+          )}
         </div>
+        {errors.shiftStart && <span className="error-text">{errors.shiftStart}</span>}
+        {errors.shiftEnd && <span className="error-text">{errors.shiftEnd}</span>}
+      </div>
+
+      {/* Lunch time range */}
+      <div className="form-group full-width">
+        <label>
+          Faculty Lunch Time <span className="required-star">*</span>
+        </label>
+        <div className="time-range-wrapper">
+          <div className="time-range-inputs">
+            <input
+              type="time"
+              name="lunchStart"
+              value={formData.lunchStart}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              className={errors.lunchStart ? "error-field" : ""}
+            />
+            <span className="time-range-separator">to</span>
+            <input
+              type="time"
+              name="lunchEnd"
+              value={formData.lunchEnd}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              className={errors.lunchEnd ? "error-field" : ""}
+            />
+          </div>
+          {formData.lunchStart && formData.lunchEnd && (
+            <span className="time-range-display">
+              {formatTo12Hour(formData.lunchStart)} to {formatTo12Hour(formData.lunchEnd)}
+            </span>
+          )}
+        </div>
+        {errors.lunchStart && <span className="error-text">{errors.lunchStart}</span>}
+        {errors.lunchEnd && <span className="error-text">{errors.lunchEnd}</span>}
+      </div>
+
+      <div className="form-group">
+        <label>
+          Basic Stipend (₹) <span className="required-star">*</span>
+        </label>
+        <input
+          type="text"
+          name="basicStipend"
+          value={formData.basicStipend}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Monthly stipend amount"
+          className={errors.basicStipend ? "error-field" : ""}
+        />
+        {errors.basicStipend && (
+          <span className="error-text">{errors.basicStipend}</span>
+        )}
+      </div>
+
+    </div>
+  </div>
+</div>
 
         {/* Section 3: Contact Information */}
         <div className="form-sections-row">

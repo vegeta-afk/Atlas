@@ -30,7 +30,6 @@ const facultySchema = new mongoose.Schema(
     shift: {
       type: String,
       required: [true, "Shift is required"],
-      enum: ["Morning", "Afternoon", "Evening", "Full-day"],
     },
     lunchTime: {
       type: String,
@@ -100,9 +99,6 @@ const facultySchema = new mongoose.Schema(
       type: String,
       enum: ["active", "inactive", "on-leave"],
       default: "active",
-    },
-    dateOfLeaving: {
-      type: Date,
     },
     isActive: {
       type: Boolean,

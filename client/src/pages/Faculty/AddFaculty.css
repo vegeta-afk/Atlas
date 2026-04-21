@@ -585,4 +585,49 @@
 .modal-footer .btn-secondary:hover {
   background-color: #f9fafb;
 }
-    
+
+
+.time-range-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.time-range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.time-range-inputs input[type="time"] {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.time-range-inputs input[type="time"]:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.time-range-separator {
+  color: #64748b;
+  font-weight: 500;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.time-range-display {
+  font-size: 13px;
+  color: #4f46e5;
+  font-weight: 500;
+  padding: 4px 8px;
+  background: #eef2ff;
+  border-radius: 6px;
+  width: fit-content;
+}
