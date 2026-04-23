@@ -29,6 +29,9 @@ import {
   Download,
   Upload,
   MessageCircle,
+  Users,
+  BookOpen,
+  X,
 } from "lucide-react";
 import { Link, useNavigate , useLocation} from "react-router-dom";
 import "./FacultyList.css";
@@ -71,6 +74,9 @@ const FacultyList = () => {
 
   // State for dropdown menu
   const [openDropdown, setOpenDropdown] = useState(null);
+  const [batchModal, setBatchModal] = useState(null);
+const [batchCache, setBatchCache] = useState({});
+const [batchLoading, setBatchLoading] = useState(false);
 
   // Status options
   const statusOptions = [
@@ -359,6 +365,35 @@ const FacultyList = () => {
   const handleViewFaculty = (facultyId) => {
     navigate(`${basePath}/faculty/view/${facultyId}`);
   };
+
+  const handleViewBatches = async (facultyMember) => {
+  if (batchCache[facultyMember._id]) {
+    setBatchModal({ faculty: facultyMember, ...batchCache[facultyMember._id] });
+    return;
+  }
+
+  setBatchModal({ faculty: facultyMember, loading: true });
+  setBatchLoading(true);
+
+  try {
+    const response = await facultyAPI.getFacultyBatches(facultyMember._id);
+    if (response.data.success) {
+      const data = response.data.data;
+      setBatchCache((prev) => ({ ...prev, [facultyMember._id]: data }));
+      setBatchModal({ faculty: facultyMember, ...data });
+    }
+  } catch (err) {
+    setBatchModal({
+      faculty: facultyMember,
+      error: true,
+      batches: [],
+      totalBatches: 0,
+      totalStudents: 0,
+    });
+  } finally {
+    setBatchLoading(false);
+  }
+};
 
   const handleEditFaculty = (facultyId) => {
     navigate(`${basePath}/faculty/edit/${facultyId}`);
@@ -720,6 +755,7 @@ const FacultyList = () => {
                 </th>
                 <th>Status</th>
                 <th>Date of Joining</th>
+                <th>Batches & Students</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -783,6 +819,24 @@ const FacultyList = () => {
                         {formatDate(facultyMember.dateOfJoining)}
                       </div>
                     </td>
+
+                    <td>
+  <button
+    className="batch-stats-btn"
+    onClick={() => handleViewBatches(facultyMember)}
+    title="View Batches & Students"
+  >
+    <BookOpen size={13} />
+    <span>
+      {batchCache[facultyMember._id]?.totalBatches ?? "—"} Batches
+    </span>
+    <span className="batch-stats-dot">•</span>
+    <Users size={13} />
+    <span>
+      {batchCache[facultyMember._id]?.totalStudents ?? "—"} Students
+    </span>
+  </button>
+</td>
                     <td>
                       <div className="action-buttons">
                         {/* View Button */}
@@ -924,7 +978,7 @@ const FacultyList = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="9" className="empty-row">
+                  <td colSpan="10" className="empty-row">
                     <div className="empty-state">
                       <Search size={48} />
                       <h3>No faculty members found</h3>
@@ -967,6 +1021,118 @@ const FacultyList = () => {
           </div>
         </div>
       )}
+
+      {batchModal && (
+  <div className="batch-modal-overlay" onClick={() => setBatchModal(null)}>
+    <div
+      className="batch-modal"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Modal Header */}
+      <div className="batch-modal-header">
+        <div className="batch-modal-title-row">
+          <div className="avatar" style={{ width: 36, height: 36, fontSize: 14 }}>
+            {batchModal.faculty?.facultyName?.charAt(0) || "?"}
+          </div>
+          <div>
+            <h3>{batchModal.faculty?.facultyName}</h3>
+            <p>{batchModal.faculty?.facultyNo}</p>
+          </div>
+        </div>
+        <button
+          className="batch-modal-close"
+          onClick={() => setBatchModal(null)}
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      {/* Summary Stats */}
+      {!batchModal.loading && !batchModal.error && (
+        <div className="batch-modal-stats">
+          <div className="batch-modal-stat">
+            <BookOpen size={16} />
+            <div>
+              <strong>{batchModal.totalBatches ?? 0}</strong>
+              <span>Batches</span>
+            </div>
+          </div>
+          <div className="batch-modal-stat">
+            <Users size={16} />
+            <div>
+              <strong>{batchModal.totalStudents ?? 0}</strong>
+              <span>Students</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading */}
+      {batchModal.loading && (
+        <div className="batch-modal-loading">
+          <div className="loading-spinner" style={{ width: 28, height: 28 }}></div>
+          <p>Loading batches...</p>
+        </div>
+      )}
+
+      {/* Error */}
+      {batchModal.error && (
+        <div className="batch-modal-error">
+          <AlertCircle size={18} />
+          <p>Could not load batch data. Check the backend endpoint.</p>
+        </div>
+      )}
+
+      {/* Batch List */}
+      {!batchModal.loading && !batchModal.error && (
+        <div className="batch-modal-body">
+          {batchModal.batches?.length > 0 ? (
+            batchModal.batches.map((batch, idx) => (
+              <div key={batch._id || idx} className="batch-card">
+                <div className="batch-card-header">
+                  <div className="batch-card-name">
+                    <BookOpen size={14} />
+                    <strong>{batch.batchName || batch.name || `Batch ${idx + 1}`}</strong>
+                  </div>
+                  <span className="batch-card-count">
+                    <Users size={12} />
+                    {batch.studentCount ?? batch.students?.length ?? 0} students
+                  </span>
+                </div>
+
+                {/* Student list inside batch */}
+                {batch.students?.length > 0 && (
+                  <div className="batch-student-list">
+                    {batch.students.map((student, sIdx) => (
+                      <div key={student._id || sIdx} className="batch-student-row">
+                        <div className="batch-student-avatar">
+                          {(student.studentName || student.name || "S").charAt(0)}
+                        </div>
+                        <div className="batch-student-info">
+                          <span>{student.studentName || student.name || "Unknown"}</span>
+                          <small>{student.rollNo || student.admissionNo || ""}</small>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(!batch.students || batch.students.length === 0) && (
+                  <p className="batch-no-students">No students in this batch yet.</p>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="batch-modal-empty">
+              <BookOpen size={36} />
+              <p>No batches assigned to this faculty member.</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+)}
     </div>
   );
 };
