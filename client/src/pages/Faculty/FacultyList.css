@@ -1,4 +1,4 @@
-/* FacultyList.css - Symmetrical layout like AdmissionList */
+/* FacultyList.css */
 
 .faculty-list-container {
   padding: 24px;
@@ -105,16 +105,12 @@
   font-size: 14px;
 }
 
-/* Horizontal Filters Section - Matching AdmissionList style */
+/* Horizontal Filters Section */
 .filters-section-horizontal {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 24px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
@@ -148,7 +144,6 @@
   color: #94a3b8;
 }
 
-/* Filter Selects */
 .filter-select-horizontal {
   position: relative;
   display: flex;
@@ -176,7 +171,6 @@
   opacity: 0.6;
 }
 
-/* Date Filter Horizontal */
 .date-filter-section-horizontal {
   position: relative;
 }
@@ -323,7 +317,74 @@
   background: #fecaca;
 }
 
-/* Table */
+/* ═══════════════════════════════════════
+   TAB SWITCHER — pill style like image 2
+═══════════════════════════════════════ */
+.tab-switcher {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1.5px solid #e2e8f0;
+  background: white;
+  color: #475569;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.tab-pill:hover {
+  border-color: #a5b4fc;
+  color: #4f46e5;
+  background: #f5f3ff;
+}
+
+.tab-pill--active {
+  background: #4f46e5;
+  color: white;
+  border-color: #4f46e5;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+.tab-pill--active:hover {
+  background: #4338ca;
+  border-color: #4338ca;
+  color: white;
+}
+
+.tab-pill__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.25);
+  color: inherit;
+  line-height: 1;
+}
+
+.tab-pill:not(.tab-pill--active) .tab-pill__count {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* ═══════════════════════════════════════
+   TABLE
+═══════════════════════════════════════ */
 .table-container {
   background: white;
   border-radius: 12px;
@@ -334,14 +395,12 @@
   overflow-x: auto;
 }
 
-/* Center table content but keep student info left-aligned */
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1400px;
+  min-width: 900px;
 }
 
-/* Center ALL table headings */
 .data-table th {
   text-align: center !important;
   vertical-align: middle;
@@ -352,27 +411,32 @@
   border-bottom: 2px solid #e2e8f0;
 }
 
-/* Center table data cells EXCEPT first column (Faculty ID) and second column (Faculty Name) */
 .data-table td {
   text-align: center;
   vertical-align: middle;
-  padding: 16px 12px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 14px 12px;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-/* Keep Faculty ID column centered */
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover td {
+  background: #fafbff;
+}
+
 .data-table td.student-id {
   text-align: center;
   font-weight: 600;
   color: #4f46e5;
 }
 
-/* Keep Faculty Name column LEFT-ALIGNED */
+/* Faculty name column stays left-aligned */
 .data-table td:nth-child(2) {
   text-align: left !important;
 }
 
-/* Ensure faculty info div inside stays left-aligned */
 .student-info {
   display: flex;
   align-items: center;
@@ -384,28 +448,24 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  text-align: left;
 }
 
 .student-info strong {
   color: #1e293b;
   font-size: 15px;
-  text-align: left;
 }
 
 .student-info small {
   color: #64748b;
   font-size: 12px;
-  text-align: left;
+  margin-top: 2px;
 }
 
-/* Center contact info content */
 .contact-info {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  text-align: center;
 }
 
 .contact-info div {
@@ -417,14 +477,12 @@
   justify-content: center;
 }
 
-/* Center shift info */
 .shift-info {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   font-size: 13px;
-  text-align: center;
 }
 
 .shift-info span {
@@ -433,36 +491,28 @@
   gap: 4px;
 }
 
-/* Center stipend info */
 .stipend-info {
-  text-align: center;
   font-weight: 600;
   color: #059669;
   font-size: 14px;
 }
 
-/* Center date info */
 .date-info {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   font-size: 13px;
-  text-align: center;
 }
 
-/* Center status badge */
 .status-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
-  background: #d1fae5;
-  color: #065f46;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
-  justify-content: center;
 }
 
 .status-active {
@@ -480,24 +530,11 @@
   color: #92400e !important;
 }
 
-/* Center action buttons */
-.action-buttons {
+.status-cell {
   display: flex;
   justify-content: center;
-  gap: 8px;
 }
 
-/* Sortable headers centered */
-.sortable {
-  text-align: center !important;
-  cursor: pointer;
-}
-
-.sortable:hover {
-  background-color: #f3f4f6;
-}
-
-/* Avatar stays left-aligned within faculty info */
 .avatar {
   width: 40px;
   height: 40px;
@@ -512,23 +549,45 @@
   flex-shrink: 0;
 }
 
-/* Ensure all table cells have consistent vertical alignment */
-.data-table td {
-  vertical-align: middle;
+.sortable {
+  text-align: center !important;
+  cursor: pointer;
 }
 
-/* Action Buttons */
+.sortable:hover {
+  background-color: #f3f4f6;
+}
+
+.course-assigned {
+  max-width: 200px;
+  word-wrap: break-word;
+}
+
+/* Action buttons */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  align-items: center;
+  min-height: 40px;
+}
+
 .action-btn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
   cursor: pointer;
-  transition: all 0.2s;
-  background: transparent;
+  border: none;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .action-btn svg {
@@ -538,39 +597,19 @@
   flex-shrink: 0;
 }
 
-.action-btn.view {
-  color: #3b82f6;
-}
+.action-btn.view { color: #3b82f6; }
+.action-btn.view:hover { background: #dbeafe; }
 
-.action-btn.view:hover {
-  background: #dbeafe;
-}
+.action-btn.edit { color: #f59e0b; }
+.action-btn.edit:hover { background: #fef3c7; }
 
-.action-btn.edit {
-  color: #f59e0b;
-}
+.action-btn.delete { color: #ef4444; }
+.action-btn.delete:hover { background: #fee2e2; }
 
-.action-btn.edit:hover {
-  background: #fef3c7;
-}
+.action-btn.more { color: #64748b; }
+.action-btn.more:hover { background: #f1f5f9; }
 
-.action-btn.delete {
-  color: #ef4444;
-}
-
-.action-btn.delete:hover {
-  background: #fee2e2;
-}
-
-.action-btn.more {
-  color: #64748b;
-}
-
-.action-btn.more:hover {
-  background: #f1f5f9;
-}
-
-/* Dropdown menu styling */
+/* Dropdown */
 .dropdown-container {
   position: relative;
   display: inline-block;
@@ -582,11 +621,11 @@
   right: 0;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 9999;
   min-width: 180px;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .data-table td:last-child {
@@ -609,21 +648,11 @@
   transition: background-color 0.2s;
 }
 
-.dropdown-item:hover {
-  background-color: #f3f4f6;
-}
+.dropdown-item:hover { background-color: #f3f4f6; }
 
-.dropdown-item.delete-option {
-  color: #dc2626;
-}
-
-.dropdown-item.delete-option:hover {
-  background-color: #fef2f2;
-}
-
-.dropdown-item.delete-option svg {
-  color: #dc2626;
-}
+.dropdown-item.delete-option { color: #dc2626; }
+.dropdown-item.delete-option:hover { background-color: #fef2f2; }
+.dropdown-item.delete-option svg { color: #dc2626; }
 
 .dropdown-divider {
   height: 1px;
@@ -631,30 +660,134 @@
   margin: 4px 0;
 }
 
-/* Empty State */
+/* ═══════════════════════════════════════
+   BATCHES TAB — specific styles
+═══════════════════════════════════════ */
+
+/* Batch name cell */
+.batch-name-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: #1e293b;
+  font-size: 13px;
+}
+
+.batch-name-cell svg {
+  color: #4f46e5;
+  flex-shrink: 0;
+}
+
+/* Student count badge */
+.batch-student-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+/* Student chips container */
+.student-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.student-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #374151;
+}
+
+.student-chip-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.no-students-text {
+  color: #94a3b8;
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Batches summary footer */
+.batches-summary-footer {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 14px 20px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  font-size: 13px;
+  color: #475569;
+}
+
+.batches-summary-footer span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.batches-summary-footer strong {
+  color: #1e293b;
+}
+
+/* ═══════════════════════════════════════
+   EMPTY STATE
+═══════════════════════════════════════ */
 .empty-state {
   padding: 60px 20px;
   text-align: center;
   color: #64748b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 .empty-state svg {
-  margin-bottom: 16px;
   color: #94a3b8;
 }
 
 .empty-state h3 {
-  margin: 0 0 8px 0;
+  margin: 0;
   color: #475569;
+  font-size: 20px;
 }
 
 .empty-state p {
-  margin: 0 0 20px 0;
+  margin: 0;
+  color: #94a3b8;
 }
 
 .empty-row {
   text-align: center;
-  padding: 40px !important;
+  padding: 60px 20px !important;
 }
 
 /* Pagination */
@@ -705,16 +838,15 @@
   font-size: 14px;
 }
 
-/* Loading and Error States */
+/* Loading / Error */
 .loading-overlay {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: 60px 40px;
   background: white;
   border-radius: 8px;
-  margin: 20px 0;
 }
 
 .loading-spinner {
@@ -728,12 +860,8 @@
 }
 
 @keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .error-alert {
@@ -748,9 +876,7 @@
   color: #dc2626;
 }
 
-.error-alert svg {
-  flex-shrink: 0;
-}
+.error-alert svg { flex-shrink: 0; }
 
 .btn-retry {
   padding: 6px 12px;
@@ -763,16 +889,10 @@
   margin-left: auto;
 }
 
-.btn-retry:hover {
-  background: #b91c1c;
-}
+.btn-retry:hover { background: #b91c1c; }
 
-/* Spinning refresh icon */
-.spinning {
-  animation: spin 1s linear infinite;
-}
+.spinning { animation: spin 1s linear infinite; }
 
-/* Disabled states */
 button:disabled,
 select:disabled,
 input:disabled {
@@ -780,410 +900,27 @@ input:disabled {
   cursor: not-allowed;
 }
 
-/* For responsive design */
+/* Responsive */
 @media (max-width: 1200px) {
-  .stats-cards {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .filters-section-horizontal {
-    gap: 12px;
-  }
-
-  .search-box-horizontal {
-    min-width: 250px;
-  }
-
-  .filter-select-horizontal {
-    min-width: 140px;
-  }
-
-  .date-filter-toggle-horizontal {
-    min-width: 160px;
-  }
+  .stats-cards { grid-template-columns: repeat(3, 1fr); }
+  .search-box-horizontal { min-width: 250px; }
 }
 
 @media (max-width: 768px) {
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .header-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .stats-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .filters-section-horizontal {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
+  .page-header { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .header-actions { width: 100%; justify-content: flex-start; }
+  .stats-cards { grid-template-columns: repeat(2, 1fr); }
+  .filters-section-horizontal { flex-direction: column; align-items: stretch; }
   .search-box-horizontal,
   .filter-select-horizontal,
-  .date-filter-toggle-horizontal {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .data-table {
-    min-width: 1200px;
-  }
-
+  .date-filter-toggle-horizontal { width: 100%; min-width: auto; }
+  .data-table { min-width: 900px; }
   .data-table th,
-  .data-table td {
-    padding: 12px 8px;
-  }
-
-  .student-info {
-    gap: 8px;
-  }
-
-  .avatar {
-    width: 32px;
-    height: 32px;
-    font-size: 14px;
-  }
-
-  .action-buttons {
-    flex-wrap: wrap;
-    gap: 4px;
-    justify-content: center;
-  }
+  .data-table td { padding: 12px 8px; }
+  .tab-switcher { flex-wrap: wrap; }
 }
 
 @media (max-width: 480px) {
-  .stats-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .pagination {
-    flex-direction: column;
-    gap: 12px;
-  }
-}
-
-/* Fix for action buttons spacing */
-.action-buttons {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-}
-
-.action-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  border: none;
-  background: white;
-  transition: all 0.2s ease;
-}
-
-.action-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.action-btn.view {
-  color: #3b82f6;
-  border-color: #93c5fd;
-}
-
-.action-btn.edit {
-  color: #10b981;
-  border-color: #a7f3d0;
-}
-
-.action-btn.delete {
-  color: #ef4444;
-  border-color: #fca5a5;
-}
-
-.action-btn.more {
-  color: #6b7280;
-  border-color: #d1d5db;
-}
-
-/* Course assigned column styling */
-.course-assigned {
-  max-width: 200px;
-  word-wrap: break-word;
-}
-
-/* Status cell for consistent spacing */
-.status-cell {
-  display: flex;
-  justify-content: center;
-}
-
-/* Dropdown menu styling */
-.dropdown-container {
-  position: relative;
-}
-
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  min-width: 180px;
-  z-index: 1000;
-  margin-top: 4px;
-}
-
-.dropdown-item {
-  width: 100%;
-  padding: 10px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #374151;
-  text-align: left;
-  transition: background 0.2s;
-}
-
-.dropdown-item:hover {
-  background: #f3f4f6;
-}
-
-.dropdown-item.delete-option {
-  color: #ef4444;
-}
-
-.dropdown-divider {
-  height: 1px;
-  background: #e5e7eb;
-  margin: 4px 0;
-}
-
-/* Contact info styling */
-.contact-info div {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.contact-info div:last-child {
-  margin-bottom: 0;
-}
-
-/* Stipend info without dollar sign */
-.stipend-info {
-  font-weight: 600;
-  color: #059669;
-}
-
-/* Fix for table layout */
-.data-table td {
-  padding: 12px 8px;
-  vertical-align: middle;
-}
-
-/* Empty state styling */
-.empty-row {
-  text-align: center;
-  padding: 60px 20px !important;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
-.empty-state h3 {
-  font-size: 20px;
-  color: #374151;
-  margin: 0;
-}
-
-.empty-state p {
-  color: #6b7280;
-  margin: 0;
-}
-
-/* Toggle chevron animation */
-.batch-chevron {
-  transition: transform 0.2s ease;
-  flex-shrink: 0;
-}
-.batch-chevron.rotated {
-  transform: rotate(180deg);
-}
-
-/* Active state for the button */
-.batch-stats-btn.active {
-  background: #dbeafe;
-  border-color: #93c5fd;
-  color: #1d4ed8;
-}
-
-/* Expandable row */
-.batch-expand-row td {
-  padding: 0 !important;
-  background: #f8fafc;
-  border-bottom: 2px solid #e2e8f0;
-}
-
-.batch-expand-container {
-  padding: 20px 32px;
-  animation: expandDown 0.2s ease;
-}
-
-@keyframes expandDown {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* Summary row */
-.batch-expand-summary {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.batch-expand-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  color: #1e293b;
-  margin-right: 4px;
-}
-
-.batch-expand-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.batch-expand-pill.blue {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
-}
-
-.batch-expand-pill.green {
-  background: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
-}
-
-/* Batch cards grid */
-.batch-expand-grid {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.batch-expand-card {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  min-width: 220px;
-  max-width: 300px;
-  flex: 1;
-  overflow: hidden;
-}
-
-.batch-expand-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: #f1f5f9;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.batch-expand-card-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.batch-expand-card-count {
-  font-size: 11px;
-  background: #e2e8f0;
-  color: #475569;
-  padding: 2px 8px;
-  border-radius: 20px;
-}
-
-/* Students inside card */
-.batch-expand-students {
-  display: flex;
-  flex-direction: column;
-}
-
-.batch-expand-student {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  border-bottom: 1px solid #f1f5f9;
-  transition: background 0.15s;
-}
-
-.batch-expand-student:last-child {
-  border-bottom: none;
-}
-
-.batch-expand-student:hover {
-  background: #f8fafc;
-}
-
-/* Loading / Error / Empty inside expand */
-.batch-expand-loading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #64748b;
-  font-size: 13px;
-  padding: 8px 0;
-}
-
-.batch-expand-error {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #dc2626;
-  font-size: 13px;
-  padding: 8px 0;
-}
-
-.batch-expand-empty {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #94a3b8;
-  font-size: 13px;
-  padding: 8px 0;
+  .stats-cards { grid-template-columns: 1fr; }
+  .pagination { flex-direction: column; gap: 12px; }
 }
