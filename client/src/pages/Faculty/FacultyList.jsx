@@ -141,45 +141,57 @@ const FacultyList = () => {
   };
 
   const fetchAllBatches = async (facultyList) => {
-    setBatchesLoading(true);
-    try {
-      const results = [];
-      for (const f of facultyList) {
-        try {
-          const response = await facultyAPI.getFacultyBatches(f._id);
-          if (response.data.success && response.data.data) {
-            const batches = response.data.data.batches || [];
-            batches.forEach((batch) => {
-              results.push({
-                ...batch,
-                facultyName: f.facultyName,
-                facultyNo: f.facultyNo,
-                facultyId: f._id,
-                facultyStatus: f.status,
-                facultyEmail: f.email,
-                facultyMobile: f.mobileNo,
-                courseAssigned: f.courseAssigned,
-              });
+  setBatchesLoading(true);
+  try {
+    const results = [];
+
+    for (const f of facultyList) {
+      try {
+        const batchRes = await facultyAPI.getFacultyBatches(f._id);
+        if (batchRes.data.success && batchRes.data.data) {
+          const batches = batchRes.data.data.batches || [];
+
+          for (const batch of batches) {
+            let students = [];
+
+            try {
+              // ✅ Same endpoint StudentAttendance uses — works correctly
+              const stuRes = await facultyAPI.getBatchStudents(f._id, batch._id);
+              students = stuRes.data?.data?.students || [];
+            } catch {
+              students = [];
+            }
+
+            results.push({
+              ...batch,
+              students,                     // ← now properly populated
+              studentCount: students.length,
+              facultyName: f.facultyName,
+              facultyNo: f.facultyNo,
+              facultyId: f._id,
+              facultyStatus: f.status,
+              facultyEmail: f.email,
+              facultyMobile: f.mobileNo,
+              courseAssigned: f.courseAssigned,
             });
           }
-        } catch {
-          // skip failed faculty
         }
+      } catch {
+        // skip failed faculty
       }
-      setAllBatchesData(results);
-      setTotalBatches(results.length);
-      const students = results.reduce(
-        (sum, b) => sum + (b.studentCount ?? b.students?.length ?? 0),
-        0
-      );
-      setTotalStudentsCount(students);
-      setBatchesFetched(true);
-    } catch (err) {
-      console.error("Error fetching all batches:", err);
-    } finally {
-      setBatchesLoading(false);
     }
-  };
+
+    setAllBatchesData(results);
+    setTotalBatches(results.length);
+    const totalStudents = results.reduce((sum, b) => sum + (b.students?.length ?? 0), 0);
+    setTotalStudentsCount(totalStudents);
+    setBatchesFetched(true);
+  } catch (err) {
+    console.error("Error fetching all batches:", err);
+  } finally {
+    setBatchesLoading(false);
+  }
+};
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
