@@ -858,7 +858,7 @@ const FacultyList = () => {
                                       </div>
 
                                       {/* Student chips */}
-                                      {batch.students && batch.students.length > 0 ? (
+                                      {/* {batch.students && batch.students.length > 0 ? (
                                         <div className="fba-student-chips">
                                           {batch.students.map((student, sIdx) => (
                                             <span key={student._id || sIdx} className="student-chip">
@@ -871,7 +871,7 @@ const FacultyList = () => {
                                         </div>
                                       ) : (
                                         <p className="fba-no-students">No students enrolled yet</p>
-                                      )}
+                                      )} */}
                                     </div>
                                   );
                                 })}
