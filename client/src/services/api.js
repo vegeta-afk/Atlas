@@ -254,7 +254,8 @@ export const facultyAPI = {
   // Dashboard
   getFacultyStats: () => api.get("/faculty/stats/dashboard"),
   getFacultyBatches: (id) => api.get(`/faculty/${id}/batches`),
-  getBatchStudents: (batchId) => api.get(`/batches/${batchId}/students`),
+  getBatchStudents: (facultyId, batchId) =>
+    api.get(`/faculty/${facultyId}/batches/${batchId}/students`),
 };
 // Export the instance for custom requests
 
