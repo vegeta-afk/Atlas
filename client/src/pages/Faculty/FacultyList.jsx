@@ -61,6 +61,9 @@ const FacultyList = () => {
   const [totalBatches, setTotalBatches] = useState(0);
   const [totalStudentsCount, setTotalStudentsCount] = useState(0);
 
+  // Accordion state for batches tab
+  const [expandedFaculty, setExpandedFaculty] = useState({});
+
   // Filters state
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
@@ -123,7 +126,6 @@ const FacultyList = () => {
         } else {
           calculateStats(response.data.data || []);
         }
-        // Reset batches when faculty list changes
         setBatchesFetched(false);
         setAllBatchesData([]);
       } else {
@@ -154,6 +156,8 @@ const FacultyList = () => {
                 facultyNo: f.facultyNo,
                 facultyId: f._id,
                 facultyStatus: f.status,
+                facultyEmail: f.email,
+                facultyMobile: f.mobileNo,
                 courseAssigned: f.courseAssigned,
               });
             });
@@ -361,7 +365,47 @@ const FacultyList = () => {
     window.open(`https://wa.me/91${phone}`, "_blank");
   };
 
-  // Filter batches by search term
+  // ── Batches tab helpers ──────────────────────────────────────────────────────
+
+  // Toggle expanded row for a faculty
+  const toggleFacultyExpand = (facultyId) => {
+    setExpandedFaculty((prev) => ({
+      ...prev,
+      [facultyId]: !prev[facultyId],
+    }));
+  };
+
+  // Group allBatchesData by facultyId, merging faculty meta from the faculty list
+  const batchesByFaculty = faculty.map((f) => {
+    const batches = allBatchesData.filter((b) => b.facultyId === f._id);
+    const totalStudents = batches.reduce(
+      (sum, b) => sum + (b.studentCount ?? b.students?.length ?? 0),
+      0
+    );
+    return {
+      facultyId: f._id,
+      facultyName: f.facultyName,
+      facultyNo: f.facultyNo,
+      facultyStatus: f.status,
+      facultyEmail: f.email,
+      facultyMobile: f.mobileNo,
+      courseAssigned: f.courseAssigned,
+      batches,
+      totalBatchCount: batches.length,
+      totalStudents,
+    };
+  }).filter((f) => {
+    if (!searchTerm) return true;
+    return (
+      f.facultyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      f.facultyNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      f.batches.some((b) =>
+        (b.batchName || b.name || "").toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+  });
+
+  // Filter batches by search term (kept for legacy use)
   const filteredBatches = allBatchesData.filter((batch) => {
     if (!searchTerm) return true;
     return (
@@ -664,7 +708,7 @@ const FacultyList = () => {
       )}
 
       {/* ═══════════════════════════════════════
-          TAB 2 — BATCHES & STUDENTS TABLE
+          TAB 2 — BATCHES & STUDENTS (Accordion)
       ═══════════════════════════════════════ */}
       {!loading && !error && activeTab === "batches" && (
         <div className="table-container">
@@ -674,85 +718,165 @@ const FacultyList = () => {
               <p>Loading batches &amp; students...</p>
             </div>
           ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Faculty</th>
-                  <th>Batch Name</th>
-                  <th>Course</th>
-                  <th>Students</th>
-                  <th>Student Names</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredBatches.length > 0 ? (
-                  filteredBatches.map((batch, idx) => (
-                    <tr key={batch._id || idx}>
-                      <td className="student-id">{idx + 1}</td>
-                      <td>
-                        <div className="student-info">
-                          <div className="avatar" style={{ background: "#6366f1" }}>
-                            {batch.facultyName?.charAt(0) || "?"}
-                          </div>
-                          <div>
-                            <strong>{batch.facultyName || "N/A"}</strong>
-                            <small>{batch.facultyNo || ""}</small>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="batch-name-cell">
-                          <BookOpen size={14} />
-                          <span>{batch.batchName || batch.name || `Batch ${idx + 1}`}</span>
-                        </div>
-                      </td>
-                      <td>{batch.courseAssigned || "N/A"}</td>
-                      <td>
-                        <span className="batch-student-count-badge">
-                          <Users size={13} />
-                          {batch.studentCount ?? batch.students?.length ?? 0}
-                        </span>
-                      </td>
-                      <td>
-                        {batch.students && batch.students.length > 0 ? (
-                          <div className="student-chips">
-                            {batch.students.map((student, sIdx) => (
-                              <span key={student._id || sIdx} className="student-chip">
-                                <span className="student-chip-avatar">
-                                  {(student.studentName || student.name || "S").charAt(0)}
-                                </span>
-                                {student.studentName || student.name || "Unknown"}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="no-students-text">No students yet</span>
+            <>
+              {/* ── Header row ── */}
+              <table className="data-table fba-main-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: "28%" }}>FACULTY DETAILS</th>
+                    <th style={{ width: "22%" }}>CONTACT INFORMATION</th>
+                    <th style={{ width: "18%" }}>ASSIGNMENT STATS</th>
+                    <th style={{ width: "14%" }}>STATUS</th>
+                    <th style={{ width: "18%" }}>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {batchesByFaculty.length > 0 ? (
+                    batchesByFaculty.map((f) => (
+                      <React.Fragment key={f.facultyId}>
+                        {/* ── Faculty row ── */}
+                        <tr className={`fba-faculty-row ${expandedFaculty[f.facultyId] ? "fba-faculty-row--open" : ""}`}>
+                          {/* Faculty Details */}
+                          <td>
+                            <div className="student-info">
+                              <div className="avatar fba-avatar-indigo">
+                                {f.facultyName?.charAt(0) || "?"}
+                              </div>
+                              <div>
+                                <strong>{f.facultyName || "N/A"}</strong>
+                                <small>{f.facultyNo || ""}</small>
+                                <small style={{ color: "#94a3b8" }}>{f.courseAssigned || ""}</small>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Contact Information */}
+                          <td>
+                            <div className="contact-info">
+                              {f.facultyEmail && (
+                                <div><Mail size={13} /> {f.facultyEmail}</div>
+                              )}
+                              {f.facultyMobile && (
+                                <div><Phone size={13} /> {formatPhoneNumber(f.facultyMobile)}</div>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Assignment Stats */}
+                          <td>
+                            <div className="fba-stats-cell">
+                              <div className="fba-stat-item fba-stat--batches">
+                                <span className="fba-stat-num">{f.totalBatchCount}</span>
+                                <span className="fba-stat-label">Batches</span>
+                              </div>
+                              <div className="fba-stat-item fba-stat--students">
+                                <span className="fba-stat-num">{f.totalStudents}</span>
+                                <span className="fba-stat-label">Students</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Status */}
+                          <td>
+                            <div className="status-cell">
+                              {getStatusBadge(f.facultyStatus)}
+                            </div>
+                          </td>
+
+                          {/* Actions */}
+                          <td>
+                            {f.totalBatchCount > 0 ? (
+                              <button
+                                className={`fba-view-btn ${expandedFaculty[f.facultyId] ? "fba-view-btn--active" : ""}`}
+                                onClick={() => toggleFacultyExpand(f.facultyId)}
+                              >
+                                <Eye size={15} />
+                                {expandedFaculty[f.facultyId] ? "Hide Batches" : "View Batches"}
+                                <ChevronDown
+                                  size={14}
+                                  className={`fba-chevron ${expandedFaculty[f.facultyId] ? "fba-chevron--open" : ""}`}
+                                />
+                              </button>
+                            ) : (
+                              <span className="fba-no-batches-text">No batches yet</span>
+                            )}
+                          </td>
+                        </tr>
+
+                        {/* ── Expanded batch cards row ── */}
+                        {expandedFaculty[f.facultyId] && f.batches.length > 0 && (
+                          <tr className="fba-expanded-row">
+                            <td colSpan="5" className="fba-expanded-cell">
+                              <div className="fba-batch-grid">
+                                {f.batches.map((batch, idx) => {
+                                  const studentCount = batch.studentCount ?? batch.students?.length ?? 0;
+                                  return (
+                                    <div key={batch._id || idx} className="fba-batch-card">
+                                      {/* Card header */}
+                                      <div className="fba-card-header">
+                                        <div className="fba-card-icon">
+                                          <BookOpen size={15} />
+                                        </div>
+                                        <div className="fba-card-title">
+                                          <span className="fba-batch-name">
+                                            {batch.batchName || batch.name || `Batch ${idx + 1}`}
+                                          </span>
+                                          <span className="fba-batch-course">
+                                            {batch.courseAssigned || f.courseAssigned || "N/A"}
+                                          </span>
+                                        </div>
+                                        <span className="fba-student-badge">
+                                          <Users size={12} />
+                                          {studentCount} student{studentCount !== 1 ? "s" : ""}
+                                        </span>
+                                      </div>
+
+                                      {/* Student chips */}
+                                      {batch.students && batch.students.length > 0 ? (
+                                        <div className="fba-student-chips">
+                                          {batch.students.map((student, sIdx) => (
+                                            <span key={student._id || sIdx} className="student-chip">
+                                              <span className="student-chip-avatar">
+                                                {(student.studentName || student.name || "S").charAt(0)}
+                                              </span>
+                                              {student.studentName || student.name || "Unknown"}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="fba-no-students">No students enrolled yet</p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </td>
+                          </tr>
                         )}
+                      </React.Fragment>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="empty-row">
+                        <div className="empty-state">
+                          <BookOpen size={48} />
+                          <h3>No faculty found</h3>
+                          <p>No faculty members are available.</p>
+                        </div>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="empty-row">
-                      <div className="empty-state">
-                        <BookOpen size={48} />
-                        <h3>No batches found</h3>
-                        <p>No batches have been assigned to any faculty member yet.</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
+                  )}
+                </tbody>
+              </table>
 
-          {/* Batches summary footer */}
-          {!batchesLoading && batchesFetched && (
-            <div className="batches-summary-footer">
-              <span><BookOpen size={14} /> <strong>{totalBatches}</strong> total batches</span>
-              <span><Users size={14} /> <strong>{totalStudentsCount}</strong> total students</span>
-            </div>
+              {/* Summary footer */}
+              {batchesFetched && (
+                <div className="batches-summary-footer">
+                  <span><BookOpen size={14} /> <strong>{totalBatches}</strong> total batches</span>
+                  <span><Users size={14} /> <strong>{totalStudentsCount}</strong> total students</span>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
