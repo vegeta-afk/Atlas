@@ -143,49 +143,63 @@ const FacultyList = () => {
   const fetchAllBatches = async (facultyList) => {
   setBatchesLoading(true);
   try {
-    const results = [];
 
-    for (const f of facultyList) {
-      try {
-        const batchRes = await facultyAPI.getFacultyBatches(f._id);
-        if (batchRes.data.success && batchRes.data.data) {
-          const batches = batchRes.data.data.batches || [];
-
-          for (const batch of batches) {
-            let students = [];
-
-            try {
-              // ✅ Same endpoint StudentAttendance uses — works correctly
-              const stuRes = await facultyAPI.getBatchStudents(f._id, batch._id);
-              students = stuRes.data?.data?.students || [];
-            } catch {
-              students = [];
-            }
-
-            results.push({
-              ...batch,
-              students,                     // ← now properly populated
-              studentCount: students.length,
-              facultyName: f.facultyName,
-              facultyNo: f.facultyNo,
-              facultyId: f._id,
-              facultyStatus: f.status,
-              facultyEmail: f.email,
-              facultyMobile: f.mobileNo,
-              courseAssigned: f.courseAssigned,
-            });
-          }
+    // ── Step 1: Fetch ALL faculty batches simultaneously ──
+    const batchResults = await Promise.all(
+      facultyList.map(async (f) => {
+        try {
+          const res = await facultyAPI.getFacultyBatches(f._id);
+          const batches = res.data?.data?.batches || [];
+          return { faculty: f, batches };
+        } catch {
+          return { faculty: f, batches: [] };
         }
-      } catch {
-        // skip failed faculty
-      }
-    }
+      })
+    );
+
+    // ── Step 2: Fetch ALL batch students simultaneously ──
+    const studentFetches = batchResults.flatMap(({ faculty: f, batches }) =>
+      batches.map(async (batch) => {
+        try {
+          const res = await facultyAPI.getBatchStudents(f._id, batch._id);
+          const students = res.data?.data?.students || [];
+          return {
+            ...batch,
+            students,
+            studentCount: students.length,
+            facultyName: f.facultyName,
+            facultyNo: f.facultyNo,
+            facultyId: f._id,
+            facultyStatus: f.status,
+            facultyEmail: f.email,
+            facultyMobile: f.mobileNo,
+            courseAssigned: f.courseAssigned,
+          };
+        } catch {
+          return {
+            ...batch,
+            students: [],
+            studentCount: 0,
+            facultyName: f.facultyName,
+            facultyNo: f.facultyNo,
+            facultyId: f._id,
+            facultyStatus: f.status,
+            facultyEmail: f.email,
+            facultyMobile: f.mobileNo,
+            courseAssigned: f.courseAssigned,
+          };
+        }
+      })
+    );
+
+    const results = await Promise.all(studentFetches);
 
     setAllBatchesData(results);
     setTotalBatches(results.length);
     const totalStudents = results.reduce((sum, b) => sum + (b.students?.length ?? 0), 0);
     setTotalStudentsCount(totalStudents);
     setBatchesFetched(true);
+
   } catch (err) {
     console.error("Error fetching all batches:", err);
   } finally {
