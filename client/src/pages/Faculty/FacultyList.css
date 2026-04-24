@@ -924,3 +924,277 @@ input:disabled {
   .stats-cards { grid-template-columns: 1fr; }
   .pagination { flex-direction: column; gap: 12px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   FBA — Faculty Batch Accordion  (Batches & Students tab)
+   Paste this entire block at the bottom of FacultyList.css
+═══════════════════════════════════════════════════════════════ */
+
+/* ── Main table overrides for the batches tab ── */
+.fba-main-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+/* ── Faculty row ── */
+.fba-faculty-row td {
+  padding: 16px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.fba-faculty-row:hover td {
+  background: #fafbff;
+}
+
+/* Highlight the whole row when its batches are expanded */
+.fba-faculty-row--open td {
+  background: #f5f3ff;
+  border-bottom-color: transparent;
+}
+
+/* ── Indigo avatar variant for batches tab ── */
+.fba-avatar-indigo {
+  background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.35);
+}
+
+/* ── Assignment Stats cell ── */
+.fba-stats-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.fba-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  min-width: 64px;
+}
+
+.fba-stat--batches {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.fba-stat--students {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.fba-stat-num {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.fba-stat--batches .fba-stat-num { color: #1d4ed8; }
+.fba-stat--students .fba-stat-num { color: #15803d; }
+
+.fba-stat-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fba-stat--batches .fba-stat-label { color: #3b82f6; }
+.fba-stat--students .fba-stat-label { color: #22c55e; }
+
+/* ── "View Batches / Hide Batches" button ── */
+.fba-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: 1.5px solid #c7d2fe;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.fba-view-btn:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.15);
+}
+
+.fba-view-btn--active {
+  background: #4f46e5;
+  color: white;
+  border-color: #4f46e5;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+.fba-view-btn--active:hover {
+  background: #4338ca;
+  border-color: #4338ca;
+}
+
+/* Chevron arrow — rotates when expanded */
+.fba-chevron {
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+}
+
+.fba-chevron--open {
+  transform: rotate(180deg);
+}
+
+/* "No batches yet" placeholder */
+.fba-no-batches-text {
+  font-size: 13px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* ── Expanded accordion row ── */
+.fba-expanded-row td {
+  padding: 0 !important;
+  border-bottom: 2px solid #e0e7ff;
+  background: #f8f9ff;
+}
+
+.fba-expanded-cell {
+  padding: 20px 24px !important;
+}
+
+/* ── Batch card grid ── */
+.fba-batch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+/* ── Individual batch card ── */
+.fba-batch-card {
+  background: white;
+  border: 1px solid #e0e7ff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 4px rgba(79, 70, 229, 0.07);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.fba-batch-card:hover {
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.12);
+  transform: translateY(-2px);
+}
+
+/* ── Batch card header ── */
+.fba-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.fba-card-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #ede9fe;
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fba-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.fba-batch-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fba-batch-course {
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Student count badge inside the card header */
+.fba-student-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Student chips inside card ── */
+.fba-student-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* reuse existing .student-chip / .student-chip-avatar styles —
+   these are already defined in FacultyList.css */
+
+/* No-students placeholder inside card */
+.fba-no-students {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+  text-align: center;
+  padding: 8px 0 2px;
+}
+
+/* ── Responsive tweaks ── */
+@media (max-width: 900px) {
+  .fba-batch-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .fba-stats-cell {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .fba-batch-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fba-expanded-cell {
+    padding: 14px !important;
+  }
+
+  .fba-view-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
