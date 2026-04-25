@@ -198,32 +198,40 @@ courseSchema.index({
 
 // Calculate total fee before saving
 courseSchema.pre("validate", function (next) {
-  const totalFee    = Number(this.totalFee)    || 0;
-  const discount    = Number(this.discount)    || 0;
-  const admissionFee = Number(this.admissionFee) || 0;
-  const examFee     = Number(this.examFee)     || 0;
-  const numberOfExams = Number(this.numberOfExams) || 1;
+  // Ensure numbers
+  const totalFee = Number(this.totalFee) || 0;
+  const discount = Number(this.discount) || 0;
 
+  // Check if duration is a number or string
   let duration = 1;
   if (typeof this.duration === "number") {
     duration = this.duration;
   } else if (typeof this.duration === "string") {
+    // Try to extract number from duration string (e.g., "3 years", "6 months")
     const match = this.duration.match(/\d+/);
     duration = match ? parseInt(match[0]) : 1;
   }
 
-  // Net Fee = (totalFee - discount%) + admissionFee + (examFee × numberOfExams)
-  const discountAmount = (totalFee * discount) / 100;
-  const totalExamFee   = examFee * numberOfExams;
-  this.netFee = totalFee - discountAmount + admissionFee + totalExamFee;
+  // Net Fee = Total Fee - Discount %
+  if (totalFee > 0) {
+    const discountDecimal = discount / 100;
+    this.netFee = totalFee * (1 - discountDecimal);
+  } else {
+    this.netFee = 0;
+  }
 
-  // Monthly Fee = netFee / duration in months
+  // Monthly Fee = Net Fee / Duration (months)
+  // Assuming duration is in months. If it's in years, multiply by 12
   let durationInMonths = duration;
   if (this.duration && this.duration.toLowerCase().includes("year")) {
     durationInMonths = duration * 12;
   }
 
-  this.monthlyFee = durationInMonths > 0 ? this.netFee / durationInMonths : 0;
+  if (this.netFee > 0 && durationInMonths > 0) {
+    this.monthlyFee = this.netFee / durationInMonths;
+  } else {
+    this.monthlyFee = 0;
+  }
 
   next();
 });
