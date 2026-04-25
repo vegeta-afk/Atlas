@@ -979,7 +979,7 @@ const EditCourse = () => {
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Other Charges
                 </label>
@@ -989,7 +989,7 @@ const EditCourse = () => {
                   onChange={handleChange}
                   placeholder="e.g., 1000"
                 />
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
