@@ -252,7 +252,7 @@ const ViewCourse = () => {
       </div>
 
       {/* ── Quick stats strip ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-3 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-4 flex items-center gap-3">
           <div className="p-2 bg-blue-50 rounded-lg">
             <Calendar className="text-blue-600" size={18} />
@@ -410,92 +410,36 @@ const ViewCourse = () => {
         </div>
       </div>
 
-      {/* ── Row 2: Exams + Seats ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Exam Info */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <SectionHeader
-            icon={ClipboardList}
-            title="Exam Information"
-            iconBg="bg-orange-50"
-            iconColor="text-orange-600"
-          />
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-orange-50 rounded-lg">
-              <Calendar className="text-orange-600" size={28} />
-              <div>
-                <p className="text-xs text-orange-700 font-medium">
-                  Number of Exams
-                </p>
-                <p className="text-2xl font-bold text-orange-800">
-                  {course.numberOfExams || 0}
-                </p>
-              </div>
-            </div>
-            <InfoRow
-              label="Exam Months"
-              value={formatExamMonths(course.examMonths)}
-            />
-          </div>
+      {/* ── Row 2: Exams (full width) ── */}
+<div className="mb-6">
+  <div className="bg-white rounded-lg shadow p-6">
+    <SectionHeader
+      icon={ClipboardList}
+      title="Exam Information"
+      iconBg="bg-orange-50"
+      iconColor="text-orange-600"
+    />
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="flex items-center gap-4 p-4 bg-orange-50 rounded-lg">
+        <Calendar className="text-orange-600" size={28} />
+        <div>
+          <p className="text-xs text-orange-700 font-medium">
+            Number of Exams
+          </p>
+          <p className="text-2xl font-bold text-orange-800">
+            {course.numberOfExams || 0}
+          </p>
         </div>
-
-        {/* Seat Availability
-        <div className="bg-white rounded-lg shadow p-6">
-          <SectionHeader
-            icon={Users}
-            title="Seat Availability"
-            iconBg="bg-purple-50"
-            iconColor="text-purple-600"
-          />
-          <div className="space-y-4">
-            <div className="flex justify-between text-sm text-gray-700 font-medium">
-              <span>
-                {course.seatsFilled || 0} filled
-              </span>
-              <span>{course.seatsAvailable || 0} total</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-              <div
-                className={`h-4 rounded-full transition-all ${
-                  seatPct >= 90
-                    ? "bg-red-500"
-                    : seatPct >= 70
-                    ? "bg-orange-500"
-                    : "bg-blue-600"
-                }`}
-                style={{ width: `${seatPct}%` }}
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">
-                <strong>{seatPct}%</strong> seats filled
-              </span>
-              <span className="text-sm text-gray-600">
-                <strong>{(course.seatsAvailable || 0) - (course.seatsFilled || 0)}</strong>{" "}
-                seats remaining
-              </span>
-            </div>
-
-            {course.availableBatches && course.availableBatches.length > 0 && (
-              <div className="pt-3 border-t">
-                <p className="text-xs text-gray-500 font-medium uppercase mb-2">
-                  Available Batches
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {course.availableBatches.map((batch) => (
-                    <span
-                      key={batch}
-                      className="px-3 py-1 text-xs bg-blue-50 text-blue-700 rounded-full font-medium capitalize"
-                    >
-                      {batch}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div> */}
       </div>
+      <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+        <InfoRow
+          label="Exam Months"
+          value={formatExamMonths(course.examMonths)}
+        />
+      </div>
+    </div>
+  </div>
+</div>
 
       {/* ── Course Description + Eligibility + Career Opportunities ── */}
       {(course.description ||
