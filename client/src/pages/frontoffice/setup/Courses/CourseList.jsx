@@ -121,7 +121,7 @@ const CourseList = () => {
           </p>
         </div>
         <Link
-          to="/admin/setup/courses/add"
+          to={`${basePath}/setup/courses/add`}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
         >
           <Plus size={20} />
@@ -173,7 +173,7 @@ const CourseList = () => {
               {searchTerm ? "Try a different search term" : "Start by adding your first course"}
             </p>
             <Link
-              to="/admin/setup/courses/add"
+              to={`${basePath}/setup/courses/add`}
               className="text-blue-600 hover:underline font-medium"
             >
               Add your first course
@@ -200,9 +200,9 @@ const CourseList = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Exams
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Seats
-                    </th>
+                    </th> */}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
@@ -270,7 +270,7 @@ const CourseList = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      {/* <td className="px-6 py-4">
                         <div className="space-y-2">
                           <div className="text-sm text-gray-900">
                             {course.seatsFilled || 0} / {course.seatsAvailable || 0}
@@ -287,7 +287,7 @@ const CourseList = () => {
                             {getSeatPercentage(course.seatsFilled || 0, course.seatsAvailable || 0)}% filled
                           </div>
                         </div>
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4">
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -302,14 +302,14 @@ const CourseList = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <Link
-                            to={`/admin/setup/courses/view/${course._id}`}
+                            to={`${basePath}/setup/courses/view/${course._id}`}
                             className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
                             title="View Details"
                           >
                             <Eye size={18} />
                           </Link>
                           <Link
-                            to={`/admin/setup/courses/edit/${course._id}`}
+                            to={`${basePath}/setup/courses/edit/${course._id}`}
                             className="p-1.5 text-green-600 hover:text-green-800 hover:bg-green-50 rounded"
                             title="Edit Course"
                           >
@@ -409,7 +409,7 @@ const CourseList = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        {/* <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Average Seats Filled</p>
@@ -428,7 +428,7 @@ const CourseList = () => {
               <div className="text-purple-600 font-bold">%</div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
