@@ -439,7 +439,7 @@ const ViewCourse = () => {
           </div>
         </div>
 
-        {/* Seat Availability */}
+        {/* Seat Availability
         <div className="bg-white rounded-lg shadow p-6">
           <SectionHeader
             icon={Users}
@@ -494,7 +494,7 @@ const ViewCourse = () => {
               </div>
             )}
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* ── Course Description + Eligibility + Career Opportunities ── */}
