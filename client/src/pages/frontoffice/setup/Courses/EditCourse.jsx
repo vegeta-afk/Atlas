@@ -1,5 +1,5 @@
 // pages/admin/courses/EditCourse.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -13,6 +13,8 @@ import {
   ChevronUp,
   Award,
   Loader2,
+  Info,
+  Keyboard,
 } from "lucide-react";
 import { courseAPI } from "../../../../services/api";
 import toast from "react-hot-toast";
@@ -41,16 +43,104 @@ const NumberInput = ({
   />
 );
 
+// ─── Shortcut Info Popover ─────────────────────────────────────────────────
+const ShortcutInfoPopover = () => {
+  const [open, setOpen] = useState(false);
+  const popoverRef = useRef(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const shortcuts = [
+    { keys: ["Alt", "S"], label: "Add Semester", color: "bg-blue-100 text-blue-700" },
+    { keys: ["Alt", "T"], label: "Add Topic (to last semester)", color: "bg-green-100 text-green-700" },
+    { keys: ["Alt", "B"], label: "Add Subtopic (to last topic)", color: "bg-purple-100 text-purple-700" },
+  ];
+
+  return (
+    <div className="relative" ref={popoverRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        title="Keyboard Shortcuts"
+        className={`p-1.5 rounded-lg border transition-all ${
+          open
+            ? "bg-blue-50 border-blue-300 text-blue-600"
+            : "bg-gray-50 border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300"
+        }`}
+      >
+        <Info size={16} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-9 z-50 w-72 bg-white rounded-xl shadow-xl border border-gray-100 p-4 animate-fade-in">
+          {/* Arrow */}
+          <div className="absolute -top-2 right-3 w-4 h-4 bg-white border-l border-t border-gray-100 rotate-45" />
+
+          <div className="flex items-center gap-2 mb-3">
+            <Keyboard size={15} className="text-blue-500" />
+            <p className="text-sm font-semibold text-gray-700">Keyboard Shortcuts</p>
+          </div>
+
+          <div className="space-y-2.5">
+            {shortcuts.map(({ keys, label, color }) => (
+              <div key={label} className="flex items-center justify-between gap-3">
+                <span className="text-xs text-gray-600">{label}</span>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {keys.map((k, i) => (
+                    <React.Fragment key={k}>
+                      <kbd
+                        className={`px-2 py-0.5 text-xs font-mono font-semibold rounded border ${color} border-opacity-40`}
+                        style={{ borderColor: "currentColor" }}
+                      >
+                        {k}
+                      </kbd>
+                      {i < keys.length - 1 && (
+                        <span className="text-gray-400 text-xs">+</span>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <p className="text-xs text-gray-400 flex items-center gap-1">
+              <span>💡</span>
+              Works anywhere on the page — no need to scroll up!
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const EditCourse = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
-  const basePath = "/" + location.pathname.split("/")[1]; // "/admin" or "/faculty"
+  const basePath = "/" + location.pathname.split("/")[1];
 
   const [loading, setLoading] = useState(false);
   const [fetchingCourse, setFetchingCourse] = useState(true);
   const [courseCodeSuggestions, setCourseCodeSuggestions] = useState([]);
   const [semesters, setSemesters] = useState([]);
+
+  // Keep a ref so keyboard handlers always see latest semesters
+  const semestersRef = useRef(semesters);
+  useEffect(() => {
+    semestersRef.current = semesters;
+  }, [semesters]);
 
   const [formData, setFormData] = useState({
     courseCode: "",
@@ -75,6 +165,7 @@ const EditCourse = () => {
     numberOfExams: "",
     examMonths: "",
     courseType: "",
+    isScholarshipBased: false,
   });
 
   // ─── Fetch existing course data ───────────────────────────────────────────
@@ -87,7 +178,10 @@ const EditCourse = () => {
         if (response.data.success) {
           const course = response.data.data;
 
-          // Populate form fields
+          const isScholarship =
+            course.isScholarshipBased ||
+            course.courseType === "scholarship_based";
+
           setFormData({
             courseCode: course.courseCode || "",
             courseFullName: course.courseFullName || "",
@@ -110,7 +204,8 @@ const EditCourse = () => {
             monthlyFee: course.monthlyFee?.toString() || "",
             numberOfExams: course.numberOfExams?.toString() || "",
             examMonths: course.examMonths || "",
-            courseType: course.courseType || "",
+            courseType: isScholarship ? "" : course.courseType || "",
+            isScholarshipBased: isScholarship,
           });
 
           // Syllabus comes from MongoDB as a native array — no JSON.parse needed
@@ -120,7 +215,9 @@ const EditCourse = () => {
           if (Array.isArray(rawSyllabus) && rawSyllabus.length > 0) {
             syllabusArray = rawSyllabus;
           } else if (typeof rawSyllabus === "string" && rawSyllabus.trim() !== "") {
-            try { syllabusArray = JSON.parse(rawSyllabus); } catch (e) {}
+            try {
+              syllabusArray = JSON.parse(rawSyllabus);
+            } catch (e) {}
           }
 
           if (syllabusArray.length > 0) {
@@ -190,10 +287,7 @@ const EditCourse = () => {
   // ─── Sync semesters → formData.syllabus ───────────────────────────────────
   useEffect(() => {
     if (semesters.length > 0) {
-      setFormData((prev) => ({
-        ...prev,
-        syllabus: JSON.stringify(semesters),
-      }));
+      setFormData((prev) => ({ ...prev, syllabus: JSON.stringify(semesters) }));
     } else {
       setFormData((prev) => ({ ...prev, syllabus: "" }));
     }
@@ -217,44 +311,8 @@ const EditCourse = () => {
     }
   }, [formData.courseFullName, formData.courseShortName, formData.courseCode]);
 
-  // ─── Handlers ─────────────────────────────────────────────────────────────
-  const handleChange = useCallback((e) => {
-    const { name, value } = e.target;
-
-    const numberFields = [
-      "semesterFee",
-      "admissionFee",
-      "examFee",
-      "otherCharges",
-      "totalSemesters",
-      "seatsAvailable",
-      "totalFee",
-      "discount",
-      "numberOfExams",
-    ];
-
-    if (numberFields.includes(name)) {
-      if (value === "" || /^\d*\.?\d*$/.test(value))
-        setFormData((prev) => ({ ...prev, [name]: value }));
-      return;
-    }
-    if (name === "courseCode") {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value.toUpperCase().replace(/\s/g, ""),
-      }));
-      return;
-    }
-    if (name === "examMonths") {
-      if (value === "" || /^[\d\s,]*$/.test(value))
-        setFormData((prev) => ({ ...prev, [name]: value }));
-      return;
-    }
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  }, []);
-
-  // ─── Semester helpers (identical to AddCourse) ────────────────────────────
-  const addSemester = () => {
+  // ─── Semester / Topic / Subtopic helpers ──────────────────────────────────
+  const addSemester = useCallback(() => {
     setSemesters((prev) => [
       ...prev,
       {
@@ -264,7 +322,7 @@ const EditCourse = () => {
         topics: [],
       },
     ]);
-  };
+  }, []);
 
   const removeSemester = (semId) =>
     setSemesters((prev) => prev.filter((s) => s.id !== semId));
@@ -276,17 +334,16 @@ const EditCourse = () => {
 
   const toggleSemesterExpand = (semId) =>
     setSemesters((prev) =>
-      prev.map((s) =>
-        s.id === semId ? { ...s, isExpanded: !s.isExpanded } : s
-      )
+      prev.map((s) => (s.id === semId ? { ...s, isExpanded: !s.isExpanded } : s))
     );
 
-  const addTopicToSemester = (semId) =>
+  const addTopicToSemester = useCallback((semId) =>
     setSemesters((prev) =>
       prev.map((s) =>
         s.id === semId
           ? {
               ...s,
+              isExpanded: true,
               topics: [
                 ...s.topics,
                 { id: Date.now(), name: "", isExpanded: true, subtopics: [] },
@@ -294,7 +351,7 @@ const EditCourse = () => {
             }
           : s
       )
-    );
+    ), []);
 
   const removeTopicFromSemester = (semId, topicId) =>
     setSemesters((prev) =>
@@ -333,12 +390,13 @@ const EditCourse = () => {
       )
     );
 
-  const addSubtopicToTopic = (semId, topicId) =>
+  const addSubtopicToTopic = useCallback((semId, topicId) =>
     setSemesters((prev) =>
       prev.map((s) =>
         s.id === semId
           ? {
               ...s,
+              isExpanded: true,
               topics: s.topics.map((t) =>
                 t.id === topicId
                   ? {
@@ -354,7 +412,7 @@ const EditCourse = () => {
             }
           : s
       )
-    );
+    ), []);
 
   const updateSubtopicName = (semId, topicId, subId, value) =>
     setSemesters((prev) =>
@@ -395,6 +453,131 @@ const EditCourse = () => {
           : s
       )
     );
+
+  // ─── ✨ Keyboard Shortcuts ─────────────────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      const isTyping = (tag === "input" || tag === "textarea") && !e.altKey;
+      if (isTyping) return;
+
+      if (!e.altKey) return;
+
+      switch (e.key.toLowerCase()) {
+        case "s": {
+          e.preventDefault();
+          addSemester();
+          toast.success("Semester added  (Alt+S)", {
+            icon: "📚",
+            duration: 1500,
+            style: { fontSize: "13px" },
+          });
+          break;
+        }
+
+        case "t": {
+          e.preventDefault();
+          const current = semestersRef.current;
+          if (current.length === 0) {
+            toast.error("Add a semester first (Alt+S)", {
+              icon: "⚠️",
+              duration: 2000,
+              style: { fontSize: "13px" },
+            });
+            return;
+          }
+          const lastSem = current[current.length - 1];
+          addTopicToSemester(lastSem.id);
+          toast.success(`Topic added to "${lastSem.name}"  (Alt+T)`, {
+            icon: "📝",
+            duration: 1500,
+            style: { fontSize: "13px" },
+          });
+          break;
+        }
+
+        case "b": {
+          e.preventDefault();
+          const current = semestersRef.current;
+          if (current.length === 0) {
+            toast.error("Add a semester first (Alt+S)", {
+              icon: "⚠️",
+              duration: 2000,
+              style: { fontSize: "13px" },
+            });
+            return;
+          }
+          const lastSem = current[current.length - 1];
+          if (!lastSem.topics || lastSem.topics.length === 0) {
+            toast.error("Add a topic first (Alt+T)", {
+              icon: "⚠️",
+              duration: 2000,
+              style: { fontSize: "13px" },
+            });
+            return;
+          }
+          const lastTopic = lastSem.topics[lastSem.topics.length - 1];
+          addSubtopicToTopic(lastSem.id, lastTopic.id);
+          toast.success(`Subtopic added to "${lastTopic.name || "topic"}"  (Alt+B)`, {
+            icon: "🔹",
+            duration: 1500,
+            style: { fontSize: "13px" },
+          });
+          break;
+        }
+
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [addSemester, addTopicToSemester, addSubtopicToTopic]);
+
+  // ─── Handlers ─────────────────────────────────────────────────────────────
+  const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+
+    const numberFields = [
+      "semesterFee",
+      "admissionFee",
+      "examFee",
+      "otherCharges",
+      "totalSemesters",
+      "seatsAvailable",
+      "totalFee",
+      "discount",
+      "numberOfExams",
+    ];
+
+    if (numberFields.includes(name)) {
+      if (value === "" || /^\d*\.?\d*$/.test(value))
+        setFormData((prev) => ({ ...prev, [name]: value }));
+      return;
+    }
+    if (name === "courseCode") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value.toUpperCase().replace(/\s/g, ""),
+      }));
+      return;
+    }
+    if (name === "examMonths") {
+      if (value === "" || /^[\d\s,]*$/.test(value))
+        setFormData((prev) => ({ ...prev, [name]: value }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  }, []);
+
+  const handleScholarshipToggle = () => {
+    setFormData((prev) => ({
+      ...prev,
+      isScholarshipBased: !prev.isScholarshipBased,
+      discount: !prev.isScholarshipBased ? "" : prev.discount,
+    }));
+  };
 
   const handleSuggestionClick = (suggestion) =>
     setFormData((prev) => ({ ...prev, courseCode: suggestion }));
@@ -463,7 +646,10 @@ const EditCourse = () => {
         monthlyFee: parseFloat(formData.monthlyFee) || 0,
         numberOfExams: parseInt(formData.numberOfExams) || 0,
         examMonths: formData.examMonths.trim(),
-        courseType: formData.courseType || "",
+        courseType: formData.isScholarshipBased
+          ? "scholarship_based"
+          : formData.courseType,
+        isScholarshipBased: formData.isScholarshipBased,
       };
 
       const response = await courseAPI.updateCourse(id, submitData);
@@ -504,7 +690,7 @@ const EditCourse = () => {
     );
   }
 
-  // ─── Render (identical layout to AddCourse) ────────────────────────────────
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="p-6">
       {/* Header */}
@@ -532,22 +718,19 @@ const EditCourse = () => {
         </div>
       </div>
 
-      {/* Form */}
       <form onSubmit={handleSubmit}>
         {/* Row 1: Basic Info + Fee Structure */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
           {/* Card 1: Basic Information */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b">
               <div className="p-2 bg-blue-50 rounded-lg">
                 <BookOpen className="text-blue-600" size={20} />
               </div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                Basic Information
-              </h2>
+              <h2 className="text-lg font-semibold text-gray-800">Basic Information</h2>
             </div>
 
-            {/* Course code suggestions */}
             {courseCodeSuggestions.length > 0 && !formData.courseCode && (
               <div className="mb-4">
                 <p className="text-xs text-gray-500 mb-1">Suggestions:</p>
@@ -631,19 +814,69 @@ const EditCourse = () => {
                   name="courseType"
                   value={formData.courseType}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={formData.isScholarshipBased}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    formData.isScholarshipBased
+                      ? "bg-gray-100 cursor-not-allowed text-gray-400"
+                      : ""
+                  }`}
                 >
                   <option value="">Select Course Type</option>
                   <option value="diploma">Diploma</option>
                   <option value="certificate">Certificate</option>
-                  <option value="scholarship_based">Scholarship Based</option>
                 </select>
-                {formData.courseType === "scholarship_based" && (
-                  <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
-                    <Award size={12} />
-                    Students can apply scholarships to this course
+                {formData.isScholarshipBased && (
+                  <p className="text-xs text-purple-600 mt-1 flex items-center gap-1">
+                    <Award size={11} />
+                    Course type is managed via the scholarship toggle
                   </p>
                 )}
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={handleScholarshipToggle}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all ${
+                    formData.isScholarshipBased
+                      ? "border-purple-400 bg-purple-50"
+                      : "border-gray-200 bg-gray-50 hover:border-gray-300"
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 transition-all ${
+                      formData.isScholarshipBased
+                        ? "bg-purple-600 border-purple-600"
+                        : "bg-white border-gray-300"
+                    }`}
+                  >
+                    {formData.isScholarshipBased && (
+                      <svg
+                        className="w-3 h-3 text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={3}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  <Award
+                    size={18}
+                    className={formData.isScholarshipBased ? "text-purple-600" : "text-gray-400"}
+                  />
+                  <div className="text-left">
+                    <p className={`text-sm font-medium ${formData.isScholarshipBased ? "text-purple-800" : "text-gray-700"}`}>
+                      Scholarship Based Course
+                    </p>
+                    <p className={`text-xs mt-0.5 ${formData.isScholarshipBased ? "text-purple-600" : "text-gray-400"}`}>
+                      {formData.isScholarshipBased
+                        ? "✨ Students can apply scholarships — direct discount is disabled"
+                        : "Enable if students can apply scholarships to this course"}
+                    </p>
+                  </div>
+                </button>
               </div>
             </div>
           </div>
@@ -654,9 +887,7 @@ const EditCourse = () => {
               <div className="p-2 bg-green-50 rounded-lg">
                 <DollarSign className="text-green-600" size={20} />
               </div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                Fee Structure
-              </h2>
+              <h2 className="text-lg font-semibold text-gray-800">Fee Structure</h2>
             </div>
 
             <div className="space-y-4">
@@ -684,26 +915,23 @@ const EditCourse = () => {
                   value={formData.discount}
                   onChange={handleChange}
                   placeholder="e.g., 10 (for 10% discount)"
-                  disabled={formData.courseType === "scholarship_based"}
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    formData.courseType === "scholarship_based"
-                      ? "bg-gray-100 cursor-not-allowed"
+                  disabled={formData.isScholarshipBased}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    formData.isScholarshipBased
+                      ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
                       : "bg-white border-gray-300"
                   }`}
                 />
-                {formData.courseType === "scholarship_based" ? (
-                  <p className="text-xs text-blue-600 mt-1">
-                    ✨ Discounts are applied via scholarships, not direct
-                    discount
+                {formData.isScholarshipBased ? (
+                  <p className="text-xs text-purple-600 mt-1 flex items-center gap-1">
+                    <Award size={11} />
+                    Discounts are applied via scholarships for this course
                   </p>
                 ) : (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enter discount percentage
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Enter discount percentage</p>
                 )}
               </div>
 
-              {/* Net Fee (auto calculated) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Net Fee (Auto Calculated)
@@ -716,14 +944,10 @@ const EditCourse = () => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none"
                     placeholder="Will calculate automatically"
                   />
-                  <Calculator
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    size={18}
-                  />
+                  <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 </div>
               </div>
 
-              {/* Monthly Fee (auto calculated) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Monthly Fee (Auto Calculated)
@@ -731,17 +955,12 @@ const EditCourse = () => {
                 <div className="relative">
                   <input
                     type="text"
-                    value={
-                      formData.monthlyFee ? `₹${formData.monthlyFee}` : ""
-                    }
+                    value={formData.monthlyFee ? `₹${formData.monthlyFee}` : ""}
                     readOnly
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none"
                     placeholder="Will calculate automatically"
                   />
-                  <Calculator
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    size={18}
-                  />
+                  <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 </div>
               </div>
 
@@ -750,23 +969,13 @@ const EditCourse = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Admission Fee
                   </label>
-                  <NumberInput
-                    name="admissionFee"
-                    value={formData.admissionFee}
-                    onChange={handleChange}
-                    placeholder="e.g., 5000"
-                  />
+                  <NumberInput name="admissionFee" value={formData.admissionFee} onChange={handleChange} placeholder="e.g., 5000" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Exam Fee
                   </label>
-                  <NumberInput
-                    name="examFee"
-                    value={formData.examFee}
-                    onChange={handleChange}
-                    placeholder="e.g., 2000"
-                  />
+                  <NumberInput name="examFee" value={formData.examFee} onChange={handleChange} placeholder="e.g., 2000" />
                 </div>
               </div>
 
@@ -791,27 +1000,17 @@ const EditCourse = () => {
             <div className="p-2 bg-purple-50 rounded-lg">
               <BookOpen className="text-purple-600" size={20} />
             </div>
-            <h2 className="text-lg font-semibold text-gray-800">
-              Course Details
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-800">Course Details</h2>
           </div>
 
           <div className="space-y-4">
-            {/* Exam fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Number of Exams in Full Course
                 </label>
-                <NumberInput
-                  name="numberOfExams"
-                  value={formData.numberOfExams}
-                  onChange={handleChange}
-                  placeholder="e.g., 2"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Total number of exams throughout the course
-                </p>
+                <NumberInput name="numberOfExams" value={formData.numberOfExams} onChange={handleChange} placeholder="e.g., 2" />
+                <p className="text-xs text-gray-500 mt-1">Total number of exams throughout the course</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -825,21 +1024,15 @@ const EditCourse = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="e.g., 6, 9, 12"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Enter months when exams occur (comma separated)
-                </p>
+                <p className="text-xs text-gray-500 mt-1">Enter months when exams occur (comma separated)</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Example: For a 15-month course with exams at month 6 and 9,
-                  enter "6, 9"
+                  Example: For a 15-month course with exams at month 6 and 9, enter "6, 9"
                 </p>
               </div>
             </div>
 
-            {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <textarea
                 name="description"
                 value={formData.description}
@@ -850,11 +1043,8 @@ const EditCourse = () => {
               />
             </div>
 
-            {/* Eligibility */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Eligibility Criteria
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Eligibility Criteria</label>
               <textarea
                 name="eligibilityCriteria"
                 value={formData.eligibilityCriteria}
@@ -865,40 +1055,45 @@ const EditCourse = () => {
               />
             </div>
 
-            {/* Semester-based Syllabus */}
+            {/* ── Semester-based Syllabus ── */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <label className="block text-sm font-medium text-gray-700">
                   Course Syllabus (Semester-wise)
                 </label>
-                <button
-                  type="button"
-                  onClick={addSemester}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
-                >
-                  <Plus size={16} />
-                  Add Semester
-                </button>
+
+                {/* ✨ Add Semester button + ⓘ shortcut info popover */}
+                <div className="flex items-center gap-2">
+                  <ShortcutInfoPopover />
+                  <button
+                    type="button"
+                    onClick={addSemester}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                    title="Add Semester (Alt+S)"
+                  >
+                    <Plus size={16} />
+                    Add Semester
+                    <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-blue-500 rounded font-mono opacity-80">
+                      Alt+S
+                    </kbd>
+                  </button>
+                </div>
               </div>
 
               {semesters.length === 0 ? (
                 <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-                  <BookOpen
-                    className="mx-auto text-gray-400 mb-2"
-                    size={32}
-                  />
+                  <BookOpen className="mx-auto text-gray-400 mb-2" size={32} />
                   <p className="text-gray-500 mb-2">No semesters added yet</p>
                   <p className="text-gray-400 text-sm">
-                    Click "Add Semester" to start building your course syllabus
+                    Click "Add Semester" or press{" "}
+                    <kbd className="px-1.5 py-0.5 text-xs bg-gray-100 border border-gray-300 rounded font-mono">Alt+S</kbd>{" "}
+                    to start building your syllabus
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {semesters.map((semester) => (
-                    <div
-                      key={semester.id}
-                      className="border border-gray-200 rounded-lg overflow-hidden"
-                    >
+                    <div key={semester.id} className="border border-gray-200 rounded-lg overflow-hidden">
                       {/* Semester Header */}
                       <div className="flex items-center justify-between p-4 bg-gray-50 border-b">
                         <div className="flex items-center gap-3">
@@ -907,19 +1102,13 @@ const EditCourse = () => {
                             onClick={() => toggleSemesterExpand(semester.id)}
                             className="text-gray-500 hover:text-gray-700"
                           >
-                            {semester.isExpanded ? (
-                              <ChevronUp size={18} />
-                            ) : (
-                              <ChevronDown size={18} />
-                            )}
+                            {semester.isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                           </button>
                           <div className="flex items-center gap-2">
                             <input
                               type="text"
                               value={semester.name}
-                              onChange={(e) =>
-                                updateSemesterName(semester.id, e.target.value)
-                              }
+                              onChange={(e) => updateSemesterName(semester.id, e.target.value)}
                               className="font-medium text-gray-800 bg-transparent border-b border-transparent hover:border-gray-300 focus:outline-none focus:border-blue-500 px-1"
                             />
                             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
@@ -932,6 +1121,7 @@ const EditCourse = () => {
                             type="button"
                             onClick={() => addTopicToSemester(semester.id)}
                             className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"
+                            title="Add Topic (Alt+T adds to last semester)"
                           >
                             <Plus size={12} />
                             Add Topic
@@ -953,40 +1143,27 @@ const EditCourse = () => {
                         <div className="p-4 space-y-4">
                           {semester.topics.length === 0 ? (
                             <p className="text-center py-3 text-gray-400 text-sm">
-                              No topics yet. Click "Add Topic" to add one.
+                              No topics yet. Click "Add Topic" or press{" "}
+                              <kbd className="px-1.5 py-0.5 text-xs bg-gray-100 border border-gray-300 rounded font-mono">Alt+T</kbd>{" "}
+                              to add one.
                             </p>
                           ) : (
                             semester.topics.map((topic) => (
-                              <div
-                                key={topic.id}
-                                className="border border-gray-200 rounded-lg"
-                              >
+                              <div key={topic.id} className="border border-gray-200 rounded-lg">
                                 {/* Topic Header */}
                                 <div className="flex items-center justify-between p-3 bg-gray-50 border-b">
                                   <div className="flex items-center gap-3 flex-1">
                                     <button
                                       type="button"
-                                      onClick={() =>
-                                        toggleTopicExpand(semester.id, topic.id)
-                                      }
+                                      onClick={() => toggleTopicExpand(semester.id, topic.id)}
                                       className="text-gray-500 hover:text-gray-700"
                                     >
-                                      {topic.isExpanded ? (
-                                        <ChevronUp size={16} />
-                                      ) : (
-                                        <ChevronDown size={16} />
-                                      )}
+                                      {topic.isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                     </button>
                                     <input
                                       type="text"
                                       value={topic.name}
-                                      onChange={(e) =>
-                                        updateTopicName(
-                                          semester.id,
-                                          topic.id,
-                                          e.target.value
-                                        )
-                                      }
+                                      onChange={(e) => updateTopicName(semester.id, topic.id, e.target.value)}
                                       className="font-medium text-gray-800 bg-transparent border-b border-transparent hover:border-gray-300 focus:outline-none focus:border-blue-500 w-full px-1"
                                       placeholder="Enter topic name"
                                     />
@@ -994,13 +1171,9 @@ const EditCourse = () => {
                                   <div className="flex items-center gap-2">
                                     <button
                                       type="button"
-                                      onClick={() =>
-                                        addSubtopicToTopic(
-                                          semester.id,
-                                          topic.id
-                                        )
-                                      }
+                                      onClick={() => addSubtopicToTopic(semester.id, topic.id)}
                                       className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+                                      title="Add Subtopic (Alt+B adds to last topic of last semester)"
                                     >
                                       <Plus size={12} />
                                       Add Subtopic
@@ -1008,12 +1181,7 @@ const EditCourse = () => {
                                     {semester.topics.length > 1 && (
                                       <button
                                         type="button"
-                                        onClick={() =>
-                                          removeTopicFromSemester(
-                                            semester.id,
-                                            topic.id
-                                          )
-                                        }
+                                        onClick={() => removeTopicFromSemester(semester.id, topic.id)}
                                         className="p-1 text-red-600 hover:text-red-800"
                                       >
                                         <Trash2 size={14} />
@@ -1027,43 +1195,28 @@ const EditCourse = () => {
                                   <div className="p-4 space-y-2">
                                     {topic.subtopics.length === 0 ? (
                                       <p className="text-center py-3 text-gray-400 text-sm">
-                                        No subtopics yet. Click "Add Subtopic"
+                                        No subtopics yet. Click "Add Subtopic" or press{" "}
+                                        <kbd className="px-1.5 py-0.5 text-xs bg-gray-100 border border-gray-300 rounded font-mono">Alt+B</kbd>{" "}
                                         to add one.
                                       </p>
                                     ) : (
                                       topic.subtopics.map((subtopic, sIdx) => (
-                                        <div
-                                          key={subtopic.id}
-                                          className="flex items-center gap-3 pl-6"
-                                        >
-                                          <span className="text-gray-500 text-sm min-w-6">
-                                            {sIdx + 1}.
-                                          </span>
+                                        <div key={subtopic.id} className="flex items-center gap-3 pl-6">
+                                          <span className="text-gray-500 text-sm min-w-6">{sIdx + 1}.</span>
                                           <input
                                             type="text"
                                             value={subtopic.name}
                                             onChange={(e) =>
-                                              updateSubtopicName(
-                                                semester.id,
-                                                topic.id,
-                                                subtopic.id,
-                                                e.target.value
-                                              )
+                                              updateSubtopicName(semester.id, topic.id, subtopic.id, e.target.value)
                                             }
                                             className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                            placeholder={`Enter subtopic ${
-                                              sIdx + 1
-                                            }`}
+                                            placeholder={`Enter subtopic ${sIdx + 1}`}
                                           />
                                           {topic.subtopics.length > 1 && (
                                             <button
                                               type="button"
                                               onClick={() =>
-                                                removeSubtopicFromTopic(
-                                                  semester.id,
-                                                  topic.id,
-                                                  subtopic.id
-                                                )
+                                                removeSubtopicFromTopic(semester.id, topic.id, subtopic.id)
                                               }
                                               className="p-1 text-red-600 hover:text-red-800"
                                             >
@@ -1086,11 +1239,8 @@ const EditCourse = () => {
               )}
             </div>
 
-            {/* Career Opportunities */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Career Opportunities
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Career Opportunities</label>
               <textarea
                 name="careerOpportunities"
                 value={formData.careerOpportunities}
