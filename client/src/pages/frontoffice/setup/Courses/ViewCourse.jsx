@@ -191,6 +191,7 @@ const ViewCourse = () => {
     course.seatsFilled || 0,
     course.seatsAvailable || 0
   );
+  const displayNetFee = course.netFee || 0;
 
   return (
     <div className="p-6">
@@ -375,8 +376,8 @@ const ViewCourse = () => {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
               <p className="text-xs text-blue-700 mb-1 font-medium">Net Fee</p>
               <p className="text-xl font-bold text-blue-800">
-                {formatCurrency(course.netFee)}
-              </p>
+  {formatCurrency(course.netFee)}
+</p>
               {course.discount > 0 && (
                 <p className="text-xs text-blue-600 mt-0.5">
                   {course.discount}% discount applied
@@ -399,9 +400,13 @@ const ViewCourse = () => {
               value={formatCurrency(course.admissionFee)}
             />
             <InfoRow
-              label="Exam Fee"
-              value={formatCurrency(course.examFee)}
-            />
+  label="Exam Fee"
+  value={
+    course.examFee && course.numberOfExams > 1
+      ? `${formatCurrency(course.examFee)} × ${course.numberOfExams} = ${formatCurrency((course.examFee || 0) * (course.numberOfExams || 1))}`
+      : formatCurrency(course.examFee)
+  }
+/>
             <InfoRow
               label="Other Charges"
               value={formatCurrency(course.otherCharges)}
