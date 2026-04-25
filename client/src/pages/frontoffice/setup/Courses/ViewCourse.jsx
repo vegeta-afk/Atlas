@@ -286,7 +286,7 @@ const ViewCourse = () => {
             </p>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 flex items-center gap-3">
+        {/* <div className="bg-white rounded-lg shadow p-4 flex items-center gap-3">
           <div className="p-2 bg-orange-50 rounded-lg">
             <Users className="text-orange-600" size={18} />
           </div>
@@ -296,7 +296,7 @@ const ViewCourse = () => {
               {course.seatsFilled || 0} / {course.seatsAvailable || 0}
             </p>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* ── Row 1: Basic Info + Fee Structure ── */}
