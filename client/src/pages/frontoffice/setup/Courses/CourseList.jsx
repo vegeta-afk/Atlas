@@ -12,11 +12,14 @@ import {
   Calendar,
   BookOpen,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link , useLocation } from "react-router-dom";
 import { courseAPI } from "../../../../services/api";
 import toast from "react-hot-toast";
 
 const CourseList = () => {
+
+  const location = useLocation();                                      // ← add this
+  const basePath = "/" + location.pathname.split("/")[1];  
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
