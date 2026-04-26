@@ -1602,7 +1602,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
               </select>
               {errors.cast && <span className="error-text">{errors.cast}</span>}
             </div>
-            <div className="form-group">
+            <div className="form-group">   {/* ✅ this is what makes the CSS apply */}
   <label>Category</label>
   <select
     name="category"
