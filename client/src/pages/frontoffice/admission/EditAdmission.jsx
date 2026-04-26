@@ -723,7 +723,7 @@ const updateData = {
           </div>
         </FormSection>
 
-        <FormSection title="Other Information" icon={Hash}>
+<FormSection title="Other Information" icon={Hash}>
   <div className="form-grid">
     <div className="form-group">
       <label>Cast *</label>
@@ -750,13 +750,6 @@ const updateData = {
         ))}
       </select>
       {errors.category && <span className="error-text">{errors.category}</span>}
-    </div>
-
-    <div className="form-group checkbox-container">
-      <label className="checkbox-label">
-        <input type="checkbox" name="speciallyAbled" checked={formData.speciallyAbled} onChange={handleChange} />
-        <span>Specially Abled</span>
-      </label>
     </div>
   </div>
 </FormSection>
