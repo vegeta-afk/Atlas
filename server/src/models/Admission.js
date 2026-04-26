@@ -172,11 +172,11 @@ photo: {
       type: String,
       trim: true,
     },
-    speciallyAbled: {
-      // ADD THIS FIELD
-      type: Boolean,
-      default: false,
-    },
+   category: {           // ✅ ADD THIS
+  type: String,
+  trim: true,
+  default: "",
+},
 
     // Source Information
     source: {

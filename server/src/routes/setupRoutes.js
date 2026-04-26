@@ -101,4 +101,10 @@ router.get("/next-actions", getNextActions);
 router.put("/next-actions/:id", updateNextAction);
 router.delete("/next-actions/:id", deleteNextAction);
 
+// Add these routes wherever your setup routes are defined
+router.post("/categories", protect, setupController.createCategory);
+router.put("/categories/:id", protect, setupController.updateCategory);
+router.delete("/categories/:id", protect, setupController.deleteCategory);
+router.put("/categories/order", protect, setupController.updateCategoryOrder);
+
 module.exports = router;

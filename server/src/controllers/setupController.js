@@ -839,3 +839,88 @@ exports.updateQualificationOrder = async (req, res) => {
     });
   }
 };
+
+const {
+  Qualification, Area, Holiday, Batch, EnquiryMethod,
+  Fee, CallStatus, CallReason, NextAction,
+  Category, // ✅ add this
+} = require("../models/Setup");
+
+// Add Category to getAllSetupData
+exports.getAllSetupData = async (req, res) => {
+  try {
+    const [qualifications, areas, holidays, batches, enquiryMethods, fees,
+      callStatuses, callReasons, nextActions, categories] =  // ✅ add categories
+      await Promise.all([
+        Qualification.find().sort({ order: 1, qualificationName: 1 }),
+        Area.find().sort({ areaName: 1 }),
+        Holiday.find().sort({ holidayDate: 1 }),
+        Batch.find().sort({ order: 1, startTime: 1 }),
+        EnquiryMethod.find().sort({ order: 1, methodName: 1 }),
+        Fee.find().sort({ feeName: 1 }),
+        CallStatus.find().sort({ order: 1 }),
+        CallReason.find().sort({ order: 1 }),
+        NextAction.find().sort({ order: 1 }),
+        Category.find().sort({ order: 1, categoryName: 1 }), // ✅ add this
+      ]);
+
+    res.json({
+      success: true,
+      data: {
+        qualifications, areas, holidays, batches, enquiryMethods,
+        fees, callStatuses, callReasons, nextActions,
+        categories, // ✅ add this
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+// ========== CATEGORY CRUD ==========
+exports.createCategory = async (req, res) => {
+  try {
+    const category = await Category.create({ ...req.body, createdBy: req.user?.id });
+    res.status(201).json({ success: true, message: "Category created successfully", data: category });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.updateCategory = async (req, res) => {
+  try {
+    const category = await Category.findByIdAndUpdate(
+      req.params.id,
+      { ...req.body },
+      { new: true, runValidators: true }
+    );
+    if (!category) return res.status(404).json({ success: false, message: "Category not found" });
+    res.json({ success: true, message: "Category updated successfully", data: category });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.deleteCategory = async (req, res) => {
+  try {
+    const category = await Category.findById(req.params.id);
+    if (!category) return res.status(404).json({ success: false, message: "Category not found" });
+    await category.deleteOne();
+    res.json({ success: true, message: "Category deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.updateCategoryOrder = async (req, res) => {
+  try {
+    const { categories } = req.body;
+    const updatePromises = categories.map(({ id, order }) =>
+      Category.findByIdAndUpdate(id, { order }, { new: true })
+    );
+    await Promise.all(updatePromises);
+    res.json({ success: true, message: "Category order updated successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

@@ -238,6 +238,11 @@ export const setupAPI = {
   createNextAction: (data) => api.post("/setup/next-actions", data),
   updateNextAction: (id, data) => api.put(`/setup/next-actions/${id}`, data),
   deleteNextAction: (id) => api.delete(`/setup/next-actions/${id}`),
+
+  createCategory: (data) => api.post("/setup/categories", data),
+updateCategory: (id, data) => api.put(`/setup/categories/${id}`, data),
+deleteCategory: (id) => api.delete(`/setup/categories/${id}`),
+updateCategoryOrder: (data) => api.put("/setup/categories/order", data),
 };
 
 export const facultyAPI = {

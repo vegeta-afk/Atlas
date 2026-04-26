@@ -314,6 +314,34 @@ const nextActionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const categorySchema = new mongoose.Schema(
+  {
+    categoryName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+    order: {
+      type: Number,
+      default: 0,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  { timestamps: true }
+);
+
+
 const Fee = mongoose.model("Fee", feeSchema);
 
 // Pre-save hook to generate displayName
@@ -341,3 +369,4 @@ module.exports.Fee = Fee;
 module.exports.CallStatus = mongoose.model("CallStatus", callStatusSchema);
 module.exports.CallReason = mongoose.model("CallReason", callReasonSchema);
 module.exports.NextAction = mongoose.model("NextAction", nextActionSchema);
+module.exports.Category = mongoose.model("Category", categorySchema);

@@ -14,6 +14,7 @@ import {
   MessageSquare,
   DollarSign,
   Phone,
+  Filter, // ✅ Step 9: Added Filter icon for Categories tab
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { setupAPI } from "../../../services/api";
@@ -22,6 +23,14 @@ const SetupList = () => {
   const [activeTab, setActiveTab] = useState("qualifications");
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Category states
+  const [categories, setCategories] = useState([]);
+  const [categoryForm, setCategoryForm] = useState({
+    categoryName: "",
+    description: "",
+    order: 0,
+  });
 
   // Data states
   const [qualifications, setQualifications] = useState([]);
@@ -79,14 +88,11 @@ const SetupList = () => {
   });
 
   const capitalizeFirst = (value) => {
-  if (!value) return value;
-  return value.charAt(0).toUpperCase() + value.slice(1);
-};
+    if (!value) return value;
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  };
 
-
-
-
-  // Fee form - REMOVED feeType field
+  // Fee form
   const [feeForm, setFeeForm] = useState({
     feeName: "",
     amount: "",
@@ -140,6 +146,7 @@ const SetupList = () => {
           callStatuses,
           callReasons,
           nextActions,
+          categories, // ✅ Step 2
         } = response.data.data;
         setQualifications(qualifications.sort((a, b) => a.order - b.order));
         setAreas(areas);
@@ -150,6 +157,7 @@ const SetupList = () => {
         setCallStatuses(callStatuses || []);
         setCallReasons(callReasons || []);
         setNextActions(nextActions || []);
+        setCategories(categories || []); // ✅ Step 2
       }
     } catch (error) {
       console.error("Fetch setup data error:", error);
@@ -170,70 +178,32 @@ const SetupList = () => {
     }
   };
 
+  // ✅ BUG FIX: categories is now at the correct level (not nested inside call-log)
   const resetForm = () => {
     if (activeTab === "qualifications") {
-      setQualificationForm({
-        qualificationName: "",
-        description: "",
-        order: 0,
-      });
+      setQualificationForm({ qualificationName: "", description: "", order: 0 });
     } else if (activeTab === "areas") {
-      setAreaForm({
-        areaName: "",
-        pincode: "",
-        city: "",
-      });
+      setAreaForm({ areaName: "", pincode: "", city: "" });
     } else if (activeTab === "holidays") {
-      setHolidayForm({
-        holidayDate: "",
-        holidayName: "",
-        description: "",
-        isRecurring: false,
-      });
+      setHolidayForm({ holidayDate: "", holidayName: "", description: "", isRecurring: false });
     } else if (activeTab === "batches") {
-      setBatchForm({
-        batchName: "",
-        startTime: "",
-        endTime: "",
-        order: 0,
-      });
+      setBatchForm({ batchName: "", startTime: "", endTime: "", order: 0 });
     } else if (activeTab === "enquiry-methods") {
-      setEnquiryMethodForm({
-        methodName: "",
-        description: "",
-        order: 0,
-      });
+      setEnquiryMethodForm({ methodName: "", description: "", order: 0 });
     } else if (activeTab === "fees") {
-      setFeeForm({
-        feeName: "",
-        amount: "",
-        description: "",
-        isActive: true,
-      });
+      setFeeForm({ feeName: "", amount: "", description: "", isActive: true });
       setFeeNameError("");
     } else if (activeTab === "call-log") {
       if (callLogSubTab === "call-status") {
-        setCallStatusForm({
-          name: "",
-          value: "",
-          description: "",
-          order: 0,
-        });
+        setCallStatusForm({ name: "", value: "", description: "", order: 0 });
       } else if (callLogSubTab === "call-reasons") {
-        setCallReasonForm({
-          name: "",
-          value: "",
-          description: "",
-          order: 0,
-        });
+        setCallReasonForm({ name: "", value: "", description: "", order: 0 });
       } else if (callLogSubTab === "next-actions") {
-        setNextActionForm({
-          name: "",
-          value: "",
-          description: "",
-          order: 0,
-        });
+        setNextActionForm({ name: "", value: "", description: "", order: 0 });
       }
+    } else if (activeTab === "categories") {
+      // ✅ BUG FIX: Now correctly at top level, not inside call-log
+      setCategoryForm({ categoryName: "", description: "", order: 0 });
     }
   };
 
@@ -276,83 +246,93 @@ const SetupList = () => {
     return "";
   };
 
-  // Separate change handlers for each form
- const handleQualificationChange = (e) => {
-  const { name, value } = e.target;
-  setQualificationForm((prev) => ({ 
-    ...prev, 
-    [name]: name === "qualificationName" || name === "description" ? capitalizeFirst(value) : value 
-  }));
-};
+  // Change handlers
+  const handleQualificationChange = (e) => {
+    const { name, value } = e.target;
+    setQualificationForm((prev) => ({
+      ...prev,
+      [name]: name === "qualificationName" || name === "description" ? capitalizeFirst(value) : value,
+    }));
+  };
 
   const handleAreaChange = (e) => {
-  const { name, value } = e.target;
-  setAreaForm((prev) => ({ 
-    ...prev, 
-    [name]: name === "areaName" || name === "city" ? capitalizeFirst(value) : value 
-  }));
-};
+    const { name, value } = e.target;
+    setAreaForm((prev) => ({
+      ...prev,
+      [name]: name === "areaName" || name === "city" ? capitalizeFirst(value) : value,
+    }));
+  };
 
   const handleHolidayChange = (e) => {
-  const { name, value, type, checked } = e.target;
-  setHolidayForm((prev) => ({
-    ...prev,
-    [name]: type === "checkbox" ? checked : name === "holidayName" || name === "description" ? capitalizeFirst(value) : value,
-  }));
-};
+    const { name, value, type, checked } = e.target;
+    setHolidayForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : name === "holidayName" || name === "description" ? capitalizeFirst(value) : value,
+    }));
+  };
 
   const handleBatchChange = (e) => {
-  const { name, value } = e.target;
-  setBatchForm((prev) => ({ 
-    ...prev, 
-    [name]: name === "batchName" ? capitalizeFirst(value) : value 
-  }));
-};
-  
-const handleEnquiryMethodChange = (e) => {
-  const { name, value } = e.target;
-  setEnquiryMethodForm((prev) => ({ 
-    ...prev, 
-    [name]: name === "methodName" || name === "description" ? capitalizeFirst(value) : value 
-  }));
-};
+    const { name, value } = e.target;
+    setBatchForm((prev) => ({
+      ...prev,
+      [name]: name === "batchName" ? capitalizeFirst(value) : value,
+    }));
+  };
+
+  const handleEnquiryMethodChange = (e) => {
+    const { name, value } = e.target;
+    setEnquiryMethodForm((prev) => ({
+      ...prev,
+      [name]: name === "methodName" || name === "description" ? capitalizeFirst(value) : value,
+    }));
+  };
 
   const handleFeeChange = (e) => {
-  const { name, value, type, checked } = e.target;
-  if (name === "feeName") {
-    const error = validateFeeName(value);
-    setFeeNameError(error);
-  }
-  setFeeForm((prev) => ({
-    ...prev,
-    [name]: type === "checkbox" ? checked : name === "feeName" || name === "description" ? capitalizeFirst(value) : value,
-  }));
-};
+    const { name, value, type, checked } = e.target;
+    if (name === "feeName") {
+      const error = validateFeeName(value);
+      setFeeNameError(error);
+    }
+    setFeeForm((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : name === "feeName" || name === "description" ? capitalizeFirst(value) : value,
+    }));
+  };
 
   const handleCallStatusChange = (e) => {
-  const { name, value } = e.target;
-  setCallStatusForm((prev) => ({ 
-    ...prev, 
-    [name]: name === "name" || name === "description" ? capitalizeFirst(value) : value 
-  }));
-};
+    const { name, value } = e.target;
+    setCallStatusForm((prev) => ({
+      ...prev,
+      [name]: name === "name" || name === "description" ? capitalizeFirst(value) : value,
+    }));
+  };
 
   const handleCallReasonChange = (e) => {
-  const { name, value } = e.target;
-  setCallReasonForm((prev) => ({ 
-    ...prev, 
-    [name]: name === "name" || name === "description" ? capitalizeFirst(value) : value 
-  }));
-};
+    const { name, value } = e.target;
+    setCallReasonForm((prev) => ({
+      ...prev,
+      [name]: name === "name" || name === "description" ? capitalizeFirst(value) : value,
+    }));
+  };
 
   const handleNextActionChange = (e) => {
-  const { name, value } = e.target;
-  setNextActionForm((prev) => ({ 
-    ...prev, 
-    [name]: name === "name" || name === "description" ? capitalizeFirst(value) : value 
-  }));
-};
+    const { name, value } = e.target;
+    setNextActionForm((prev) => ({
+      ...prev,
+      [name]: name === "name" || name === "description" ? capitalizeFirst(value) : value,
+    }));
+  };
 
+  // ✅ Step 4: Category change handler
+  const handleCategoryChange = (e) => {
+    const { name, value } = e.target;
+    setCategoryForm((prev) => ({
+      ...prev,
+      [name]: name === "categoryName" || name === "description" ? capitalizeFirst(value) : value,
+    }));
+  };
+
+  // ✅ BUG FIX: categories case is now at correct level (not nested inside call-log)
   const handleEdit = (item) => {
     setEditingId(item._id);
     setShowForm(true);
@@ -422,6 +402,13 @@ const handleEnquiryMethodChange = (e) => {
           order: item.order || 0,
         });
       }
+    } else if (activeTab === "categories") {
+      // ✅ BUG FIX: Now correctly at top level
+      setCategoryForm({
+        categoryName: item.categoryName,
+        description: item.description || "",
+        order: item.order || 0,
+      });
     }
   };
 
@@ -532,21 +519,14 @@ const handleEnquiryMethodChange = (e) => {
         }
         let feeType = "other";
         const feeNameLower = trimmedFeeName.toLowerCase();
-        if (feeNameLower.includes("double") && feeNameLower.includes("batch")) {
-          feeType = "double-batch";
-        } else if (feeNameLower.includes("course") && feeNameLower.includes("extend")) {
-          feeType = "course-extend";
-        } else if (feeNameLower.includes("form")) {
-          feeType = "form-fee";
-        } else if (feeNameLower.includes("course") && feeNameLower.includes("convert")) {
-          feeType = "course-convert";
-        } else if (feeNameLower.includes("registration")) {
-          feeType = "registration";
-        } else if (feeNameLower.includes("library")) {
-          feeType = "library";
-        } else if (feeNameLower.includes("convenience")) {
-          feeType = "convenience";
-        }
+        if (feeNameLower.includes("double") && feeNameLower.includes("batch")) feeType = "double-batch";
+        else if (feeNameLower.includes("course") && feeNameLower.includes("extend")) feeType = "course-extend";
+        else if (feeNameLower.includes("form")) feeType = "form-fee";
+        else if (feeNameLower.includes("course") && feeNameLower.includes("convert")) feeType = "course-convert";
+        else if (feeNameLower.includes("registration")) feeType = "registration";
+        else if (feeNameLower.includes("library")) feeType = "library";
+        else if (feeNameLower.includes("convenience")) feeType = "convenience";
+
         const submitData = {
           feeName: trimmedFeeName,
           feeType: feeType,
@@ -617,6 +597,24 @@ const handleEnquiryMethodChange = (e) => {
             toast.success("Next action added");
           }
         }
+      } else if (activeTab === "categories") {
+        // ✅ Step 6: Category submit
+        if (!categoryForm.categoryName.trim()) {
+          toast.error("Category name is required");
+          return;
+        }
+        const submitData = {
+          categoryName: categoryForm.categoryName.trim(),
+          description: categoryForm.description.trim() || "",
+          order: parseInt(categoryForm.order) || 0,
+        };
+        if (editingId) {
+          await setupAPI.updateCategory(editingId, submitData);
+          toast.success("Category updated");
+        } else {
+          await setupAPI.createCategory(submitData);
+          toast.success("Category added");
+        }
       }
 
       setShowForm(false);
@@ -662,6 +660,10 @@ const handleEnquiryMethodChange = (e) => {
           await setupAPI.deleteNextAction(id);
           toast.success("Next action deleted");
         }
+      } else if (activeTab === "categories") {
+        // ✅ Step 7
+        await setupAPI.deleteCategory(id);
+        toast.success("Category deleted");
       }
       fetchSetupData();
     } catch (error) {
@@ -675,10 +677,7 @@ const handleEnquiryMethodChange = (e) => {
     const newBatches = [...batches];
     const newOrder = direction === "up" ? batchIndex - 1 : batchIndex + 1;
     [newBatches[batchIndex], newBatches[newOrder]] = [newBatches[newOrder], newBatches[batchIndex]];
-    const updatedBatches = newBatches.map((batch, index) => ({
-      id: batch._id,
-      order: index,
-    }));
+    const updatedBatches = newBatches.map((batch, index) => ({ id: batch._id, order: index }));
     try {
       await setupAPI.updateBatchOrder({ batches: updatedBatches });
       setBatches(newBatches);
@@ -694,10 +693,7 @@ const handleEnquiryMethodChange = (e) => {
     const newMethods = [...enquiryMethods];
     const newOrder = direction === "up" ? methodIndex - 1 : methodIndex + 1;
     [newMethods[methodIndex], newMethods[newOrder]] = [newMethods[newOrder], newMethods[methodIndex]];
-    const updatedMethods = newMethods.map((method, index) => ({
-      id: method._id,
-      order: index,
-    }));
+    const updatedMethods = newMethods.map((method, index) => ({ id: method._id, order: index }));
     try {
       await setupAPI.updateEnquiryMethodOrder({ enquiryMethods: updatedMethods });
       setEnquiryMethods(newMethods);
@@ -713,10 +709,7 @@ const handleEnquiryMethodChange = (e) => {
     const newQualifications = [...qualifications];
     const newOrder = direction === "up" ? qualIndex - 1 : qualIndex + 1;
     [newQualifications[qualIndex], newQualifications[newOrder]] = [newQualifications[newOrder], newQualifications[qualIndex]];
-    const updatedQualifications = newQualifications.map((qual, index) => ({
-      id: qual._id,
-      order: index,
-    }));
+    const updatedQualifications = newQualifications.map((qual, index) => ({ id: qual._id, order: index }));
     try {
       await setupAPI.updateQualificationOrder({ qualifications: updatedQualifications });
       setQualifications(newQualifications);
@@ -726,6 +719,7 @@ const handleEnquiryMethodChange = (e) => {
     }
   };
 
+  // ✅ Step 8: categories added to getFilteredData
   const getFilteredData = () => {
     let data = [];
     if (activeTab === "qualifications") data = qualifications;
@@ -738,13 +732,13 @@ const handleEnquiryMethodChange = (e) => {
       if (callLogSubTab === "call-status") data = callStatuses;
       else if (callLogSubTab === "call-reasons") data = callReasons;
       else if (callLogSubTab === "next-actions") data = nextActions;
+    } else if (activeTab === "categories") {
+      data = categories;
     }
 
     if (searchTerm) {
       return data.filter((item) =>
-        Object.values(item).some((val) =>
-          String(val).toLowerCase().includes(searchTerm.toLowerCase())
-        )
+        Object.values(item).some((val) => String(val).toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
     return data;
@@ -759,7 +753,6 @@ const handleEnquiryMethodChange = (e) => {
       columns = [
         { key: "name", label: "Status Name" },
         { key: "value", label: "Status Value" },
-        // { key: "description", label: "Description" }, // Commented out
         { key: "order", label: "Order" },
       ];
     } else if (callLogSubTab === "call-reasons") {
@@ -767,7 +760,6 @@ const handleEnquiryMethodChange = (e) => {
       columns = [
         { key: "name", label: "Reason Name" },
         { key: "value", label: "Reason Value" },
-        // { key: "description", label: "Description" }, // Commented out
         { key: "order", label: "Order" },
       ];
     } else if (callLogSubTab === "next-actions") {
@@ -775,7 +767,6 @@ const handleEnquiryMethodChange = (e) => {
       columns = [
         { key: "name", label: "Action Name" },
         { key: "value", label: "Action Value" },
-        // { key: "description", label: "Description" }, // Commented out
         { key: "order", label: "Order" },
       ];
     }
@@ -800,7 +791,6 @@ const handleEnquiryMethodChange = (e) => {
               <td className="px-6 py-4">
                 <code className="px-2 py-1 bg-gray-100 rounded text-sm">{item.value}</code>
               </td>
-              {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
               <td className="px-6 py-4">{item.order}</td>
               <td className="px-6 py-4">
                 <span className={`px-2 py-1 text-xs rounded-full ${item.isActive !== false ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
@@ -940,8 +930,7 @@ const handleEnquiryMethodChange = (e) => {
           </div>
         </div>
       );
-      title = editingId ? "Edit" : "Add New";
-      title += " Qualification";
+      title = (editingId ? "Edit" : "Add New") + " Qualification";
     } else if (activeTab === "areas") {
       formContent = (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -982,8 +971,7 @@ const handleEnquiryMethodChange = (e) => {
           </div>
         </div>
       );
-      title = editingId ? "Edit" : "Add New";
-      title += " Area";
+      title = (editingId ? "Edit" : "Add New") + " Area";
     } else if (activeTab === "holidays") {
       formContent = (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1025,8 +1013,7 @@ const handleEnquiryMethodChange = (e) => {
           </div>
         </div>
       );
-      title = editingId ? "Edit" : "Add New";
-      title += " Holiday";
+      title = (editingId ? "Edit" : "Add New") + " Holiday";
     } else if (activeTab === "batches") {
       formContent = (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1067,8 +1054,7 @@ const handleEnquiryMethodChange = (e) => {
           </div>
         </div>
       );
-      title = editingId ? "Edit" : "Add New";
-      title += " Batch";
+      title = (editingId ? "Edit" : "Add New") + " Batch";
     } else if (activeTab === "enquiry-methods") {
       formContent = (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1099,8 +1085,7 @@ const handleEnquiryMethodChange = (e) => {
           </div>
         </div>
       );
-      title = editingId ? "Edit" : "Add New";
-      title += " Enquiry Method";
+      title = (editingId ? "Edit" : "Add New") + " Enquiry Method";
     } else if (activeTab === "fees") {
       formContent = (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1160,20 +1145,55 @@ const handleEnquiryMethodChange = (e) => {
           </div>
         </div>
       );
-      title = editingId ? "Edit" : "Add New";
-      title += " Fee";
+      title = (editingId ? "Edit" : "Add New") + " Fee";
     } else if (activeTab === "call-log") {
       formContent = renderCallLogForm();
-      if (callLogSubTab === "call-status") {
-        title = editingId ? "Edit" : "Add New";
-        title += " Call Status";
-      } else if (callLogSubTab === "call-reasons") {
-        title = editingId ? "Edit" : "Add New";
-        title += " Call Reason";
-      } else {
-        title = editingId ? "Edit" : "Add New";
-        title += " Next Action";
-      }
+      if (callLogSubTab === "call-status") title = (editingId ? "Edit" : "Add New") + " Call Status";
+      else if (callLogSubTab === "call-reasons") title = (editingId ? "Edit" : "Add New") + " Call Reason";
+      else title = (editingId ? "Edit" : "Add New") + " Next Action";
+    } else if (activeTab === "categories") {
+      // ✅ Step 10: Category form
+      formContent = (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category Name *</label>
+            <input
+              type="text"
+              name="categoryName"
+              autoCapitalize="sentences"
+              value={categoryForm.categoryName}
+              onChange={handleCategoryChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g., General, OBC, SC, ST"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Order</label>
+            <input
+              type="number"
+              name="order"
+              value={categoryForm.order}
+              onChange={handleCategoryChange}
+              min="0"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Display order"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea
+              name="description"
+              value={categoryForm.description}
+              onChange={handleCategoryChange}
+              rows="2"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Optional description..."
+            />
+          </div>
+        </div>
+      );
+      title = (editingId ? "Edit" : "Add New") + " Category";
     }
 
     return (
@@ -1184,19 +1204,12 @@ const handleEnquiryMethodChange = (e) => {
           <div className="mt-6 flex justify-end gap-3">
             <button
               type="button"
-              onClick={() => {
-                setShowForm(false);
-                setEditingId(null);
-                resetForm();
-              }}
+              onClick={() => { setShowForm(false); setEditingId(null); resetForm(); }}
               className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
               {editingId ? "Update" : "Save"}
             </button>
           </div>
@@ -1215,7 +1228,6 @@ const handleEnquiryMethodChange = (e) => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
@@ -1225,7 +1237,6 @@ const handleEnquiryMethodChange = (e) => {
               <tr key={item._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">{item.order}</td>
                 <td className="px-6 py-4">{item.qualificationName}</td>
-                {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                     {item.isActive ? "Active" : "Inactive"}
@@ -1233,18 +1244,10 @@ const handleEnquiryMethodChange = (e) => {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => handleQualificationOrder(item._id, "up")} 
-                      className="text-gray-600 hover:text-gray-800" 
-                      disabled={qualifications.findIndex((q) => q._id === item._id) === 0}
-                    >
+                    <button onClick={() => handleQualificationOrder(item._id, "up")} className="text-gray-600 hover:text-gray-800" disabled={qualifications.findIndex((q) => q._id === item._id) === 0}>
                       <ChevronUp size={16} />
                     </button>
-                    <button 
-                      onClick={() => handleQualificationOrder(item._id, "down")} 
-                      className="text-gray-600 hover:text-gray-800" 
-                      disabled={qualifications.findIndex((q) => q._id === item._id) === qualifications.length - 1}
-                    >
+                    <button onClick={() => handleQualificationOrder(item._id, "down")} className="text-gray-600 hover:text-gray-800" disabled={qualifications.findIndex((q) => q._id === item._id) === qualifications.length - 1}>
                       <ChevronDown size={16} />
                     </button>
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800">
@@ -1270,7 +1273,6 @@ const handleEnquiryMethodChange = (e) => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Area Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">City</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pincode</th>
-              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
@@ -1281,19 +1283,14 @@ const handleEnquiryMethodChange = (e) => {
                 <td className="px-6 py-4">{item.areaName}</td>
                 <td className="px-6 py-4">{item.city || "-"}</td>
                 <td className="px-6 py-4">{item.pincode || "-"}</td>
-                {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                     {item.isActive ? "Active" : "Inactive"}
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800 mr-3">
-                    <Edit size={16} />
-                  </button>
-                  <button onClick={() => handleDelete(item._id)} className="text-red-600 hover:text-red-800">
-                    <Trash2 size={16} />
-                  </button>
+                  <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800 mr-3"><Edit size={16} /></button>
+                  <button onClick={() => handleDelete(item._id)} className="text-red-600 hover:text-red-800"><Trash2 size={16} /></button>
                 </td>
               </tr>
             ))}
@@ -1309,7 +1306,6 @@ const handleEnquiryMethodChange = (e) => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Holiday Name</th>
-              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recurring</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
@@ -1319,19 +1315,14 @@ const handleEnquiryMethodChange = (e) => {
               <tr key={item._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">{new Date(item.holidayDate).toLocaleDateString()}</td>
                 <td className="px-6 py-4">{item.holidayName}</td>
-                {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isRecurring ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}>
                     {item.isRecurring ? "Yes" : "No"}
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800 mr-3">
-                    <Edit size={16} />
-                  </button>
-                  <button onClick={() => handleDelete(item._id)} className="text-red-600 hover:text-red-800">
-                    <Trash2 size={16} />
-                  </button>
+                  <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800 mr-3"><Edit size={16} /></button>
+                  <button onClick={() => handleDelete(item._id)} className="text-red-600 hover:text-red-800"><Trash2 size={16} /></button>
                 </td>
               </tr>
             ))}
@@ -1347,8 +1338,6 @@ const handleEnquiryMethodChange = (e) => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Batch Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time Slot</th>
-              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order</th> */}
-              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
@@ -1358,8 +1347,6 @@ const handleEnquiryMethodChange = (e) => {
               <tr key={item._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">{item.batchName}</td>
                 <td className="px-6 py-4">{`${item.startTime} to ${item.endTime}`}</td>
-                {/* <td className="px-6 py-4">{item.order}</td> */}
-                {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                     {item.isActive ? "Active" : "Inactive"}
@@ -1373,12 +1360,8 @@ const handleEnquiryMethodChange = (e) => {
                     <button onClick={() => handleBatchOrder(item._id, "down")} className="text-gray-600 hover:text-gray-800" disabled={batches.findIndex((b) => b._id === item._id) === batches.length - 1}>
                       <ChevronDown size={16} />
                     </button>
-                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800">
-                      <Edit size={16} />
-                    </button>
-                    <button onClick={() => handleDelete(item._id)} className="text-red-600 hover:text-red-800">
-                      <Trash2 size={16} />
-                    </button>
+                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800"><Edit size={16} /></button>
+                    <button onClick={() => handleDelete(item._id)} className="text-red-600 hover:text-red-800"><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>
@@ -1395,7 +1378,6 @@ const handleEnquiryMethodChange = (e) => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method Name</th>
-              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
@@ -1405,7 +1387,6 @@ const handleEnquiryMethodChange = (e) => {
               <tr key={item._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">{item.order}</td>
                 <td className="px-6 py-4">{item.methodName}</td>
-                {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                     {item.isActive ? "Active" : "Inactive"}
@@ -1419,12 +1400,8 @@ const handleEnquiryMethodChange = (e) => {
                     <button onClick={() => handleEnquiryMethodOrder(item._id, "down")} className="text-gray-600 hover:text-gray-800" disabled={enquiryMethods.findIndex((m) => m._id === item._id) === enquiryMethods.length - 1}>
                       <ChevronDown size={16} />
                     </button>
-                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800">
-                      <Edit size={16} />
-                    </button>
-                    <button onClick={() => handleDelete(item._id)} className="text-red-600 hover:text-red-800">
-                      <Trash2 size={16} />
-                    </button>
+                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800"><Edit size={16} /></button>
+                    <button onClick={() => handleDelete(item._id)} className="text-red-600 hover:text-red-800"><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>
@@ -1441,7 +1418,6 @@ const handleEnquiryMethodChange = (e) => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fee Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
@@ -1451,19 +1427,14 @@ const handleEnquiryMethodChange = (e) => {
               <tr key={item._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">{item.feeName}</td>
                 <td className="px-6 py-4">₹{item.amount}</td>
-                {/* <td className="px-6 py-4">{item.description || "-"}</td> */}
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                     {item.isActive ? "Active" : "Inactive"}
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800 mr-3">
-                    <Edit size={16} />
-                  </button>
-                  <button onClick={() => handleDelete(item._id)} className="text-red-600 hover:text-red-800">
-                    <Trash2 size={16} />
-                  </button>
+                  <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800 mr-3"><Edit size={16} /></button>
+                  <button onClick={() => handleDelete(item._id)} className="text-red-600 hover:text-red-800"><Trash2 size={16} /></button>
                 </td>
               </tr>
             ))}
@@ -1475,18 +1446,60 @@ const handleEnquiryMethodChange = (e) => {
     if (activeTab === "call-log") {
       return renderCallLogTable();
     }
+
+    // ✅ Step 11: Category table
+    if (activeTab === "categories") {
+      return (
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {data.map((item) => (
+              <tr key={item._id} className="hover:bg-gray-50">
+                <td className="px-6 py-4">{item.order}</td>
+                <td className="px-6 py-4 font-medium">{item.categoryName}</td>
+                <td className="px-6 py-4 text-gray-500">{item.description || "-"}</td>
+                <td className="px-6 py-4">
+                  <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                    {item.isActive ? "Active" : "Inactive"}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800">
+                      <Edit size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(item._id)} className="text-red-600 hover:text-red-800">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+    }
   };
 
   return (
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Setup Management</h1>
-        <p className="text-gray-600">Manage qualifications, areas, holidays, batches, enquiry methods, fees, and call log settings</p>
+        <p className="text-gray-600">Manage qualifications, areas, holidays, batches, enquiry methods, fees, call log settings, and categories</p>
       </div>
 
       {/* Tabs */}
       <div className="mb-6">
         <div className="flex space-x-1 border-b flex-wrap">
+          {/* ✅ Step 9: Categories tab added */}
           {[
             { key: "qualifications", label: "Qualifications", icon: GraduationCap },
             { key: "areas", label: "Areas", icon: MapPin },
@@ -1495,6 +1508,7 @@ const handleEnquiryMethodChange = (e) => {
             { key: "enquiry-methods", label: "Enquiry Methods", icon: MessageSquare },
             { key: "fees", label: "Fees", icon: DollarSign },
             { key: "call-log", label: "Call Log Settings", icon: Phone },
+            { key: "categories", label: "Categories", icon: Filter }, // ✅ Step 9
           ].map((tab) => (
             <button
               key={tab.key}
@@ -1515,47 +1529,20 @@ const handleEnquiryMethodChange = (e) => {
         {activeTab === "call-log" && (
           <div className="flex space-x-2 mt-4">
             <button
-              onClick={() => {
-                setCallLogSubTab("call-status");
-                setShowForm(false);
-                setEditingId(null);
-                setSearchTerm("");
-              }}
-              className={`px-3 py-1 text-sm rounded ${
-                callLogSubTab === "call-status"
-                  ? "bg-blue-100 text-blue-700"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
+              onClick={() => { setCallLogSubTab("call-status"); setShowForm(false); setEditingId(null); setSearchTerm(""); }}
+              className={`px-3 py-1 text-sm rounded ${callLogSubTab === "call-status" ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"}`}
             >
               Call Status
             </button>
             <button
-              onClick={() => {
-                setCallLogSubTab("call-reasons");
-                setShowForm(false);
-                setEditingId(null);
-                setSearchTerm("");
-              }}
-              className={`px-3 py-1 text-sm rounded ${
-                callLogSubTab === "call-reasons"
-                  ? "bg-blue-100 text-blue-700"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
+              onClick={() => { setCallLogSubTab("call-reasons"); setShowForm(false); setEditingId(null); setSearchTerm(""); }}
+              className={`px-3 py-1 text-sm rounded ${callLogSubTab === "call-reasons" ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"}`}
             >
               Call Reasons
             </button>
             <button
-              onClick={() => {
-                setCallLogSubTab("next-actions");
-                setShowForm(false);
-                setEditingId(null);
-                setSearchTerm("");
-              }}
-              className={`px-3 py-1 text-sm rounded ${
-                callLogSubTab === "next-actions"
-                  ? "bg-blue-100 text-blue-700"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
+              onClick={() => { setCallLogSubTab("next-actions"); setShowForm(false); setEditingId(null); setSearchTerm(""); }}
+              className={`px-3 py-1 text-sm rounded ${callLogSubTab === "next-actions" ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"}`}
             >
               Next Actions
             </button>
@@ -1581,25 +1568,18 @@ const handleEnquiryMethodChange = (e) => {
         >
           <Plus size={20} />
           Add{" "}
-{activeTab === "call-log"
-  ? callLogSubTab === "call-status"
-    ? "Call Status"
-    : callLogSubTab === "call-reasons"
-    ? "Call Reason"
-    : "Next Action"
-  : activeTab === "enquiry-methods"
-  ? "Enquiry Method"
-  : activeTab === "fees"
-  ? "Fee"
-  : activeTab === "batches"
-  ? "Batch"
-  : activeTab === "areas"
-  ? "Area"
-  : activeTab === "holidays"
-  ? "Holiday"
-  : activeTab === "qualifications"
-  ? "Qualification"
-  : activeTab.charAt(0).toUpperCase() + activeTab.slice(1, -1)}
+          {activeTab === "call-log"
+            ? callLogSubTab === "call-status" ? "Call Status"
+              : callLogSubTab === "call-reasons" ? "Call Reason"
+              : "Next Action"
+            : activeTab === "enquiry-methods" ? "Enquiry Method"
+            : activeTab === "fees" ? "Fee"
+            : activeTab === "batches" ? "Batch"
+            : activeTab === "areas" ? "Area"
+            : activeTab === "holidays" ? "Holiday"
+            : activeTab === "qualifications" ? "Qualification"
+            : activeTab === "categories" ? "Category"  // ✅ Step 9
+            : activeTab.charAt(0).toUpperCase() + activeTab.slice(1, -1)}
         </button>
       </div>
 
@@ -1612,23 +1592,7 @@ const handleEnquiryMethodChange = (e) => {
           <div className="text-center py-12">Loading...</div>
         ) : getFilteredData().length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            No {activeTab === "call-log" ? callLogSubTab.replace("-", " ") : activeTab.replace("-", " ")} found.{" "}
-            {/* {!showForm && (
-              <button onClick={() => setShowForm(true)} className="text-blue-600 hover:underline">
-                Add your first{" "}
-                {activeTab === "call-log"
-                  ? callLogSubTab === "call-status"
-                    ? "call status"
-                    : callLogSubTab === "call-reasons"
-                    ? "call reason"
-                    : "next action"
-                  : activeTab === "enquiry-methods"
-                  ? "enquiry method"
-                  : activeTab === "fees"
-                  ? "fee"
-                  : activeTab.slice(0, -1)}
-              </button>
-            )} */}
+            No {activeTab === "call-log" ? callLogSubTab.replace("-", " ") : activeTab.replace("-", " ")} found.
           </div>
         ) : (
           renderTable()
