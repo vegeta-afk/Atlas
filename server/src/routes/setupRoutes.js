@@ -38,8 +38,13 @@ const {
   getNextActions,
   updateNextAction,
   deleteNextAction,
+
   // ✅ Add qualification order controller (you need to create this)
   updateQualificationOrder,
+    createCategory,       // ✅ add
+  updateCategory,       // ✅ add
+  deleteCategory,       // ✅ add
+  updateCategoryOrder,  // ✅ add
 } = require("../controllers/setupController");
 
 router.use(protect);
@@ -102,9 +107,9 @@ router.put("/next-actions/:id", updateNextAction);
 router.delete("/next-actions/:id", deleteNextAction);
 
 // Add these routes wherever your setup routes are defined
-router.post("/categories", protect, setupController.createCategory);
-router.put("/categories/:id", protect, setupController.updateCategory);
-router.delete("/categories/:id", protect, setupController.deleteCategory);
-router.put("/categories/order", protect, setupController.updateCategoryOrder);
+router.put("/categories/order", updateCategoryOrder);  // ⚠️ MUST be before /:id
+router.post("/categories", createCategory);
+router.put("/categories/:id", updateCategory);
+router.delete("/categories/:id", deleteCategory);
 
 module.exports = router;

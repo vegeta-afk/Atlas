@@ -9,41 +9,10 @@ const {
   CallStatus,
   CallReason,
   NextAction,
+  Category,
 } = require("../models/Setup");
 // Get all setup data
-exports.getAllSetupData = async (req, res) => {
-  try {
-    const [qualifications, areas, holidays, batches, enquiryMethods, fees, callStatuses, callReasons, nextActions] =
-      await Promise.all([
-        Qualification.find().sort({ order: 1, qualificationName: 1 }),
-        Area.find().sort({ areaName: 1 }),
-        Holiday.find().sort({ holidayDate: 1 }),
-        Batch.find().sort({ order: 1, startTime: 1 }),
-        EnquiryMethod.find().sort({ order: 1, methodName: 1 }),
-        Fee.find().sort({ feeName: 1 }),
-        CallStatus.find().sort({ order: 1 }),      // ✅ added
-        CallReason.find().sort({ order: 1 }),      // ✅ added
-        NextAction.find().sort({ order: 1 }),      // ✅ added
-      ]);
 
-    res.json({
-      success: true,
-      data: {
-        qualifications,
-        areas,
-        holidays,
-        batches,
-        enquiryMethods,
-        fees,
-        callStatuses,    // ✅ added
-        callReasons,     // ✅ added
-        nextActions,     // ✅ added
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
-  }
-};
 
 // ========== NEW FUNCTION: Get Active Data (for forms) ==========
 exports.getActiveData = async (req, res) => {
@@ -840,11 +809,6 @@ exports.updateQualificationOrder = async (req, res) => {
   }
 };
 
-const {
-  Qualification, Area, Holiday, Batch, EnquiryMethod,
-  Fee, CallStatus, CallReason, NextAction,
-  Category, // ✅ add this
-} = require("../models/Setup");
 
 // Add Category to getAllSetupData
 exports.getAllSetupData = async (req, res) => {
