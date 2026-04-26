@@ -36,6 +36,8 @@ const EditAdmission = () => {
   const [studentPhoto, setStudentPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
 
+  const [isCourseScholarshipEligible, setIsCourseScholarshipEligible] = useState(false);
+
   const [qualifications, setQualifications] = useState([]);
   const [batches, setBatches]               = useState([]);
   const [areas, setAreas]                   = useState([]);
@@ -68,7 +70,8 @@ const EditAdmission = () => {
     lastQualification: "", yearOfPassing: "",
     interestedCourse: "", courseId: "",
     specialization: "", preferredBatch: "", facultyAllot: "",
-    category: "",
+cast: "", speciallyAbled: false,
+category: "",
     referenceName: "", referenceContact: "", referenceRelation: "",
     remarks: "",
     hasScholarship: false, scholarshipApplied: false,
@@ -184,14 +187,18 @@ const EditAdmission = () => {
   };
 
   const fetchCourseDetails = async (courseId) => {
-    if (!courseId) return;
-    try {
-      const response = await courseAPI.getCourse(courseId);
-      if (response.data.success) setSelectedCourseDetails(response.data.data);
-    } catch (err) {
-      console.error("Failed to fetch course details:", err);
+  if (!courseId) return;
+  try {
+    const response = await courseAPI.getCourse(courseId);
+    if (response.data.success) {
+      setSelectedCourseDetails(response.data.data);
+      setIsCourseScholarshipEligible(response.data.data.courseType === "scholarship_based"); // ✅
     }
-  };
+  } catch (err) {
+    console.error("Failed to fetch course details:", err);
+    setIsCourseScholarshipEligible(false); // ✅
+  }
+};
 
   const fetchFaculty = async () => {
     try {
@@ -223,11 +230,11 @@ const EditAdmission = () => {
       setLoadingSetup(true);
       const response = await setupAPI.getAll();
       if (response.data.success) {
-        const { qualifications, areas, batches } = response.data.data;
-        setQualifications(qualifications || []);
-        setAreas(areas || []);
-        setBatches(batches || []);
-        setCategories(categories || []);
+        const { qualifications, areas, batches, categories } = response.data.data; // ✅ destructure it
+setQualifications(qualifications || []);
+setAreas(areas || []);
+setBatches(batches || []);
+setCategories(categories || []);
       } else throw new Error(response.data.message);
     } catch (err) {
       setSetupError(err.message || "Failed to load setup data");
@@ -666,8 +673,8 @@ const updateData = {
   {errors.interestedCourse && <span className="error-text">{errors.interestedCourse}</span>}
 </div>
 
-            {formData.courseId && (
-              <div className="form-group scholarship-action">
+            {formData.courseId && isCourseScholarshipEligible && (
+  <div className="form-group scholarship-action">
                 {!formData.hasScholarship ? (
                   <button type="button" onClick={() => setShowScholarshipModal(true)} className="btn-scholarship">
                     <Gift size={16} /> Apply Scholarship
