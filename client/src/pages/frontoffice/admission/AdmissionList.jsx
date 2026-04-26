@@ -156,8 +156,14 @@ const AdmissionList = () => {
           email: admission.email,
         }));
 
-        setAdmissions(transformedAdmissions);
-        setFilteredAdmissions(transformedAdmissions);
+        const ACTIVE_STATUSES = ["admitted", "confirmed", "pending", "provisional", "new", "under_process", "approved"];
+
+const activeAdmissions = transformedAdmissions.filter(a => 
+  ACTIVE_STATUSES.includes(a.admissionStatus)
+);
+
+setAdmissions(activeAdmissions);
+setFilteredAdmissions(activeAdmissions);
 
         setPagination({
           ...pagination,
@@ -251,11 +257,12 @@ const AdmissionList = () => {
       }
       
       if (response.data.success) {
-        alert(`Student ${statusAction}ed successfully!`);
-        setShowStatusModal(false);
-        // Refresh the list
-        fetchAdmissions();
-      }
+  // Instantly remove from UI without waiting for refetch
+  setAdmissions(prev => prev.filter(a => a.id !== selectedStudent.id));
+  setFilteredAdmissions(prev => prev.filter(a => a.id !== selectedStudent.id));
+  setShowStatusModal(false);
+  fetchAdmissions(); // still refresh for accurate counts
+}
     } catch (error) {
       console.error(`Error ${statusAction}ing student:`, error);
       alert(`Failed to ${statusAction} student: ${error.response?.data?.message || error.message}`);
