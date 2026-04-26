@@ -253,6 +253,10 @@ scholarship: {
         "admitted",
         "completed",
         "cancelled",
+        "on_hold",    // ✅ add this
+    "pending",    // ✅ add this
+    "provisional", // ✅ add this
+    "confirmed",  
       ],
       default: "admitted", // Change default to "admitted"
     },
