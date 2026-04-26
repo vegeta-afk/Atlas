@@ -39,6 +39,7 @@ const EditAdmission = () => {
   const [qualifications, setQualifications] = useState([]);
   const [batches, setBatches]               = useState([]);
   const [areas, setAreas]                   = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loadingSetup, setLoadingSetup]     = useState(false);
   const [setupError, setSetupError]         = useState(null);
 
@@ -67,7 +68,7 @@ const EditAdmission = () => {
     lastQualification: "", yearOfPassing: "",
     interestedCourse: "", courseId: "",
     specialization: "", preferredBatch: "", facultyAllot: "",
-    cast: "", speciallyAbled: false,
+    category: "",
     referenceName: "", referenceContact: "", referenceRelation: "",
     remarks: "",
     hasScholarship: false, scholarshipApplied: false,
@@ -151,7 +152,7 @@ const EditAdmission = () => {
           preferredBatch:    d.batchTime || d.preferredBatch || "",
           facultyAllot:      d.facultyAllot || "",
           cast:              d.cast || "",
-          speciallyAbled:    d.speciallyAbled || false,
+          category:      d.category || "",
           referenceName:     d.referenceName || "",
           referenceContact:  d.referenceContact || "",
           referenceRelation: d.referenceRelation || "",
@@ -226,6 +227,7 @@ const EditAdmission = () => {
         setQualifications(qualifications || []);
         setAreas(areas || []);
         setBatches(batches || []);
+        setCategories(categories || []);
       } else throw new Error(response.data.message);
     } catch (err) {
       setSetupError(err.message || "Failed to load setup data");
@@ -356,6 +358,7 @@ const updateData = {
   specialization: formData.specialization || "",
   batchTime: formData.preferredBatch, facultyAllot: formData.facultyAllot,
   cast: formData.cast, speciallyAbled: formData.speciallyAbled,
+  category: formData.category || "",
   referenceName: formData.referenceName || "",
   referenceContact: formData.referenceContact || "",
   referenceRelation: formData.referenceRelation || "",
@@ -721,23 +724,42 @@ const updateData = {
         </FormSection>
 
         <FormSection title="Other Information" icon={Hash}>
-          <div className="form-grid">
-            <div className="form-group">
-              <label>Cast *</label>
-              <select name="cast" value={formData.cast} onChange={handleChange} className={errors.cast ? "error-field" : ""}>
-                <option value="">Select Cast</option>
-                {castOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-              {errors.cast && <span className="error-text">{errors.cast}</span>}
-            </div>
-            <div className="form-group checkbox-container">
-              <label className="checkbox-label">
-                <input type="checkbox" name="speciallyAbled" checked={formData.speciallyAbled} onChange={handleChange} />
-                <span>Specially Abled</span>
-              </label>
-            </div>
-          </div>
-        </FormSection>
+  <div className="form-grid">
+    <div className="form-group">
+      <label>Cast *</label>
+      <select name="cast" value={formData.cast} onChange={handleChange} className={errors.cast ? "error-field" : ""}>
+        <option value="">Select Cast</option>
+        {castOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+      {errors.cast && <span className="error-text">{errors.cast}</span>}
+    </div>
+
+    <div className="form-group">
+      <label>Category</label>
+      <select
+        name="category"
+        value={formData.category || ""}
+        onChange={handleChange}
+        className={errors.category ? "error-field" : ""}
+      >
+        <option value="">Select Category</option>
+        {categories.map((cat) => (
+          <option key={cat._id} value={cat.categoryName}>
+            {cat.categoryName}
+          </option>
+        ))}
+      </select>
+      {errors.category && <span className="error-text">{errors.category}</span>}
+    </div>
+
+    <div className="form-group checkbox-container">
+      <label className="checkbox-label">
+        <input type="checkbox" name="speciallyAbled" checked={formData.speciallyAbled} onChange={handleChange} />
+        <span>Specially Abled</span>
+      </label>
+    </div>
+  </div>
+</FormSection>
 
         {/* <FormSection title="Reference (Optional)" icon={User}>
           <div className="form-grid">
