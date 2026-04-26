@@ -1421,12 +1421,13 @@ exports.reactivateAdmission = async (req, res) => {
       await student.save();
       
       // Re-add to TeacherBatch if needed
-      try {
-        const { assignStudentToFacultyBatch } = require("./admissionController");
-        await assignStudentToFacultyBatch(student);
-      } catch (tbError) {
-        console.error("Error reassigning to TeacherBatch:", tbError);
-      }
+      // Re-add to TeacherBatch directly (already in same file)
+try {
+  await assignStudentToFacultyBatch(student);
+  console.log(`✅ Student re-added to TeacherBatch after reactivation`);
+} catch (tbError) {
+  console.error("Error reassigning to TeacherBatch:", tbError);
+}
     }
 
     res.json({
@@ -1560,3 +1561,5 @@ exports.autoHoldStudents = async () => {
     return { success: false, error: error.message };
   }
 };
+
+exports.assignStudentToFacultyBatch = assignStudentToFacultyBatch;
