@@ -57,6 +57,7 @@ const AddAdmission = () => {
   const [qualifications, setQualifications] = useState([]);
   const [batches, setBatches] = useState([]);
   const [areas, setAreas] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loadingSetup, setLoadingSetup] = useState(false);
   const [setupError, setSetupError] = useState(null);
 
@@ -248,10 +249,11 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
 
       const response = await setupAPI.getAll();
       if (response.data.success) {
-        const { qualifications, areas, batches } = response.data.data;
+        const { qualifications, areas, batches, categories } = response.data.data;
         setQualifications(qualifications || []);
         setAreas(areas || []);
         setBatches(batches || []);
+        setCategories(categories || []);
       } else {
         throw new Error(response.data.message || "Failed to load setup data");
       }
