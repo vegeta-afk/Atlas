@@ -1,464 +1,557 @@
 // pages/frontoffice/admission/ViewAdmission.jsx
 import React, { useState, useEffect } from "react";
-import {
-  ArrowLeft, Edit, Printer, Download, Mail, Phone, Calendar,
-  User, BookOpen, MapPin, Globe, FileText, CheckCircle, XCircle,
-  Clock, MessageSquare, AlertCircle, Loader2,
-} from "lucide-react";
-import { Link, useParams, useNavigate } from "react-router-dom";
-import "./ViewAdmission.css";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { admissionAPI } from "../../../services/api";
 import useBasePath from "../../../hooks/useBasePath";
+import {
+  ArrowLeft,
+  Edit,
+  Phone,
+  Mail,
+  MessageCircle,
+  Calendar,
+  User,
+  BookOpen,
+  MapPin,
+  Hash,
+  RefreshCw,
+  AlertCircle,
+  UserCheck,
+  UserX,
+  Clock,
+  DollarSign,
+  Award,
+  FileText,
+  Users,
+} from "lucide-react";
+import "./ViewAdmission.css";
 
 const ViewAdmission = () => {
-  const { id } = useParams();
   const navigate = useNavigate();
+  const { id } = useParams();
   const basePath = useBasePath();
 
-  const [admission, setAdmission]   = useState(null);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
+  const [admission, setAdmission] = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState(null);
   const [photoError, setPhotoError] = useState(false);
 
-  useEffect(() => { fetchAdmissionDetails(); }, [id]);
+  useEffect(() => {
+    if (id) fetchAdmission();
+  }, [id]);
 
-  const fetchAdmissionDetails = async () => {
+  // ─── Fetch ─────────────────────────────────────────────────────────────────
+  const fetchAdmission = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
       const response = await admissionAPI.getAdmission(id);
-
       if (response.data.success) {
-        const d = response.data.data;
-
-        setAdmission({
-          id:           d._id,
-          studentId:    d.admissionNo || `ADM${d._id.substring(0, 8)}`,
-          fullName:     d.fullName || "N/A",
-          photo:        d.photo || null,
-
-          // Personal
-          dateOfBirth:    d.dateOfBirth  || null,
-          gender:         d.gender       || "N/A",
-          fatherName:     d.fatherName   || "N/A",
-          fatherNumber:   d.fatherNumber || "N/A",
-          motherName:     d.motherName   || "N/A",
-          motherNumber:   d.motherNumber || "N/A",
-          cast:           d.cast         || "N/A",
-          speciallyAbled: d.speciallyAbled ? "Yes" : "No",
-
-          // Contact
-          email:           d.email           || "N/A",
-          mobileNumber:    d.mobileNumber    || "N/A",
-          alternateNumber: d.alternateNumber || "N/A",
-          aadharNumber:    d.aadharNumber    || "N/A",
-          address:         d.address         || "N/A",
-          city:            d.city            || "N/A",
-          state:           d.state           || "N/A",
-          pincode:         d.pincode         || "N/A",
-
-          // Academic
-          lastQualification: d.lastQualification || "N/A",
-          percentage:        d.percentage        || "N/A",
-          yearOfPassing:     d.yearOfPassing     || "N/A",
-          schoolCollege:     d.schoolCollege     || "N/A",
-
-          // Course
-          interestedCourse: d.course         || "N/A",
-          specialization:   d.specialization || "N/A",
-          preferredBatch:   d.batchTime      || "N/A",
-          admissionYear:    d.admissionYear  || "N/A",
-          courseType:       d.courseType     || "N/A",
-          facultyAllot:     d.facultyAllot   || "Not Allotted",
-
-          // Source
-          source:            d.source            || "N/A",
-          referenceName:     d.referenceName     || "N/A",
-          referenceContact:  d.referenceContact  || "N/A",
-          referenceRelation: d.referenceRelation || "N/A",
-
-          // Fees
-          totalFees:           d.totalFees           ?? "N/A",
-          paidFees:            d.paidFees            ?? 0,
-          balanceFees:         d.balanceFees         ?? 0,
-          nextInstallmentDate: d.nextInstallmentDate || null,
-
-          // Scholarship
-          hasScholarship: d.hasScholarship || false,
-          scholarship:    d.scholarship    || null,
-
-          // Status / Meta
-          status:        d.status       || "admitted",
-          priority:      d.priority     || "medium",
-          remarks:       d.remarks      || "No remarks available.",
-          admissionDate: d.admissionDate || d.createdAt,
-          admissionBy:   d.admissionBy  || "N/A",
-          enquiryNo:     d.enquiryNo    || "N/A",
-
-          // Documents & Activity
-          documents: d.documents || [],
-          activities: d.activities || [
-            {
-              id:     1,
-              action: "Admission Created",
-              by:     d.admissionBy || "System",
-              date:   d.createdAt ? new Date(d.createdAt).toLocaleString("en-GB") : "N/A",
-              notes:  "Admission record created successfully.",
-            },
-          ],
-        });
+        setAdmission(response.data.data);
       } else {
-        throw new Error(response.data.message || "Failed to fetch admission details");
+        throw new Error(response.data.message || "Failed to fetch admission");
       }
     } catch (err) {
-      console.error("Error fetching admission:", err);
-      setError(err.response?.data?.message || err.message || "Failed to load admission details");
+      setError(err.response?.data?.message || err.message || "Failed to load admission");
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "admitted":
-      case "approved":
-      case "completed":     return <CheckCircle className="status-icon converted" />;
-      case "rejected":
-      case "cancelled":     return <XCircle className="status-icon rejected" />;
-      case "under_process": return <Clock className="status-icon follow_up" />;
-      default:              return <Clock className="status-icon new" />;
-    }
+  // ─── Helpers ───────────────────────────────────────────────────────────────
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      day: "2-digit", month: "long", year: "numeric",
+    });
   };
 
-  const getStatusLabel = (status) => ({
-    new:           "New",
-    under_process: "Under Process",
-    approved:      "Approved",
-    rejected:      "Rejected",
-    admitted:      "Admitted",
-    completed:     "Completed",
-    cancelled:     "Cancelled",
-  }[status] || status.replace(/_/g, " ").toUpperCase());
-
-  const getPriorityBadge = (priority) => {
-    const cls = {
-      low:    "priority-low",
-      medium: "priority-medium",
-      high:   "priority-high",
-      urgent: "priority-urgent",
-    };
-    return (
-      <span className={`priority-badge ${cls[priority] || "priority-medium"}`}>
-        {priority.charAt(0).toUpperCase() + priority.slice(1)}
-      </span>
-    );
-  };
-
-  const formatDate = (val) => {
-    if (!val || val === "N/A") return "N/A";
-    try { return new Date(val).toLocaleDateString("en-GB"); } catch { return val; }
+  const formatPhone = (phone) => {
+    if (!phone) return "N/A";
+    const cleaned = phone.replace(/\D/g, "");
+    return cleaned.length === 10
+      ? `${cleaned.slice(0, 5)} ${cleaned.slice(5)}`
+      : phone;
   };
 
   const formatCurrency = (amount) => {
-    if (amount === "N/A" || amount === undefined || amount === null) return "N/A";
+    if (amount === undefined || amount === null || amount === "") return "N/A";
     return `₹${Number(amount).toLocaleString("en-IN")}`;
   };
 
-  // ✅ handlePrint and handleExport defined BEFORE any early returns
-  const handlePrint = () => window.print();
-
-  const handleExport = async () => {
-    try {
-      const response = await admissionAPI.exportAdmission(id);
-      if (response.data) {
-        const blob = new Blob([response.data], { type: "application/pdf" });
-        const url  = window.URL.createObjectURL(blob);
-        const a    = document.createElement("a");
-        a.href     = url;
-        a.download = `admission-${admission?.studentId || id}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }
-    } catch (err) {
-      alert("Failed to export admission details");
-    }
+  const getInitials = (name) => {
+    if (!name) return "?";
+    return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
   };
 
-  // ── Sub-components ─────────────────────────────────────────────────────────
+  const getStatusConfig = (status) => {
+    const map = {
+      admitted:      { label: "Admitted",      className: "status-active",    Icon: UserCheck },
+      approved:      { label: "Approved",      className: "status-active",    Icon: UserCheck },
+      completed:     { label: "Completed",     className: "status-active",    Icon: UserCheck },
+      rejected:      { label: "Rejected",      className: "status-inactive",  Icon: UserX },
+      cancelled:     { label: "Cancelled",     className: "status-inactive",  Icon: UserX },
+      under_process: { label: "Under Process", className: "status-on-leave",  Icon: Clock },
+    };
+    return map[status] || { label: status || "Admitted", className: "status-on-leave", Icon: Clock };
+  };
 
-  const InfoCard = ({ title, icon: Icon, children }) => (
-    <div className="info-card">
-      <div className="info-card-header"><Icon size={20} /><h3>{title}</h3></div>
-      <div className="info-card-content">{children}</div>
-    </div>
-  );
+  const openWhatsApp = (phone) => {
+    if (!phone) return;
+    const cleaned = phone.replace(/\D/g, "");
+    window.open(`https://wa.me/91${cleaned}`, "_blank");
+  };
 
-  const InfoItem = ({ label, value, fullWidth = false }) => (
-    <div className={`info-item${fullWidth ? " full-width" : ""}`}>
-      <span className="info-label">{label}</span>
-      <span className="info-value">{value || "N/A"}</span>
-    </div>
-  );
+  // ─── Loading ───────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="va-container">
+        <div className="va-center-state">
+          <RefreshCw size={32} className="va-spinning" />
+          <p>Loading admission details...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // ── Early returns (AFTER all hooks and function definitions) ───────────────
+  // ─── Error ─────────────────────────────────────────────────────────────────
+  if (error || !admission) {
+    return (
+      <div className="va-container">
+        <div className="va-center-state">
+          <AlertCircle size={48} className="va-error-icon" />
+          <h3>Failed to load admission</h3>
+          <p>{error}</p>
+          <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+            <button onClick={fetchAdmission} className="va-btn-primary">
+              <RefreshCw size={16} /> Retry
+            </button>
+            <Link to={`${basePath}/front-office/admissions`} className="va-btn-secondary">
+              Back to List
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  if (loading) return (
-    <div className="loading-container">
-      <Loader2 className="animate-spin" size={48} /><p>Loading admission details...</p>
-    </div>
-  );
+  const d = admission;
+  const statusConfig = getStatusConfig(d.status);
+  const StatusIcon = statusConfig.Icon;
+  const hasReference = d.referenceName || d.referenceContact || d.referenceRelation;
 
-  if (error) return (
-    <div className="error-container">
-      <AlertCircle size={48} /><h3>Error Loading Admission</h3><p>{error}</p>
-      <button onClick={() => navigate(`${basePath}/front-office/admissions`)} className="btn-primary mt-4">
-        Back to List
-      </button>
-    </div>
-  );
-
-  if (!admission) return (
-    <div className="not-found-container">
-      <AlertCircle size={48} /><h3>Admission Not Found</h3>
-      <button onClick={() => navigate(`${basePath}/front-office/admissions`)} className="btn-primary mt-4">
-        Back to List
-      </button>
-    </div>
-  );
-
-  // ── Render ─────────────────────────────────────────────────────────────────
-
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="view-admission-container">
+    <div className="va-container">
 
-      {/* Header */}
-      <div className="page-header">
-        <div className="header-left">
-          <Link to={`${basePath}/front-office/admissions`} className="back-link">
-            <ArrowLeft size={20} /> Back to List
+      {/* Page Header */}
+      <div className="va-page-header">
+        <div className="va-header-left">
+          <Link to={`${basePath}/front-office/admissions`} className="va-back-link">
+            <ArrowLeft size={20} />
+            Back to Admissions List
           </Link>
           <div>
             <h1>Admission Details</h1>
-            <p>Admission ID: {admission.studentId}</p>
+            <p>Viewing profile of {d.fullName}</p>
           </div>
         </div>
-        <div className="header-actions">
-          <button className="action-btn" onClick={handlePrint}><Printer size={18} /> Print</button>
-          <button className="action-btn" onClick={handleExport}><Download size={18} /> Export</button>
-          <Link to={`${basePath}/front-office/admissions/edit/${admission.id}`} className="btn-primary">
-            <Edit size={18} /> Edit
-          </Link>
+        <div className="va-header-actions">
+          <button
+            onClick={() => navigate(`${basePath}/front-office/admissions/edit/${id}`)}
+            className="va-btn-primary"
+          >
+            <Edit size={18} />
+            Edit Admission
+          </button>
         </div>
       </div>
 
-      {/* Student Summary Banner */}
-      <div className="student-summary">
-        <div className="student-avatar">
-          {admission.photo && !photoError ? (
+      {/* Profile Hero Card */}
+      <div className="va-hero-card">
+        <div className="va-avatar-large">
+          {d.photo && !photoError ? (
             <img
-              src={admission.photo}
-              alt={admission.fullName}
-              className="avatar-photo"
+              src={d.photo}
+              alt={d.fullName}
+              className="va-avatar-photo"
               onError={() => setPhotoError(true)}
             />
           ) : (
-            <div className="avatar-large">
-              {admission.fullName !== "N/A" ? admission.fullName.charAt(0).toUpperCase() : "?"}
-            </div>
+            getInitials(d.fullName)
           )}
-          <div className="student-basic">
-            <h2>{admission.fullName}</h2>
-            <div className="contact-links">
-              {admission.email !== "N/A" && (
-                <a href={`mailto:${admission.email}`}><Mail size={14} />{admission.email}</a>
-              )}
-              {admission.mobileNumber !== "N/A" && (
-                <a href={`tel:${admission.mobileNumber}`}><Phone size={14} />{admission.mobileNumber}</a>
-              )}
-            </div>
-            <div className="additional-info">
-              {admission.aadharNumber !== "N/A" && (
-                <span className="info-tag">Aadhar: {admission.aadharNumber}</span>
-              )}
-              <span className="info-tag">Faculty: {admission.facultyAllot}</span>
-              {admission.enquiryNo !== "N/A" && (
-                <span className="info-tag">Enquiry: {admission.enquiryNo}</span>
-              )}
-            </div>
+        </div>
+
+        <div className="va-hero-info">
+          <h2>{d.fullName}</h2>
+          <p className="va-sub">{d.course || "Course not assigned"}</p>
+          <div className="va-hero-meta">
+            <span className={`va-status-badge ${statusConfig.className}`}>
+              <StatusIcon size={13} />
+              {statusConfig.label}
+            </span>
+            <span className="va-meta-chip">
+              <Hash size={14} />
+              {d.admissionNo || "N/A"}
+            </span>
+            <span className="va-meta-chip">
+              <Clock size={14} />
+              {d.batchTime || "N/A"} Batch
+            </span>
+            {d.hasScholarship && (
+              <span className="va-meta-chip va-chip-scholarship">
+                <Award size={14} />
+                Scholarship Applied
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="summary-stats">
-          <div className="stat">
-            <span className="stat-label">Status</span>
-            <div className="status-badge">
-              {getStatusIcon(admission.status)}
-              {getStatusLabel(admission.status)}
-            </div>
-          </div>
-          {/* <div className="stat">
-            <span className="stat-label">Priority</span>
-            {getPriorityBadge(admission.priority)}
-          </div> */}
-          <div className="stat">
-            <span className="stat-label">Admission Date</span>
-            <div className="date-info">
-              <Calendar size={14} />{formatDate(admission.admissionDate)}
-            </div>
-          </div>
-          <div className="stat">
-            <span className="stat-label">Admitted By</span>
-            <div className="assigned-info">
-              <div className="avatar-small">
-                {admission.admissionBy !== "N/A"
-                  ? admission.admissionBy.charAt(0).toUpperCase() : "A"}
-              </div>
-              {admission.admissionBy}
-            </div>
-          </div>
+        {/* Quick Actions */}
+        <div className="va-quick-actions">
+          {d.mobileNumber && (
+            <a href={`tel:${d.mobileNumber}`} className="va-quick-btn va-quick-call">
+              <Phone size={18} />
+              <span>Call</span>
+            </a>
+          )}
+          {d.email && (
+            <a href={`mailto:${d.email}`} className="va-quick-btn va-quick-mail">
+              <Mail size={18} />
+              <span>Email</span>
+            </a>
+          )}
+          {d.mobileNumber && (
+            <button
+              onClick={() => openWhatsApp(d.mobileNumber)}
+              className="va-quick-btn va-quick-whatsapp"
+            >
+              <MessageCircle size={18} />
+              <span>WhatsApp</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Main 2-Column Grid */}
-      <div className="content-grid">
+      {/* Details Grid */}
+      <div className="va-details-grid">
 
-        {/* LEFT */}
-        <div className="left-column">
-          <InfoCard title="Personal Information" icon={User}>
-            <div className="info-grid">
-              <InfoItem label="Date of Birth"   value={formatDate(admission.dateOfBirth)} />
-              <InfoItem label="Gender"          value={admission.gender} />
-              <InfoItem label="Father's Name"   value={admission.fatherName} />
-              <InfoItem label="Father's Number" value={admission.fatherNumber} />
-              <InfoItem label="Mother's Name"   value={admission.motherName} />
-              <InfoItem label="Mother's Number" value={admission.motherNumber} />
-              <InfoItem label="Caste"           value={admission.cast} />
-              <InfoItem label="Specially Abled" value={admission.speciallyAbled} />
+        {/* Personal Information */}
+        <div className="va-card">
+          <div className="va-card-header">
+            <User size={18} />
+            <h3>Personal Information</h3>
+          </div>
+          <div className="va-card-body">
+            <div className="va-field-row">
+              <span className="va-field-label">Full Name</span>
+              <span className="va-field-value">{d.fullName || "N/A"}</span>
             </div>
-          </InfoCard>
-
-          <InfoCard title="Academic Information" icon={BookOpen}>
-            <div className="info-grid">
-              <InfoItem label="Last Qualification" value={admission.lastQualification} />
-              {/* <InfoItem label="Percentage / CGPA"  value={admission.percentage} /> */}
-              <InfoItem label="Year of Passing"    value={String(admission.yearOfPassing)} />
-              {/* <InfoItem label="School / College"   value={admission.schoolCollege} fullWidth /> */}
+            <div className="va-field-row">
+              <span className="va-field-label">Date of Birth</span>
+              <span className="va-field-value">
+                <Calendar size={14} style={{ marginRight: 6, opacity: 0.6 }} />
+                {formatDate(d.dateOfBirth)}
+              </span>
             </div>
-          </InfoCard>
-
-          <InfoCard title="Contact Information" icon={MapPin}>
-            <div className="info-grid">
-              <InfoItem label="Mobile Number"    value={admission.mobileNumber} />
-              <InfoItem label="Alternate Number" value={admission.alternateNumber} />
-              <InfoItem label="Email"            value={admission.email} />
-              <InfoItem label="Address"          value={admission.address} fullWidth />
-              <InfoItem label="City"             value={admission.city} />
-              <InfoItem label="State"            value={admission.state} />
-              <InfoItem label="Pincode"          value={admission.pincode} />
+            <div className="va-field-row">
+              <span className="va-field-label">Gender</span>
+              <span className="va-field-value va-capitalize">{d.gender || "N/A"}</span>
             </div>
-          </InfoCard>
+            <div className="va-field-row">
+              <span className="va-field-label">Father's Name</span>
+              <span className="va-field-value">{d.fatherName || "N/A"}</span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Mother's Name</span>
+              <span className="va-field-value">{d.motherName || "N/A"}</span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Caste</span>
+              <span className="va-field-value va-uppercase">{d.cast || "N/A"}</span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Category</span>
+              <span className="va-field-value">{d.category || "N/A"}</span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Specially Abled</span>
+              <span className="va-field-value">{d.speciallyAbled ? "Yes" : "No"}</span>
+            </div>
+          </div>
         </div>
 
-        {/* RIGHT */}
-        <div className="right-column">
-          <InfoCard title="Course & Batch Information" icon={BookOpen}>
-            <div className="info-grid">
-              <InfoItem label="Course"         value={admission.interestedCourse} />
-              {/* <InfoItem label="Specialization" value={admission.specialization} /> */}
-              <InfoItem label="Batch Time"     value={admission.preferredBatch} />
-              <InfoItem label="Admission Year" value={String(admission.admissionYear)} />
-              <InfoItem label="Course Type"    value={admission.courseType} />
-              <InfoItem label="Faculty"        value={admission.facultyAllot} />
+        {/* Academic & Course Information */}
+        <div className="va-card">
+          <div className="va-card-header">
+            <BookOpen size={18} />
+            <h3>Academic & Course Information</h3>
+          </div>
+          <div className="va-card-body">
+            <div className="va-field-row">
+              <span className="va-field-label">Last Qualification</span>
+              <span className="va-field-value">{d.lastQualification || "N/A"}</span>
             </div>
-          </InfoCard>
-
-          <InfoCard title="Fee Information" icon={FileText}>
-            <div className="info-grid">
-              <InfoItem label="Total Fees"       value={formatCurrency(admission.totalFees)} />
-              <InfoItem label="Paid Amount"      value={formatCurrency(admission.paidFees)} />
-              <InfoItem label="Balance Amount"   value={formatCurrency(admission.balanceFees)} />
-              <InfoItem label="Next Installment" value={formatDate(admission.nextInstallmentDate)} />
+            <div className="va-field-row">
+              <span className="va-field-label">Year of Passing</span>
+              <span className="va-field-value">{d.yearOfPassing || "N/A"}</span>
             </div>
-            {admission.hasScholarship && admission.scholarship && (
-              <div className="scholarship-banner">
-                <span className="scholarship-label">🎓 Scholarship Applied</span>
-                <div className="info-grid" style={{ marginTop: 10 }}>
-                  <InfoItem label="Scholarship"  value={admission.scholarship.scholarshipName} />
-                  <InfoItem label="Discount"     value={`${admission.scholarship.percent}%`} />
-                  <InfoItem label="Original Fee" value={formatCurrency(admission.scholarship.originalTotalFee)} />
-                  <InfoItem label="Final Fee"    value={formatCurrency(admission.scholarship.finalTotalFee)} />
-                </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Course</span>
+              <span className="va-field-value va-highlight">{d.course || "N/A"}</span>
+            </div>
+            {d.specialization && (
+              <div className="va-field-row">
+                <span className="va-field-label">Specialization</span>
+                <span className="va-field-value">{d.specialization}</span>
               </div>
             )}
-          </InfoCard>
-
-          <InfoCard title="Source Information" icon={Globe}>
-            <div className="info-grid">
-              <InfoItem label="Source"             value={admission.source} />
-              {/* <InfoItem label="Reference Name"     value={admission.referenceName} />
-              <InfoItem label="Reference Contact"  value={admission.referenceContact} />
-              <InfoItem label="Reference Relation" value={admission.referenceRelation} /> */}
+            <div className="va-field-row">
+              <span className="va-field-label">Batch Time</span>
+              <span className="va-field-value">
+                <Clock size={14} style={{ marginRight: 6, opacity: 0.6 }} />
+                {d.batchTime || "N/A"}
+              </span>
             </div>
-          </InfoCard>
+            <div className="va-field-row">
+              <span className="va-field-label">Faculty Allotted</span>
+              <span className="va-field-value">{d.facultyAllot || "Not Allotted"}</span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Admission Year</span>
+              <span className="va-field-value">{d.admissionYear || "N/A"}</span>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Bottom 2-Column Grid — last 4 cards side-by-side */}
-      <div className="bottom-grid">
+        {/* Contact Information */}
+        <div className="va-card">
+          <div className="va-card-header">
+            <Phone size={18} />
+            <h3>Contact Information</h3>
+          </div>
+          <div className="va-card-body">
+            <div className="va-field-row">
+              <span className="va-field-label">Mobile No</span>
+              <span className="va-field-value">
+                <a href={`tel:${d.mobileNumber}`} className="va-link">
+                  <Phone size={14} />
+                  {formatPhone(d.mobileNumber)}
+                </a>
+              </span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Father's Mobile</span>
+              <span className="va-field-value">
+                <a href={`tel:${d.fatherNumber}`} className="va-link">
+                  <Phone size={14} />
+                  {formatPhone(d.fatherNumber)}
+                </a>
+              </span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Mother's Mobile</span>
+              <span className="va-field-value">
+                <a href={`tel:${d.motherNumber}`} className="va-link">
+                  <Phone size={14} />
+                  {formatPhone(d.motherNumber)}
+                </a>
+              </span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Email</span>
+              <span className="va-field-value">
+                {d.email ? (
+                  <a href={`mailto:${d.email}`} className="va-link">
+                    <Mail size={14} />
+                    {d.email}
+                  </a>
+                ) : (
+                  "N/A"
+                )}
+              </span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Aadhar Number</span>
+              <span className="va-field-value">{d.aadharNumber || "N/A"}</span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Place / Area</span>
+              <span className="va-field-value">
+                <MapPin size={14} style={{ marginRight: 6, opacity: 0.6 }} />
+                {d.place || "N/A"}
+              </span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Address</span>
+              <span className="va-field-value va-address">{d.address || "N/A"}</span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">City</span>
+              <span className="va-field-value">{d.city || "N/A"}</span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">State</span>
+              <span className="va-field-value">{d.state || "N/A"}</span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Pincode</span>
+              <span className="va-field-value">{d.pincode || "N/A"}</span>
+            </div>
+          </div>
+        </div>
 
-        <div className="bottom-left">
-          <InfoCard title="Remarks" icon={MessageSquare}>
-            <div className="remarks-content"><p>{admission.remarks}</p></div>
-          </InfoCard>
+        {/* Fee Information */}
+        <div className="va-card">
+          <div className="va-card-header">
+            <DollarSign size={18} />
+            <h3>Fee Information</h3>
+          </div>
+          <div className="va-card-body">
+            <div className="va-field-row">
+              <span className="va-field-label">Total Fees</span>
+              <span className="va-field-value va-fee-total">{formatCurrency(d.totalFees)}</span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Paid Amount</span>
+              <span className="va-field-value va-fee-paid">{formatCurrency(d.paidFees)}</span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Balance Amount</span>
+              <span className="va-field-value va-fee-balance">{formatCurrency(d.balanceFees)}</span>
+            </div>
 
-          <InfoCard title="Documents" icon={FileText}>
-            {admission.documents.length > 0 ? (
-              <div className="documents-list">
-                {admission.documents.map((doc, i) => (
-                  <div key={i} className="document-item">
-                    <FileText size={15} />
-                    <span>{doc.name || doc}</span>
-                    {doc.url && (
-                      <a href={doc.url} target="_blank" rel="noopener noreferrer" className="document-download">
-                        View
-                      </a>
-                    )}
+            {/* Scholarship section inside fee card */}
+            {d.hasScholarship && d.scholarship && (
+              <>
+                <div className="va-divider" />
+                <div className="va-scholarship-block">
+                  <div className="va-scholarship-title">
+                    <Award size={14} />
+                    <span>Scholarship Details</span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="empty-text">No documents uploaded</p>
-            )}
-          </InfoCard>
-        </div>
-
-        <div className="bottom-right">
-          <InfoCard title="Activity Log" icon={Clock}>
-            <div className="activity-timeline">
-              {admission.activities.map((activity, i) => (
-                <div key={activity.id || i} className="activity-item">
-                  <div className="activity-dot" />
-                  <div className="activity-content">
-                    <div className="activity-header">
-                      <strong>{activity.action}</strong>
-                      <span className="activity-date">{activity.date}</span>
-                    </div>
-                    <div className="activity-details">
-                      <span className="activity-by">By: {activity.by}</span>
-                      {activity.notes && <p className="activity-notes">{activity.notes}</p>}
-                    </div>
+                  <div className="va-field-row">
+                    <span className="va-field-label">Scholarship</span>
+                    <span className="va-field-value">{d.scholarship.scholarshipName || "N/A"}</span>
+                  </div>
+                  <div className="va-field-row">
+                    <span className="va-field-label">Discount</span>
+                    <span className="va-field-value va-saving">{d.scholarship.percent}%</span>
+                  </div>
+                  <div className="va-field-row">
+                    <span className="va-field-label">Original Fee</span>
+                    <span className="va-field-value">{formatCurrency(d.scholarship.originalTotalFee)}</span>
+                  </div>
+                  <div className="va-field-row">
+                    <span className="va-field-label">You Save</span>
+                    <span className="va-field-value va-saving">- {formatCurrency(d.scholarship.scholarshipValue)}</span>
+                  </div>
+                  <div className="va-field-row">
+                    <span className="va-field-label">Final Fee</span>
+                    <span className="va-field-value va-fee-total">{formatCurrency(d.scholarship.finalTotalFee)}</span>
                   </div>
                 </div>
-              ))}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Reference Details — only if provided */}
+        {hasReference && (
+          <div className="va-card">
+            <div className="va-card-header">
+              <Users size={18} />
+              <h3>Reference Details</h3>
             </div>
-          </InfoCard>
+            <div className="va-card-body">
+              {d.referenceName && (
+                <div className="va-field-row">
+                  <span className="va-field-label">Reference Name</span>
+                  <span className="va-field-value">{d.referenceName}</span>
+                </div>
+              )}
+              {d.referenceContact && (
+                <div className="va-field-row">
+                  <span className="va-field-label">Reference Contact</span>
+                  <span className="va-field-value">
+                    <a href={`tel:${d.referenceContact}`} className="va-link">
+                      <Phone size={14} />
+                      {formatPhone(d.referenceContact)}
+                    </a>
+                  </span>
+                </div>
+              )}
+              {d.referenceRelation && (
+                <div className="va-field-row">
+                  <span className="va-field-label">Relation</span>
+                  <span className="va-field-value va-capitalize">{d.referenceRelation}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Remarks — only if provided */}
+        {d.remarks && (
+          <div className={`va-card ${!hasReference ? "va-card-full" : ""}`}>
+            <div className="va-card-header">
+              <FileText size={18} />
+              <h3>Remarks</h3>
+            </div>
+            <div className="va-card-body">
+              <p className="va-remarks">{d.remarks}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Admission Timeline — full width */}
+        <div className="va-card va-card-full">
+          <div className="va-card-header">
+            <Calendar size={18} />
+            <h3>Admission Timeline</h3>
+          </div>
+          <div className="va-card-body va-timeline">
+            <div className="va-timeline-item va-timeline-join">
+              <div className="va-timeline-dot" />
+              <div>
+                <p className="va-timeline-label">Admission Date</p>
+                <p className="va-timeline-date">{formatDate(d.admissionDate || d.createdAt)}</p>
+                <p className="va-timeline-sub">Admitted by {d.admissionBy || "Admin"}</p>
+              </div>
+            </div>
+
+            <div className="va-timeline-line" />
+
+            <div className="va-timeline-item va-timeline-present">
+              <div className="va-timeline-dot" />
+              <div>
+                <p className="va-timeline-label">
+                  {d.enquiryNo ? "Converted from Enquiry" : "Source"}
+                </p>
+                <p className="va-timeline-date">
+                  {d.enquiryNo || "Direct Admission"}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
+
+      {/* Footer Actions */}
+      <div className="va-footer-actions">
+        <Link to={`${basePath}/front-office/admissions`} className="va-btn-secondary">
+          Back to List
+        </Link>
+        <button
+          onClick={() => navigate(`${basePath}/front-office/admissions/edit/${id}`)}
+          className="va-btn-primary"
+        >
+          <Edit size={18} />
+          Edit Admission
+        </button>
+      </div>
+
     </div>
   );
 };
