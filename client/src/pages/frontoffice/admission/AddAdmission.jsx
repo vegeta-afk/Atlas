@@ -1602,15 +1602,13 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
               </select>
               {errors.cast && <span className="error-text">{errors.cast}</span>}
             </div>
-            <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Category
-  </label>
+            <div className="form-group">
+  <label>Category</label>
   <select
     name="category"
     value={formData.category || ""}
     onChange={handleChange}
-    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+    className={errors.category ? "error-field" : ""}
   >
     <option value="">Select Category</option>
     {categories.map((cat) => (
@@ -1619,6 +1617,9 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
       </option>
     ))}
   </select>
+  {errors.category && (
+    <span className="error-text">{errors.category}</span>
+  )}
 </div>
           </div>
         </FormSection>
