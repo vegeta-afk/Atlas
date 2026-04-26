@@ -237,8 +237,12 @@ setBatches(batches || []);
 setCategories(categories || []);
       } else throw new Error(response.data.message);
     } catch (err) {
-      setSetupError(err.message || "Failed to load setup data");
-    } finally {
+  setSetupError(err.message || "Failed to load setup data");
+  setQualifications([]);
+  setAreas([]);
+  setBatches([]);
+  setCategories([]); // ✅ reset on error too
+} finally {
       setLoadingSetup(false);
     }
   };
@@ -284,10 +288,21 @@ setCategories(categories || []);
     if (name === "aadharNumber") { setFormData((p) => ({ ...p, [name]: value.replace(/\D/g, "").slice(0, 12) })); return; }
     if (name === "pincode")      { setFormData((p) => ({ ...p, [name]: value.replace(/\D/g, "").slice(0, 6) }));  return; }
     if (name === "courseId") {
-      const selected = courses.find((c) => c._id === value);
-      setFormData((p) => ({ ...p, courseId: value, interestedCourse: selected ? selected.courseFullName : "" }));
-      return;
-    }
+  const selected = courses.find((c) => c._id === value);
+  setFormData((p) => ({
+    ...p,
+    courseId: value,
+    interestedCourse: selected ? selected.courseFullName : "",
+    hasScholarship: false,
+    scholarshipApplied: false,
+    scholarshipId: "",
+    scholarshipName: "",
+    scholarshipCode: "",
+  }));
+  setIsCourseScholarshipEligible(false); // ✅ reset immediately on course change
+  setCalculatedFees(null);
+  return;
+}
     setFormData((p) => ({ ...p, [name]: value }));
   };
 

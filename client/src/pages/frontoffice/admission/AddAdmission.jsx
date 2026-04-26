@@ -265,6 +265,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
       setQualifications([]);
       setAreas([]);
       setBatches([]);
+      setCategories([]);
     } finally {
       setLoadingSetup(false);
     }
