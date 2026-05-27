@@ -1474,8 +1474,8 @@ const SetupList = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {data.map((item) => (
               <tr key={item._id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">{item.order}</td>
-                <td className="px-6 py-4 font-medium">{item.categoryName}</td>
+                <td className="px-6 py-4">{item.order + 1}</td>
+<td className="px-6 py-4 font-medium">{item.categoryName}</td>
                 <td className="px-6 py-4 text-gray-500">{item.description || "-"}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
