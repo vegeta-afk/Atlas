@@ -92,6 +92,15 @@ const SetupList = () => {
     return value.charAt(0).toUpperCase() + value.slice(1);
   };
 
+  const formatTime = (time) => {
+  if (!time) return "";
+  const [hours, minutes] = time.split(':');
+  const h = parseInt(hours);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${minutes} ${ampm}`;
+};
+
   // Fee form
   const [feeForm, setFeeForm] = useState({
     feeName: "",
@@ -1235,8 +1244,8 @@ const SetupList = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {data.map((item) => (
               <tr key={item._id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">{item.order}</td>
-                <td className="px-6 py-4">{item.qualificationName}</td>
+                <td className="px-6 py-4">{item.order + 1}</td>
+<td className="px-6 py-4">{item.qualificationName}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                     {item.isActive ? "Active" : "Inactive"}
@@ -1313,7 +1322,7 @@ const SetupList = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {data.map((item) => (
               <tr key={item._id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">{new Date(item.holidayDate).toLocaleDateString()}</td>
+                <td className="px-6 py-4">{(() => { const d = new Date(item.holidayDate); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`; })()}</td>
                 <td className="px-6 py-4">{item.holidayName}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isRecurring ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}>
@@ -1336,8 +1345,9 @@ const SetupList = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Batch Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time Slot</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Batch Name</th>
+<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time Slot</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
@@ -1345,8 +1355,9 @@ const SetupList = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {data.map((item) => (
               <tr key={item._id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">{item.batchName}</td>
-                <td className="px-6 py-4">{`${item.startTime} to ${item.endTime}`}</td>
+                <td className="px-6 py-4">{item.order + 1}</td>
+<td className="px-6 py-4">{item.batchName}</td>
+<td className="px-6 py-4">{`${formatTime(item.startTime)} to ${formatTime(item.endTime)}`}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                     {item.isActive ? "Active" : "Inactive"}
