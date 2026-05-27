@@ -1272,7 +1272,6 @@ const SetupList = () => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Area Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">City</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pincode</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
@@ -1282,7 +1281,6 @@ const SetupList = () => {
               <tr key={item._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">{item.areaName}</td>
                 <td className="px-6 py-4">{item.city || "-"}</td>
-                <td className="px-6 py-4">{item.pincode || "-"}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 text-xs rounded-full ${item.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                     {item.isActive ? "Active" : "Inactive"}
