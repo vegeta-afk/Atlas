@@ -963,21 +963,12 @@ const SetupList = () => {
               name="city"
               value={areaForm.city}
               onChange={handleAreaChange}
+              required
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g., Delhi"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
-            <input
-              type="text"
-              name="pincode"
-              value={areaForm.pincode}
-              onChange={handleAreaChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., 110001"
-            />
-          </div>
+          
         </div>
       );
       title = (editingId ? "Edit" : "Add New") + " Area";
