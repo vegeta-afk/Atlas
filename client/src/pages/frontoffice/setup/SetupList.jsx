@@ -1574,9 +1574,15 @@ const SetupList = () => {
           />
         </div>
         <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
+  onClick={() => {
+    if (activeTab === "categories") setCategoryForm({ categoryName: "", description: "", order: categories.length });
+    if (activeTab === "qualifications") setQualificationForm({ qualificationName: "", description: "", order: qualifications.length });
+    if (activeTab === "batches") setBatchForm({ batchName: "", startTime: "", endTime: "", order: batches.length });
+    if (activeTab === "enquiry-methods") setEnquiryMethodForm({ methodName: "", description: "", order: enquiryMethods.length });
+    setShowForm(true);
+  }}
+  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+>
           <Plus size={20} />
           Add{" "}
           {activeTab === "call-log"
