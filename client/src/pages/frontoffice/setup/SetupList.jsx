@@ -1177,7 +1177,7 @@ const SetupList = () => {
               placeholder="e.g., General, OBC, SC, ST"
             />
           </div>
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Order</label>
             <input
               type="number"
@@ -1188,8 +1188,8 @@ const SetupList = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Display order"
             />
-          </div>
-          <div className="md:col-span-2">
+          </div> */}
+          {/* <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
             <textarea
               name="description"
@@ -1199,7 +1199,7 @@ const SetupList = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Optional description..."
             />
-          </div>
+          </div> */}
         </div>
       );
       title = (editingId ? "Edit" : "Add New") + " Category";
