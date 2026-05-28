@@ -710,7 +710,7 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
     {enquiry.followUpDate && (
       <div className="follow-up-date">
         Follow-up:{" "}
-        {new Date(enquiry.followUpDate).toLocaleDateString()}
+        {new Date(enquiry.followUpDate).toLocaleDateString('en-IN')}
       </div>
     )}
   </div>
@@ -724,7 +724,7 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
     </div>
     <div>
       <strong>{enquiry.applicantName || "N/A"}</strong>
-      <small>{enquiry.guardianName ? `F: ${enquiry.guardianName}` : "—"}</small>
+      <small>{enquiry.guardianName ? enquiry.guardianName : "—"}</small>
     </div>
   </div>
 </td>
