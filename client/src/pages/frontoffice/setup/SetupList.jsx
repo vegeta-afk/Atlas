@@ -761,7 +761,6 @@ const SetupList = () => {
       data = callStatuses;
       columns = [
         { key: "name", label: "Status Name" },
-        { key: "value", label: "Status Value" },
         { key: "order", label: "Order" },
       ];
     } else if (callLogSubTab === "call-reasons") {
@@ -850,30 +849,6 @@ const SetupList = () => {
             required
             className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder={`e.g., ${title} name`}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Value *</label>
-          <input
-            type="text"
-            name="value"
-            value={formData.value}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder={`e.g., ${title.toLowerCase().replace(" ", "_")}`}
-          />
-          <p className="mt-1 text-xs text-gray-500">Unique identifier (e.g., interested, not_interested)</p>
-        </div>
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            rows="2"
-            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Optional description..."
           />
         </div>
         <div>
