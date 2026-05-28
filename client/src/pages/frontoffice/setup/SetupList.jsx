@@ -758,27 +758,24 @@ const SetupList = () => {
     let columns = [];
 
     if (callLogSubTab === "call-status") {
-      data = callStatuses;
-      columns = [
-        { key: "name", label: "Status Name" },
-        { key: "value", label: "Status Value" },
-        { key: "order", label: "Order" },
-      ];
-    } else if (callLogSubTab === "call-reasons") {
-      data = callReasons;
-      columns = [
-        { key: "name", label: "Reason Name" },
-        { key: "value", label: "Reason Value" },
-        { key: "order", label: "Order" },
-      ];
-    } else if (callLogSubTab === "next-actions") {
-      data = nextActions;
-      columns = [
-        { key: "name", label: "Action Name" },
-        { key: "value", label: "Action Value" },
-        { key: "order", label: "Order" },
-      ];
-    }
+  data = callStatuses;
+  columns = [
+    { key: "name", label: "Status Name" },
+    { key: "order", label: "Order" },
+  ];
+} else if (callLogSubTab === "call-reasons") {
+  data = callReasons;
+  columns = [
+    { key: "name", label: "Reason Name" },
+    { key: "order", label: "Order" },
+  ];
+} else if (callLogSubTab === "next-actions") {
+  data = nextActions;
+  columns = [
+    { key: "name", label: "Action Name" },
+    { key: "order", label: "Order" },
+  ];
+}
 
     return (
       <table className="min-w-full divide-y divide-gray-200">
@@ -797,10 +794,7 @@ const SetupList = () => {
           {data.map((item) => (
             <tr key={item._id} className="hover:bg-gray-50">
               <td className="px-6 py-4">{item.name}</td>
-              <td className="px-6 py-4">
-                <code className="px-2 py-1 bg-gray-100 rounded text-sm">{item.value}</code>
-              </td>
-              <td className="px-6 py-4">{item.order}</td>
+<td className="px-6 py-4">{item.order + 1}</td>
               <td className="px-6 py-4">
                 <span className={`px-2 py-1 text-xs rounded-full ${item.isActive !== false ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                   {item.isActive !== false ? "Active" : "Inactive"}
