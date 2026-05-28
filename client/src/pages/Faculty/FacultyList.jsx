@@ -95,6 +95,16 @@ const FacultyList = () => {
     { value: "Full-day", label: "Full Day" },
   ];
 
+  const formatTimeRange = (timeRange) => {
+  if (!timeRange) return "N/A";
+  return timeRange.replace(/(\d{2}):(\d{2})/g, (_, h, m) => {
+    const hour = parseInt(h);
+    const period = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${m} ${period}`;
+  });
+};
+
   const fetchFaculty = async () => {
     setLoading(true);
     setError(null);
@@ -351,7 +361,9 @@ const FacultyList = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString();
+    return new Date(dateString).toLocaleDateString('en-IN', {
+  day: '2-digit', month: '2-digit', year: 'numeric'
+});
   };
 
   const formatPhoneNumber = (phone) => {
@@ -616,106 +628,112 @@ const FacultyList = () => {
           <table className="data-table">
             <thead>
               <tr>
-                <th onClick={() => handleSort("facultyNo")} className="sortable">Faculty ID {getSortIndicator("facultyNo")}</th>
-                <th onClick={() => handleSort("facultyName")} className="sortable">Faculty Name {getSortIndicator("facultyName")}</th>
-                <th>Contact Information</th>
-                <th onClick={() => handleSort("courseAssigned")} className="sortable">Course Assigned {getSortIndicator("courseAssigned")}</th>
-                <th>Shift &amp; Timing</th>
-                <th onClick={() => handleSort("basicStipend")} className="sortable">Stipend {getSortIndicator("basicStipend")}</th>
-                <th>Status</th>
-                <th>Date of Joining</th>
-                <th>Actions</th>
-              </tr>
+  <th onClick={() => handleSort("facultyNo")} className="sortable">Faculty ID {getSortIndicator("facultyNo")}</th>
+  <th onClick={() => handleSort("dateOfJoining")} className="sortable">Date of Joining {getSortIndicator("dateOfJoining")}</th>
+  <th onClick={() => handleSort("facultyName")} className="sortable">Faculty Name {getSortIndicator("facultyName")}</th>
+  <th>Contact Information</th>
+  <th onClick={() => handleSort("courseAssigned")} className="sortable">Course Assigned {getSortIndicator("courseAssigned")}</th>
+  <th>Shift &amp; Timing</th>
+  <th onClick={() => handleSort("basicStipend")} className="sortable">Stipend {getSortIndicator("basicStipend")}</th>
+  <th>Status</th>
+  <th>Actions</th>
+</tr>
             </thead>
             <tbody>
               {filteredFaculty.length > 0 ? (
                 filteredFaculty.map((facultyMember) => (
                   <tr key={facultyMember._id}>
-                    <td className="student-id">{facultyMember.facultyNo}</td>
-                    <td>
-                      <div className="student-info">
-                        <div className="avatar">{facultyMember.facultyName?.charAt(0) || "?"}</div>
-                        <div>
-                          <strong>{facultyMember.facultyName || "N/A"}</strong>
-                          <small>{facultyMember.email || "No email"}</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="contact-info">
-                        <div><Phone size={14} /> {formatPhoneNumber(facultyMember.mobileNo || "N/A")}</div>
-                        <div><MessageCircle size={14} /> {formatPhoneNumber(facultyMember.whatsappNo || "N/A")}</div>
-                      </div>
-                    </td>
-                    <td className="course-assigned">{facultyMember.courseAssigned || "N/A"}</td>
-                    <td>
-                      <div className="shift-info">
-                        <span>{getShiftIcon(facultyMember.shift)} {facultyMember.shift}</span>
-                        <span><Coffee size={12} /> Lunch: {facultyMember.lunchTime || "N/A"}</span>
-                      </div>
-                    </td>
-                    <td className="stipend-info">
-                      ₹{facultyMember.basicStipend ? facultyMember.basicStipend.toLocaleString("en-IN") : "0"}
-                    </td>
-                    <td>
-                      <div className="status-cell">{getStatusBadge(facultyMember.status)}</div>
-                    </td>
-                    <td>
-                      <div className="date-info"><Calendar size={14} /> {formatDate(facultyMember.dateOfJoining)}</div>
-                    </td>
-                    <td>
-                      <div className="action-buttons">
-                        <button className="action-btn view" onClick={() => handleViewFaculty(facultyMember._id)} title="View Faculty">
-                          <Eye size={16} />
-                        </button>
-                        <button className="action-btn edit" onClick={() => handleEditFaculty(facultyMember._id)} title="Edit Faculty">
-                          <Edit size={16} />
-                        </button>
-                        {facultyMember.status === "inactive" ? (
-                          <button className="action-btn view" onClick={() => handleActivateFaculty(facultyMember)} title="Activate Faculty">
-                            <UserCheck size={16} />
-                          </button>
-                        ) : facultyMember.status === "active" ? (
-                          <button className="action-btn delete" onClick={() => handleDeactivateFaculty(facultyMember)} title="Deactivate Faculty">
-                            <UserX size={16} />
-                          </button>
-                        ) : null}
-                        <div className="dropdown-container">
-                          <button className="action-btn more" onClick={(e) => toggleDropdown(facultyMember._id, e)} title="More options">
-                            <MoreVertical size={16} />
-                          </button>
-                          {openDropdown === facultyMember._id && (
-                            <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
-                              {facultyMember.status === "active" && (
-                                <button className="dropdown-item" onClick={() => { handleMarkOnLeave(facultyMember); setOpenDropdown(null); }}>
-                                  <Clock size={14} /><span>Mark as On Leave</span>
-                                </button>
-                              )}
-                              {facultyMember.email && (
-                                <button className="dropdown-item" onClick={() => { window.location.href = `mailto:${facultyMember.email}`; setOpenDropdown(null); }}>
-                                  <Mail size={14} /><span>Send Email</span>
-                                </button>
-                              )}
-                              {facultyMember.mobileNo && (
-                                <button className="dropdown-item" onClick={() => { window.open(`tel:${facultyMember.mobileNo}`); setOpenDropdown(null); }}>
-                                  <Phone size={14} /><span>Call Now</span>
-                                </button>
-                              )}
-                              {facultyMember.whatsappNo && (
-                                <button className="dropdown-item" onClick={() => { openWhatsApp(facultyMember.whatsappNo); setOpenDropdown(null); }}>
-                                  <MessageCircle size={14} /><span>WhatsApp</span>
-                                </button>
-                              )}
-                              <div className="dropdown-divider"></div>
-                              <button className="dropdown-item delete-option" onClick={() => { handleDeleteFaculty(facultyMember._id, facultyMember.facultyName); setOpenDropdown(null); }}>
-                                <Trash2 size={14} /><span>Delete Faculty</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
+  <td className="student-id">{facultyMember.facultyNo}</td>
+
+  {/* ← Date of Joining moved to 2nd */}
+  <td>
+    <div className="date-info">
+      <Calendar size={14} /> {formatDate(facultyMember.dateOfJoining)}
+    </div>
+  </td>
+
+  <td>
+    <div className="student-info">
+      <div className="avatar">{facultyMember.facultyName?.charAt(0) || "?"}</div>
+      <div>
+        <strong>{facultyMember.facultyName || "N/A"}</strong>
+        <small>{facultyMember.email || "No email"}</small>
+      </div>
+    </div>
+  </td>
+  <td>
+    <div className="contact-info">
+      <div><Phone size={14} /> {formatPhoneNumber(facultyMember.mobileNo || "N/A")}</div>
+      <div><MessageCircle size={14} /> {formatPhoneNumber(facultyMember.whatsappNo || "N/A")}</div>
+    </div>
+  </td>
+  <td className="course-assigned">{facultyMember.courseAssigned || "N/A"}</td>
+  <td>
+    <div className="shift-info">
+      <span>{getShiftIcon(facultyMember.shift)} {formatTimeRange(facultyMember.shift)}</span>
+      <span><Coffee size={12} /> Lunch: {formatTimeRange(facultyMember.lunchTime)}</span>
+    </div>
+  </td>
+  <td className="stipend-info">
+    ₹{facultyMember.basicStipend ? facultyMember.basicStipend.toLocaleString("en-IN") : "0"}
+  </td>
+  <td>
+    <div className="status-cell">{getStatusBadge(facultyMember.status)}</div>
+  </td>
+  {/* ← old Date of Joining td removed from here */}
+  <td>
+    <div className="action-buttons">
+      <button className="action-btn view" onClick={() => handleViewFaculty(facultyMember._id)} title="View Faculty">
+        <Eye size={16} />
+      </button>
+      <button className="action-btn edit" onClick={() => handleEditFaculty(facultyMember._id)} title="Edit Faculty">
+        <Edit size={16} />
+      </button>
+      {facultyMember.status === "inactive" ? (
+        <button className="action-btn view" onClick={() => handleActivateFaculty(facultyMember)} title="Activate Faculty">
+          <UserCheck size={16} />
+        </button>
+      ) : facultyMember.status === "active" ? (
+        <button className="action-btn delete" onClick={() => handleDeactivateFaculty(facultyMember)} title="Deactivate Faculty">
+          <UserX size={16} />
+        </button>
+      ) : null}
+      <div className="dropdown-container">
+        <button className="action-btn more" onClick={(e) => toggleDropdown(facultyMember._id, e)} title="More options">
+          <MoreVertical size={16} />
+        </button>
+        {openDropdown === facultyMember._id && (
+          <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
+            {facultyMember.status === "active" && (
+              <button className="dropdown-item" onClick={() => { handleMarkOnLeave(facultyMember); setOpenDropdown(null); }}>
+                <Clock size={14} /><span>Mark as On Leave</span>
+              </button>
+            )}
+            {facultyMember.email && (
+              <button className="dropdown-item" onClick={() => { window.location.href = `mailto:${facultyMember.email}`; setOpenDropdown(null); }}>
+                <Mail size={14} /><span>Send Email</span>
+              </button>
+            )}
+            {facultyMember.mobileNo && (
+              <button className="dropdown-item" onClick={() => { window.open(`tel:${facultyMember.mobileNo}`); setOpenDropdown(null); }}>
+                <Phone size={14} /><span>Call Now</span>
+              </button>
+            )}
+            {facultyMember.whatsappNo && (
+              <button className="dropdown-item" onClick={() => { openWhatsApp(facultyMember.whatsappNo); setOpenDropdown(null); }}>
+                <MessageCircle size={14} /><span>WhatsApp</span>
+              </button>
+            )}
+            <div className="dropdown-divider"></div>
+            <button className="dropdown-item delete-option" onClick={() => { handleDeleteFaculty(facultyMember._id, facultyMember.facultyName); setOpenDropdown(null); }}>
+              <Trash2 size={14} /><span>Delete Faculty</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  </td>
+</tr>
                 ))
               ) : (
                 <tr>
