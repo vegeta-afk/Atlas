@@ -411,6 +411,15 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
     reader.readAsDataURL(file);
   };
 
+  const formatTime = (time) => {
+  if (!time) return "";
+  const [hours, minutes] = time.split(':');
+  const h = parseInt(hours);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${minutes} ${ampm}`;
+};
+
   const castOptions = [
     { value: "general", label: "General" },
     { value: "sc", label: "SC" },
@@ -1523,9 +1532,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
                 </option>
                 {batches.map((batch) => {
                   // Create display text for batch
-                  const displayName =
-                    batch.displayName ||
-                    `${batch.startTime} to ${batch.endTime}`;
+                  const displayName = batch.displayName || `${formatTime(batch.startTime)} to ${formatTime(batch.endTime)}`;
 
                   return (
                     <option key={batch._id} value={displayName}>

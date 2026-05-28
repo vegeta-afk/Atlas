@@ -142,6 +142,15 @@ const EditEnquiry = () => {
     }
   };
 
+  const formatTime = (time) => {
+  if (!time) return "";
+  const [hours, minutes] = time.split(':');
+  const h = parseInt(hours);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${minutes} ${ampm}`;
+};
+
   const fetchCourses = async () => {
     try {
       setLoadingCourses(true);
@@ -467,7 +476,7 @@ const EditEnquiry = () => {
                         <option value={formData.batchTime}>{formData.batchTime}</option>
                       )}
                       {batches.map((b) => {
-                        const display = b.displayName || `${b.startTime} to ${b.endTime}`;
+                        const display = b.displayName || `${formatTime(b.startTime)} to ${formatTime(b.endTime)}`;
                         return <option key={b._id} value={display}>{b.batchName} ({display})</option>;
                       })}
                     </select>

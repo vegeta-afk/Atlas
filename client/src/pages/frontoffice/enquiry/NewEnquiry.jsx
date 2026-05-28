@@ -180,6 +180,15 @@ const NewEnquiry = () => {
       .join(" ");
   };
 
+  const formatTime = (time) => {
+  if (!time) return "";
+  const [hours, minutes] = time.split(':');
+  const h = parseInt(hours);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${minutes} ${ampm}`;
+};
+
   // Phone validation - Only check for 10 digits
   const validatePhoneFormat = (phone) => {
     const digitsOnly = phone.replace(/\D/g, "");
@@ -809,15 +818,15 @@ const NewEnquiry = () => {
                         {loadingSetup ? "Loading..." : "Select Batch Time"}
                       </option>
                       {batches.map((batch) => {
-                        const displayName =
-                          batch.displayName ||
-                          `${batch.startTime} to ${batch.endTime}`;
-                        return (
-                          <option key={batch._id} value={displayName}>
-                            {batch.batchName} ({displayName})
-                          </option>
-                        );
-                      })}
+  const displayName =
+    batch.displayName ||
+    `${formatTime(batch.startTime)} to ${formatTime(batch.endTime)}`;
+  return (
+    <option key={batch._id} value={displayName}>
+      {batch.batchName} ({displayName})
+    </option>
+  );
+})}
                     </select>
                     {errors.batchTime && (
                       <span className="error-text">{errors.batchTime}</span>

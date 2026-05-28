@@ -186,6 +186,8 @@ category: "",
     }
   };
 
+
+
   const fetchCourseDetails = async (courseId) => {
   if (!courseId) return;
   try {
@@ -327,6 +329,15 @@ setCategories(categories || []);
       setCalculatedFees(null);
     }
   };
+
+  const formatTime = (time) => {
+  if (!time) return "";
+  const [hours, minutes] = time.split(':');
+  const h = parseInt(hours);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${minutes} ${ampm}`;
+};
 
   // ─── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
@@ -717,9 +728,9 @@ const updateData = {
                   <option value={formData.preferredBatch}>{formData.preferredBatch}</option>
                 )}
                 {batches.map((b) => {
-                  const display = b.displayName || `${b.startTime} to ${b.endTime}`;
-                  return <option key={b._id} value={display}>{b.batchName} ({display})</option>;
-                })}
+  const display = b.displayName || `${formatTime(b.startTime)} to ${formatTime(b.endTime)}`;
+  return <option key={b._id} value={display}>{b.batchName} ({display})</option>;
+})}
               </select>
               {errors.preferredBatch && <span className="error-text">{errors.preferredBatch}</span>}
             </div>
