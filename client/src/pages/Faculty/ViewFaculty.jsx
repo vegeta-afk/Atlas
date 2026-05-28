@@ -67,6 +67,16 @@ const ViewFaculty = () => {
     });
   };
 
+  const formatTimeRange = (timeRange) => {
+  if (!timeRange) return "N/A";
+  return timeRange.replace(/(\d{2}):(\d{2})/g, (_, h, m) => {
+    const hour = parseInt(h);
+    const period = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${m} ${period}`;
+  });
+};
+
   const formatPhone = (phone) => {
     if (!phone) return "N/A";
     const cleaned = phone.replace(/\D/g, "");
@@ -188,7 +198,7 @@ const ViewFaculty = () => {
             </span>
             <span className="vf-meta-chip">
               {getShiftIcon(faculty.shift)}
-              {faculty.shift || "N/A"} Shift
+              {formatTimeRange(faculty.shift) || "N/A"} Shift
             </span>
           </div>
         </div>
@@ -267,20 +277,24 @@ const ViewFaculty = () => {
             </div>
             <div className="vf-field-row">
               <span className="vf-field-label">Course Assigned</span>
-              <span className="vf-field-value">{faculty.courseAssigned || "Not assigned"}</span>
+              <span className="vf-field-value">
+  {faculty.courseAssigned
+    ? faculty.courseAssigned.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    : "Not Assigned"}
+</span>
             </div>
             <div className="vf-field-row">
               <span className="vf-field-label">Shift</span>
               <span className="vf-field-value">
                 {getShiftIcon(faculty.shift)}
-                <span style={{ marginLeft: 6 }}>{faculty.shift || "N/A"}</span>
+                <span style={{ marginLeft: 6 }}>{formatTimeRange(faculty.shift) || "N/A"}</span>
               </span>
             </div>
             <div className="vf-field-row">
               <span className="vf-field-label">Lunch Time</span>
               <span className="vf-field-value">
                 <Coffee size={14} style={{ marginRight: 6, opacity: 0.6 }} />
-                {faculty.lunchTime || "N/A"}
+                {formatTimeRange(faculty.lunchTime)}
               </span>
             </div>
             <div className="vf-field-row">
