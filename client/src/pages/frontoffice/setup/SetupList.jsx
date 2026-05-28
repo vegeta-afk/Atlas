@@ -761,6 +761,7 @@ const SetupList = () => {
       data = callStatuses;
       columns = [
         { key: "name", label: "Status Name" },
+        { key: "value", label: "Status Value" },
         { key: "order", label: "Order" },
       ];
     } else if (callLogSubTab === "call-reasons") {
