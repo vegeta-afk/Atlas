@@ -818,9 +818,7 @@ const NewEnquiry = () => {
                         {loadingSetup ? "Loading..." : "Select Batch Time"}
                       </option>
                       {batches.map((batch) => {
-  const displayName =
-    batch.displayName ||
-    `${formatTime(batch.startTime)} to ${formatTime(batch.endTime)}`;
+  const displayName = `${formatTime(batch.startTime)} to ${formatTime(batch.endTime)}`;
   return (
     <option key={batch._id} value={displayName}>
       {batch.batchName} ({displayName})

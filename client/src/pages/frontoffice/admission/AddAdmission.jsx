@@ -1532,7 +1532,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
                 </option>
                 {batches.map((batch) => {
                   // Create display text for batch
-                  const displayName = batch.displayName || `${formatTime(batch.startTime)} to ${formatTime(batch.endTime)}`;
+                  const displayName = `${formatTime(batch.startTime)} to ${formatTime(batch.endTime)}`;
 
                   return (
                     <option key={batch._id} value={displayName}>
