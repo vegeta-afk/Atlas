@@ -724,7 +724,7 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
     </div>
     <div>
       <strong>{enquiry.applicantName || "N/A"}</strong>
-      <small>{enquiry.guardianName ? `S/O: ${enquiry.guardianName}` : "—"}</small>
+      <small>{enquiry.guardianName ? `P: ${enquiry.guardianName}` : "—"}</small>
     </div>
   </div>
 </td>
