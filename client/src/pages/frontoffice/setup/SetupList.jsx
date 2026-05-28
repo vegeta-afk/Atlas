@@ -1534,12 +1534,17 @@ const SetupList = () => {
         </div>
         <button
   onClick={() => {
-    if (activeTab === "categories") setCategoryForm({ categoryName: "", description: "", order: categories.length });
-    if (activeTab === "qualifications") setQualificationForm({ qualificationName: "", description: "", order: qualifications.length });
-    if (activeTab === "batches") setBatchForm({ batchName: "", startTime: "", endTime: "", order: batches.length });
-    if (activeTab === "enquiry-methods") setEnquiryMethodForm({ methodName: "", description: "", order: enquiryMethods.length });
-    setShowForm(true);
-  }}
+  if (activeTab === "categories") setCategoryForm({ categoryName: "", description: "", order: categories.length });
+  if (activeTab === "qualifications") setQualificationForm({ qualificationName: "", description: "", order: qualifications.length });
+  if (activeTab === "batches") setBatchForm({ batchName: "", startTime: "", endTime: "", order: batches.length });
+  if (activeTab === "enquiry-methods") setEnquiryMethodForm({ methodName: "", description: "", order: enquiryMethods.length });
+  if (activeTab === "call-log") {
+    if (callLogSubTab === "call-status") setCallStatusForm({ name: "", value: "", description: "", order: callStatuses.length });
+    else if (callLogSubTab === "call-reasons") setCallReasonForm({ name: "", value: "", description: "", order: callReasons.length });
+    else if (callLogSubTab === "next-actions") setNextActionForm({ name: "", value: "", description: "", order: nextActions.length });
+  }
+  setShowForm(true);
+}}
   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
 >
           <Plus size={20} />
