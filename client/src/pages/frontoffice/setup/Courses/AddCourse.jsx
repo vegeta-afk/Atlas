@@ -654,13 +654,13 @@ const AddCourse = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Duration (months) *
+                    Duration ( in Months) *
                   </label>
                   <NumberInput
                     name="duration"
                     value={formData.duration}
                     onChange={handleChange}
-                    placeholder="e.g., 3"
+                    placeholder="Number of Months"
                   />
                 </div>
                 <div>
