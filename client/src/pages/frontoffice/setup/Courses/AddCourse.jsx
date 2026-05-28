@@ -671,7 +671,7 @@ const AddCourse = () => {
                     name="totalSemesters"
                     value={formData.totalSemesters}
                     onChange={handleChange}
-                    placeholder="e.g., 6"
+                    placeholder="Number of Semester "
                     required
                   />
                 </div>
