@@ -705,7 +705,7 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
   <div className="date-info">
     <div>
       <Calendar size={14} />{" "}
-      {new Date(enquiry.enquiryDate).toLocaleDateString()}
+      {new Date(enquiry.enquiryDate).toLocaleDateString('en-IN')}
     </div>
     {enquiry.followUpDate && (
       <div className="follow-up-date">
