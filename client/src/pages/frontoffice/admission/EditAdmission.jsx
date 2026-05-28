@@ -728,7 +728,7 @@ const updateData = {
                   <option value={formData.preferredBatch}>{formData.preferredBatch}</option>
                 )}
                 {batches.map((b) => {
-  const display = b.displayName || `${formatTime(b.startTime)} to ${formatTime(b.endTime)}`;
+const display = `${formatTime(b.startTime)} to ${formatTime(b.endTime)}`;
   return <option key={b._id} value={display}>{b.batchName} ({display})</option>;
 })}
               </select>
