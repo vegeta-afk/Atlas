@@ -674,36 +674,24 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
             <table className="data-table">
               <thead>
                 <tr>
-                  <th
-                    onClick={() => handleSort("enquiryNo")}
-                    className="sortable"
-                  >
-                    Enquiry ID{" "}
-                    {sortConfig.key === "enquiryNo" &&
-                      (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </th>
-                  <th
-                    onClick={() => handleSort("applicantName")}
-                    className="sortable"
-                  >
-                    Name{" "}
-                    {sortConfig.key === "applicantName" &&
-                      (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </th>
-                  <th>Contact Info</th>
-                  <th
-                    onClick={() => handleSort("courseInterested")}
-                    className="sortable"
-                  >
-                    Course{" "}
-                    {sortConfig.key === "courseInterested" &&
-                      (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </th>
-                  <th>Enquiry Details</th>
-                  <th>Status</th>
-                  <th>Dates</th>
-                  <th>Prospectus</th>
-                  <th>Actions</th>
+                 <th onClick={() => handleSort("enquiryNo")} className="sortable">
+  Enquiry ID{" "}
+  {sortConfig.key === "enquiryNo" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+</th>
+<th>Dates</th>
+<th onClick={() => handleSort("applicantName")} className="sortable">
+  Name{" "}
+  {sortConfig.key === "applicantName" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+</th>
+<th>Contact Info</th>
+<th onClick={() => handleSort("courseInterested")} className="sortable">
+  Course{" "}
+  {sortConfig.key === "courseInterested" && (sortConfig.direction === "asc" ? "↑" : "↓")}
+</th>
+<th>Enquiry Details</th>
+<th>Status</th>
+<th>Prospectus</th>
+<th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -711,72 +699,81 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
                   filteredEnquiries.map((enquiry) => (
                     <tr key={enquiry._id}>
                       <td className="enquiry-id">{enquiry.enquiryNo}</td>
-                      <td>
-                        <div className="student-info">
-                          <div className="avatar">
-                            {enquiry.applicantName?.charAt(0) || "?"}
-                          </div>
-                          <div>
-                            <strong>{enquiry.applicantName || "N/A"}</strong>
-                            <small>{enquiry.contactNo || "No contact"}</small>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="contact-info">
-                          <div>
-                            <Phone size={14} /> {enquiry.contactNo || "N/A"}
-                          </div>
-                          {enquiry.whatsappNo && (
-                            <div>
-                              <MessageCircle
-                                size={14}
-                                className="whatsapp-icon"
-                              />
-                              {enquiry.whatsappNo}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td>{enquiry.courseInterested || "N/A"}</td>
-                      <td>
-                        <div className="enquiry-details">
-                          <div>
-                            <strong>Method:</strong>{" "}
-                            {formatMethod(enquiry.enquiryMethod)}
-                          </div>
-                          <div>
-                            <strong>By:</strong> {enquiry.enquiryBy || "N/A"}
-                          </div>
-                        </div>
-                      </td>
-                      <td>{getStatusBadge(enquiry.status)}</td>
-                      <td>
-                        <div className="date-info">
-                          <div>
-                            <Calendar size={14} />{" "}
-                            {new Date(enquiry.enquiryDate).toLocaleDateString()}
-                          </div>
-                          {enquiry.followUpDate && (
-                            <div className="follow-up-date">
-                              Follow-up:{" "}
-                              {new Date(
-                                enquiry.followUpDate
-                              ).toLocaleDateString()}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        {enquiry.prospectusFees === "yes" ? (
-                          <div className="prospectus-paid">
-                            <CheckCircle size={14} />
-                            <span>₹{enquiry.prospectusAmount || 0}</span>
-                          </div>
-                        ) : (
-                          <span className="prospectus-not-paid">Not Paid</span>
-                        )}
-                      </td>
+
+{/* DATE - moved here */}
+<td>
+  <div className="date-info">
+    <div>
+      <Calendar size={14} />{" "}
+      {new Date(enquiry.enquiryDate).toLocaleDateString()}
+    </div>
+    {enquiry.followUpDate && (
+      <div className="follow-up-date">
+        Follow-up:{" "}
+        {new Date(enquiry.followUpDate).toLocaleDateString()}
+      </div>
+    )}
+  </div>
+</td>
+
+{/* NAME - with father name */}
+<td>
+  <div className="student-info">
+    <div className="avatar">
+      {enquiry.applicantName?.charAt(0) || "?"}
+    </div>
+    <div>
+      <strong>{enquiry.applicantName || "N/A"}</strong>
+      <small>{enquiry.guardianName ? `F: ${enquiry.guardianName}` : "—"}</small>
+    </div>
+  </div>
+</td>
+
+{/* CONTACT */}
+<td>
+  <div className="contact-info">
+    <div>
+      <Phone size={14} /> {enquiry.contactNo || "N/A"}
+    </div>
+    {enquiry.whatsappNo && (
+      <div>
+        <MessageCircle size={14} className="whatsapp-icon" />
+        {enquiry.whatsappNo}
+      </div>
+    )}
+  </div>
+</td>
+
+{/* COURSE */}
+<td>{enquiry.courseInterested || "N/A"}</td>
+
+{/* ENQUIRY DETAILS */}
+<td>
+  <div className="enquiry-details">
+    <div>
+      <strong>Method:</strong>{" "}
+      {formatMethod(enquiry.enquiryMethod)}
+    </div>
+    <div>
+      <strong>By:</strong> {enquiry.enquiryBy || "N/A"}
+    </div>
+  </div>
+</td>
+
+{/* STATUS */}
+<td>{getStatusBadge(enquiry.status)}</td>
+
+{/* PROSPECTUS */}
+<td>
+  {enquiry.prospectusFees === "yes" ? (
+    <div className="prospectus-paid">
+      <CheckCircle size={14} />
+      <span>₹{enquiry.prospectusAmount || 0}</span>
+    </div>
+  ) : (
+    <span className="prospectus-not-paid">Not Paid</span>
+  )}
+</td>
                       <td>
                         <div className="action-buttons">
                           {/* Convert to Admission Button */}
