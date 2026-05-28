@@ -529,7 +529,8 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
                   <option value="">
                     {loadingCourses ? "Loading courses..." : "Select Course"}
                   </option>
-                  {courses.map((course) => (
+                 <option value="general_subjects">General Subjects</option> 
+                 {courses.map((course) => (
                     <option key={course._id} value={course.courseFullName}>
                       {" "}
                       {/* Send name */}
@@ -540,7 +541,7 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
                     </option>
                   ))}
                   <option value="">Not Allotted</option>
-                  <option value="general_subjects">General Subjects</option>
+                  
                   <option value="not_allotted">Not Allotted</option>
                 </select>
 
