@@ -969,7 +969,7 @@ const AddCourse = () => {
                             type="button"
                             onClick={() => addTopicToSemester(semester.id)}
                             className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200"
-                            title="Add Topic (Alt+T adds to last semester)"
+                            title="press Alt+T to add one"
                           >
                             <Plus size={12} />
                             Add Topic
@@ -1021,11 +1021,11 @@ const AddCourse = () => {
                                       type="button"
                                       onClick={() => addSubtopicToTopic(semester.id, topic.id)}
                                       className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
-                                      title="Add Subtopic (Alt+B adds to last topic of last semester)"
+                                      title="press Alt+B to add one"
                                     >
                                       <Plus size={12} />
                                       Add Subtopic
-                                    </button>
+                                    </button> 
                                     {semester.topics.length > 1 && (
                                       <button
                                         type="button"
