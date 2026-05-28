@@ -261,7 +261,7 @@ const ViewCourse = () => {
           <div>
             <p className="text-xs text-gray-500">Duration</p>
             <p className="text-sm font-semibold text-gray-800">
-              {course.duration || "—"} months
+              {course.duration || "—"} Months
             </p>
           </div>
         </div>
