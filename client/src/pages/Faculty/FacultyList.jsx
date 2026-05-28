@@ -667,7 +667,11 @@ const FacultyList = () => {
       <div><MessageCircle size={14} /> {formatPhoneNumber(facultyMember.whatsappNo || "N/A")}</div>
     </div>
   </td>
-  <td className="course-assigned">{facultyMember.courseAssigned || "N/A"}</td>
+  <td className="course-assigned">
+  {facultyMember.courseAssigned
+    ? facultyMember.courseAssigned.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    : "N/A"}
+</td>
   <td>
     <div className="shift-info">
       <span>{getShiftIcon(facultyMember.shift)} {formatTimeRange(facultyMember.shift)}</span>
