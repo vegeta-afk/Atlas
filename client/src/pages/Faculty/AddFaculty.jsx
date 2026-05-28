@@ -540,7 +540,7 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
                         : ""}
                     </option>
                   ))}
-                  <option value="">Not Allotted</option>
+                  
                   
                   <option value="not_allotted">Not Allotted</option>
                 </select>
