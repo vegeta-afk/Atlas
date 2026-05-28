@@ -18,7 +18,7 @@ import toast from "react-hot-toast";
 
 const CourseList = () => {
 
-  const location = useLocation();                                      // ← add this
+  const location = useLocation();                                      
   const basePath = "/" + location.pathname.split("/")[1];  
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -229,18 +229,18 @@ const CourseList = () => {
                         <div className="text-sm text-gray-500">
                           {course.courseShortName}
                           {course.courseType && (
-                            <span className="ml-2 px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
-                              {course.courseType}
-                            </span>
-                          )}
+  <span className="ml-2 px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
+    {course.courseType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+  </span>
+)}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">
-                          {course.duration}
+                          {course.duration} Months
                         </div>
                         <div className="text-sm text-gray-500">
-                          {course.totalSemesters || 0} semesters
+                          {course.totalSemesters || 0} Semesters
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -264,7 +264,7 @@ const CourseList = () => {
                         <div className="space-y-1">
                           <div className="text-sm flex items-center gap-1">
                             <Calendar size={14} />
-                            <span>{course.numberOfExams || 0} exams</span>
+                            <span>{course.numberOfExams || 0} Exams</span>
                           </div>
                           {course.examMonths && (
                             <div className="text-xs text-gray-500">
