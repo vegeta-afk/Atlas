@@ -183,7 +183,20 @@ const ViewFaculty = () => {
 
       {/* Profile Hero Card */}
       <div className="vf-hero-card">
-        <div className="vf-avatar-large">{getInitials(faculty.facultyName)}</div>
+        {faculty.photo ? (
+  <img
+    src={faculty.photo}
+    alt={faculty.facultyName}
+    className="vf-avatar-large"
+    style={{ objectFit: "cover", borderRadius: "50%", flexShrink: 0 }}
+    onError={(e) => {
+      e.target.onerror = null;
+      e.target.outerHTML = `<div class="vf-avatar-large">${getInitials(faculty.facultyName)}</div>`;
+    }}
+  />
+) : (
+  <div className="vf-avatar-large">{getInitials(faculty.facultyName)}</div>
+)}
         <div className="vf-hero-info">
           <h2>{faculty.facultyName}</h2>
           <p className="vf-sub">{faculty.courseAssigned || "Course not assigned"}</p>
