@@ -53,7 +53,6 @@ const FacultyList = () => {
     newThisMonth: 0,
   });
 
-  // Tab state
   const [activeTab, setActiveTab] = useState("faculty");
   const [allBatchesData, setAllBatchesData] = useState([]);
   const [batchesLoading, setBatchesLoading] = useState(false);
@@ -61,10 +60,8 @@ const FacultyList = () => {
   const [totalBatches, setTotalBatches] = useState(0);
   const [totalStudentsCount, setTotalStudentsCount] = useState(0);
 
-  // Accordion state for batches tab
   const [expandedFaculty, setExpandedFaculty] = useState({});
 
-  // Filters state
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedShift, setSelectedShift] = useState("all");
@@ -96,14 +93,14 @@ const FacultyList = () => {
   ];
 
   const formatTimeRange = (timeRange) => {
-  if (!timeRange) return "N/A";
-  return timeRange.replace(/(\d{2}):(\d{2})/g, (_, h, m) => {
-    const hour = parseInt(h);
-    const period = hour >= 12 ? "PM" : "AM";
-    const hour12 = hour % 12 || 12;
-    return `${hour12}:${m} ${period}`;
-  });
-};
+    if (!timeRange) return "N/A";
+    return timeRange.replace(/(\d{2}):(\d{2})/g, (_, h, m) => {
+      const hour = parseInt(h);
+      const period = hour >= 12 ? "PM" : "AM";
+      const hour12 = hour % 12 || 12;
+      return `${hour12}:${m} ${period}`;
+    });
+  };
 
   const fetchFaculty = async () => {
     setLoading(true);
@@ -151,71 +148,66 @@ const FacultyList = () => {
   };
 
   const fetchAllBatches = async (facultyList) => {
-  setBatchesLoading(true);
-  try {
+    setBatchesLoading(true);
+    try {
+      const batchResults = await Promise.all(
+        facultyList.map(async (f) => {
+          try {
+            const res = await facultyAPI.getFacultyBatches(f._id);
+            const batches = res.data?.data?.batches || [];
+            return { faculty: f, batches };
+          } catch {
+            return { faculty: f, batches: [] };
+          }
+        })
+      );
 
-    // ── Step 1: Fetch ALL faculty batches simultaneously ──
-    const batchResults = await Promise.all(
-      facultyList.map(async (f) => {
-        try {
-          const res = await facultyAPI.getFacultyBatches(f._id);
-          const batches = res.data?.data?.batches || [];
-          return { faculty: f, batches };
-        } catch {
-          return { faculty: f, batches: [] };
-        }
-      })
-    );
+      const studentFetches = batchResults.flatMap(({ faculty: f, batches }) =>
+        batches.map(async (batch) => {
+          try {
+            const res = await facultyAPI.getBatchStudents(f._id, batch._id);
+            const students = res.data?.data?.students || [];
+            return {
+              ...batch,
+              students,
+              studentCount: students.length,
+              facultyName: f.facultyName,
+              facultyNo: f.facultyNo,
+              facultyId: f._id,
+              facultyStatus: f.status,
+              facultyEmail: f.email,
+              facultyMobile: f.mobileNo,
+              courseAssigned: f.courseAssigned,
+            };
+          } catch {
+            return {
+              ...batch,
+              students: [],
+              studentCount: 0,
+              facultyName: f.facultyName,
+              facultyNo: f.facultyNo,
+              facultyId: f._id,
+              facultyStatus: f.status,
+              facultyEmail: f.email,
+              facultyMobile: f.mobileNo,
+              courseAssigned: f.courseAssigned,
+            };
+          }
+        })
+      );
 
-    // ── Step 2: Fetch ALL batch students simultaneously ──
-    const studentFetches = batchResults.flatMap(({ faculty: f, batches }) =>
-      batches.map(async (batch) => {
-        try {
-          const res = await facultyAPI.getBatchStudents(f._id, batch._id);
-          const students = res.data?.data?.students || [];
-          return {
-            ...batch,
-            students,
-            studentCount: students.length,
-            facultyName: f.facultyName,
-            facultyNo: f.facultyNo,
-            facultyId: f._id,
-            facultyStatus: f.status,
-            facultyEmail: f.email,
-            facultyMobile: f.mobileNo,
-            courseAssigned: f.courseAssigned,
-          };
-        } catch {
-          return {
-            ...batch,
-            students: [],
-            studentCount: 0,
-            facultyName: f.facultyName,
-            facultyNo: f.facultyNo,
-            facultyId: f._id,
-            facultyStatus: f.status,
-            facultyEmail: f.email,
-            facultyMobile: f.mobileNo,
-            courseAssigned: f.courseAssigned,
-          };
-        }
-      })
-    );
-
-    const results = await Promise.all(studentFetches);
-
-    setAllBatchesData(results);
-    setTotalBatches(results.length);
-    const totalStudents = results.reduce((sum, b) => sum + (b.students?.length ?? 0), 0);
-    setTotalStudentsCount(totalStudents);
-    setBatchesFetched(true);
-
-  } catch (err) {
-    console.error("Error fetching all batches:", err);
-  } finally {
-    setBatchesLoading(false);
-  }
-};
+      const results = await Promise.all(studentFetches);
+      setAllBatchesData(results);
+      setTotalBatches(results.length);
+      const totalStudents = results.reduce((sum, b) => sum + (b.students?.length ?? 0), 0);
+      setTotalStudentsCount(totalStudents);
+      setBatchesFetched(true);
+    } catch (err) {
+      console.error("Error fetching all batches:", err);
+    } finally {
+      setBatchesLoading(false);
+    }
+  };
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -291,8 +283,8 @@ const FacultyList = () => {
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      active: { color: "status-active", label: "Active", icon: <UserCheck size={12} /> },
-      inactive: { color: "status-inactive", label: "Inactive", icon: <UserX size={12} /> },
+      active:     { color: "status-active",   label: "Active",   icon: <UserCheck size={12} /> },
+      inactive:   { color: "status-inactive", label: "Inactive", icon: <UserX size={12} /> },
       "on-leave": { color: "status-on-leave", label: "On Leave", icon: <Clock size={12} /> },
     };
     const config = statusMap[status] || statusMap.active;
@@ -306,9 +298,9 @@ const FacultyList = () => {
 
   const getShiftIcon = (shift) => {
     const shiftMap = {
-      Morning: <Sun size={14} />,
-      Afternoon: <Sun size={14} />,
-      Evening: <Moon size={14} />,
+      Morning:    <Sun size={14} />,
+      Afternoon:  <Sun size={14} />,
+      Evening:    <Moon size={14} />,
       "Full-day": <Clock size={14} />,
     };
     return shiftMap[shift] || <Clock size={14} />;
@@ -349,9 +341,9 @@ const FacultyList = () => {
     } catch (err) { alert(err.response?.data?.message || "Failed to delete faculty"); }
   };
 
-  const handleViewFaculty = (facultyId) => navigate(`${basePath}/faculty/view/${facultyId}`);
-  const handleEditFaculty = (facultyId) => navigate(`${basePath}/faculty/edit/${facultyId}`);
-  const handleRefresh = () => fetchFaculty();
+  const handleViewFaculty   = (id) => navigate(`${basePath}/faculty/view/${id}`);
+  const handleEditFaculty   = (id) => navigate(`${basePath}/faculty/edit/${id}`);
+  const handleRefresh       = () => fetchFaculty();
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {
@@ -361,9 +353,9 @@ const FacultyList = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString('en-IN', {
-  day: '2-digit', month: '2-digit', year: 'numeric'
-});
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+    });
   };
 
   const formatPhoneNumber = (phone) => {
@@ -403,17 +395,11 @@ const FacultyList = () => {
     window.open(`https://wa.me/91${phone}`, "_blank");
   };
 
-  // ── Batches tab helpers ──────────────────────────────────────────────────────
-
-  // Toggle expanded row for a faculty
   const toggleFacultyExpand = (facultyId) => {
-    setExpandedFaculty((prev) => ({
-      ...prev,
-      [facultyId]: !prev[facultyId],
-    }));
+    setExpandedFaculty((prev) => ({ ...prev, [facultyId]: !prev[facultyId] }));
   };
 
-  // Group allBatchesData by facultyId, merging faculty meta from the faculty list
+  // ── batchesByFaculty — now carries facultyPhoto too ─────────────────────
   const batchesByFaculty = faculty.map((f) => {
     const batches = allBatchesData.filter((b) => b.facultyId === f._id);
     const totalStudents = batches.reduce(
@@ -421,12 +407,13 @@ const FacultyList = () => {
       0
     );
     return {
-      facultyId: f._id,
-      facultyName: f.facultyName,
-      facultyNo: f.facultyNo,
-      facultyStatus: f.status,
-      facultyEmail: f.email,
-      facultyMobile: f.mobileNo,
+      facultyId:      f._id,
+      facultyName:    f.facultyName,
+      facultyNo:      f.facultyNo,
+      facultyStatus:  f.status,
+      facultyEmail:   f.email,
+      facultyMobile:  f.mobileNo,
+      facultyPhoto:   f.photo || null,   // ← NEW
       courseAssigned: f.courseAssigned,
       batches,
       totalBatchCount: batches.length,
@@ -443,7 +430,6 @@ const FacultyList = () => {
     );
   });
 
-  // Filter batches by search term (kept for legacy use)
   const filteredBatches = allBatchesData.filter((batch) => {
     if (!searchTerm) return true;
     return (
@@ -477,7 +463,6 @@ const FacultyList = () => {
         </div>
       </div>
 
-      {/* Loading State */}
       {loading && (
         <div className="loading-overlay">
           <div className="loading-spinner"></div>
@@ -485,7 +470,6 @@ const FacultyList = () => {
         </div>
       )}
 
-      {/* Error State */}
       {error && !loading && (
         <div className="error-alert">
           <AlertCircle size={20} />
@@ -497,7 +481,6 @@ const FacultyList = () => {
         </div>
       )}
 
-      {/* Stats Cards */}
       {!loading && !error && (
         <div className="stats-cards">
           <div className="stat-card">
@@ -523,7 +506,6 @@ const FacultyList = () => {
         </div>
       )}
 
-      {/* Filters Section */}
       {!loading && !error && (
         <div className="filters-section-horizontal">
           <div className="search-box-horizontal">
@@ -596,7 +578,6 @@ const FacultyList = () => {
         </div>
       )}
 
-      {/* ── TAB SWITCHER ── */}
       {!loading && !error && (
         <div className="tab-switcher">
           <button
@@ -628,116 +609,146 @@ const FacultyList = () => {
           <table className="data-table">
             <thead>
               <tr>
-  <th onClick={() => handleSort("facultyNo")} className="sortable">Faculty ID {getSortIndicator("facultyNo")}</th>
-  <th onClick={() => handleSort("dateOfJoining")} className="sortable">Date of Joining {getSortIndicator("dateOfJoining")}</th>
-  <th onClick={() => handleSort("facultyName")} className="sortable">Faculty Name {getSortIndicator("facultyName")}</th>
-  <th>Contact Information</th>
-  <th onClick={() => handleSort("courseAssigned")} className="sortable">Course Assigned {getSortIndicator("courseAssigned")}</th>
-  <th>Shift &amp; Timing</th>
-  <th onClick={() => handleSort("basicStipend")} className="sortable">Stipend {getSortIndicator("basicStipend")}</th>
-  <th>Status</th>
-  <th>Actions</th>
-</tr>
+                <th onClick={() => handleSort("facultyNo")} className="sortable">Faculty ID {getSortIndicator("facultyNo")}</th>
+                <th onClick={() => handleSort("dateOfJoining")} className="sortable">Date of Joining {getSortIndicator("dateOfJoining")}</th>
+                <th onClick={() => handleSort("facultyName")} className="sortable">Faculty Name {getSortIndicator("facultyName")}</th>
+                <th>Contact Information</th>
+                <th onClick={() => handleSort("courseAssigned")} className="sortable">Course Assigned {getSortIndicator("courseAssigned")}</th>
+                <th>Shift &amp; Timing</th>
+                <th onClick={() => handleSort("basicStipend")} className="sortable">Stipend {getSortIndicator("basicStipend")}</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
             </thead>
             <tbody>
               {filteredFaculty.length > 0 ? (
                 filteredFaculty.map((facultyMember) => (
                   <tr key={facultyMember._id}>
-  <td className="student-id">{facultyMember.facultyNo}</td>
+                    <td className="student-id">{facultyMember.facultyNo}</td>
 
-  {/* ← Date of Joining moved to 2nd */}
-  <td>
-    <div className="date-info">
-      <Calendar size={14} /> {formatDate(facultyMember.dateOfJoining)}
-    </div>
-  </td>
+                    <td>
+                      <div className="date-info">
+                        <Calendar size={14} /> {formatDate(facultyMember.dateOfJoining)}
+                      </div>
+                    </td>
 
-  <td>
-    <div className="student-info">
-      <div className="avatar">{facultyMember.facultyName?.charAt(0) || "?"}</div>
-      <div>
-        <strong>{facultyMember.facultyName || "N/A"}</strong>
-        <small>{facultyMember.email || "No email"}</small>
-      </div>
-    </div>
-  </td>
-  <td>
-    <div className="contact-info">
-      <div><Phone size={14} /> {formatPhoneNumber(facultyMember.mobileNo || "N/A")}</div>
-      <div><MessageCircle size={14} /> {formatPhoneNumber(facultyMember.whatsappNo || "N/A")}</div>
-    </div>
-  </td>
-  <td className="course-assigned">
-  {facultyMember.courseAssigned
-    ? facultyMember.courseAssigned.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-    : "N/A"}
-</td>
-  <td>
-    <div className="shift-info">
-      <span>{getShiftIcon(facultyMember.shift)} {formatTimeRange(facultyMember.shift)}</span>
-      <span><Coffee size={12} /> Lunch: {formatTimeRange(facultyMember.lunchTime)}</span>
-    </div>
-  </td>
-  <td className="stipend-info">
-    ₹{facultyMember.basicStipend ? facultyMember.basicStipend.toLocaleString("en-IN") : "0"}
-  </td>
-  <td>
-    <div className="status-cell">{getStatusBadge(facultyMember.status)}</div>
-  </td>
-  {/* ← old Date of Joining td removed from here */}
-  <td>
-    <div className="action-buttons">
-      <button className="action-btn view" onClick={() => handleViewFaculty(facultyMember._id)} title="View Faculty">
-        <Eye size={16} />
-      </button>
-      <button className="action-btn edit" onClick={() => handleEditFaculty(facultyMember._id)} title="Edit Faculty">
-        <Edit size={16} />
-      </button>
-      {facultyMember.status === "inactive" ? (
-        <button className="action-btn view" onClick={() => handleActivateFaculty(facultyMember)} title="Activate Faculty">
-          <UserCheck size={16} />
-        </button>
-      ) : facultyMember.status === "active" ? (
-        <button className="action-btn delete" onClick={() => handleDeactivateFaculty(facultyMember)} title="Deactivate Faculty">
-          <UserX size={16} />
-        </button>
-      ) : null}
-      <div className="dropdown-container">
-        <button className="action-btn more" onClick={(e) => toggleDropdown(facultyMember._id, e)} title="More options">
-          <MoreVertical size={16} />
-        </button>
-        {openDropdown === facultyMember._id && (
-          <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
-            {facultyMember.status === "active" && (
-              <button className="dropdown-item" onClick={() => { handleMarkOnLeave(facultyMember); setOpenDropdown(null); }}>
-                <Clock size={14} /><span>Mark as On Leave</span>
-              </button>
-            )}
-            {facultyMember.email && (
-              <button className="dropdown-item" onClick={() => { window.location.href = `mailto:${facultyMember.email}`; setOpenDropdown(null); }}>
-                <Mail size={14} /><span>Send Email</span>
-              </button>
-            )}
-            {facultyMember.mobileNo && (
-              <button className="dropdown-item" onClick={() => { window.open(`tel:${facultyMember.mobileNo}`); setOpenDropdown(null); }}>
-                <Phone size={14} /><span>Call Now</span>
-              </button>
-            )}
-            {facultyMember.whatsappNo && (
-              <button className="dropdown-item" onClick={() => { openWhatsApp(facultyMember.whatsappNo); setOpenDropdown(null); }}>
-                <MessageCircle size={14} /><span>WhatsApp</span>
-              </button>
-            )}
-            <div className="dropdown-divider"></div>
-            <button className="dropdown-item delete-option" onClick={() => { handleDeleteFaculty(facultyMember._id, facultyMember.facultyName); setOpenDropdown(null); }}>
-              <Trash2 size={14} /><span>Delete Faculty</span>
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  </td>
-</tr>
+                    {/* ── Faculty Name cell with photo ── */}
+                    <td>
+                      <div className="student-info">
+                        {/* Photo — shown when available, hidden via onError */}
+                        {facultyMember.photo ? (
+                          <img
+                            src={facultyMember.photo}
+                            alt={facultyMember.facultyName}
+                            style={{
+                              width: "36px",
+                              height: "36px",
+                              borderRadius: "50%",
+                              objectFit: "cover",
+                              flexShrink: 0,
+                            }}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.style.display = "none";
+                              e.target.nextSibling.style.display = "flex";
+                            }}
+                          />
+                        ) : null}
+                        {/* Letter avatar — hidden when photo loads, shown as fallback */}
+                        <div
+                          className="avatar"
+                          style={{ display: facultyMember.photo ? "none" : "flex" }}
+                        >
+                          {facultyMember.facultyName?.charAt(0) || "?"}
+                        </div>
+                        <div>
+                          <strong>{facultyMember.facultyName || "N/A"}</strong>
+                          <small>{facultyMember.email || "No email"}</small>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td>
+                      <div className="contact-info">
+                        <div><Phone size={14} /> {formatPhoneNumber(facultyMember.mobileNo || "N/A")}</div>
+                        <div><MessageCircle size={14} /> {formatPhoneNumber(facultyMember.whatsappNo || "N/A")}</div>
+                      </div>
+                    </td>
+
+                    <td className="course-assigned">
+                      {facultyMember.courseAssigned
+                        ? facultyMember.courseAssigned.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+                        : "N/A"}
+                    </td>
+
+                    <td>
+                      <div className="shift-info">
+                        <span>{getShiftIcon(facultyMember.shift)} {formatTimeRange(facultyMember.shift)}</span>
+                        <span><Coffee size={12} /> Lunch: {formatTimeRange(facultyMember.lunchTime)}</span>
+                      </div>
+                    </td>
+
+                    <td className="stipend-info">
+                      ₹{facultyMember.basicStipend ? facultyMember.basicStipend.toLocaleString("en-IN") : "0"}
+                    </td>
+
+                    <td>
+                      <div className="status-cell">{getStatusBadge(facultyMember.status)}</div>
+                    </td>
+
+                    <td>
+                      <div className="action-buttons">
+                        <button className="action-btn view" onClick={() => handleViewFaculty(facultyMember._id)} title="View Faculty">
+                          <Eye size={16} />
+                        </button>
+                        <button className="action-btn edit" onClick={() => handleEditFaculty(facultyMember._id)} title="Edit Faculty">
+                          <Edit size={16} />
+                        </button>
+                        {facultyMember.status === "inactive" ? (
+                          <button className="action-btn view" onClick={() => handleActivateFaculty(facultyMember)} title="Activate Faculty">
+                            <UserCheck size={16} />
+                          </button>
+                        ) : facultyMember.status === "active" ? (
+                          <button className="action-btn delete" onClick={() => handleDeactivateFaculty(facultyMember)} title="Deactivate Faculty">
+                            <UserX size={16} />
+                          </button>
+                        ) : null}
+                        <div className="dropdown-container">
+                          <button className="action-btn more" onClick={(e) => toggleDropdown(facultyMember._id, e)} title="More options">
+                            <MoreVertical size={16} />
+                          </button>
+                          {openDropdown === facultyMember._id && (
+                            <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
+                              {facultyMember.status === "active" && (
+                                <button className="dropdown-item" onClick={() => { handleMarkOnLeave(facultyMember); setOpenDropdown(null); }}>
+                                  <Clock size={14} /><span>Mark as On Leave</span>
+                                </button>
+                              )}
+                              {facultyMember.email && (
+                                <button className="dropdown-item" onClick={() => { window.location.href = `mailto:${facultyMember.email}`; setOpenDropdown(null); }}>
+                                  <Mail size={14} /><span>Send Email</span>
+                                </button>
+                              )}
+                              {facultyMember.mobileNo && (
+                                <button className="dropdown-item" onClick={() => { window.open(`tel:${facultyMember.mobileNo}`); setOpenDropdown(null); }}>
+                                  <Phone size={14} /><span>Call Now</span>
+                                </button>
+                              )}
+                              {facultyMember.whatsappNo && (
+                                <button className="dropdown-item" onClick={() => { openWhatsApp(facultyMember.whatsappNo); setOpenDropdown(null); }}>
+                                  <MessageCircle size={14} /><span>WhatsApp</span>
+                                </button>
+                              )}
+                              <div className="dropdown-divider"></div>
+                              <button className="dropdown-item delete-option" onClick={() => { handleDeleteFaculty(facultyMember._id, facultyMember.facultyName); setOpenDropdown(null); }}>
+                                <Trash2 size={14} /><span>Delete Faculty</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
                 ))
               ) : (
                 <tr>
@@ -767,7 +778,6 @@ const FacultyList = () => {
             </div>
           ) : (
             <>
-              {/* ── Header row ── */}
               <table className="data-table fba-main-table">
                 <thead>
                   <tr>
@@ -782,12 +792,35 @@ const FacultyList = () => {
                   {batchesByFaculty.length > 0 ? (
                     batchesByFaculty.map((f) => (
                       <React.Fragment key={f.facultyId}>
-                        {/* ── Faculty row ── */}
                         <tr className={`fba-faculty-row ${expandedFaculty[f.facultyId] ? "fba-faculty-row--open" : ""}`}>
-                          {/* Faculty Details */}
+
+                          {/* Faculty Details — with photo */}
                           <td>
                             <div className="student-info">
-                              <div className="avatar fba-avatar-indigo">
+                              {/* Photo */}
+                              {f.facultyPhoto ? (
+                                <img
+                                  src={f.facultyPhoto}
+                                  alt={f.facultyName}
+                                  style={{
+                                    width: "36px",
+                                    height: "36px",
+                                    borderRadius: "50%",
+                                    objectFit: "cover",
+                                    flexShrink: 0,
+                                  }}
+                                  onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.style.display = "none";
+                                    e.target.nextSibling.style.display = "flex";
+                                  }}
+                                />
+                              ) : null}
+                              {/* Letter avatar fallback */}
+                              <div
+                                className="avatar fba-avatar-indigo"
+                                style={{ display: f.facultyPhoto ? "none" : "flex" }}
+                              >
                                 {f.facultyName?.charAt(0) || "?"}
                               </div>
                               <div>
@@ -798,7 +831,6 @@ const FacultyList = () => {
                             </div>
                           </td>
 
-                          {/* Contact Information */}
                           <td>
                             <div className="contact-info">
                               {f.facultyEmail && (
@@ -810,7 +842,6 @@ const FacultyList = () => {
                             </div>
                           </td>
 
-                          {/* Assignment Stats */}
                           <td>
                             <div className="fba-stats-cell">
                               <div className="fba-stat-item fba-stat--batches">
@@ -824,14 +855,12 @@ const FacultyList = () => {
                             </div>
                           </td>
 
-                          {/* Status */}
                           <td>
                             <div className="status-cell">
                               {getStatusBadge(f.facultyStatus)}
                             </div>
                           </td>
 
-                          {/* Actions */}
                           <td>
                             {f.totalBatchCount > 0 ? (
                               <button
@@ -851,7 +880,6 @@ const FacultyList = () => {
                           </td>
                         </tr>
 
-                        {/* ── Expanded batch cards row ── */}
                         {expandedFaculty[f.facultyId] && f.batches.length > 0 && (
                           <tr className="fba-expanded-row">
                             <td colSpan="5" className="fba-expanded-cell">
@@ -860,11 +888,8 @@ const FacultyList = () => {
                                   const studentCount = batch.studentCount ?? batch.students?.length ?? 0;
                                   return (
                                     <div key={batch._id || idx} className="fba-batch-card">
-                                      {/* Card header */}
                                       <div className="fba-card-header">
-                                        <div className="fba-card-icon">
-                                          <BookOpen size={15} />
-                                        </div>
+                                        <div className="fba-card-icon"><BookOpen size={15} /></div>
                                         <div className="fba-card-title">
                                           <span className="fba-batch-name">
                                             {batch.batchName || batch.name || `Batch ${idx + 1}`}
@@ -878,22 +903,6 @@ const FacultyList = () => {
                                           {studentCount} student{studentCount !== 1 ? "s" : ""}
                                         </span>
                                       </div>
-
-                                      {/* Student chips */}
-                                      {/* {batch.students && batch.students.length > 0 ? (
-                                        <div className="fba-student-chips">
-                                          {batch.students.map((student, sIdx) => (
-                                            <span key={student._id || sIdx} className="student-chip">
-                                              <span className="student-chip-avatar">
-                                                {(student.studentName || student.name || "S").charAt(0)}
-                                              </span>
-                                              {student.studentName || student.name || "Unknown"}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      ) : (
-                                        <p className="fba-no-students">No students enrolled yet</p>
-                                      )} */}
                                     </div>
                                   );
                                 })}
@@ -917,7 +926,6 @@ const FacultyList = () => {
                 </tbody>
               </table>
 
-              {/* Summary footer */}
               {batchesFetched && (
                 <div className="batches-summary-footer">
                   <span><BookOpen size={14} /> <strong>{totalBatches}</strong> total batches</span>
@@ -929,7 +937,6 @@ const FacultyList = () => {
         </div>
       )}
 
-      {/* Pagination — only on faculty tab */}
       {!loading && !error && activeTab === "faculty" && pagination.totalPages > 1 && (
         <div className="pagination">
           <div className="pagination-info">
