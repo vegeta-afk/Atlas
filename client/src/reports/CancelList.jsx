@@ -611,7 +611,7 @@ const CancelList = () => {
                   <td>
                     <div className="action-buttons">
                       <Link
-                        to={`/admin/front-office/admissions/view/${admission.id}`}
+                        to={`${basePath}/front-office/admissions/view/${admission.id}`}
                         className="action-btn view"
                         title="View Details"
                       >

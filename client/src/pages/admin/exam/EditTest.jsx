@@ -6,7 +6,7 @@ const EditTest = () => {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <Link to="${basePath}/exam/manage-tests" className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4">
+        <Link to={`${basePath}/exam/manage-tests`} className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4">
           <ArrowLeft size={20} />
           Back to Manage Tests
         </Link>

@@ -1,12 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, BarChart } from 'lucide-react';
+import useBasePath from "../../../hooks/useBasePath";
 
 const ExamResults = () => {
+  const basePath = useBasePath();
+
   return (
     <div className="p-6">
       <div className="mb-6">
-        <Link to="/admin/exam/manage-tests" className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4">
+        <Link to={`${basePath}/exam/manage-tests`} className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4">
           <ArrowLeft size={20} />
           Back to Tests
         </Link>

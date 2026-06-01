@@ -485,7 +485,7 @@ const CallLogs = () => {
                               </button>
                               {openDropdown === item._id && (
                                 <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
-                                  <Link to={`/admin/front-office/${activeTab === "admission" ? "admissions/view" : "enquiries/view"}/${item._id}`} className="dropdown-item">
+                                  <Link to={`${basePath}/front-office/${activeTab === "admission" ? "admissions/view" : "enquiries/view"}/${item._id}`} className="dropdown-item">
                                     <Eye size={14} /> View Details
                                   </Link>
                                   <button className="dropdown-item" onClick={() => openWhatsApp(item.mobileNumber || item.contactNo)}>

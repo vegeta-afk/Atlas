@@ -306,9 +306,9 @@ const ViewEnquiry = () => {
           <InfoCard title="Academic Details" icon={BookOpen}>
             <div className="info-grid">
               <InfoItem label="Qualification"   value={e.qualification} />
-              <InfoItem label="School / College" value={e.schoolCollege} />
+              {/* <InfoItem label="School / College" value={e.schoolCollege} /> */}
               <InfoItem label="Year of Passing"  value={e.yearOfPassing ? String(e.yearOfPassing) : null} />
-              <InfoItem label="Percentage"       value={e.percentage} />
+              {/* <InfoItem label="Percentage"       value={e.percentage} /> */}
             </div>
           </InfoCard>
 
@@ -319,11 +319,11 @@ const ViewEnquiry = () => {
             </div>
           </InfoCard>
 
-          <InfoCard title="Reference Details" icon={Globe}>
+          {/* <InfoCard title="Reference Details" icon={Globe}>
             <div className="info-grid">
               <InfoItem label="Reference" value={e.reference} />
             </div>
-          </InfoCard>
+          </InfoCard> */}
 
           <InfoCard title="Prospectus & Fees" icon={FileText}>
             <div className="info-grid">
