@@ -246,17 +246,31 @@ updateCategoryOrder: (data) => api.put("/setup/categories/order", data),
 };
 
 export const facultyAPI = {
-  // CRUD Operations
   getFaculty: (params) => api.get("/faculty", { params }),
   getFacultyById: (id) => api.get(`/faculty/${id}`),
-  createFaculty: (data) => api.post("/faculty", data),
-  updateFaculty: (id, data) => api.put(`/faculty/${id}`, data),
+
+  // ✅ FIXED: FormData check (same pattern as admissionAPI)
+  createFaculty: (data) => {
+    if (data instanceof FormData) {
+      return api.post("/faculty", data, {
+        headers: { "Content-Type": undefined },
+      });
+    }
+    return api.post("/faculty", data);
+  },
+
+  // ✅ FIXED: FormData check for update too
+  updateFaculty: (id, data) => {
+    if (data instanceof FormData) {
+      return api.put(`/faculty/${id}`, data, {
+        headers: { "Content-Type": undefined },
+      });
+    }
+    return api.put(`/faculty/${id}`, data);
+  },
+
   deleteFaculty: (id) => api.delete(`/faculty/${id}`),
-
-  // Special Operations
   updateFacultyStatus: (id, data) => api.put(`/faculty/${id}/status`, data),
-
-  // Dashboard
   getFacultyStats: () => api.get("/faculty/stats/dashboard"),
   getFacultyBatches: (id) => api.get(`/faculty/${id}/batches`),
   getBatchStudents: (facultyId, batchId) =>
