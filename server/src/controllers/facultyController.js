@@ -151,9 +151,6 @@ exports.getFacultyById = async (req, res) => {
 // @access  Private (Admin, HR)
 exports.createFaculty = async (req, res) => {
 
-  console.log("Content-Type:", req.headers["content-type"]);
-  console.log("req.file:", req.file);
-  console.log("req.body keys:", Object.keys(req.body));
   try {
     console.log("📦 Create Faculty - Request Body:", req.body);
  
