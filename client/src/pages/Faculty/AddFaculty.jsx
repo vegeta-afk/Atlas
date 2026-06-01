@@ -14,6 +14,8 @@ import {
   DollarSign,
   Copy,
   Check,
+  Camera,   // ← NEW
+  Upload,   // ← NEW
 } from "lucide-react";
 import "./AddFaculty.css";
 
@@ -22,23 +24,23 @@ const AddFaculty = () => {
   const basePath = "/admin";
 
   const [formData, setFormData] = useState({
-  dateOfJoining: "",
-  facultyName: "",
-  fathersName: "",
-  shiftStart: "",
-  shiftEnd: "",
-  lunchStart: "",
-  lunchEnd: "",
-  dateOfBirth: "",
-  email: "",
-  basicStipend: "",
-  mobileNo: "",
-  whatsappNo: "",
-  address: "",
-  fatherContactNo: "",
-  motherContactNo: "",
-  courseAllotted: "",
-});
+    dateOfJoining: "",
+    facultyName: "",
+    fathersName: "",
+    shiftStart: "",
+    shiftEnd: "",
+    lunchStart: "",
+    lunchEnd: "",
+    dateOfBirth: "",
+    email: "",
+    basicStipend: "",
+    mobileNo: "",
+    whatsappNo: "",
+    address: "",
+    fatherContactNo: "",
+    motherContactNo: "",
+    courseAllotted: "",
+  });
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,21 +48,25 @@ const AddFaculty = () => {
     "FAC" + Math.floor(1000 + Math.random() * 9000)
   );
 
-  // NEW STATES FOR PASSWORD MODAL
+  // ── NEW: Photo states ─────────────────────────────────────────────────────
+  const [facultyPhoto, setFacultyPhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // Password modal states
   const [createdFaculty, setCreatedFaculty] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [facultyPassword, setFacultyPassword] = useState("");
   const [isPasswordCopied, setIsPasswordCopied] = useState(false);
 
   const formatTo12Hour = (time24) => {
-  if (!time24) return "";
-  const [hours, minutes] = time24.split(":").map(Number);
-  const period = hours >= 12 ? "PM" : "AM";
-  const hours12 = hours % 12 || 12;
-  return `${hours12}:${String(minutes).padStart(2, "0")} ${period}`;
-};
+    if (!time24) return "";
+    const [hours, minutes] = time24.split(":").map(Number);
+    const period = hours >= 12 ? "PM" : "AM";
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${String(minutes).padStart(2, "0")} ${period}`;
+  };
 
-  // Format name to Proper Case
   const formatName = (name) => {
     if (!name) return "";
     return name
@@ -70,20 +76,38 @@ const AddFaculty = () => {
       .join(" ");
   };
 
-  // Format phone number to exactly 10 digits
   const formatPhoneNumber = (phone) => {
     if (!phone) return "";
-    // Remove all non-digits and take first 10 characters
-    const digits = phone.replace(/\D/g, "").slice(0, 10);
-    return digits;
+    return phone.replace(/\D/g, "").slice(0, 10);
   };
+
+  // ── NEW: Photo upload handler (same rules as AddAdmission) ────────────────
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 100 * 1024) {
+      alert("Photo size must be less than 100KB");
+      return;
+    }
+
+    if (!file.type.match("image/jpeg") && !file.type.match("image/jpg")) {
+      alert("Only JPEG/JPG images are allowed");
+      return;
+    }
+
+    setFacultyPhoto(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setPhotoPreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+  // ──────────────────────────────────────────────────────────────────────────
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
     let formattedValue = value;
 
-    // Apply formatting based on field type
     if (name === "facultyName" || name === "fathersName") {
       formattedValue = formatName(value);
     } else if (
@@ -95,30 +119,21 @@ const AddFaculty = () => {
       formattedValue = formatPhoneNumber(value);
     } else if (name === "basicStipend") {
       formattedValue = value.replace(/[^0-9]/g, "");
-    } else if (name === "email") {
-      formattedValue = value;
     } else if (name === "address") {
       formattedValue = value.charAt(0).toUpperCase() + value.slice(1);
     }
 
-    setFormData({
-      ...formData,
-      [name]: formattedValue,
-    });
+    setFormData({ ...formData, [name]: formattedValue });
 
-    // Clear error when user starts typing
     if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: "",
-      });
+      setErrors({ ...errors, [name]: "" });
     }
   };
 
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [courseError, setCourseError] = useState(null);
-  
+
   useEffect(() => {
     fetchCourses();
   }, []);
@@ -137,17 +152,9 @@ const AddFaculty = () => {
       }
     } catch (err) {
       console.error("Error fetching courses:", err);
-      setCourseError(
-        err.message || "Failed to load courses. Using default options."
-      );
-
-      // Fallback courses in case API fails
+      setCourseError(err.message || "Failed to load courses. Using default options.");
       setCourses([
-        {
-          _id: "1",
-          courseFullName: "B.Tech Computer Science",
-          courseShortName: "BTech CS",
-        },
+        { _id: "1", courseFullName: "B.Tech Computer Science", courseShortName: "BTech CS" },
         { _id: "2", courseFullName: "MBA", courseShortName: "MBA" },
         { _id: "3", courseFullName: "BBA", courseShortName: "BBA" },
         { _id: "4", courseFullName: "BCA", courseShortName: "BCA" },
@@ -163,31 +170,30 @@ const AddFaculty = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\d{10}$/;
 
-    // Required field validation
     const requiredFields = [
-  "dateOfJoining",
-  "facultyName",
-  "fathersName",
-  "shiftStart",
-  "shiftEnd",
-  "lunchStart",
-  "lunchEnd",
-  "dateOfBirth",
-  "email",
-  "basicStipend",
-  "mobileNo",
-  "address",
-  "fatherContactNo",
-  "motherContactNo",
-  "courseAllotted",
-];
+      "dateOfJoining",
+      "facultyName",
+      "fathersName",
+      "shiftStart",
+      "shiftEnd",
+      "lunchStart",
+      "lunchEnd",
+      "dateOfBirth",
+      "email",
+      "basicStipend",
+      "mobileNo",
+      "address",
+      "fatherContactNo",
+      "motherContactNo",
+      "courseAllotted",
+    ];
 
-if (formData.shiftStart && formData.shiftEnd && formData.shiftStart >= formData.shiftEnd) {
-  newErrors.shiftEnd = "End time must be after start time";
-}
-if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.lunchEnd) {
-  newErrors.lunchEnd = "Lunch end time must be after start time";
-}
+    if (formData.shiftStart && formData.shiftEnd && formData.shiftStart >= formData.shiftEnd) {
+      newErrors.shiftEnd = "End time must be after start time";
+    }
+    if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.lunchEnd) {
+      newErrors.lunchEnd = "Lunch end time must be after start time";
+    }
 
     requiredFields.forEach((field) => {
       if (!formData[field] || !formData[field].toString().trim()) {
@@ -195,41 +201,30 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
       }
     });
 
-    // Email validation
     if (formData.email && !emailRegex.test(formData.email)) {
       newErrors.email = "Please enter a valid email address";
     }
 
-    // Phone number validation (must be exactly 10 digits)
-    const phoneFields = [
-      "mobileNo",
-      "whatsappNo",
-      "fatherContactNo",
-      "motherContactNo",
-    ];
+    const phoneFields = ["mobileNo", "whatsappNo", "fatherContactNo", "motherContactNo"];
     phoneFields.forEach((field) => {
       if (formData[field] && !phoneRegex.test(formData[field])) {
         newErrors[field] = "Phone number must be exactly 10 digits";
       }
     });
 
-    // WhatsApp number is optional, but if provided, must be 10 digits
     if (formData.whatsappNo && !phoneRegex.test(formData.whatsappNo)) {
       newErrors.whatsappNo = "WhatsApp number must be exactly 10 digits";
     }
 
-    // Basic stipend validation
     if (formData.basicStipend && parseInt(formData.basicStipend) <= 0) {
       newErrors.basicStipend = "Stipend must be greater than 0";
     }
 
-    // Date validation: Date of joining should be after date of birth
     if (formData.dateOfJoining && formData.dateOfBirth) {
       const joinDate = new Date(formData.dateOfJoining);
       const birthDate = new Date(formData.dateOfBirth);
       if (joinDate < birthDate) {
-        newErrors.dateOfJoining =
-          "Date of joining cannot be before date of birth";
+        newErrors.dateOfJoining = "Date of joining cannot be before date of birth";
       }
     }
 
@@ -237,30 +232,24 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
     return Object.keys(newErrors).length === 0;
   };
 
-  // NEW: Function to copy password to clipboard
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(facultyPassword)
+    navigator.clipboard
+      .writeText(facultyPassword)
       .then(() => {
         setIsPasswordCopied(true);
         setTimeout(() => setIsPasswordCopied(false), 2000);
       })
-      .catch(err => {
-        console.error("Failed to copy: ", err);
-      });
+      .catch((err) => console.error("Failed to copy: ", err));
   };
 
-  // NEW: Function to handle modal close
   const handleClosePasswordModal = () => {
     setShowPasswordModal(false);
     setCreatedFaculty(null);
     setFacultyPassword("");
     setIsPasswordCopied(false);
-    
-    // Navigate back to faculty list
     navigate(`${basePath}/faculty`);
   };
 
-  // UPDATED handleSubmit function
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -272,7 +261,6 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
     setIsSubmitting(true);
 
     try {
-      // Prepare data for API
       const facultyData = {
         facultyNo: autoGeneratedNo,
         facultyName: formData.facultyName,
@@ -280,75 +268,81 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
         dateOfJoining: formData.dateOfJoining,
         dateOfBirth: formData.dateOfBirth,
         shift: `${formData.shiftStart}-${formData.shiftEnd}`,
-       lunchTime: `${formData.lunchStart}-${formData.lunchEnd}`,
+        lunchTime: `${formData.lunchStart}-${formData.lunchEnd}`,
         email: formData.email,
         mobileNo: formData.mobileNo,
-        whatsappNo: formData.whatsappNo || formData.mobileNo, // Default to mobile
+        whatsappNo: formData.whatsappNo || formData.mobileNo,
         address: formData.address,
         fatherContactNo: formData.fatherContactNo,
         motherContactNo: formData.motherContactNo,
         basicStipend: parseFloat(formData.basicStipend) || 0,
-        status: "active", // Default status
+        status: "active",
         courseAssigned: formData.courseAllotted,
       };
 
-      // Call API
-      const response = await facultyAPI.createFaculty(facultyData);
+      // ── NEW: Use FormData if photo selected, else plain JSON ──────────────
+      let payload;
+      if (facultyPhoto) {
+        payload = new FormData();
+        Object.entries(facultyData).forEach(([key, value]) => {
+          if (value !== null && value !== undefined) {
+            payload.append(key, typeof value === "object" ? JSON.stringify(value) : value);
+          }
+        });
+        payload.append("photo", facultyPhoto);
+      } else {
+        payload = facultyData;
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
+      const response = await facultyAPI.createFaculty(payload);
 
       if (response.data.success) {
-        // Show success modal with password
         setCreatedFaculty(response.data.data.faculty || response.data.data);
-        
-        // Check if password is returned from backend
+
         if (response.data.data.user && response.data.data.user.defaultPassword) {
           setFacultyPassword(response.data.data.user.defaultPassword);
         } else {
-          setFacultyPassword("Faculty@123"); // Default fallback
+          setFacultyPassword("Faculty@123");
         }
-        
+
         setShowPasswordModal(true);
-        
-        // Reset form
+
+        // Reset form + photo
         setFormData({
-  dateOfJoining: "",
-  facultyName: "",
-  fathersName: "",
-  shiftStart: "",
-  shiftEnd: "",
-  lunchStart: "",
-  lunchEnd: "",
-  dateOfBirth: "",
-  email: "",
-  basicStipend: "",
-  mobileNo: "",
-  whatsappNo: "",
-  address: "",
-  fatherContactNo: "",
-  motherContactNo: "",
-  courseAllotted: "",
-});
+          dateOfJoining: "",
+          facultyName: "",
+          fathersName: "",
+          shiftStart: "",
+          shiftEnd: "",
+          lunchStart: "",
+          lunchEnd: "",
+          dateOfBirth: "",
+          email: "",
+          basicStipend: "",
+          mobileNo: "",
+          whatsappNo: "",
+          address: "",
+          fatherContactNo: "",
+          motherContactNo: "",
+          courseAllotted: "",
+        });
+        setFacultyPhoto(null);     // ← NEW
+        setPhotoPreview(null);     // ← NEW
         setErrors({});
-        
       } else {
         throw new Error(response.data.message || "Failed to add faculty");
       }
     } catch (err) {
       console.error("Error adding faculty:", err);
-      alert(
-        err.response?.data?.message ||
-          "Failed to add faculty. Please try again."
-      );
+      alert(err.response?.data?.message || "Failed to add faculty. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleCancel = () => {
-    if (
-      window.confirm(
-        "Are you sure you want to cancel? All unsaved changes will be lost."
-      )
-    ) {
+    if (window.confirm("Are you sure you want to cancel? All unsaved changes will be lost.")) {
       navigate(`${basePath}/faculty`);
     }
   };
@@ -363,10 +357,7 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
       const currentIndex = Array.from(focusableElements).indexOf(e.target);
       if (currentIndex < focusableElements.length - 1) {
         const nextElement = focusableElements[currentIndex + 1];
-        if (
-          nextElement.tagName !== "BUTTON" ||
-          currentIndex === focusableElements.length - 2
-        ) {
+        if (nextElement.tagName !== "BUTTON" || currentIndex === focusableElements.length - 2) {
           nextElement.focus();
         }
       }
@@ -374,27 +365,28 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
   };
 
   const handleReset = () => {
-  setFormData({
-    dateOfJoining: "",
-    facultyName: "",
-    fathersName: "",
-    shiftStart: "",      // ✅ updated
-    shiftEnd: "",        // ✅ updated
-    lunchStart: "",      // ✅ updated
-    lunchEnd: "",        // ✅ updated
-    dateOfBirth: "",
-    email: "",
-    basicStipend: "",
-    mobileNo: "",
-    whatsappNo: "",
-    address: "",
-    fatherContactNo: "",
-    motherContactNo: "",
-    courseAllotted: "",
-    // removed dateOfLeaving ✅
-  });
-  setErrors({});
-};
+    setFormData({
+      dateOfJoining: "",
+      facultyName: "",
+      fathersName: "",
+      shiftStart: "",
+      shiftEnd: "",
+      lunchStart: "",
+      lunchEnd: "",
+      dateOfBirth: "",
+      email: "",
+      basicStipend: "",
+      mobileNo: "",
+      whatsappNo: "",
+      address: "",
+      fatherContactNo: "",
+      motherContactNo: "",
+      courseAllotted: "",
+    });
+    setFacultyPhoto(null);   // ← NEW
+    setPhotoPreview(null);   // ← NEW
+    setErrors({});
+  };
 
   return (
     <div className="new-enquiry-container">
@@ -424,252 +416,278 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
       </div>
 
       <form onSubmit={handleSubmit} className="enquiry-form">
-        {/* Section 1: Faculty Details */}
+
+        {/* ── Section 1: Faculty Details ──────────────────────────────────── */}
         <div className="form-card">
           <div className="card-header">
             <User size={20} />
             <h3>Faculty Details</h3>
           </div>
           <div className="card-content">
+
+            {/* NEW: photo + form-grid side by side */}
+            <div className="faculty-details-grid">
+
+              {/* Photo upload column */}
+              <div className="faculty-photo-section">
+                <div className="photo-upload-container">
+                  <div className="photo-preview">
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="Faculty Preview" />
+                    ) : (
+                      <div className="photo-placeholder">
+                        <Camera size={40} />
+                        <span>Faculty Photo</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="photo-upload-controls">
+                    <label className="photo-upload-btn">
+                      <input
+                        type="file"
+                        accept=".jpg,.jpeg"
+                        onChange={handlePhotoUpload}
+                        className="file-input"
+                      />
+                      <Upload size={15} />
+                      Upload Photo
+                    </label>
+                    <p className="photo-note">Max 100KB, JPEG/JPG only</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Form fields column */}
+              <div className="faculty-info-section">
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Faculty No</label>
+                    <input
+                      type="text"
+                      value={autoGeneratedNo}
+                      readOnly
+                      className="enquiry-no"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>
+                      Date of Joining <span className="required-star">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      name="dateOfJoining"
+                      value={formData.dateOfJoining}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      max={new Date().toISOString().split("T")[0]}
+                      className={errors.dateOfJoining ? "error-field" : ""}
+                    />
+                    {errors.dateOfJoining && (
+                      <span className="error-text">{errors.dateOfJoining}</span>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label>
+                      Faculty Name <span className="required-star">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="facultyName"
+                      value={formData.facultyName}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Full name of faculty"
+                      className={errors.facultyName ? "error-field" : ""}
+                    />
+                    {errors.facultyName && (
+                      <span className="error-text">{errors.facultyName}</span>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label>
+                      Father's Name <span className="required-star">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="fathersName"
+                      value={formData.fathersName}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Father's name"
+                      className={errors.fathersName ? "error-field" : ""}
+                    />
+                    {errors.fathersName && (
+                      <span className="error-text">{errors.fathersName}</span>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label>
+                      Date of Birth <span className="required-star">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      name="dateOfBirth"
+                      value={formData.dateOfBirth}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      max={new Date().toISOString().split("T")[0]}
+                      className={errors.dateOfBirth ? "error-field" : ""}
+                    />
+                    {errors.dateOfBirth && (
+                      <span className="error-text">{errors.dateOfBirth}</span>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label>
+                      Course Allotted <span className="required-star">*</span>
+                    </label>
+                    <select
+                      name="courseAllotted"
+                      value={formData.courseAllotted}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      className={errors.courseAllotted ? "error-field" : ""}
+                      disabled={loadingCourses}
+                    >
+                      <option value="">
+                        {loadingCourses ? "Loading courses..." : "Select Course"}
+                      </option>
+                      <option value="general_subjects">General Subjects</option>
+                      {courses.map((course) => (
+                        <option key={course._id} value={course.courseFullName}>
+                          {course.courseFullName}
+                          {course.courseShortName ? ` (${course.courseShortName})` : ""}
+                        </option>
+                      ))}
+                      <option value="not_allotted">Not Allotted</option>
+                    </select>
+                    {loadingCourses && (
+                      <span className="loading-text">Loading courses...</span>
+                    )}
+                    {courseError && !loadingCourses && (
+                      <span className="error-text" style={{ color: "orange", fontSize: "12px" }}>
+                        ⚠️ {courseError}
+                      </span>
+                    )}
+                    {errors.courseAllotted && (
+                      <span className="error-text">{errors.courseAllotted}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+            {/* END faculty-details-grid */}
+
+          </div>
+        </div>
+
+        {/* ── Section 2: Work Details ─────────────────────────────────────── */}
+        <div className="form-card">
+          <div className="card-header">
+            <Calendar size={20} />
+            <h3>Work Details</h3>
+          </div>
+          <div className="card-content">
             <div className="form-grid">
+
+              <div className="form-group full-width">
+                <label>
+                  Faculty Timing Shift <span className="required-star">*</span>
+                </label>
+                <div className="time-range-wrapper">
+                  <div className="time-range-inputs">
+                    <input
+                      type="time"
+                      name="shiftStart"
+                      value={formData.shiftStart}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      className={errors.shiftStart ? "error-field" : ""}
+                    />
+                    <span className="time-range-separator">to</span>
+                    <input
+                      type="time"
+                      name="shiftEnd"
+                      value={formData.shiftEnd}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      className={errors.shiftEnd ? "error-field" : ""}
+                    />
+                  </div>
+                  {formData.shiftStart && formData.shiftEnd && (
+                    <span className="time-range-display">
+                      {formatTo12Hour(formData.shiftStart)} to {formatTo12Hour(formData.shiftEnd)}
+                    </span>
+                  )}
+                </div>
+                {errors.shiftStart && <span className="error-text">{errors.shiftStart}</span>}
+                {errors.shiftEnd && <span className="error-text">{errors.shiftEnd}</span>}
+              </div>
+
+              <div className="form-group full-width">
+                <label>
+                  Faculty Lunch Time <span className="required-star">*</span>
+                </label>
+                <div className="time-range-wrapper">
+                  <div className="time-range-inputs">
+                    <input
+                      type="time"
+                      name="lunchStart"
+                      value={formData.lunchStart}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      className={errors.lunchStart ? "error-field" : ""}
+                    />
+                    <span className="time-range-separator">to</span>
+                    <input
+                      type="time"
+                      name="lunchEnd"
+                      value={formData.lunchEnd}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      className={errors.lunchEnd ? "error-field" : ""}
+                    />
+                  </div>
+                  {formData.lunchStart && formData.lunchEnd && (
+                    <span className="time-range-display">
+                      {formatTo12Hour(formData.lunchStart)} to {formatTo12Hour(formData.lunchEnd)}
+                    </span>
+                  )}
+                </div>
+                {errors.lunchStart && <span className="error-text">{errors.lunchStart}</span>}
+                {errors.lunchEnd && <span className="error-text">{errors.lunchEnd}</span>}
+              </div>
+
               <div className="form-group">
-                <label>Faculty No</label>
+                <label>
+                  Basic Stipend (₹) <span className="required-star">*</span>
+                </label>
                 <input
                   type="text"
-                  value={autoGeneratedNo}
-                  readOnly
-                  className="enquiry-no"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>
-                  Date of Joining <span className="required-star">*</span>
-                </label>
-                <input
-                  type="date"
-                  name="dateOfJoining"
-                  value={formData.dateOfJoining}
+                  name="basicStipend"
+                  value={formData.basicStipend}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  max={new Date().toISOString().split("T")[0]}
-                  className={errors.dateOfJoining ? "error-field" : ""}
+                  placeholder="Monthly stipend amount"
+                  className={errors.basicStipend ? "error-field" : ""}
                 />
-                {errors.dateOfJoining && (
-                  <span className="error-text">{errors.dateOfJoining}</span>
+                {errors.basicStipend && (
+                  <span className="error-text">{errors.basicStipend}</span>
                 )}
               </div>
 
-              <div className="form-group">
-                <label>
-                  Faculty Name <span className="required-star">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="facultyName"
-                  value={formData.facultyName}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Full name of faculty"
-                  className={errors.facultyName ? "error-field" : ""}
-                />
-                {errors.facultyName && (
-                  <span className="error-text">{errors.facultyName}</span>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label>
-                  Father's Name <span className="required-star">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="fathersName"
-                  value={formData.fathersName}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Father's name"
-                  className={errors.fathersName ? "error-field" : ""}
-                />
-                {errors.fathersName && (
-                  <span className="error-text">{errors.fathersName}</span>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label>
-                  Date of Birth <span className="required-star">*</span>
-                </label>
-                <input
-                  type="date"
-                  name="dateOfBirth"
-                  value={formData.dateOfBirth}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  max={new Date().toISOString().split("T")[0]}
-                  className={errors.dateOfBirth ? "error-field" : ""}
-                />
-                {errors.dateOfBirth && (
-                  <span className="error-text">{errors.dateOfBirth}</span>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label>
-                  Course Allotted <span className="required-star">*</span>
-                </label>
-                <select
-                  name="courseAllotted"
-                  value={formData.courseAllotted}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  className={errors.courseAllotted ? "error-field" : ""}
-                  disabled={loadingCourses}
-                >
-                  <option value="">
-                    {loadingCourses ? "Loading courses..." : "Select Course"}
-                  </option>
-                 <option value="general_subjects">General Subjects</option> 
-                 {courses.map((course) => (
-                    <option key={course._id} value={course.courseFullName}>
-                      {" "}
-                      {/* Send name */}
-                      {course.courseFullName}
-                      {course.courseShortName
-                        ? ` (${course.courseShortName})`
-                        : ""}
-                    </option>
-                  ))}
-                  
-                  
-                  <option value="not_allotted">Not Allotted</option>
-                </select>
-
-                {/* Show loading or error messages */}
-                {loadingCourses && (
-                  <span className="loading-text">Loading courses...</span>
-                )}
-                {courseError && !loadingCourses && (
-                  <span
-                    className="error-text"
-                    style={{ color: "orange", fontSize: "12px" }}
-                  >
-                    ⚠️ {courseError}
-                  </span>
-                )}
-                {errors.courseAllotted && (
-                  <span className="error-text">{errors.courseAllotted}</span>
-                )}
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Section 2: Work Details */}
-        {/* Section 2: Work Details */}
-<div className="form-card">
-  <div className="card-header">
-    <Calendar size={20} />
-    <h3>Work Details</h3>
-  </div>
-  <div className="card-content">
-    <div className="form-grid">
-
-      {/* Shift time range */}
-      <div className="form-group full-width">
-        <label>
-          Faculty Timing Shift <span className="required-star">*</span>
-        </label>
-        <div className="time-range-wrapper">
-          <div className="time-range-inputs">
-            <input
-              type="time"
-              name="shiftStart"
-              value={formData.shiftStart}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              className={errors.shiftStart ? "error-field" : ""}
-            />
-            <span className="time-range-separator">to</span>
-            <input
-              type="time"
-              name="shiftEnd"
-              value={formData.shiftEnd}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              className={errors.shiftEnd ? "error-field" : ""}
-            />
-          </div>
-          {formData.shiftStart && formData.shiftEnd && (
-            <span className="time-range-display">
-              {formatTo12Hour(formData.shiftStart)} to {formatTo12Hour(formData.shiftEnd)}
-            </span>
-          )}
-        </div>
-        {errors.shiftStart && <span className="error-text">{errors.shiftStart}</span>}
-        {errors.shiftEnd && <span className="error-text">{errors.shiftEnd}</span>}
-      </div>
-
-      {/* Lunch time range */}
-      <div className="form-group full-width">
-        <label>
-          Faculty Lunch Time <span className="required-star">*</span>
-        </label>
-        <div className="time-range-wrapper">
-          <div className="time-range-inputs">
-            <input
-              type="time"
-              name="lunchStart"
-              value={formData.lunchStart}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              className={errors.lunchStart ? "error-field" : ""}
-            />
-            <span className="time-range-separator">to</span>
-            <input
-              type="time"
-              name="lunchEnd"
-              value={formData.lunchEnd}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              className={errors.lunchEnd ? "error-field" : ""}
-            />
-          </div>
-          {formData.lunchStart && formData.lunchEnd && (
-            <span className="time-range-display">
-              {formatTo12Hour(formData.lunchStart)} to {formatTo12Hour(formData.lunchEnd)}
-            </span>
-          )}
-        </div>
-        {errors.lunchStart && <span className="error-text">{errors.lunchStart}</span>}
-        {errors.lunchEnd && <span className="error-text">{errors.lunchEnd}</span>}
-      </div>
-
-      <div className="form-group">
-        <label>
-          Basic Stipend (₹) <span className="required-star">*</span>
-        </label>
-        <input
-          type="text"
-          name="basicStipend"
-          value={formData.basicStipend}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Monthly stipend amount"
-          className={errors.basicStipend ? "error-field" : ""}
-        />
-        {errors.basicStipend && (
-          <span className="error-text">{errors.basicStipend}</span>
-        )}
-      </div>
-
-    </div>
-  </div>
-</div>
-
-        {/* Section 3: Contact Information */}
+        {/* ── Section 3: Contact Information ──────────────────────────────── */}
         <div className="form-sections-row">
-          {/* Left Column - Contact Details */}
           <div className="form-column">
             <div className="form-card">
               <div className="card-header">
@@ -736,7 +754,6 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
             </div>
           </div>
 
-          {/* Right Column - Parent Contact Details */}
           <div className="form-column">
             <div className="form-card">
               <div className="card-header">
@@ -760,9 +777,7 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
                       className={errors.fatherContactNo ? "error-field" : ""}
                     />
                     {errors.fatherContactNo && (
-                      <span className="error-text">
-                        {errors.fatherContactNo}
-                      </span>
+                      <span className="error-text">{errors.fatherContactNo}</span>
                     )}
                   </div>
 
@@ -781,9 +796,7 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
                       className={errors.motherContactNo ? "error-field" : ""}
                     />
                     {errors.motherContactNo && (
-                      <span className="error-text">
-                        {errors.motherContactNo}
-                      </span>
+                      <span className="error-text">{errors.motherContactNo}</span>
                     )}
                   </div>
 
@@ -821,7 +834,7 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
         </div>
       </form>
 
-      {/* NEW: Password Success Modal */}
+      {/* Password Success Modal — unchanged */}
       {showPasswordModal && createdFaculty && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -831,7 +844,7 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
                 ×
               </button>
             </div>
-            
+
             <div className="modal-body">
               <div className="success-icon">
                 <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
@@ -839,14 +852,14 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
                   <polyline points="22 4 12 14.01 9 11.01"></polyline>
                 </svg>
               </div>
-              
+
               <div className="faculty-info">
                 <h3>{createdFaculty.facultyName}</h3>
                 <p><strong>Faculty No:</strong> {createdFaculty.facultyNo}</p>
                 <p><strong>Email:</strong> {createdFaculty.email}</p>
                 <p><strong>Course:</strong> {createdFaculty.courseAssigned || "Not Assigned"}</p>
               </div>
-              
+
               <div className="password-section">
                 <h4>Login Credentials</h4>
                 <div className="password-display">
@@ -859,12 +872,12 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
                     </button>
                   </div>
                   <p className="password-note">
-                    ⚠️ Please share this password with the faculty member securely. 
+                    ⚠️ Please share this password with the faculty member securely.
                     They should change it on first login.
                   </p>
                 </div>
               </div>
-              
+
               <div className="login-instructions">
                 <h4>How to Login:</h4>
                 <ol>
@@ -874,7 +887,7 @@ if (formData.lunchStart && formData.lunchEnd && formData.lunchStart >= formData.
                 </ol>
               </div>
             </div>
-            
+
             <div className="modal-footer">
               <button onClick={handleClosePasswordModal} className="btn-primary">
                 Done

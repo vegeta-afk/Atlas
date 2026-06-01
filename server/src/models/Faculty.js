@@ -1,3 +1,4 @@
+// models/Faculty.js
 const mongoose = require("mongoose");
 
 const facultySchema = new mongoose.Schema(
@@ -95,6 +96,14 @@ const facultySchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+
+    // ── NEW: Cloudinary photo URL ─────────────────────────────────────────
+    photo: {
+      type: String,
+      default: "",
+    },
+    // ─────────────────────────────────────────────────────────────────────
+
     status: {
       type: String,
       enum: ["active", "inactive", "on-leave"],

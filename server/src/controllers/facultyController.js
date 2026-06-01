@@ -152,7 +152,17 @@ exports.getFacultyById = async (req, res) => {
 exports.createFaculty = async (req, res) => {
   try {
     console.log("📦 Create Faculty - Request Body:", req.body);
-
+ 
+    // ── NEW: Cloudinary photo upload (same pattern as admission) ──────────
+    let photoUrl = null;
+    if (req.file) {
+      const { uploadToCloudinary } = require("../config/cloudinary");
+      const result = await uploadToCloudinary(req.file.buffer);
+      photoUrl = result.secure_url;
+      console.log("📸 Faculty photo uploaded to Cloudinary:", photoUrl);
+    }
+    // ─────────────────────────────────────────────────────────────────────
+ 
     // Check if mobile number already exists in ACTIVE records only
     if (req.body.mobileNo) {
       const existingMobile = await Faculty.findOne({
@@ -166,7 +176,7 @@ exports.createFaculty = async (req, res) => {
         });
       }
     }
-
+ 
     // Check if email already exists in Faculty records
     if (req.body.email) {
       const existingFacultyEmail = await Faculty.findOne({
@@ -178,7 +188,7 @@ exports.createFaculty = async (req, res) => {
           message: "Email already registered in faculty records",
         });
       }
-
+ 
       // Check if email already exists in User records
       const existingUserEmail = await User.findOne({
         email: req.body.email.toLowerCase(),
@@ -190,63 +200,62 @@ exports.createFaculty = async (req, res) => {
         });
       }
     }
-
+ 
     // Build faculty data
     const facultyData = {
-      facultyName: req.body.facultyName,
-      fathersName: req.body.fathersName,
-      dateOfJoining: req.body.dateOfJoining,
-      dateOfBirth: req.body.dateOfBirth,
-      shift: req.body.shift,
-      lunchTime: req.body.lunchTime,
-      email: req.body.email || "",
-      mobileNo: req.body.mobileNo,
-      whatsappNo: req.body.whatsappNo || req.body.mobileNo,
-      address: req.body.address,
+      facultyName:    req.body.facultyName,
+      fathersName:    req.body.fathersName,
+      dateOfJoining:  req.body.dateOfJoining,
+      dateOfBirth:    req.body.dateOfBirth,
+      shift:          req.body.shift,
+      lunchTime:      req.body.lunchTime,
+      email:          req.body.email || "",
+      mobileNo:       req.body.mobileNo,
+      whatsappNo:     req.body.whatsappNo || req.body.mobileNo,
+      address:        req.body.address,
       fatherContactNo: req.body.fatherContactNo,
       motherContactNo: req.body.motherContactNo,
-      basicStipend: req.body.basicStipend,
+      basicStipend:   req.body.basicStipend,
       courseAssigned: req.body.courseAssigned || "",
-      status: req.body.status || "active",
-      dateOfLeaving: req.body.dateOfLeaving || null,
-      createdBy: req.user ? req.user.id : null,
+      status:         req.body.status || "active",
+      dateOfLeaving:  req.body.dateOfLeaving || null,
+      createdBy:      req.user ? req.user.id : null,
+      photo:          photoUrl || "",   // ← NEW
     };
-
+ 
     if (req.body.facultyNo) {
       facultyData.facultyNo = req.body.facultyNo;
     }
-
+ 
     // ✅ Step 1: Create Faculty record
     const faculty = await Faculty.create(facultyData);
     console.log("✅ Faculty created:", faculty._id.toString());
-
+ 
     // ✅ Step 2: Build user email
     const userEmail = req.body.email
       ? req.body.email.toLowerCase().trim()
       : `${req.body.facultyName.replace(/\s+/g, ".").toLowerCase()}@faculty.com`;
-
+ 
     console.log(`📧 User email will be: ${userEmail}`);
     console.log(`🔗 facultyId to link: ${faculty._id.toString()}`);
-
+ 
     // ✅ Step 3: Check if user already exists with this email
     const existingUser = await User.findOne({ email: userEmail });
-
+ 
     if (existingUser) {
       console.log(`⚠️ User already exists: ${existingUser._id}`);
       console.log(`   facultyId before update: ${existingUser.facultyId || "MISSING"}`);
-
-      // Link the existing user to this faculty
-      existingUser.facultyId = faculty._id;
-      existingUser.role = "instructor";
-      existingUser.name = req.body.facultyName;
+ 
+      existingUser.facultyId  = faculty._id;
+      existingUser.role       = "instructor";
+      existingUser.name       = req.body.facultyName;
       existingUser.mobileNumber = req.body.mobileNo;
-
+ 
       await existingUser.save();
-      
-      // Verify the update
+ 
       const verifiedUser = await User.findById(existingUser._id).lean();
-      console.log(`✅ Verified facultyId after update: ${verifiedUser.facultyId ? verifiedUser.facultyId.toString() : 'STILL MISSING'}`);
-
+      console.log(`✅ Verified facultyId after update: ${verifiedUser.facultyId ? verifiedUser.facultyId.toString() : "STILL MISSING"}`);
+ 
       return res.status(201).json({
         success: true,
         message: "Faculty created and linked to existing user account",
@@ -261,56 +270,52 @@ exports.createFaculty = async (req, res) => {
         },
       });
     }
-
+ 
     // ✅ Step 4: Create brand new user
     const defaultPassword = "Faculty@123";
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(defaultPassword, salt);
-
+    const salt            = await bcrypt.genSalt(10);
+    const hashedPassword  = await bcrypt.hash(defaultPassword, salt);
+ 
     console.log("📝 Creating new User with data:");
     console.log({
-      name: req.body.facultyName,
-      email: userEmail,
-      role: "instructor",
+      name:      req.body.facultyName,
+      email:     userEmail,
+      role:      "instructor",
       facultyId: faculty._id.toString(),
     });
-
-    // CRITICAL: Create user with explicit ObjectId
+ 
     const newUser = new User({
-      name: req.body.facultyName,
-      email: userEmail,
-      password: hashedPassword,
+      name:         req.body.facultyName,
+      email:        userEmail,
+      password:     hashedPassword,
       mobileNumber: req.body.mobileNo,
-      role: "instructor",
-      facultyId: new mongoose.Types.ObjectId(faculty._id),  // ✅ Explicit ObjectId cast
-      isVerified: true,
+      role:         "instructor",
+      facultyId:    new mongoose.Types.ObjectId(faculty._id),
+      isVerified:   true,
     });
-
-    // ✅ Step 5: Save and immediately verify facultyId was written
+ 
+    // ✅ Step 5: Save and verify facultyId was written
     await newUser.save();
     console.log("✅ New user saved:", newUser._id.toString());
-
+ 
     // ✅ Step 6: Read back from DB to confirm facultyId is actually stored
     const savedUser = await User.findById(newUser._id).lean();
-
+ 
     if (!savedUser.facultyId) {
       console.error("🚨 CRITICAL: facultyId NOT saved, running force repair...");
-      
-      // Force repair with explicit update
+ 
       const updateResult = await User.findByIdAndUpdate(
         newUser._id,
         { $set: { facultyId: new mongoose.Types.ObjectId(faculty._id) } },
-        { new: true } // Return the updated document
+        { new: true }
       );
-      
+ 
       if (updateResult && updateResult.facultyId) {
         console.log(`🔧 Force repair successful: ${updateResult.facultyId.toString()}`);
       } else {
         console.error("🔧 Force repair FAILED!");
-        
-        // Last resort: direct MongoDB update
         const db = mongoose.connection.db;
-        const collection = db.collection('users');
+        const collection = db.collection("users");
         await collection.updateOne(
           { _id: newUser._id },
           { $set: { facultyId: faculty._id } }
@@ -320,33 +325,33 @@ exports.createFaculty = async (req, res) => {
     } else {
       console.log("✅ Verified facultyId:", savedUser.facultyId.toString());
     }
-
+ 
     // ✅ Step 7: Final verification
     const finalUser = await User.findById(newUser._id).lean();
     console.log("🔍 FINAL VERIFICATION:", {
-      id: finalUser._id,
-      email: finalUser.email,
-      facultyId: finalUser.facultyId ? finalUser.facultyId.toString() : '❌ MISSING',
-      hasFacultyId: !!finalUser.facultyId
+      id:          finalUser._id,
+      email:       finalUser.email,
+      facultyId:   finalUser.facultyId ? finalUser.facultyId.toString() : "❌ MISSING",
+      hasFacultyId: !!finalUser.facultyId,
     });
-
+ 
     return res.status(201).json({
       success: true,
       message: "Faculty created successfully with login account",
       data: {
         faculty: faculty,
         user: {
-          id: newUser._id,
-          email: newUser.email,
-          role: newUser.role,
+          id:              newUser._id,
+          email:           newUser.email,
+          role:            newUser.role,
           defaultPassword: defaultPassword,
         },
       },
     });
-
+ 
   } catch (error) {
     console.error("❌ Create faculty error:", error);
-
+ 
     if (error.name === "ValidationError") {
       console.error("Validation errors:", error.errors);
       return res.status(400).json({
@@ -355,14 +360,14 @@ exports.createFaculty = async (req, res) => {
         errors: error.errors,
       });
     }
-
+ 
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
         message: "Duplicate entry. Faculty number or email already exists.",
       });
     }
-
+ 
     res.status(500).json({
       success: false,
       message: error.message || "Failed to create faculty",
@@ -376,18 +381,27 @@ exports.createFaculty = async (req, res) => {
 // @access  Private (Admin, HR)
 exports.updateFaculty = async (req, res) => {
   try {
+    // ── NEW: Cloudinary photo upload (same pattern as admission) ──────────
+    if (req.file) {
+      const { uploadToCloudinary } = require("../config/cloudinary");
+      const result = await uploadToCloudinary(req.file.buffer);
+      req.body.photo = result.secure_url;
+      console.log("📸 Faculty photo updated on Cloudinary:", req.body.photo);
+    }
+    // ─────────────────────────────────────────────────────────────────────
+ 
     const faculty = await Faculty.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     }).select("-__v");
-
+ 
     if (!faculty) {
       return res.status(404).json({
         success: false,
         message: "Faculty not found",
       });
     }
-
+ 
     // Also update User account if email or name changed
     if (req.body.email || req.body.facultyName) {
       const updateData = {};
@@ -397,14 +411,14 @@ exports.updateFaculty = async (req, res) => {
       if (req.body.facultyName) {
         updateData.name = req.body.facultyName;
       }
-
+ 
       await User.findOneAndUpdate(
         { facultyId: faculty._id },
         updateData,
         { new: true, runValidators: true }
       );
     }
-
+ 
     res.json({
       success: true,
       message: "Faculty updated successfully",
@@ -412,7 +426,7 @@ exports.updateFaculty = async (req, res) => {
     });
   } catch (error) {
     console.error("Update faculty error:", error);
-
+ 
     if (error.name === "ValidationError") {
       return res.status(400).json({
         success: false,
@@ -420,7 +434,7 @@ exports.updateFaculty = async (req, res) => {
         errors: error.errors,
       });
     }
-
+ 
     res.status(500).json({
       success: false,
       message: "Server error",

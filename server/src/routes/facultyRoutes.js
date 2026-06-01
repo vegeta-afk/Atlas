@@ -2,14 +2,15 @@ const express = require("express");
 const router = express.Router();
 const facultyController = require("../controllers/facultyController");
 const { protect, authorize } = require("../middlewares/authMiddleware");
+const { upload } = require("../config/cloudinary");
 
 router.use(protect);
 
 // ======================
 // STATIC / SPECIFIC ROUTES FIRST
 // ======================
+router.post("/", authorize("admin", "hr"), upload.single("photo"), facultyController.createFaculty);
 
-router.post("/", authorize("admin", "hr"), facultyController.createFaculty);
 
 router.get("/", authorize("admin", "hr", "instructor"), facultyController.getFaculty);
 
@@ -30,7 +31,7 @@ router.put("/:id/status", authorize("admin", "hr"), facultyController.updateFacu
 
 router.route("/:id")
   .get(authorize("admin", "hr"), facultyController.getFacultyById)
-  .put(authorize("admin", "hr"), facultyController.updateFaculty)
+  .put(authorize("admin", "hr"), upload.single("photo"), facultyController.updateFaculty)
   .delete(authorize("admin"), facultyController.deleteFaculty);
 
 // Shared routes (admin views any, faculty views own — enforced in controller)

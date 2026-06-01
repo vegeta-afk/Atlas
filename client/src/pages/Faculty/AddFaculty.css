@@ -631,3 +631,111 @@
   border-radius: 6px;
   width: fit-content;
 }
+
+/* ── APPEND THESE TO THE BOTTOM OF AddFaculty.css ── */
+
+/* Photo + form fields layout inside Faculty Details card */
+.faculty-details-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.faculty-photo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.faculty-info-section {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Photo upload container */
+.photo-upload-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.photo-preview {
+  width: 140px;
+  height: 170px;
+  border: 2px dashed #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+}
+
+.photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #94a3b8;
+}
+
+.photo-placeholder span {
+  font-size: 12px;
+  text-align: center;
+}
+
+/* Upload controls */
+.photo-upload-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.photo-upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: #4f46e5;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.photo-upload-btn:hover {
+  background: #4338ca;
+}
+
+.file-input {
+  display: none;
+}
+
+.photo-note {
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+  margin: 0;
+}
+
+/* Stack on smaller screens */
+@media (max-width: 768px) {
+  .faculty-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .faculty-photo-section {
+    align-items: center;
+  }
+}
