@@ -295,6 +295,14 @@ const AddFaculty = () => {
       }
       // ─────────────────────────────────────────────────────────────────────
 
+       if (payload instanceof FormData) {
+  console.log("✅ Sending as FormData");
+  console.log("photo entry:", payload.get("photo"));
+} else {
+  console.log("❌ Sending as plain JSON — photo will be lost");
+} 
+
+
       const response = await facultyAPI.createFaculty(payload);
 
       if (response.data.success) {
