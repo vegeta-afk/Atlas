@@ -211,6 +211,7 @@ const hasScholarship = req.body.hasScholarship === true || req.body.hasScholarsh
       facultyAllot: req.body.facultyAllot || "Not Allotted",
       admissionYear: req.body.admissionYear || new Date().getFullYear(),
       cast: req.body.cast || "",
+      category: req.body.category || "", 
       speciallyAbled: req.body.speciallyAbled || false,
       source: req.body.source || "website",
       referenceName: req.body.referenceName || "",
