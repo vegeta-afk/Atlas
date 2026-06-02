@@ -318,9 +318,12 @@ const ViewAdmission = () => {
               <span className="va-field-value">{d.facultyAllot || "Not Allotted"}</span>
             </div>
             <div className="va-field-row">
-              <span className="va-field-label">Admission Year</span>
-              <span className="va-field-value">{d.admissionYear || "N/A"}</span>
-            </div>
+      <span className="va-field-label">Admission Date</span>
+      <span className="va-field-value">
+        <Calendar size={14} style={{ marginRight: 6, opacity: 0.6 }} />
+        {formatDate(d.admissionDate || d.createdAt)}
+      </span>
+    </div>
           </div>
         </div>
 
