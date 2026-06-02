@@ -121,6 +121,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
 
     // Other Category
     cast: "",
+    category: "",
     speciallyAbled: false,
 
     // Reference Section - Optional
@@ -864,6 +865,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
         // Additional fields
         facultyAllot: formData.facultyAllot,
         cast: formData.cast,
+        category: formData.category,
         speciallyAbled: formData.speciallyAbled,
         referenceName: formData.referenceName || "",
         referenceContact: formData.referenceContact || "",
@@ -1016,6 +1018,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
       preferredBatch: "",
       facultyAllot: "",
       cast: "",
+      category: "",
       speciallyAbled: false,
       referenceName: "",
       referenceContact: "",
