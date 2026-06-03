@@ -44,13 +44,14 @@ const {
     createCategory,       // ✅ add
   updateCategory,       // ✅ add
   deleteCategory,       // ✅ add
-  updateCategoryOrder,  // ✅ add
+  updateCategoryOrder,
+   repairBatchDisplayNames,  // ✅ add
 } = require("../controllers/setupController");
 
 router.use(protect);
 router.get("/", protect, authorize("admin", "instructor"), getAllSetupData);
 router.get("/active", protect, authorize("admin", "instructor"), getActiveData);
-router.get('/repair-batch-displaynames', protect, authorize('admin'), setupController.repairBatchDisplayNames);
+router.get('/repair-batch-displaynames', protect, authorize('admin'), repairBatchDisplayNames);
 
 // Setup data
 router.get("/", getAllSetupData);
