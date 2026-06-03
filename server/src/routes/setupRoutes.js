@@ -50,6 +50,7 @@ const {
 router.use(protect);
 router.get("/", protect, authorize("admin", "instructor"), getAllSetupData);
 router.get("/active", protect, authorize("admin", "instructor"), getActiveData);
+router.get('/repair-batch-displaynames', protect, authorize('admin'), setupController.repairBatchDisplayNames);
 
 // Setup data
 router.get("/", getAllSetupData);

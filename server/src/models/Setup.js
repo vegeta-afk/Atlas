@@ -347,7 +347,13 @@ const Fee = mongoose.model("Fee", feeSchema);
 // Pre-save hook to generate displayName
 batchSchema.pre("save", function (next) {
   if (this.startTime && this.endTime) {
-    this.displayName = `${this.startTime} to ${this.endTime}`;
+    const fmt = (t) => {
+      const [h, m] = t.split(':').map(Number);
+      const period = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 || 12;
+      return `${h12}:${String(m).padStart(2,'0')} ${period}`;
+    };
+    this.displayName = `${fmt(this.startTime)} to ${fmt(this.endTime)}`;
   }
   next();
 });

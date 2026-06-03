@@ -1009,7 +1009,6 @@ const assignStudentToFacultyBatch = async (student) => {
   try {
     console.log(`🎯 Assigning student ${student.studentId} to faculty-batch...`);
     
-    // Skip if faculty not allotted
     if (!student.facultyAllot || student.facultyAllot === "Not Allotted") {
       console.log(`⚠️ Skipping: No faculty allotted for student ${student.studentId}`);
       return;
@@ -1034,7 +1033,6 @@ const assignStudentToFacultyBatch = async (student) => {
       role: "instructor"
     });
     
-    // If user not found by facultyId, try by email and auto-repair
     if (!user) {
       console.log(`⚠️ User not found by facultyId, trying email: ${faculty.email}`);
       user = await User.findOne({ email: faculty.email.toLowerCase() });
@@ -1049,28 +1047,53 @@ const assignStudentToFacultyBatch = async (student) => {
       }
     }
     
-    // 3. Get batch by timing
+    // 3. Get batch by timing — 3 fallback levels
     const { Batch } = require("../models/Setup");
+
+    // Step 3a: exact displayName match
     let batch = await Batch.findOne({
       $or: [
         { displayName: student.batchTime },
         { displayName: { $regex: student.batchTime, $options: "i" } }
       ]
     });
-    
+
+    // Step 3b: batchName match
     if (!batch) {
-      // Try to find by batchName
       batch = await Batch.findOne({
         batchName: { $regex: student.batchTime, $options: "i" }
       });
     }
-    
+
+    // Step 3c: parse AM/PM string → 24h → match startTime/endTime
     if (!batch) {
-      console.error(`❌ Batch not found for timing: ${student.batchTime}`);
+      const to24h = (str) => {
+        if (!str) return null;
+        const matches = [...str.matchAll(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/gi)];
+        if (matches.length < 2) return null;
+        return matches.slice(0, 2).map(m => {
+          let h = parseInt(m[1]);
+          const min = (m[2] || '00').padStart(2, '0');
+          const p = m[3].toLowerCase();
+          if (p === 'pm' && h !== 12) h += 12;
+          if (p === 'am' && h === 12) h = 0;
+          return `${String(h).padStart(2, '0')}:${min}`;
+        });
+      };
+
+      const times = to24h(student.batchTime);
+      if (times) {
+        batch = await Batch.findOne({ startTime: times[0], endTime: times[1] });
+        if (batch) console.log(`✅ Matched batch by parsed time: ${batch.batchName}`);
+      }
+    }
+
+    if (!batch) {
+      console.error(`❌ Batch not found for timing: "${student.batchTime}"`);
       return;
     }
     
-    // 4. CRITICAL: Update student's batchTime to match exact batch displayName
+    // 4. Sync student's batchTime to exact batch displayName
     if (student.batchTime !== batch.displayName) {
       console.log(`🔄 Syncing student batchTime: "${student.batchTime}" → "${batch.displayName}"`);
       student.batchTime = batch.displayName;
@@ -1080,7 +1103,6 @@ const assignStudentToFacultyBatch = async (student) => {
     // 5. Find or create TeacherBatch
     const TeacherBatch = require("../models/TeacherBatch");
     
-    // First, remove student from ANY other TeacherBatch (cleanup)
     const otherTeacherBatches = await TeacherBatch.find({
       "assignedStudents.student": student._id
     });
@@ -1095,7 +1117,6 @@ const assignStudentToFacultyBatch = async (student) => {
       }
     }
     
-    // Now find or create correct TeacherBatch
     let teacherBatch = await TeacherBatch.findOne({
       teacher: user._id,
       batch: batch._id,
@@ -1103,7 +1124,6 @@ const assignStudentToFacultyBatch = async (student) => {
     });
     
     if (!teacherBatch) {
-      // Create new TeacherBatch
       teacherBatch = new TeacherBatch({
         teacher: user._id,
         batch: batch._id,
@@ -1116,15 +1136,12 @@ const assignStudentToFacultyBatch = async (student) => {
         roomNumber: "Default",
         subject: faculty.courseAssigned || "General"
       });
-      
       await teacherBatch.save();
       console.log(`✅ Created new TeacherBatch for ${faculty.facultyName}`);
     } else {
-      // Check if student already in this batch
       const alreadyAssigned = teacherBatch.assignedStudents.some(
         s => s.student.toString() === student._id.toString()
       );
-      
       if (!alreadyAssigned) {
         teacherBatch.assignedStudents.push({
           student: student._id,
@@ -1147,14 +1164,11 @@ const assignStudentToFacultyBatch = async (student) => {
       console.log(`   Faculty: ${finalFaculty.facultyName}`);
       console.log(`   Batch: ${finalTB.batch.displayName}`);
       
-      // Double-check student document matches
       if (student.facultyAllot !== finalFaculty.facultyName) {
-        console.log(`⚠️ Student faculty mismatch! Fixing...`);
         student.facultyAllot = finalFaculty.facultyName;
         await student.save();
       }
       if (student.batchTime !== finalTB.batch.displayName) {
-        console.log(`⚠️ Student batch mismatch! Fixing...`);
         student.batchTime = finalTB.batch.displayName;
         await student.save();
       }

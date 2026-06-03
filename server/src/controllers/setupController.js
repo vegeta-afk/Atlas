@@ -701,6 +701,37 @@ exports.createBatch = async (req, res) => {
   }
 };
 
+
+// GET /api/setup/repair-batch-displaynames  (admin only, run once)
+exports.repairBatchDisplayNames = async (req, res) => {
+  try {
+    const { Batch } = require("../models/Setup");
+    const batches = await Batch.find({});
+    
+    const fmt = (t) => {
+      const [h, m] = t.split(':').map(Number);
+      const period = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 || 12;
+      return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+    };
+    
+    let updated = 0;
+    for (const batch of batches) {
+      const newDisplay = `${fmt(batch.startTime)} to ${fmt(batch.endTime)}`;
+      if (batch.displayName !== newDisplay) {
+        batch.displayName = newDisplay;
+        await batch.save();
+        updated++;
+        console.log(`✅ ${batch.batchName}: "${batch.displayName}"`);
+      }
+    }
+    
+    res.json({ success: true, updated, message: `Updated ${updated} batch displayNames` });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 exports.updateBatch = async (req, res) => {
   try {
     const batch = await Batch.findByIdAndUpdate(
