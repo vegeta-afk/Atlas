@@ -15,6 +15,8 @@ const ADMIN_ONLY  = ["admin"];
 
 // ── Special named routes (MUST come before /:id) ──────────────────────────
 
+router.post('/repair-teacher-batches', authorize('admin'), admissionController.repairTeacherBatches);
+
 router.get("/approved", authorize(...READ_ROLES), async (req, res) => {
   try {
     const Admission = require("../models/Admission");

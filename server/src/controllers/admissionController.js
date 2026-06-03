@@ -1577,4 +1577,37 @@ exports.autoHoldStudents = async () => {
   }
 };
 
+exports.repairTeacherBatches = async (req, res) => {
+  try {
+    const TeacherBatch = require("../models/TeacherBatch");
+    const students = await Student.find({ 
+      facultyAllot: { $ne: "Not Allotted" },
+      status: "active"
+    });
+
+    let fixed = 0, skipped = 0;
+
+    for (const student of students) {
+      const alreadyLinked = await TeacherBatch.findOne({
+        "assignedStudents.student": student._id
+      });
+
+      if (!alreadyLinked) {
+        try {
+          await assignStudentToFacultyBatch(student);
+          fixed++;
+          console.log(`✅ Repaired: ${student.studentId}`);
+        } catch (e) {
+          skipped++;
+          console.log(`⚠️ Skipped: ${student.studentId} — ${e.message}`);
+        }
+      }
+    }
+
+    res.json({ success: true, fixed, skipped });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 exports.assignStudentToFacultyBatch = assignStudentToFacultyBatch;
