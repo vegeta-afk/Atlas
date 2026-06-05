@@ -51,9 +51,7 @@ const studentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    courseCode: {
-      type: String,
-    },
+    courseCode: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
     specialization: String,
     batchTime: String,
     facultyAllot: String,
