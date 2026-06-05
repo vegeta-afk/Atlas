@@ -46,7 +46,11 @@ exports.getEligibleStudents = async (req, res) => {
       const admissionDate = new Date(student.admissionDate);
       const today      = new Date();
       const diffDays   = Math.ceil(Math.abs(today - admissionDate) / (1000 * 60 * 60 * 24));
-      const currentMonth = Math.floor(diffDays / 30) + 1;
+      const courseDuration = parseInt(student.courseCode?.duration, 10) || 999;
+const currentMonth = Math.min(
+  Math.floor(diffDays / 30) + 1,
+  courseDuration
+);
       const paidEntries  = student.feeSchedule?.filter(m => m.paidAmount > 0) || [];
       const paidAmount   = paidEntries.reduce((sum, m) => sum + (m.paidAmount || 0), 0);
 
@@ -254,7 +258,11 @@ exports.convertStudentCourse = async (req, res) => {
     const today = new Date();
     const diffTime = Math.abs(today - admissionDate);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const currentMonth = Math.floor(diffDays / 30) + 1;
+    const oldCourseDuration = parseInt(oldCourse?.duration, 10) || 999;
+const currentMonth = Math.min(
+  Math.floor(diffDays / 30) + 1,
+  oldCourseDuration
+);
 
     if (conversionMonthNum < currentMonth) {
       await session.abortTransaction();
@@ -319,9 +327,9 @@ const oldPaidAmount = student.paidAmount || 0;
       conversionDate: new Date(),
       reason: conversionReason,
       convertedBy: convertedBy || req.user?.id,
-      oldTotalFee: student.totalCourseFee,
+      oldTotalFee: oldTotalFee, 
       newTotalFee: newTotalCourseFee,
-      oldPaidAmount: newPaidAmount,
+      oldPaidAmount: oldPaidAmount,
       newPaidAmount: newPaidAmount
     });
 
@@ -346,9 +354,9 @@ const oldPaidAmount = student.paidAmount || 0;
         oldCourse: oldCourse?.courseFullName,
         newCourse: newCourse.courseFullName,
         conversionMonth: conversionMonthNum,
-        oldTotalFee: student.totalCourseFee,
+        oldTotalFee: oldTotalFee,
         newTotalFee: newTotalCourseFee,
-        oldPaidAmount: newPaidAmount,
+        oldPaidAmount: oldPaidAmount,
         newPaidAmount: newPaidAmount,
         newBalanceAmount: newBalanceAmount,
         examMonths: examMonthsInNewSchedule,
