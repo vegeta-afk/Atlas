@@ -2166,50 +2166,50 @@ const deletePaymentLocally = (fee) => {
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap border-r">
-                    <div className="flex gap-2">
-                      {fee.status === "paid" || fee.status === "partial" ? (
-                        <>
-                          <button
-                            onClick={() => openPaymentModal(fee, "edit")}
-                            className="p-1 text-blue-600 hover:text-blue-900 rounded hover:bg-blue-50"
-                            title="Edit Payment"
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            onClick={() => deletePayment(fee)}
-                            className="p-1 text-red-600 hover:text-red-900 rounded hover:bg-red-50"
-                            title="Delete Payment"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </>
-                      ) : fee.status === "suspended" ? (
-  // Suspended months show no action
-  <span className="text-xs text-red-400">Suspended</span>
-) : (
   <div className="flex gap-2">
-    <button
-      onClick={() => openPaymentModal(fee, "add")}
-      className="p-1 text-green-600 hover:text-green-900 rounded hover:bg-green-50"
-      title="Add Payment"
-    >
-      <Plus size={16} />
-    </button>
-    <button
-      onClick={() => {
-        setSuspendData({ monthNumber: fee.monthNumber, month: fee.month, reason: "" });
-        setShowSuspendModal(true);
-      }}
-      className="p-1 text-red-500 hover:text-red-700 rounded hover:bg-red-50"
-      title="Suspend Month"
-    >
-      <AlertCircle size={16} />
-    </button>
+    {fee.status === "paid" || fee.status === "partial" ? (
+      <>
+        <button
+          onClick={() => openPaymentModal(fee, "edit")}
+          className="p-1 text-blue-600 hover:text-blue-900 rounded hover:bg-blue-50"
+          title="Edit Payment"
+        >
+          <Edit size={16} />
+        </button>
+        <button
+          onClick={() => deletePayment(fee)}
+          className="p-1 text-red-600 hover:text-red-900 rounded hover:bg-red-50"
+          title="Delete Payment"
+        >
+          <Trash2 size={16} />
+        </button>
+      </>
+    ) : fee.status === "suspended" ? (
+      <span className="text-xs text-red-400">Suspended</span>
+    ) : (
+      <>
+        <button
+          onClick={() => openPaymentModal(fee, "add")}
+          className="p-1 text-green-600 hover:text-green-900 rounded hover:bg-green-50"
+          title="Add Payment"
+        >
+          <Plus size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setSuspendData({ monthNumber: fee.monthNumber, month: fee.month, reason: "" });
+            setShowSuspendModal(true);
+          }}
+          className="p-1 text-red-500 hover:text-red-700 rounded hover:bg-red-50"
+          title="Suspend Month"
+        >
+          <AlertCircle size={16} />
+        </button>
+      </>
+    )}
   </div>
-)}
-                    </div>
-                  </td>
+</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {fee.receiptNo ? (
                       <div className="flex gap-2">
@@ -2661,6 +2661,70 @@ const deletePaymentLocally = (fee) => {
           </div>
         </div>
       )}
+      {showSuspendModal && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+      
+      <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-white font-bold text-lg">Suspend Month</h3>
+            <p className="text-white/70 text-xs mt-0.5">
+              {suspendData.month} — Month {suspendData.monthNumber}
+            </p>
+          </div>
+          <button 
+            onClick={() => setShowSuspendModal(false)} 
+            className="text-white/70 hover:text-white text-2xl leading-none"
+          >
+            &times;
+          </button>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-4">
+        <div className="p-4 bg-red-50 rounded-lg border border-red-100">
+          <p className="text-sm text-red-700 font-medium">⚠ What will happen:</p>
+          <ul className="text-sm text-red-600 mt-2 space-y-1 list-disc list-inside">
+            <li>Month {suspendData.monthNumber} will be marked as <strong>Suspended</strong></li>
+            <li>A new month will be <strong>auto-added at the end</strong> with the same fee</li>
+            <li>This action can be undone by deleting the suspended month</li>
+          </ul>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+            Reason for Suspension <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            value={suspendData.reason}
+            onChange={(e) => setSuspendData({ ...suspendData, reason: e.target.value })}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+            rows="3"
+            placeholder="e.g. Student was absent the entire month..."
+          />
+        </div>
+      </div>
+
+      <div className="px-6 pb-6 flex justify-end gap-3">
+        <button 
+          onClick={() => setShowSuspendModal(false)} 
+          className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSuspend}
+          disabled={!suspendData.reason.trim()}
+          className="px-5 py-2 text-sm text-white rounded-lg font-medium bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          <AlertCircle size={15} />
+          Suspend & Add New Month
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
