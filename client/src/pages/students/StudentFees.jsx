@@ -241,6 +241,8 @@ const StudentFees = () => {
             payingAmount: balanceAmount,
             isExamMonth: fee.isExamMonth || false,
             examFee: fee.examFee || 0,
+            examPaid: fee.examPaid || 0,        // ← ADD
+            monthlyPaid: fee.monthlyPaid || 0,  // ← ADD
             dueDate: fee.dueDate || calculateDueDate(studentData?.admissionDate, monthNumber)
           };
         });
@@ -906,44 +908,55 @@ console.log("🔍 Payment data:", JSON.stringify({
           </div>
 
           {/* Exam Fee Input */}
-          <div>
-            <label className="block text-sm font-medium text-yellow-700 mb-1">
-              Exam Fee
-              <span className="ml-1 text-xs text-gray-400">
-                (Max: {formatCurrency(fee.examFee || 0)})
-              </span>
-            </label>
-            <input
-              type="number"
-              value={fee.examPayingAmount ?? (fee.examFee || 0)}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value) || 0;
-                const clampedVal = Math.min(val, fee.examFee || 0);
-                const updatedFees = getCurrentFees().map(f => {
-                  if (f.id === fee.id) {
-                    const monthlyPaying = f.monthlyPayingAmount ?? ((f.pendingAmount || 0) - (f.examFee || 0));
-                    return {
-                      ...f,
-                      examPayingAmount: clampedVal,
-                      payingAmount: monthlyPaying + clampedVal
-                    };
-                  }
-                  return f;
-                });
-                updateCurrentFees(updatedFees);
-              }}
-              onWheel={(e) => e.target.blur()}
-              className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 bg-yellow-50"
-              min="0"
-              max={fee.examFee || 0}
-            />
-            {/* Exam eligibility indicator */}
-            {(fee.examPayingAmount ?? (fee.examFee || 0)) >= (fee.examFee || 0) ? (
-              <p className="text-xs text-green-600 mt-1">✅ Exam fee fully paid — eligible for exam</p>
-            ) : (
-              <p className="text-xs text-red-500 mt-1">❌ Exam fee not fully paid</p>
-            )}
-          </div>
+<div>
+  <label className="block text-sm font-medium text-yellow-700 mb-1">
+    Exam Fee
+    <span className="ml-1 text-xs text-gray-400">
+      (Max: {formatCurrency(Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))})
+    </span>
+  </label>
+
+  {(fee.examPaid || 0) >= (fee.examFee || 0) && (fee.examFee || 0) > 0 ? (
+    // ✅ LOCKED — exam already paid
+    <div className="w-full px-3 py-2 border border-green-300 rounded-lg bg-green-50 text-green-700 text-sm font-medium">
+      ✅ Exam fee already paid — ₹{fee.examFee}
+    </div>
+  ) : (
+    <input
+      type="number"
+      value={fee.examPayingAmount ?? Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))}
+      onChange={(e) => {
+        const val = parseFloat(e.target.value) || 0;
+        const maxExam = Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0));
+        const clampedVal = Math.min(val, maxExam);
+        const updatedFees = getCurrentFees().map(f => {
+          if (f.id === fee.id) {
+            const monthlyPaying = f.monthlyPayingAmount ?? ((f.pendingAmount || 0) - maxExam);
+            return {
+              ...f,
+              examPayingAmount: clampedVal,
+              payingAmount: monthlyPaying + clampedVal
+            };
+          }
+          return f;
+        });
+        updateCurrentFees(updatedFees);
+      }}
+      onWheel={(e) => e.target.blur()}
+      className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 bg-yellow-50"
+      min="0"
+      max={Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))}
+    />
+  )}
+
+  {(fee.examPaid || 0) >= (fee.examFee || 0) && (fee.examFee || 0) > 0 ? (
+    <p className="text-xs text-green-600 mt-1">✅ Exam fee fully paid — eligible for exam</p>
+  ) : (fee.examPayingAmount ?? Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))) + (fee.examPaid || 0) >= (fee.examFee || 0) ? (
+    <p className="text-xs text-green-600 mt-1">✅ Will be exam eligible after this payment</p>
+  ) : (
+    <p className="text-xs text-red-500 mt-1">❌ Exam fee not fully paid</p>
+  )}
+</div>
         </div>
 
         {/* Total summary */}
