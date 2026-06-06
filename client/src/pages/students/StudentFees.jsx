@@ -389,20 +389,35 @@ const StudentFees = () => {
   additionalCourseIndices: selectedFees.map(fee => fee.additionalCourseIndex ?? null),
   monthlyAmounts: selectedFees.map(fee => fee.isExamMonth ? (fee.monthlyPayingAmount ?? (fee.payingAmount - (fee.examFee || 0))) : fee.payingAmount),
   examAmounts: selectedFees.map(fee => fee.isExamMonth ? (fee.examPayingAmount ?? 0) : 0),
-        paymentType: "multiple",
-        paymentDate,
-        receiptNo,
-        paymentMode,
-        remarks: remarks || "",
-        otherFees: otherFeeAmount > 0 ? [{
-          feeId: selectedOtherFee,
-          feeName: otherFees.find(f => f.id === selectedOtherFee)?.name || "Other Fee",
-          amount: otherFeeAmount,
-          description: otherFeeDescription
-        }] : [],
-        // fineAmount: parseFloat(fineAmount || 0),
-        // fineReason: fineAmount > 0 ? fineReason : ""
-      };
+  paymentType: "multiple",
+  paymentDate,
+  receiptNo,
+  paymentMode,
+  remarks: remarks || "",
+  otherFees: otherFeeAmount > 0 ? [{
+    feeId: selectedOtherFee,
+    feeName: otherFees.find(f => f.id === selectedOtherFee)?.name || "Other Fee",
+    amount: otherFeeAmount,
+    description: otherFeeDescription
+  }] : [],
+};
+
+// ← ADD THIS RIGHT HERE
+console.log("🔍 Payment data:", JSON.stringify({
+  months: paymentData.months,
+  amounts: paymentData.amounts,
+  monthlyAmounts: paymentData.monthlyAmounts,
+  examAmounts: paymentData.examAmounts,
+  selectedFees: selectedFees.map(f => ({
+    monthNumber: f.monthNumber,
+    isExamMonth: f.isExamMonth,
+    payingAmount: f.payingAmount,
+    monthlyPayingAmount: f.monthlyPayingAmount,
+    examPayingAmount: f.examPayingAmount,
+    examFee: f.examFee,
+    examPaid: f.examPaid
+  }))
+}, null, 2));
 
       const response = await authFetch("/api/students/payment", {
         method: "POST",
