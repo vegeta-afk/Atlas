@@ -402,6 +402,8 @@ const cleanFeeForBackend = (fee) => ({
   additionalFees: fee.additionalFees || [],
   totalFee: fee.totalFee || 0,
   paidAmount: fee.paidAmount || 0,
+  monthlyPaid: fee.monthlyPaid || 0,
+  examPaid: fee.examPaid || 0, 
   balanceAmount: fee.balanceAmount || 0,
   status: fee.status || "pending",
   carryForwardAmount: fee.carryForwardAmount || 0,
