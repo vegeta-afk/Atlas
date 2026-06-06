@@ -1141,6 +1141,58 @@ const lastIsExam = false;
   }
 };
 
+const handleUnsuspend = async (fee) => {
+  if (!confirm(`Unsuspend ${fee.month}? The auto-added replacement month will also be removed.`)) return;
+
+  try {
+    const token = localStorage.getItem("token");
+    const existingSchedule = feeData.feeSchedule;
+
+    // 1. Find the auto-added month for this suspended month
+    const autoAddedRemark = `Auto-added: replacing suspended Month ${fee.monthNumber}`;
+    
+    // 2. Remove the auto-added month + restore suspended month to pending
+    const updatedSchedule = existingSchedule
+      .filter(m => m.remarks !== autoAddedRemark) // remove auto-added
+      .map(m => {
+        if (m.monthNumber === fee.monthNumber) {
+          return {
+            ...m,
+            status: "pending",
+            remarks: "",
+          };
+        }
+        return m;
+      });
+
+    // 3. Save to backend
+    const response = await fetch(`${BASE_URL}/api/students/${studentId}/fees/schedule`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        feeSchedule: updatedSchedule.map(cleanFeeForBackend),
+        totalCourseFee: updatedSchedule.reduce((s, f) => s + (f.totalFee || 0), 0),
+        paidAmount: updatedSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0),
+        balanceAmount: updatedSchedule.reduce((s, f) => s + (f.balanceAmount || 0), 0),
+      }),
+    });
+
+    if (response.ok) {
+      updateFeeSchedule(updatedSchedule);
+      alert(`Month ${fee.monthNumber} unsuspended successfully.`);
+    } else {
+      const errData = await response.json().catch(() => ({}));
+      alert("Failed to unsuspend: " + (errData.message || "Backend error"));
+    }
+  } catch (error) {
+    console.error("Unsuspend error:", error);
+    alert(`Error: ${error.message}`);
+  }
+};
+
   const updateFeeSchedule = (updatedFeeSchedule) => {
   // Sort by month number first
   const sortedSchedule = [...updatedFeeSchedule].sort((a, b) => a.monthNumber - b.monthNumber);
@@ -2193,7 +2245,14 @@ const deletePaymentLocally = (fee) => {
         </button>
       </>
     ) : fee.status === "suspended" ? (
-      <span className="text-xs text-red-400">Suspended</span>
+  <button
+    type="button"
+    onClick={() => handleUnsuspend(fee)}
+    className="px-2 py-1 text-xs text-red-500 border border-red-300 rounded hover:bg-red-50 hover:text-red-700 transition-colors"
+    title="Unsuspend Month"
+  >
+    Unsuspend
+  </button>
     ) : (
       <>
         <button
