@@ -140,7 +140,7 @@ const generateConvertedFeeSchedule = (student, newCourse, conversionMonth) => {
     
     for (let i = 0; i < existingFeeSchedule.length; i++) {
       const month = existingFeeSchedule[i];
-      if (month.monthNumber < conversionMonth && month.paidAmount > 0) {
+      if (month.monthNumber < conversionMonth) {
         // Keep paid months EXACTLY as they were
         feeSchedule.push({
           month: month.month,
