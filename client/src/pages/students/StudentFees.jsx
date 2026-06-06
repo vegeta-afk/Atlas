@@ -312,16 +312,33 @@ const StudentFees = () => {
 
   // ✅ UPDATED: Uses updateCurrentFees
   const toggleFeeSelection = (feeId) => {
-    const updatedFees = getCurrentFees().map(fee => {
-      if (fee.id === feeId) {
-        const newSelected = !fee.selected;
-        return { ...fee, selected: newSelected, payingAmount: newSelected ? (fee.pendingAmount || 0) : 0 };
+  const updatedFees = getCurrentFees().map(fee => {
+    if (fee.id === feeId) {
+      const newSelected = !fee.selected;
+      if (newSelected && fee.isExamMonth) {
+        // ✅ Initialize split amounts for exam months
+        const remainingExam = Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0));
+        const remainingMonthly = Math.max(0, (fee.pendingAmount || 0) - remainingExam);
+        return {
+          ...fee,
+          selected: true,
+          monthlyPayingAmount: remainingMonthly,
+          examPayingAmount: remainingExam,
+          payingAmount: remainingMonthly + remainingExam
+        };
       }
-      return fee;
-    });
-    updateCurrentFees(updatedFees);
-  };
-
+      return {
+        ...fee,
+        selected: newSelected,
+        payingAmount: newSelected ? (fee.pendingAmount || 0) : 0,
+        monthlyPayingAmount: undefined,
+        examPayingAmount: undefined
+      };
+    }
+    return fee;
+  });
+  updateCurrentFees(updatedFees);
+};
   // ✅ UPDATED: Uses updateCurrentFees
   const handleAmountChange = (feeId, amount) => {
     const updatedFees = getCurrentFees().map(fee => {
