@@ -1056,10 +1056,18 @@ const handleSuspend = async () => {
 
     // 2. Get last month's fee for the new appended month
     const lastMonth = existingSchedule[existingSchedule.length - 1];
-    const newMonthNumber = lastMonth.monthNumber + 1;
-    const lastFee = lastMonth.baseFee || lastMonth.monthlyFee || lastMonth.amount || 0;
-    const lastExamFee = lastMonth.examFee || 0;
-    const lastIsExam = lastMonth.isExamMonth || false;
+const newMonthNumber = lastMonth.monthNumber + 1;
+
+// Find last non-exam month to get the base monthly fee
+const lastNonExamMonth = [...existingSchedule]
+  .reverse()
+  .find(m => !m.isExamMonth);
+
+const lastFee = lastNonExamMonth?.baseFee || lastNonExamMonth?.monthlyFee || lastNonExamMonth?.amount || 0;
+
+// New appended month is never an exam month
+const lastExamFee = 0;
+const lastIsExam = false;
 
     // 3. Calculate new month date from admission date
     let newMonthName = `Month ${newMonthNumber}`;
