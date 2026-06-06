@@ -1421,6 +1421,8 @@ const student = await Student.findOne(
       remarks:     fee.remarks,
       baseFee:     baseFee,       // ← ADD THIS
       amount:      baseFee,  
+      monthlyPaid: fee.monthlyPaid || 0,  // ← ADD
+  examPaid:    fee.examPaid || 0,     // ← ADD
     };
   });
 })();
