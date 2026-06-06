@@ -1557,6 +1557,8 @@ const response = await fetch(endpoint, {
           paymentMode:  "",
           remarks:      "",
           paidAmount:   0,
+          monthlyPaid:  0,  // ← ADD
+          examPaid:     0,  // ← ADD
           balanceAmount: totalAmount,
           pendingAmount: totalAmount,
         };
