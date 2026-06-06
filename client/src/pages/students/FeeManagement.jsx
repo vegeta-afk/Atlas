@@ -2156,19 +2156,37 @@ const deletePaymentLocally = (fee) => {
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap border-r">
-                    <div className="font-medium">
-                      {formatCurrency(fee.monthlyFee || fee.amount || 0)}
-                    </div>
-                  </td>
+  <div className="font-medium">
+    {formatCurrency(fee.monthlyFee || fee.amount || 0)}
+  </div>
+  {fee.isExamMonth && (
+    <div className="text-xs mt-1">
+      {(fee.monthlyPaid || 0) >= (fee.monthlyFee || fee.amount || 0) ? (
+        <span className="text-green-600">✅ Monthly paid</span>
+      ) : (fee.monthlyPaid || 0) > 0 ? (
+        <span className="text-orange-500">⚡ Partial: {formatCurrency(fee.monthlyPaid || 0)}</span>
+      ) : (
+        <span className="text-gray-400">⏳ Unpaid</span>
+      )}
+    </div>
+  )}
+</td>
                   <td className="px-4 py-3 whitespace-nowrap border-r">
-                    <div
-                      className={`font-medium ${
-                        fee.isExamMonth ? "text-red-600" : "text-gray-400"
-                      }`}
-                    >
-                      {fee.isExamMonth ? formatCurrency(fee.examFee || 0) : "-"}
-                    </div>
-                  </td>
+  <div className={`font-medium ${fee.isExamMonth ? "text-red-600" : "text-gray-400"}`}>
+    {fee.isExamMonth ? formatCurrency(fee.examFee || 0) : "-"}
+  </div>
+  {fee.isExamMonth && (
+    <div className="text-xs mt-1">
+      {(fee.examPaid || 0) >= (fee.examFee || 0) && (fee.examFee || 0) > 0 ? (
+        <span className="text-green-600">✅ Exam eligible</span>
+      ) : (fee.examPaid || 0) > 0 ? (
+        <span className="text-orange-500">⚡ {formatCurrency(fee.examPaid || 0)} paid</span>
+      ) : (
+        <span className="text-red-400">❌ Not eligible</span>
+      )}
+    </div>
+  )}
+</td>
                   <td className="px-4 py-3 whitespace-nowrap border-r">
                     <div className="font-bold">
                       {formatCurrency(

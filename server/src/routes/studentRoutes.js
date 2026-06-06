@@ -581,16 +581,24 @@ console.log(`✅ Found fee at index ${feeIndex} for month ${monthNum}`);
 
         console.log(`💰 Fee calculation: total=${feeTotal}, currentPaid=${currentPaid}, newPaid=${newPaidAmount}, newBalance=${newBalance}`);
 
-        // Update fee entry
         fee.paidAmount = newPaidAmount;
-        fee.balanceAmount = newBalance; // THIS WAS NaN BEFORE!
-        fee.status = newBalance === 0 ? "paid" : "partial";
-        fee.paymentDate = new Date(paymentDate);
-        fee.receiptNo = receiptNo;
-        fee.paymentMode = paymentMode;
-        fee.remarks = remarks || "";
+fee.balanceAmount = newBalance;
+fee.status = newBalance === 0 ? "paid" : "partial";
+fee.paymentDate = new Date(paymentDate);
+fee.receiptNo = receiptNo;
+fee.paymentMode = paymentMode;
+fee.remarks = remarks || "";
 
-        if (fineAmount > 0) {
+// ✅ Save split payment amounts for exam months
+const { monthlyAmounts, examAmounts } = req.body;
+if (monthlyAmounts?.[i] !== undefined) {
+  fee.monthlyPaid = (fee.monthlyPaid || 0) + parseFloat(monthlyAmounts[i] || 0);
+}
+if (examAmounts?.[i] !== undefined) {
+  fee.examPaid = (fee.examPaid || 0) + parseFloat(examAmounts[i] || 0);
+}
+
+if (fineAmount > 0) {
           fee.fines = {
             amount: (fee.fines?.amount || 0) + fineAmount,
             reason: fineReason || "Late payment fine",
@@ -658,29 +666,38 @@ if (isAdditionalCourse) {
       console.log(`💰 Fee calculation: total=${feeTotal}, currentPaid=${currentPaid}, newPaid=${newPaidAmount}, newBalance=${newBalance}`);
 
       // Update fee entry
-      fee.paidAmount = newPaidAmount;
-      fee.balanceAmount = newBalance;
-      fee.status = newBalance === 0 ? "paid" : "partial";
-      fee.paymentDate = new Date(paymentDate);
-      fee.receiptNo = receiptNo;
-      fee.paymentMode = paymentMode;
-      fee.remarks = remarks || "";
+     fee.paidAmount = newPaidAmount;
+fee.balanceAmount = newBalance;
+fee.status = newBalance === 0 ? "paid" : "partial";
+fee.paymentDate = new Date(paymentDate);
+fee.receiptNo = receiptNo;
+fee.paymentMode = paymentMode;
+fee.remarks = remarks || "";
 
-      if (fineAmount > 0) {
-        fee.fines = {
-          amount: (fee.fines?.amount || 0) + fineAmount,
-          reason: fineReason || "Late payment fine",
-          waived: false
-        };
-      }
+// ✅ Save split payment amounts for exam months (single month)
+const { monthlyAmounts, examAmounts } = req.body;
+if (monthlyAmounts?.[0] !== undefined) {
+  fee.monthlyPaid = (fee.monthlyPaid || 0) + parseFloat(monthlyAmounts[0] || 0);
+}
+if (examAmounts?.[0] !== undefined) {
+  fee.examPaid = (fee.examPaid || 0) + parseFloat(examAmounts[0] || 0);
+}
 
-      if (paymentType === "promise" && promisedDate) {
-        fee.status = "promised";
-        fee.promisedDate = new Date(promisedDate);
-        fee.finesPaused = true;
-      }
+if (fineAmount > 0) {
+  fee.fines = {
+    amount: (fee.fines?.amount || 0) + fineAmount,
+    reason: fineReason || "Late payment fine",
+    waived: false
+  };
+}
 
-   student.feeSchedule[feeIndex] = fee;
+if (paymentType === "promise" && promisedDate) {
+  fee.status = "promised";
+  fee.promisedDate = new Date(promisedDate);
+  fee.finesPaused = true;
+}
+
+student.feeSchedule[feeIndex] = fee;
 student.markModified("feeSchedule");
       totalPaid = amount;
       updatedMonths.push(monthNumber);

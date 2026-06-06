@@ -233,6 +233,8 @@ scholarship: {
         ],
         totalFee: Number,
         paidAmount: { type: Number, default: 0 },
+        monthlyPaid: { type: Number, default: 0 },
+        examPaid: { type: Number, default: 0 },
         balanceAmount: Number,
         status: {
           type: String,
@@ -369,11 +371,12 @@ studentSchema.pre("save", function (next) {
       if (fee.totalFee !== undefined && fee.paidAmount !== undefined) {
         fee.balanceAmount = fee.totalFee - fee.paidAmount;
         
-        if (fee.balanceAmount === 0 && fee.paidAmount > 0) {
-          fee.status = "paid";
-        } else if (fee.paidAmount > 0 && fee.balanceAmount > 0) {
-          fee.status = "partial";
-        }
+        if (fee.status === "suspended") return; // ← don't override suspended
+if (fee.balanceAmount === 0 && fee.paidAmount > 0) {
+  fee.status = "paid";
+} else if (fee.paidAmount > 0 && fee.balanceAmount > 0) {
+  fee.status = "partial";
+}
       }
     });
   }
