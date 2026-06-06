@@ -138,7 +138,7 @@ scholarship: {
             balanceAmount: Number,
             status: {
               type: String,
-              enum: ["pending", "paid", "partial", "overdue", "promised"],
+              enum: ["pending", "paid", "partial", "overdue", "promised" , "suspended"],
               default: "pending"
             },
             dueDate: Date,
@@ -236,7 +236,7 @@ scholarship: {
         balanceAmount: Number,
         status: {
           type: String,
-          enum: ["pending", "paid", "partial", "overdue", "promised", "carry_forward"],
+          enum: ["pending", "paid", "partial", "overdue", "promised", "carry_forward", "suspended"],
           default: "pending"
         },
         carryForwardAmount: { type: Number, default: 0 },
