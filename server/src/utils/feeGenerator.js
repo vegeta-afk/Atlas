@@ -153,7 +153,7 @@ const generateConvertedFeeSchedule = (student, newCourse, conversionMonth) => {
           totalFee: month.totalFee || month.paidAmount,
           paidAmount: month.paidAmount || 0,
           balanceAmount: 0,
-          status: "paid",
+          status: month.status || (month.paidAmount > 0 ? "paid" : "pending"),
           isExamMonth: month.isExamMonth || false,
           carryForwardAmount: month.carryForwardAmount || 0,
           dueDate: month.dueDate,
