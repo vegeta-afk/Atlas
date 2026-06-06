@@ -39,6 +39,8 @@ const FeeManagement = ({ studentId, student, course, additionalCourseIndex }) =>
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [showMoreActions, setShowMoreActions] = useState(false);
+  const [showSuspendModal, setShowSuspendModal] = useState(false);
+  const [suspendData, setSuspendData] = useState({ monthNumber: null, month: "", reason: "" });
   const [showMonthModal, setShowMonthModal] = useState(false);
   const [showReceiptTable, setShowReceiptTable] = useState(false); // STEP 1
   const [monthManagementData, setMonthManagementData] = useState({
@@ -1030,6 +1032,107 @@ const deleteMonth = async (monthNumber) => {
   }
 };
 
+const handleSuspend = async () => {
+  if (!suspendData.reason.trim()) {
+    alert("Please enter a reason for suspension");
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("token");
+    const existingSchedule = feeData.feeSchedule;
+
+    // 1. Mark the month as suspended
+    const updatedSchedule = existingSchedule.map(fee => {
+      if (fee.monthNumber === suspendData.monthNumber) {
+        return {
+          ...fee,
+          status: "suspended",
+          remarks: `Suspended: ${suspendData.reason}`,
+        };
+      }
+      return fee;
+    });
+
+    // 2. Get last month's fee for the new appended month
+    const lastMonth = existingSchedule[existingSchedule.length - 1];
+    const newMonthNumber = lastMonth.monthNumber + 1;
+    const lastFee = lastMonth.baseFee || lastMonth.monthlyFee || lastMonth.amount || 0;
+    const lastExamFee = lastMonth.examFee || 0;
+    const lastIsExam = lastMonth.isExamMonth || false;
+
+    // 3. Calculate new month date from admission date
+    let newMonthName = `Month ${newMonthNumber}`;
+    let newDueDate = new Date();
+    if (student?.admissionDate) {
+      const admission = new Date(student.admissionDate);
+      const monthDate = new Date(admission);
+      monthDate.setDate(1);
+      monthDate.setMonth(admission.getMonth() + (newMonthNumber - 1));
+      newMonthName = monthDate.toLocaleString("en-US", { month: "long", year: "numeric" });
+      newDueDate = new Date(monthDate);
+      newDueDate.setDate(5);
+    }
+
+    // 4. Append new month at end
+    const newMonth = {
+      month: newMonthName,
+      monthNumber: newMonthNumber,
+      baseFee: lastFee,
+      monthlyFee: lastFee,
+      amount: lastFee,
+      additionalFees: [],
+      examFee: lastExamFee,
+      isExamMonth: lastIsExam,
+      totalFee: lastFee + lastExamFee,
+      paidAmount: 0,
+      balanceAmount: lastFee + lastExamFee,
+      status: "pending",
+      carryForwardAmount: 0,
+      dueDate: newDueDate,
+      promisedDate: null,
+      finesPaused: false,
+      fines: { amount: 0, reason: "", waived: false },
+      paymentDate: null,
+      receiptNo: "",
+      paymentMode: "",
+      remarks: `Auto-added: replacing suspended Month ${suspendData.monthNumber}`,
+    };
+
+    const finalSchedule = [...updatedSchedule, newMonth];
+
+    // 5. Save to backend
+    const response = await fetch(`${BASE_URL}/api/students/${studentId}/fees/schedule`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        feeSchedule: finalSchedule.map(cleanFeeForBackend),
+        totalCourseFee: finalSchedule.reduce((s, f) => s + (f.totalFee || 0), 0),
+        paidAmount: finalSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0),
+        balanceAmount: finalSchedule.reduce((s, f) => s + (f.balanceAmount || 0), 0),
+      }),
+    });
+
+    if (response.ok) {
+      updateFeeSchedule(finalSchedule);
+      alert(`Month ${suspendData.monthNumber} suspended. New month ${newMonthNumber} added at end.`);
+    } else {
+      updateFeeSchedule(finalSchedule);
+      alert("Saved locally (backend failed)");
+    }
+
+    setShowSuspendModal(false);
+    setSuspendData({ monthNumber: null, month: "", reason: "" });
+
+  } catch (error) {
+    console.error("Suspend error:", error);
+    alert(`Error: ${error.message}`);
+  }
+};
+
   const updateFeeSchedule = (updatedFeeSchedule) => {
   // Sort by month number first
   const sortedSchedule = [...updatedFeeSchedule].sort((a, b) => a.monthNumber - b.monthNumber);
@@ -1955,10 +2058,11 @@ const deletePaymentLocally = (fee) => {
                 <tr
                   key={index}
                   className={`hover:bg-gray-50 ${
-                    fee.isExamMonth ? "bg-yellow-50" : ""
-                  } ${fee.status === "paid" ? "bg-green-50" : ""} ${
-                    fee.status === "partial" ? "bg-blue-50" : ""
-                  }`}
+  fee.status === "suspended" ? "bg-red-50 border-l-4 border-l-red-400" :
+  fee.isExamMonth ? "bg-yellow-50" : ""
+} ${fee.status === "paid" ? "bg-green-50" : ""} ${
+  fee.status === "partial" ? "bg-blue-50" : ""
+}`}
                 >
                   <td className="px-4 py-3 whitespace-nowrap border-r">
                     <div className="font-medium">{fee.month}</div>
@@ -2016,31 +2120,43 @@ const deletePaymentLocally = (fee) => {
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap border-r">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        fee.status === "paid"
-                          ? "bg-green-100 text-green-800"
-                          : fee.status === "overdue"
-                          ? "bg-red-100 text-red-800"
-                          : fee.status === "partial"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {fee.status === "paid" && (
-                        <CheckCircle size={12} className="mr-1" />
-                      )}
-                      {fee.status === "overdue" && (
-                        <AlertCircle size={12} className="mr-1" />
-                      )}
-                      {fee.status === "partial" && (
-                        <AlertCircle size={12} className="mr-1" />
-                      )}
-                      {fee.status?.charAt(0).toUpperCase() + fee.status?.slice(1)}
-                      {fee.status === "partial" && fee.balanceAmount > 0 && (
-                        <span className="ml-1">({formatCurrency(fee.balanceAmount)} due)</span>
-                      )}
-                    </span>
+                    {fee.status === "suspended" ? (
+  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+    <AlertCircle size={12} className="mr-1" />
+    Suspended
+    {fee.remarks && (
+      <span className="ml-1 text-red-600 truncate max-w-[100px]" title={fee.remarks}>
+        — {fee.remarks.replace("Suspended: ", "")}
+      </span>
+    )}
+  </span>
+) : (
+  <span
+    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+      fee.status === "paid"
+        ? "bg-green-100 text-green-800"
+        : fee.status === "overdue"
+        ? "bg-red-100 text-red-800"
+        : fee.status === "partial"
+        ? "bg-blue-100 text-blue-800"
+        : "bg-yellow-100 text-yellow-800"
+    }`}
+  >
+    {fee.status === "paid" && (
+      <CheckCircle size={12} className="mr-1" />
+    )}
+    {fee.status === "overdue" && (
+      <AlertCircle size={12} className="mr-1" />
+    )}
+    {fee.status === "partial" && (
+      <AlertCircle size={12} className="mr-1" />
+    )}
+    {fee.status?.charAt(0).toUpperCase() + fee.status?.slice(1)}
+    {fee.status === "partial" && fee.balanceAmount > 0 && (
+      <span className="ml-1">({formatCurrency(fee.balanceAmount)} due)</span>
+    )}
+  </span>
+)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap border-r">
                     <div className={`font-medium ${fee.paidAmount > 0 ? "text-green-600" : "text-gray-400"}`}>
@@ -2068,15 +2184,30 @@ const deletePaymentLocally = (fee) => {
                             <Trash2 size={16} />
                           </button>
                         </>
-                      ) : (
-                        <button
-                          onClick={() => openPaymentModal(fee, "add")}
-                          className="p-1 text-green-600 hover:text-green-900 rounded hover:bg-green-50"
-                          title="Add Payment"
-                        >
-                          <Plus size={16} />
-                        </button>
-                      )}
+                      ) : fee.status === "suspended" ? (
+  // Suspended months show no action
+  <span className="text-xs text-red-400">Suspended</span>
+) : (
+  <div className="flex gap-2">
+    <button
+      onClick={() => openPaymentModal(fee, "add")}
+      className="p-1 text-green-600 hover:text-green-900 rounded hover:bg-green-50"
+      title="Add Payment"
+    >
+      <Plus size={16} />
+    </button>
+    <button
+      onClick={() => {
+        setSuspendData({ monthNumber: fee.monthNumber, month: fee.month, reason: "" });
+        setShowSuspendModal(true);
+      }}
+      className="p-1 text-red-500 hover:text-red-700 rounded hover:bg-red-50"
+      title="Suspend Month"
+    >
+      <AlertCircle size={16} />
+    </button>
+  </div>
+)}
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">

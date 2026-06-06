@@ -210,11 +210,12 @@ const StudentFees = () => {
         let feeSchedule = feeData.feeSchedule || [];
 
         feeSchedule = feeSchedule.filter(fee => {
-          const totalAmount = fee.totalFee || fee.totalAmount || 0;
-          const paidAmount = fee.paidAmount || 0;
-          const balanceAmount = fee.balanceAmount !== undefined ? fee.balanceAmount : totalAmount - paidAmount;
-          return fee.status === "pending" || balanceAmount > 0 || paidAmount < totalAmount;
-        });
+  if (fee.status === "suspended") return false; // ← exclude suspended months
+  const totalAmount = fee.totalFee || fee.totalAmount || 0;
+  const paidAmount = fee.paidAmount || 0;
+  const balanceAmount = fee.balanceAmount !== undefined ? fee.balanceAmount : totalAmount - paidAmount;
+  return fee.status === "pending" || balanceAmount > 0 || paidAmount < totalAmount;
+});
 
         if (feeSchedule.length === 0) return [];
 

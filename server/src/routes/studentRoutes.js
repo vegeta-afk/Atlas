@@ -1402,6 +1402,8 @@ const student = await Student.findOne(
       receiptNo:   fee.receiptNo,
       paymentMode: fee.paymentMode,
       remarks:     fee.remarks,
+      baseFee:     baseFee,       // ← ADD THIS
+      amount:      baseFee,  
     };
   });
 })();
