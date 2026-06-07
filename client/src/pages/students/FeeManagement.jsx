@@ -24,6 +24,7 @@ const FeeManagement = ({ studentId, student, course, additionalCourseIndex }) =>
   const additionalCourseData = isAdditionalCourse ? student?.additionalCourses?.[additionalCourseIndex] : null;
   const [feeData, setFeeData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [courseShortNames, setCourseShortNames] = useState({});
   const [paymentData, setPaymentData] = useState({
     monthNumber: "",
     amount: "",
@@ -55,6 +56,33 @@ const FeeManagement = ({ studentId, student, course, additionalCourseIndex }) =>
   });
 
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  useEffect(() => {
+  if (studentId) {
+    fetchStudentFees();
+    fetchCourseShortNames();
+  }
+}, [studentId, student?.admissionDate]);
+
+const fetchCourseShortNames = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${BASE_URL}/api/courses`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const data = await response.json();
+    if (data.success) {
+      const map = {};
+      (data.data || []).forEach(course => {
+        map[course.courseFullName] = course.courseShortName || 
+          course.courseFullName.split(' ').map(w => w[0]).join('');
+      });
+      setCourseShortNames(map);
+    }
+  } catch (err) {
+    console.error("Error fetching course short names:", err);
+  }
+};
 
   const processAdditionalCourseFeeSchedule = (feeSchedule) => {
   if (!feeSchedule || !Array.isArray(feeSchedule)) return [];
@@ -1734,6 +1762,28 @@ const deletePaymentLocally = (fee) => {
     }).format(amount);
   };
 
+  const getCourseShortName = (fee) => {
+  const conversionHistory = feeData?.student?.conversionHistory || [];
+  
+  if (conversionHistory.length === 0) {
+    return courseShortNames[feeData?.student?.course] || "—";
+  }
+
+  const sortedHistory = [...conversionHistory].sort((a, b) => a.conversionMonth - b.conversionMonth);
+  
+  let courseName = sortedHistory[0].fromCourse;
+  
+  for (const conversion of sortedHistory) {
+    if (fee.monthNumber >= conversion.conversionMonth) {
+      courseName = conversion.toCourse;
+    } else {
+      break;
+    }
+  }
+
+  return courseShortNames[courseName] || 
+         courseName?.split(' ').map(w => w[0]).join('') || "—";
+};
   const printReceipt = () => {
     const printWindow = window.open("", "_blank");
     printWindow.document.write(`
@@ -2092,6 +2142,9 @@ const deletePaymentLocally = (fee) => {
                   Month
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                  Course
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
                   Due Date
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
@@ -2153,6 +2206,17 @@ const deletePaymentLocally = (fee) => {
                       </button>
                     </div>
                   </td>
+
+                  <td className="px-4 py-3 whitespace-nowrap border-r">
+  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${
+    feeData?.student?.conversionHistory?.length > 0 &&
+    feeData.student.conversionHistory.some(c => fee.monthNumber < c.conversionMonth)
+      ? "bg-blue-100 text-blue-700"   // old course months
+      : "bg-purple-100 text-purple-700" // new/current course months
+  }`}>
+    {getCourseShortName(fee)}
+  </span>
+</td>
                   <td className="px-4 py-3 whitespace-nowrap border-r">
                     <div className="flex items-center gap-1">
                       <Calendar size={14} />
@@ -2335,7 +2399,7 @@ const deletePaymentLocally = (fee) => {
             {/* Footer with Totals */}
             <tfoot className="bg-gray-50">
               <tr>
-                <td colSpan="2" className="px-4 py-3 font-bold text-right">
+                <td colSpan="3" className="px-4 py-3 font-bold text-right">
                   TOTALS:
                 </td>
                 <td className="px-4 py-3 font-bold border-r">

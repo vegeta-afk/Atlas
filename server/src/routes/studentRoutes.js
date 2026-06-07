@@ -1422,7 +1422,7 @@ const student = await Student.findOne(
       baseFee:     baseFee,       // ← ADD THIS
       amount:      baseFee,  
       monthlyPaid: fee.monthlyPaid || 0,  // ← ADD
-  examPaid:    fee.examPaid || 0,     // ← ADD
+      examPaid:    fee.examPaid || 0,     // ← ADD
     };
   });
 })();
@@ -1500,6 +1500,7 @@ const student = await Student.findOne(
         course: {
           _id: course?._id,
           courseFullName: course?.courseFullName || student.course,
+          courseShortName: course?.courseShortName || "",
           duration: course?.duration || 12,
           monthlyFee: course?.monthlyFee,
           examFee: course?.examFee,
