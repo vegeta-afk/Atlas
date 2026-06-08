@@ -54,6 +54,16 @@ const StudentFees = () => {
   const [selectedOtherFee, setSelectedOtherFee] = useState(null);
   const [otherFeeAmount, setOtherFeeAmount] = useState(0);
   const [otherFeeDescription, setOtherFeeDescription] = useState("");
+  const [feeRegisterData, setFeeRegisterData] = useState([]);
+  const [regLoading, setRegLoading] = useState(false);
+  const [regFromDate, setRegFromDate] = useState(() => {
+  const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0];
+  });
+  const [regToDate, setRegToDate] = useState(new Date().toISOString().split('T')[0]);
+  const [regSearchName, setRegSearchName] = useState('');
+  const [regSearchReceipt, setRegSearchReceipt] = useState('');
+  const [regPage, setRegPage] = useState(1);
+  const REG_PAGE_SIZE = 15;
 
 
   // ✅ NEW: Course tab states
@@ -107,6 +117,29 @@ const StudentFees = () => {
     }
   };
 
+  const fetchFeeRegister = async () => {
+  try {
+    setRegLoading(true);
+    setRegPage(1);
+    const params = new URLSearchParams();
+    if (regFromDate)      params.append('from',    regFromDate);
+    if (regToDate)        params.append('to',      regToDate);
+    if (regSearchName.trim())   params.append('search', regSearchName.trim());
+    if (regSearchReceipt.trim()) params.append('receipt', regSearchReceipt.trim());
+
+    const response = await authFetch(`/api/students/fee-register?${params}`);
+    if (response.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; return; }
+    const data = await response.json();
+    if (data.success) {
+      setFeeRegisterData(data.data || []);
+    }
+  } catch (err) {
+    console.error('Fee register fetch error:', err);
+  } finally {
+    setRegLoading(false);
+  }
+};
+
   const generateReceiptNo = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -124,6 +157,10 @@ const StudentFees = () => {
       if (searchTimeout) clearTimeout(searchTimeout);
     };
   }, []);
+
+  useEffect(() => {
+  if (activeTab === 'feeRegister') fetchFeeRegister();
+}, [activeTab]);
 
   const fetchStudents = async () => {
     try {
@@ -540,6 +577,8 @@ console.log("🔍 Payment data:", JSON.stringify({
 
   const pendingStudents = students.filter(s => s.balanceAmount > 0);
   const paidStudents = students.filter(s => s.balanceAmount === 0);
+  const totalRegPages   = Math.max(1, Math.ceil(feeRegisterData.length / REG_PAGE_SIZE));
+  const paginatedRegister = feeRegisterData.slice((regPage - 1) * REG_PAGE_SIZE, regPage * REG_PAGE_SIZE);
 
  return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -576,6 +615,14 @@ console.log("🔍 Payment data:", JSON.stringify({
         >
           <CheckCircle className="mr-2 h-5 w-5" />
           Paid Fees
+        </button>
+
+        <button
+          className={`flex items-center px-4 py-3 font-medium whitespace-nowrap ${activeTab === "feeRegister" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-700"}`}
+          onClick={() => setActiveTab("feeRegister")}
+        >
+          <FileText className="mr-2 h-5 w-5" />
+          Fee Register
         </button>
       </div>
 
@@ -1326,6 +1373,178 @@ console.log("🔍 Payment data:", JSON.stringify({
           </div>
         )}
       </div>
+
+      {/* ── Fee Register ───────────────────────────────────────────── */}
+{activeTab === "feeRegister" && (
+  <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+
+    {/* Header */}
+    <div className="p-6 border-b border-gray-200">
+      <h2 className="text-xl font-semibold flex items-center">
+        <FileText className="mr-3 h-6 w-6 text-blue-600" />
+        Fee Collection Register
+      </h2>
+      <p className="text-gray-600 mt-1">Complete record of every fee submitted</p>
+    </div>
+
+    {/* Filters bar */}
+    <div className="p-4 bg-gray-50 border-b flex flex-wrap gap-3 items-end">
+      <div>
+        <label className="text-xs font-medium text-gray-500 block mb-1">Search Name</label>
+        <input
+          type="text"
+          value={regSearchName}
+          onChange={e => setRegSearchName(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && fetchFeeRegister()}
+          placeholder="Search for names.."
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-44 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        />
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-gray-500 block mb-1">From</label>
+        <input
+          type="date"
+          value={regFromDate}
+          onChange={e => setRegFromDate(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        />
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-gray-500 block mb-1">To</label>
+        <input
+          type="date"
+          value={regToDate}
+          onChange={e => setRegToDate(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        />
+      </div>
+
+      <button
+        onClick={fetchFeeRegister}
+        className="px-5 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-semibold transition-colors"
+      >
+        Search
+      </button>
+
+      <div className="ml-auto">
+        <label className="text-xs font-medium text-gray-500 block mb-1">Search Receipt No.</label>
+        <input
+          type="text"
+          value={regSearchReceipt}
+          onChange={e => setRegSearchReceipt(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && fetchFeeRegister()}
+          placeholder="Search Receipt No.."
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-44 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        />
+      </div>
+    </div>
+
+    {/* Table */}
+    <div className="overflow-x-auto">
+      <table className="min-w-full">
+        <thead>
+          <tr style={{ backgroundColor: '#7B1C1C' }}>
+            {['Date', 'Receipt No', 'Roll No', 'Student Name', 'Course', 'Batch Time', 'Faculty', 'Fee Type', 'Amount'].map(h => (
+              <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {regLoading ? (
+            <tr>
+              <td colSpan={9} className="py-16 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
+              </td>
+            </tr>
+          ) : paginatedRegister.length === 0 ? (
+            <tr>
+              <td colSpan={9} className="py-16 text-center text-gray-400">
+                <FileText className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+                No fee records found for the selected filters.
+              </td>
+            </tr>
+          ) : (
+            paginatedRegister.map((record, idx) => (
+              <tr key={idx} className={`hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  {formatDate(record.date)}
+                </td>
+                <td className="px-4 py-3 text-sm font-semibold text-gray-900 whitespace-nowrap">
+                  {record.receiptNo}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  {record.rollNo}
+                </td>
+                <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
+                  {record.studentName}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-600 max-w-[140px]">
+                  <div className="truncate" title={record.course}>{record.course}</div>
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  {record.batchTime}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  {record.faculty}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    record.feeType === 'Exam Fee'    ? 'bg-yellow-100 text-yellow-800' :
+                    record.feeType === 'Monthly Fee' ? 'bg-blue-100 text-blue-800'   :
+                                                       'bg-green-100 text-green-800'
+                  }`}>
+                    {record.feeType}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-sm font-bold text-green-700 whitespace-nowrap">
+                  ₹{(record.amount || 0).toLocaleString('en-IN')}
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+
+    {/* Footer: total + pagination */}
+    <div className="p-4 border-t bg-gray-50 flex flex-wrap items-center justify-between gap-3">
+      <div className="text-sm text-gray-600">
+        <span className="font-semibold text-gray-800">{feeRegisterData.length}</span> records &nbsp;|&nbsp;
+        Total collected:&nbsp;
+        <span className="font-bold text-green-700">
+          ₹{feeRegisterData.reduce((s, r) => s + (r.amount || 0), 0).toLocaleString('en-IN')}
+        </span>
+      </div>
+
+      {totalRegPages > 1 && (
+        <div className="flex items-center gap-2">
+          <button
+            disabled={regPage === 1}
+            onClick={() => setRegPage(p => p - 1)}
+            className="p-1.5 border rounded-lg hover:bg-gray-100 disabled:opacity-40"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="text-sm text-gray-600">
+            Page {regPage} / {totalRegPages}
+          </span>
+          <button
+            disabled={regPage === totalRegPages}
+            onClick={() => setRegPage(p => p + 1)}
+            className="p-1.5 border rounded-lg hover:bg-gray-100 disabled:opacity-40"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+    </div>
+
+  </div>
+)}
     </div>
   );
 };

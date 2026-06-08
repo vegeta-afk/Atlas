@@ -256,6 +256,140 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET /api/students/fee-register
+// ⚠️ Place this BEFORE router.get('/:id', ...) in students.js
+router.get('/fee-register', auth, async (req, res) => {
+  try {
+    const { from, to, search, receipt } = req.query;
+
+    // ── Student filter (name or roll no) ───────────────────────
+    let studentQuery = {};
+    if (search) {
+      studentQuery.$or = [
+        { fullName:    { $regex: search, $options: 'i' } },
+        { admissionNo: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const students = await Student.find(studentQuery).lean();
+    const records  = [];
+
+    // ── Date range helpers ─────────────────────────────────────
+    const fromDate = from ? new Date(from) : null;
+    const toDate   = to   ? new Date(new Date(to).setHours(23, 59, 59, 999)) : null;
+
+    const inRange = (dateVal) => {
+      if (!dateVal) return false; // skip entries with no payment date
+      const d = new Date(dateVal);
+      if (fromDate && d < fromDate) return false;
+      if (toDate   && d > toDate)   return false;
+      return true;
+    };
+
+    const matchesReceipt = (rNo) =>
+      !receipt || String(rNo || '').toLowerCase().includes(receipt.toLowerCase());
+
+    // ── Helper: push a record ──────────────────────────────────
+    const push = (student, fee, courseName, batchTime, faculty, feeType, amount) => {
+      if (!amount || amount <= 0) return;
+      records.push({
+        date:        fee.paymentDate || fee.date,
+        receiptNo:   fee.receiptNo,
+        rollNo:      student.admissionNo,
+        studentName: student.fullName,
+        course:      courseName || 'N/A',
+        batchTime:   batchTime  || 'N/A',
+        faculty:     faculty    || 'N/A',
+        feeType,
+        amount
+      });
+    };
+
+    for (const student of students) {
+
+      // ── 1. Primary course feeSchedule ─────────────────────────
+      for (const fee of (student.feeSchedule || [])) {
+        if (!fee.receiptNo || !fee.paidAmount) continue;
+        if (!inRange(fee.paymentDate))          continue;
+        if (!matchesReceipt(fee.receiptNo))     continue;
+
+        if (fee.isExamMonth && (fee.monthlyPaid || fee.examPaid)) {
+          // Split exam months into two rows for clarity
+          if (fee.monthlyPaid > 0) {
+            push(student, fee, student.course, student.batchTime, student.facultyAllot, 'Monthly Fee', fee.monthlyPaid);
+          }
+          if (fee.examPaid > 0) {
+            push(student, fee, student.course, student.batchTime, student.facultyAllot, 'Exam Fee', fee.examPaid);
+          }
+        } else {
+          // Regular month — single row
+          push(student, fee, student.course, student.batchTime, student.facultyAllot,
+            fee.isExamMonth ? 'Exam Fee' : 'Monthly Fee',
+            fee.paidAmount
+          );
+        }
+      }
+
+      // ── 2. Additional courses ──────────────────────────────────
+      for (const ac of (student.additionalCourses || [])) {
+        for (const fee of (ac.feeSchedule || [])) {
+          if (!fee.receiptNo || !fee.paidAmount) continue;
+          if (!inRange(fee.paymentDate))          continue;
+          if (!matchesReceipt(fee.receiptNo))     continue;
+
+          const batchTime = ac.batchTime || student.batchTime;
+          const faculty   = ac.facultyName || student.facultyAllot;
+
+          if (fee.isExamMonth && (fee.monthlyPaid || fee.examPaid)) {
+            if (fee.monthlyPaid > 0) push(student, fee, ac.courseName, batchTime, faculty, 'Monthly Fee', fee.monthlyPaid);
+            if (fee.examPaid   > 0) push(student, fee, ac.courseName, batchTime, faculty, 'Exam Fee',    fee.examPaid);
+          } else {
+            push(student, fee, ac.courseName, batchTime, faculty,
+              fee.isExamMonth ? 'Exam Fee' : 'Monthly Fee',
+              fee.paidAmount
+            );
+          }
+        }
+      }
+
+      // ── 3. paymentHistory — other/fine fees ───────────────────
+      // (only if your payment handler stores otherFees inside paymentHistory)
+      for (const ph of (student.paymentHistory || [])) {
+        if (!ph.receiptNo)               continue;
+        if (!inRange(ph.date))           continue;
+        if (!matchesReceipt(ph.receiptNo)) continue;
+
+        // otherFees are not in schema but backend may store them (Mongoose allows extra fields)
+        if (Array.isArray(ph.otherFees)) {
+          for (const of_ of ph.otherFees) {
+            if (!of_.amount) continue;
+            records.push({
+              date:        ph.date,
+              receiptNo:   ph.receiptNo,
+              rollNo:      student.admissionNo,
+              studentName: student.fullName,
+              course:      student.course    || 'N/A',
+              batchTime:   student.batchTime || 'N/A',
+              faculty:     student.facultyAllot || 'N/A',
+              feeType:     of_.feeName || 'Other Fee',
+              amount:      of_.amount
+            });
+          }
+        }
+      }
+    }
+
+    // Newest first
+    records.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+    res.json({ success: true, data: records, total: records.length });
+
+  } catch (err) {
+    console.error('Fee register error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ========== POST ROUTES ==========
 
 // @route   POST /api/students/bulk-import
