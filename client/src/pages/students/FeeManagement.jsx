@@ -1639,6 +1639,105 @@ const response = await fetch(endpoint, {
   }
 };
 
+
+const deleteMonthlyFee = async (fee) => {
+  if (!confirm(`Delete only monthly fee payment for ${fee.month}?`)) return;
+
+  try {
+    const token = localStorage.getItem("token");
+    const updatedSchedule = feeData.feeSchedule.map(f => {
+      if (f.monthNumber === fee.monthNumber) {
+        const newPaidAmount = f.examPaid || 0; // only exam paid remains
+        const newBalance = (f.totalFee || 0) - newPaidAmount;
+        return {
+          ...f,
+          paidAmount: newPaidAmount,
+          monthlyPaid: 0,
+          balanceAmount: newBalance,
+          status: newPaidAmount === 0 ? "pending" : "partial",
+          paymentDate: newPaidAmount === 0 ? null : f.paymentDate,
+          receiptNo: newPaidAmount === 0 ? "" : f.receiptNo,
+        };
+      }
+      return f;
+    });
+
+    const response = await fetch(`${BASE_URL}/api/students/${studentId}/fees/schedule`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        feeSchedule: updatedSchedule.map(cleanFeeForBackend),
+        totalCourseFee: feeData.summary.totalCourseFee,
+        paidAmount: updatedSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0),
+        balanceAmount: updatedSchedule.reduce((s, f) => s + (f.balanceAmount || 0), 0),
+      }),
+    });
+
+    if (response.ok) {
+      updateFeeSchedule(updatedSchedule);
+      alert(`Monthly fee payment deleted for ${fee.month}.`);
+    } else {
+      const err = await response.json().catch(() => ({}));
+      alert("Failed: " + (err.message || "Backend error"));
+    }
+  } catch (error) {
+    console.error("Delete monthly fee error:", error);
+    alert(`Error: ${error.message}`);
+  }
+};
+
+const deleteExamFee = async (fee) => {
+  if (!confirm(`Delete only exam fee payment for ${fee.month}?`)) return;
+
+  try {
+    const token = localStorage.getItem("token");
+    const updatedSchedule = feeData.feeSchedule.map(f => {
+      if (f.monthNumber === fee.monthNumber) {
+        const newPaidAmount = f.monthlyPaid || 0; // only monthly paid remains
+        const newBalance = (f.totalFee || 0) - newPaidAmount;
+        return {
+          ...f,
+          paidAmount: newPaidAmount,
+          examPaid: 0,
+          balanceAmount: newBalance,
+          status: newPaidAmount === 0 ? "pending" : "partial",
+          paymentDate: newPaidAmount === 0 ? null : f.paymentDate,
+          receiptNo: newPaidAmount === 0 ? "" : f.receiptNo,
+        };
+      }
+      return f;
+    });
+
+    const response = await fetch(`${BASE_URL}/api/students/${studentId}/fees/schedule`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        feeSchedule: updatedSchedule.map(cleanFeeForBackend),
+        totalCourseFee: feeData.summary.totalCourseFee,
+        paidAmount: updatedSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0),
+        balanceAmount: updatedSchedule.reduce((s, f) => s + (f.balanceAmount || 0), 0),
+      }),
+    });
+
+    if (response.ok) {
+      updateFeeSchedule(updatedSchedule);
+      alert(`Exam fee payment deleted for ${fee.month}.`);
+    } else {
+      const err = await response.json().catch(() => ({}));
+      alert("Failed: " + (err.message || "Backend error"));
+    }
+  } catch (error) {
+    console.error("Delete exam fee error:", error);
+    alert(`Error: ${error.message}`);
+  }
+};
+
 // Alternative method if DELETE endpoint doesn't exist
 const deletePaymentViaUpdate = async (fee) => {
   try {
@@ -2314,22 +2413,46 @@ const deletePaymentLocally = (fee) => {
                   <td className="px-4 py-3 whitespace-nowrap border-r">
   <div className="flex gap-2">
     {fee.status === "paid" || fee.status === "partial" ? (
-      <>
+  <>
+    <button
+      onClick={() => openPaymentModal(fee, "edit")}
+      className="p-1 text-blue-600 hover:text-blue-900 rounded hover:bg-blue-50"
+      title="Edit Payment"
+    >
+      <Edit size={16} />
+    </button>
+
+    {fee.isExamMonth ? (
+      // ── EXAM MONTH: Split delete buttons ──
+      <div className="flex flex-col gap-1">
         <button
-          onClick={() => openPaymentModal(fee, "edit")}
-          className="p-1 text-blue-600 hover:text-blue-900 rounded hover:bg-blue-50"
-          title="Edit Payment"
+          onClick={() => deleteMonthlyFee(fee)}
+          disabled={(fee.monthlyPaid || 0) === 0}
+          className="px-1.5 py-0.5 text-xs text-orange-600 border border-orange-300 rounded hover:bg-orange-50 disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Delete Monthly Fee Only"
         >
-          <Edit size={16} />
+          -Monthly
         </button>
         <button
-          onClick={() => deletePayment(fee)}
-          className="p-1 text-red-600 hover:text-red-900 rounded hover:bg-red-50"
-          title="Delete Payment"
+          onClick={() => deleteExamFee(fee)}
+          disabled={(fee.examPaid || 0) === 0}
+          className="px-1.5 py-0.5 text-xs text-red-600 border border-red-300 rounded hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Delete Exam Fee Only"
         >
-          <Trash2 size={16} />
+          -Exam
         </button>
-      </>
+      </div>
+    ) : (
+      // ── REGULAR MONTH: Single delete ──
+      <button
+        onClick={() => deletePayment(fee)}
+        className="p-1 text-red-600 hover:text-red-900 rounded hover:bg-red-50"
+        title="Delete Payment"
+      >
+        <Trash2 size={16} />
+      </button>
+    )}
+  </>
     ) : fee.status === "suspended" ? (
   <button
     type="button"
