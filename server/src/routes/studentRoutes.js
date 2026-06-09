@@ -258,7 +258,7 @@ router.get("/", async (req, res) => {
 
 // GET /api/students/fee-register
 // ⚠️ Place this BEFORE router.get('/:id', ...) in students.js
-router.get('/fee-register', auth, async (req, res) => {
+router.get('/fee-register', async (req, res) => {
   try {
     const { from, to, search, receipt } = req.query;
 
