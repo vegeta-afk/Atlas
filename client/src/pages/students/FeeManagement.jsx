@@ -587,57 +587,7 @@ const calcTotals = (schedule) => ({
   }
 };
 
-const feeRegisterRows = useMemo(() => {
-  if (!feeData) return [];
-  const rows = [];
 
-  for (const fee of (feeData.feeSchedule || [])) {
-    if (!fee.receiptNo || !fee.paidAmount) continue;
-
-    if (fee.isExamMonth && (fee.monthlyPaid || fee.examPaid)) {
-      if ((fee.monthlyPaid || 0) > 0) {
-        rows.push({
-          date:        fee.paymentDate,
-          receiptNo:   fee.receiptNo,
-          rollNo:      student?.admissionNo || feeData.student?.admissionNo || '—',
-          studentName: feeData.student?.fullName,
-          course:      getCourseShortName(fee),
-          batchTime:   student?.batchTime || '—',
-          faculty:     student?.facultyAllot || '—',
-          feeType:     'Monthly Fee',
-          amount:      fee.monthlyPaid
-        });
-      }
-      if ((fee.examPaid || 0) > 0) {
-        rows.push({
-          date:        fee.paymentDate,
-          receiptNo:   fee.receiptNo,
-          rollNo:      student?.admissionNo || feeData.student?.admissionNo || '—',
-          studentName: feeData.student?.fullName,
-          course:      getCourseShortName(fee),
-          batchTime:   student?.batchTime || '—',
-          faculty:     student?.facultyAllot || '—',
-          feeType:     'Exam Fee',
-          amount:      fee.examPaid
-        });
-      }
-    } else {
-      rows.push({
-        date:        fee.paymentDate,
-        receiptNo:   fee.receiptNo,
-        rollNo:      student?.admissionNo || feeData.student?.admissionNo || '—',
-        studentName: feeData.student?.fullName,
-        course:      getCourseShortName(fee),
-        batchTime:   student?.batchTime || '—',
-        faculty:     student?.facultyAllot || '—',
-        feeType:     fee.isExamMonth ? 'Exam Fee' : 'Monthly Fee',
-        amount:      fee.paidAmount
-      });
-    }
-  }
-
-  return rows.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-}, [feeData, student]);
 
  // Open month management modal - FIXED with proper defaults
 const openMonthModal = (fee = null, action = "add") => {
@@ -1940,6 +1890,60 @@ const deletePaymentLocally = (fee) => {
   return courseShortNames[courseName] || 
          courseName?.split(' ').map(w => w[0]).join('') || "—";
 };
+
+const feeRegisterRows = useMemo(() => {
+  if (!feeData) return [];
+  const rows = [];
+
+  for (const fee of (feeData.feeSchedule || [])) {
+    if (!fee.receiptNo || !fee.paidAmount) continue;
+
+    if (fee.isExamMonth && (fee.monthlyPaid || fee.examPaid)) {
+      if ((fee.monthlyPaid || 0) > 0) {
+        rows.push({
+          date:        fee.paymentDate,
+          receiptNo:   fee.receiptNo,
+          rollNo:      student?.admissionNo || feeData.student?.admissionNo || '—',
+          studentName: feeData.student?.fullName,
+          course:      getCourseShortName(fee),
+          batchTime:   student?.batchTime || '—',
+          faculty:     student?.facultyAllot || '—',
+          feeType:     'Monthly Fee',
+          amount:      fee.monthlyPaid
+        });
+      }
+      if ((fee.examPaid || 0) > 0) {
+        rows.push({
+          date:        fee.paymentDate,
+          receiptNo:   fee.receiptNo,
+          rollNo:      student?.admissionNo || feeData.student?.admissionNo || '—',
+          studentName: feeData.student?.fullName,
+          course:      getCourseShortName(fee),
+          batchTime:   student?.batchTime || '—',
+          faculty:     student?.facultyAllot || '—',
+          feeType:     'Exam Fee',
+          amount:      fee.examPaid
+        });
+      }
+    } else {
+      rows.push({
+        date:        fee.paymentDate,
+        receiptNo:   fee.receiptNo,
+        rollNo:      student?.admissionNo || feeData.student?.admissionNo || '—',
+        studentName: feeData.student?.fullName,
+        course:      getCourseShortName(fee),
+        batchTime:   student?.batchTime || '—',
+        faculty:     student?.facultyAllot || '—',
+        feeType:     fee.isExamMonth ? 'Exam Fee' : 'Monthly Fee',
+        amount:      fee.paidAmount
+      });
+    }
+  }
+
+  return rows.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+}, [feeData, student]);
+
+
   const printReceipt = () => {
     const printWindow = window.open("", "_blank");
     printWindow.document.write(`
