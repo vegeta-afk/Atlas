@@ -453,9 +453,13 @@ const cleanFeeForBackend = (fee) => ({
 });
 
 const calcTotals = (schedule) => ({
-  totalCourseFee: schedule.reduce((s, f) => s + ((f.baseFee || 0) + (f.isExamMonth ? (f.examFee || 0) : 0)), 0),
+  totalCourseFee: schedule
+    .filter(f => f.status !== "suspended")
+    .reduce((s, f) => s + ((f.baseFee || 0) + (f.isExamMonth ? (f.examFee || 0) : 0)), 0),
   paidAmount:     schedule.reduce((s, f) => s + (f.paidAmount   || 0), 0),
-  balanceAmount:  schedule.reduce((s, f) => s + (f.balanceAmount|| 0), 0),
+  balanceAmount:  schedule
+    .filter(f => f.status !== "suspended")
+    .reduce((s, f) => s + (f.balanceAmount || 0), 0),
 });
 
   useEffect(() => {
@@ -509,8 +513,9 @@ const calcTotals = (schedule) => ({
   const apiStudent = data.data.student;
   const processedSchedule = processFeeSchedule(data.data.feeSchedule || [], apiStudent);
   
-  const totalCourseFee = processedSchedule.reduce((s, f) => 
-    s + (f.baseFee || 0) + (f.isExamMonth ? (f.examFee || 0) : 0), 0);
+  const totalCourseFee = processedSchedule
+  .filter(f => f.status !== "suspended")
+  .reduce((s, f) => s + (f.baseFee || 0) + (f.isExamMonth ? (f.examFee || 0) : 0), 0);
   const paidAmount = processedSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
 
   const processedData = {
@@ -521,8 +526,12 @@ const calcTotals = (schedule) => ({
       totalCourseFee,
       paidAmount,
       balanceAmount: totalCourseFee - paidAmount,
-      totalMonthlyFees: processedSchedule.reduce((s, f) => s + (f.baseFee || 0), 0),
-      totalExamFees: processedSchedule.reduce((s, f) => s + (f.isExamMonth ? (f.examFee || 0) : 0), 0),
+      totalMonthlyFees: processedSchedule
+  .filter(f => f.status !== "suspended")
+  .reduce((s, f) => s + (f.baseFee || 0), 0),
+totalExamFees: processedSchedule
+  .filter(f => f.status !== "suspended")
+  .reduce((s, f) => s + (f.isExamMonth ? (f.examFee || 0) : 0), 0),
     }
   };
   setFeeData(processedData);
@@ -1234,7 +1243,9 @@ const handleUnsuspend = async (fee) => {
   // Sort by month number first
   const sortedSchedule = [...updatedFeeSchedule].sort((a, b) => a.monthNumber - b.monthNumber);
   
-  const totalCourseFee = sortedSchedule.reduce((sum, fee) => sum + (fee.totalFee || 0), 0);
+  const totalCourseFee = sortedSchedule
+  .filter(f => f.status !== "suspended")
+  .reduce((sum, fee) => sum + (fee.totalFee || 0), 0);
   const totalPaid = sortedSchedule.reduce((sum, fee) => sum + (fee.paidAmount || 0), 0);
   const balanceAmount = Math.max(0, totalCourseFee - totalPaid);
   
@@ -1255,8 +1266,8 @@ const handleUnsuspend = async (fee) => {
       paidInstallments,
       partialInstallments,
       pendingInstallments,
-      totalMonthlyFees: sortedSchedule.reduce((sum, fee) => sum + (fee.baseFee || 0), 0),
-      totalExamFees: sortedSchedule.reduce((sum, fee) => sum + (fee.examFee || 0), 0),
+      totalMonthlyFees: sortedSchedule.filter(f => f.status !== "suspended").reduce((sum, fee) => sum + (fee.baseFee || 0), 0),
+      totalExamFees: sortedSchedule.filter(f => f.status !== "suspended").reduce((sum, fee) => sum + (fee.examFee || 0), 0),
     },
   });
 };
