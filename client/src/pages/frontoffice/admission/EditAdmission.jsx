@@ -64,6 +64,13 @@ const EditAdmission = () => {
   const [originalCourseId, setOriginalCourseId] = useState("");
   const [courseChanged, setCourseChanged] = useState(false);
 
+
+  const formDataRef = React.useRef(formData);
+
+    useEffect(() => {
+    formDataRef.current = formData;
+    }, [formData]);
+
   const [formData, setFormData] = useState({
     admissionNo: "", admissionBy: "", admissionDate: "", enquiryNo: "",
     fullName: "", dateOfBirth: "", gender: "",
@@ -389,7 +396,9 @@ setCategories(categories || []);
      // EditAdmission.jsx — handleSubmit → updateData object
 
 
-let newFeeSchedule = null;
+ const latestFormData = formDataRef.current;
+
+     let newFeeSchedule = null;
 
 if (courseChanged && selectedCourseDetails && formData.courseId) {
   // Course changed — with or without scholarship
@@ -410,11 +419,6 @@ if (courseChanged && selectedCourseDetails && formData.courseId) {
   console.log("🎓 Fee schedule generated (scholarship):", newFeeSchedule.length, "months @ ₹", formData.finalMonthlyFee);
 }
 
-console.log("🔍 DEBUG courseChanged:", courseChanged);
-console.log("🔍 DEBUG hasScholarship:", formData.hasScholarship);
-console.log("🔍 DEBUG finalMonthlyFee:", formData.finalMonthlyFee);
-console.log("🔍 DEBUG newFeeSchedule:", newFeeSchedule ? `${newFeeSchedule.length} months, first month fee: ₹${newFeeSchedule[0]?.monthlyFee}` : "NULL - not sending");
-console.log("🔍 DEBUG selectedCourseDetails:", selectedCourseDetails?.courseFullName, "monthly:", selectedCourseDetails?.monthlyFee);
 
 
 
