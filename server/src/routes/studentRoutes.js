@@ -8,7 +8,6 @@ const { generateFeeSchedule } = require("../utils/feeGenerator");
 const studentController = require("../controllers/studentController");
 const User = require("../models/user");
 const bcrypt = require("bcryptjs");
-const { otherFees: otherFeesData } = req.body;
 
 
 router.use(protect);
@@ -635,7 +634,8 @@ router.post("/payment", async (req, res) => {
       fineReason,
       carryForward,
       carryForwardAmount,
-      carryToMonth
+      carryToMonth,
+      otherFees: otherFeesData,
     } = req.body;
 
     const student = await Student.findById(studentId);
@@ -864,7 +864,8 @@ student.markModified("feeSchedule");
       collectedBy: req.user?.id || "admin",
       remarks: remarks || "",
       paymentType: paymentType,
-      fineAmount: fineAmount || 0
+      fineAmount: fineAmount || 0,
+      otherFees: Array.isArray(otherFeesData) ? otherFeesData : []
     });
 
     await Student.findByIdAndUpdate(
