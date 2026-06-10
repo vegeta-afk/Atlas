@@ -173,21 +173,31 @@ const StudentFees = () => {
       }
       const data = await response.json();
       if (data.success) {
-        const transformedStudents = (data.data || []).map(student => ({
-          _id: student._id,
-          studentId: student.studentId,
-          admissionNo: student.admissionNo,
-          fullName: student.fullName,
-          fatherName: student.fatherName || "N/A",
-          dateOfJoining: student.admissionDate || student.dateOfJoining,
-          course: student.course || student.courseName || "N/A",
-          batch: student.batch || student.batchName || student.batchTime || student.originalData?.batch || "N/A",
-          status: student.status || "Active",
-          monthlyFee: student.monthlyFee || student.feeAmount || 0,
-          paidAmount: student.paidAmount || 0,
-          balanceAmount: student.balanceAmount || student.pendingAmount || 0,
-          originalData: student
-        }));
+        const transformedStudents = (data.data || []).map(student => {
+  const activeFeeSchedule = (student.feeSchedule || []).filter(
+    f => f.status !== "suspended"
+  );
+  const activeTotalFee = activeFeeSchedule.length > 0
+    ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
+    : (student.totalCourseFee || 0);
+  const activeBalance = activeTotalFee - (student.paidAmount || 0);
+
+  return {
+    _id: student._id,
+    studentId: student.studentId,
+    admissionNo: student.admissionNo,
+    fullName: student.fullName,
+    fatherName: student.fatherName || "N/A",
+    dateOfJoining: student.admissionDate || student.dateOfJoining,
+    course: student.course || student.courseName || "N/A",
+    batch: student.batch || student.batchName || student.batchTime || student.originalData?.batch || "N/A",
+    status: student.status || "Active",
+    monthlyFee: student.monthlyFee || student.feeAmount || 0,
+    paidAmount: student.paidAmount || 0,
+    balanceAmount: Math.max(0, activeBalance),
+    originalData: student
+  };
+});
         setStudents(transformedStudents);
       } else {
         loadMockData();
@@ -525,21 +535,31 @@ console.log("🔍 Payment data:", JSON.stringify({
       }
       const data = await response.json();
       if (data.success && data.data && data.data.length > 0) {
-        const transformedStudents = (data.data || []).map(student => ({
-          _id: student._id,
-          studentId: student.studentId,
-          admissionNo: student.admissionNo,
-          fullName: student.fullName,
-          fatherName: student.fatherName || "N/A",
-          dateOfJoining: student.admissionDate || student.dateOfJoining,
-          course: student.course || "N/A",
-          batch: student.batch || student.batchName || student.batchTime || "N/A",
-          status: student.status || "Active",
-          monthlyFee: student.monthlyFee || 0,
-          paidAmount: student.paidAmount || 0,
-          balanceAmount: student.balanceAmount || 0,
-          originalData: student
-        }));
+        const transformedStudents = (data.data || []).map(student => {
+  const activeFeeSchedule = (student.feeSchedule || []).filter(
+    f => f.status !== "suspended"
+  );
+  const activeTotalFee = activeFeeSchedule.length > 0
+    ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
+    : (student.totalCourseFee || 0);
+  const activeBalance = activeTotalFee - (student.paidAmount || 0);
+
+  return {
+    _id: student._id,
+    studentId: student.studentId,
+    admissionNo: student.admissionNo,
+    fullName: student.fullName,
+    fatherName: student.fatherName || "N/A",
+    dateOfJoining: student.admissionDate || student.dateOfJoining,
+    course: student.course || student.courseName || "N/A",
+    batch: student.batch || student.batchName || student.batchTime || student.originalData?.batch || "N/A",
+    status: student.status || "Active",
+    monthlyFee: student.monthlyFee || student.feeAmount || 0,
+    paidAmount: student.paidAmount || 0,
+    balanceAmount: Math.max(0, activeBalance),
+    originalData: student
+  };
+});
         setStudents(transformedStudents);
       } else {
         const searchLower = searchQuery.toLowerCase().trim();
