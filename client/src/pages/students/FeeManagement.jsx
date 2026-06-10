@@ -1895,11 +1895,10 @@ const feeRegisterRows = useMemo(() => {
   if (!feeData) return [];
   const rows = [];
 
-
   const getShortName = (fee) => {
     const conversionHistory = feeData?.student?.conversionHistory || [];
     if (conversionHistory.length === 0) {
-      return courseShortNames[feeData?.student?.course] || 
+      return courseShortNames[feeData?.student?.course] ||
              feeData?.student?.course?.split(' ').map(w => w[0]).join('') || '—';
     }
     const sortedHistory = [...conversionHistory].sort((a, b) => a.conversionMonth - b.conversionMonth);
@@ -1911,10 +1910,11 @@ const feeRegisterRows = useMemo(() => {
         break;
       }
     }
-    return courseShortNames[courseName] || 
+    return courseShortNames[courseName] ||
            courseName?.split(' ').map(w => w[0]).join('') || '—';
   };
 
+  // ── 1. Primary feeSchedule ─────────────────────────────
   for (const fee of (feeData.feeSchedule || [])) {
     if (!fee.receiptNo || !(fee.paidAmount > 0)) continue;
 
@@ -1925,11 +1925,11 @@ const feeRegisterRows = useMemo(() => {
           receiptNo:   fee.receiptNo,
           rollNo:      student?.admissionNo || feeData.student?.admissionNo || '—',
           studentName: feeData.student?.fullName,
-          course:      getCourseShortName(fee),
+          course:      getShortName(fee),
           batchTime:   student?.batchTime || '—',
           faculty:     student?.facultyAllot || '—',
           feeType:     'Monthly Fee',
-          amount:      fee.monthlyPaid
+          amount:      fee.monthlyPaid,
         });
       }
       if ((fee.examPaid || 0) > 0) {
@@ -1938,11 +1938,11 @@ const feeRegisterRows = useMemo(() => {
           receiptNo:   fee.receiptNo,
           rollNo:      student?.admissionNo || feeData.student?.admissionNo || '—',
           studentName: feeData.student?.fullName,
-          course:      getCourseShortName(fee),
+          course:      getShortName(fee),
           batchTime:   student?.batchTime || '—',
           faculty:     student?.facultyAllot || '—',
           feeType:     'Exam Fee',
-          amount:      fee.examPaid
+          amount:      fee.examPaid,
         });
       }
     } else {
@@ -1951,11 +1951,30 @@ const feeRegisterRows = useMemo(() => {
         receiptNo:   fee.receiptNo,
         rollNo:      student?.admissionNo || feeData.student?.admissionNo || '—',
         studentName: feeData.student?.fullName,
-        course:      getCourseShortName(fee),
+        course:      getShortName(fee),
         batchTime:   student?.batchTime || '—',
         faculty:     student?.facultyAllot || '—',
         feeType:     fee.isExamMonth ? 'Exam Fee' : 'Monthly Fee',
-        amount:      fee.paidAmount
+        amount:      fee.paidAmount,
+      });
+    }
+  }
+
+  // ── 2. paymentHistory → otherFees (Late Fee, Convert Fee, etc.) ──
+  for (const ph of (feeData.student?.paymentHistory || [])) {
+    if (!ph.receiptNo || !Array.isArray(ph.otherFees)) continue;
+    for (const of_ of ph.otherFees) {
+      if (!of_.amount || of_.amount <= 0) continue;
+      rows.push({
+        date:        ph.date,
+        receiptNo:   ph.receiptNo,
+        rollNo:      student?.admissionNo || feeData.student?.admissionNo || '—',
+        studentName: feeData.student?.fullName,
+        course:      getShortName({ monthNumber: 0 }),
+        batchTime:   student?.batchTime || '—',
+        faculty:     student?.facultyAllot || '—',
+        feeType:     of_.feeName || 'Other Fee',
+        amount:      of_.amount,
       });
     }
   }

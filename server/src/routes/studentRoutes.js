@@ -1631,7 +1631,8 @@ const student = await Student.findOne(
           paidAmount: student.paidAmount,
           balanceAmount: student.balanceAmount,
           conversionHistory: student.conversionHistory || [],
-          feeSchedule: feeSchedule
+          feeSchedule: feeSchedule,
+          paymentHistory: student.paymentHistory || [],
         },
         course: {
           _id: course?._id,
