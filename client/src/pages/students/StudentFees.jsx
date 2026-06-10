@@ -924,15 +924,15 @@ console.log("🔍 Payment data:", JSON.stringify({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Monthly Fee
               <span className="ml-1 text-xs text-gray-400">
-                (Max: {formatCurrency((fee.pendingAmount || 0) - (fee.examFee || 0))})
+                (Max: {formatCurrency(Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))))})
               </span>
             </label>
             <input
               type="number"
-              value={fee.monthlyPayingAmount ?? ((fee.pendingAmount || 0) - (fee.examFee || 0))}
+              value={fee.monthlyPayingAmount ?? Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))}
               onChange={(e) => {
                 const val = parseFloat(e.target.value) || 0;
-                const maxMonthly = (fee.pendingAmount || 0) - (fee.examFee || 0);
+                const maxMonthly = Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)));
                 const clampedVal = Math.min(val, maxMonthly);
                 const updatedFees = getCurrentFees().map(f => {
                   if (f.id === fee.id) {
@@ -950,7 +950,7 @@ console.log("🔍 Payment data:", JSON.stringify({
               onWheel={(e) => e.target.blur()}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               min="0"
-              max={(fee.pendingAmount || 0) - (fee.examFee || 0)}
+              max={Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))}
             />
           </div>
 
@@ -1010,7 +1010,10 @@ console.log("🔍 Payment data:", JSON.stringify({
         <div className="flex justify-between items-center bg-white rounded-lg px-3 py-2 border border-blue-200">
           <span className="text-sm text-gray-600">Total paying:</span>
           <span className="font-bold text-blue-700">
-            {formatCurrency((fee.monthlyPayingAmount ?? ((fee.pendingAmount || 0) - (fee.examFee || 0))) + (fee.examPayingAmount ?? (fee.examFee || 0)))}
+            {formatCurrency(
+  (fee.monthlyPayingAmount ?? Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))) +
+  (fee.examPayingAmount ?? Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))
+)}
           </span>
         </div>
 
