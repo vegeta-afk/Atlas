@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import "./AddAdmission.css";
+import { generateFeeSchedule } from "../../../utils/feeGenerator";
 
 const FormSection = ({ title, icon: Icon, children }) => (
   <div className="form-section">
@@ -390,17 +391,8 @@ setCategories(categories || []);
 
 let newFeeSchedule = null;
 if (courseChanged && selectedCourseDetails && formData.courseId) {
-  try {
-    // Import generateFeeSchedule (see step 4 below)
-    const { generateFeeSchedule } = await import("../../../utils/feeGenerator");
-    newFeeSchedule = generateFeeSchedule(selectedCourseDetails, formData.admissionDate);
-    console.log("📋 New fee schedule generated:", newFeeSchedule.length, "months");
-  } catch (err) {
-    console.error("Fee generation failed:", err);
-    alert("Failed to generate new fee schedule. Save aborted.");
-    setIsSubmitting(false);
-    return;
-  }
+  newFeeSchedule = generateFeeSchedule(selectedCourseDetails, formData.admissionDate);
+  console.log("📋 New fee schedule generated:", newFeeSchedule.length, "months");
 }
 
 
