@@ -74,7 +74,13 @@ const currentMonth = Math.min(
 // POST /api/course-conversion/preview
 exports.getConversionPreview = async (req, res) => {
   try {
-    const { studentId, newCourseId, conversionMonth } = req.body;
+    const { 
+  studentId, 
+  newCourseId, 
+  conversionMonth,
+  scholarshipPercent,
+  finalMonthlyFee,
+} = req.body;
     const student = await Student.findById(studentId).populate("courseCode");
     const newCourse = await Course.findById(newCourseId);
 
@@ -85,7 +91,10 @@ exports.getConversionPreview = async (req, res) => {
     const oldDuration = parseInt(oldCourse?.duration, 10) || 0;
     const newDuration = parseInt(newCourse.duration, 10) || 0;
     const conversionMonthNum = parseInt(conversionMonth, 10);
-    const newMonthlyFee = parseFloat(newCourse.monthlyFee) || 0;
+    const originalMonthlyFee = parseFloat(newCourse.monthlyFee) || 0;
+const newMonthlyFee = (finalMonthlyFee && parseFloat(finalMonthlyFee) > 0)
+  ? parseFloat(finalMonthlyFee)
+  : originalMonthlyFee;
     const newExamFee = parseFloat(newCourse.examFee) || 0;
 
     // ✅ Get ALL paid months (regardless of month number)
@@ -169,6 +178,7 @@ exports.getConversionPreview = async (req, res) => {
           name: newCourse.courseFullName,
           duration: newDuration,
           monthlyFee: newMonthlyFee,
+          originalMonthlyFee: originalMonthlyFee,
           examFee: newExamFee,
           examMonths: newCourse.examMonths,
         },
@@ -208,12 +218,15 @@ exports.convertStudentCourse = async (req, res) => {
 
   try {
     const {
-      studentId,
-      newCourseId,
-      conversionMonth,
-      conversionReason,
-      convertedBy
-    } = req.body;
+  studentId,
+  newCourseId,
+  conversionMonth,
+  conversionReason,
+  convertedBy,
+  hasScholarship,
+  scholarshipPercent,
+  finalMonthlyFee,
+} = req.body;
 
     // Get student with current course details
     const student = await Student.findById(studentId)
@@ -282,7 +295,13 @@ const currentMonth = Math.min(
     console.log("Conversion Month:", conversionMonthNum);
 
     // ✅ USE THE NEW DEDICATED FUNCTION TO GENERATE CONVERTED FEE SCHEDULE
-    const newFeeSchedule = generateConvertedFeeSchedule(student, newCourse, conversionMonthNum);
+    const courseForSchedule = (hasScholarship && finalMonthlyFee && parseFloat(finalMonthlyFee) > 0)
+  ? { ...newCourse.toObject(), monthlyFee: parseFloat(finalMonthlyFee) }
+  : newCourse.toObject();
+
+console.log("💰 Monthly fee for schedule:", courseForSchedule.monthlyFee, hasScholarship ? `(${scholarshipPercent}% scholarship)` : "(no scholarship)");
+
+const newFeeSchedule = generateConvertedFeeSchedule(student, courseForSchedule, conversionMonthNum);
 
     if (!newFeeSchedule || newFeeSchedule.length === 0) {
       await session.abortTransaction();
@@ -314,6 +333,21 @@ const oldPaidAmount = student.paidAmount || 0;
     student.totalCourseFee = newTotalCourseFee;
     student.paidAmount = newPaidAmount;
     student.balanceAmount = newBalanceAmount;
+
+    if (hasScholarship && finalMonthlyFee && parseFloat(finalMonthlyFee) > 0) {
+  student.hasScholarship = true;
+  student.monthlyFee = parseFloat(finalMonthlyFee);
+  student.scholarship = {
+    applied: true,
+    scholarshipName: `${scholarshipPercent}% Scholarship`,
+    scholarshipCode: `SCH${scholarshipPercent}`,
+    percent: parseFloat(scholarshipPercent),
+    type: "percentage",
+    originalMonthlyFee: newCourse.monthlyFee,
+    finalMonthlyFee: parseFloat(finalMonthlyFee),
+  };
+  console.log(`🎓 Scholarship saved: ${scholarshipPercent}% → ₹${finalMonthlyFee}/month`);
+}
 
     // Add conversion history
     if (!student.conversionHistory) {

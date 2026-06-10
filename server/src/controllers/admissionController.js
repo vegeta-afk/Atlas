@@ -332,6 +332,12 @@ exports.updateAdmission = async (req, res) => {
       catch (e) { req.body.feeSchedule = undefined; }
     }
 
+    console.log("🔍 BACKEND feeSchedule received:", req.body.feeSchedule
+  ? `${req.body.feeSchedule.length} months, first fee: ₹${req.body.feeSchedule[0]?.monthlyFee}`
+  : "NOT RECEIVED"
+);
+console.log("🔍 BACKEND totalFees received:", req.body.totalFees);
+
     const admission = await Admission.findById(req.params.id);
     if (!admission) {
       return res.status(404).json({ success: false, message: "Admission not found" });
