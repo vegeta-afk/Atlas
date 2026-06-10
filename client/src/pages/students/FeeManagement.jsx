@@ -1893,13 +1893,27 @@ const deletePaymentLocally = (fee) => {
 
 const feeRegisterRows = useMemo(() => {
   if (!feeData) return [];
-
-  console.log("🧾 feeSchedule for register:", 
-    feeData.feeSchedule?.filter(f => f.receiptNo).map(f => ({
-      month: f.month, receiptNo: f.receiptNo, paidAmount: f.paidAmount
-    }))
-  );
   const rows = [];
+
+
+  const getShortName = (fee) => {
+    const conversionHistory = feeData?.student?.conversionHistory || [];
+    if (conversionHistory.length === 0) {
+      return courseShortNames[feeData?.student?.course] || 
+             feeData?.student?.course?.split(' ').map(w => w[0]).join('') || '—';
+    }
+    const sortedHistory = [...conversionHistory].sort((a, b) => a.conversionMonth - b.conversionMonth);
+    let courseName = sortedHistory[0].fromCourse;
+    for (const conversion of sortedHistory) {
+      if (fee.monthNumber >= conversion.conversionMonth) {
+        courseName = conversion.toCourse;
+      } else {
+        break;
+      }
+    }
+    return courseShortNames[courseName] || 
+           courseName?.split(' ').map(w => w[0]).join('') || '—';
+  };
 
   for (const fee of (feeData.feeSchedule || [])) {
     if (!fee.receiptNo || !(fee.paidAmount > 0)) continue;
