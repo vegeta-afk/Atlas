@@ -291,6 +291,18 @@ const ViewStudent = () => {
     );
   }
 
+
+  const activeFeeSchedule = (student.feeSchedule || []).filter(
+  f => f.status !== "suspended"
+);
+const activeTotalFee = activeFeeSchedule.reduce(
+  (s, f) => s + (f.totalFee || 0), 0
+);
+const activePaidAmount = activeFeeSchedule.reduce(
+  (s, f) => s + (f.paidAmount || 0), 0
+);
+const activeBalanceAmount = activeTotalFee - activePaidAmount;
+
   const tabs = [
     { id: "basic", label: "Basic Info", icon: <User size={18} /> },
     { id: "fees", label: "Fees", icon: <DollarSign size={18} /> },
@@ -384,13 +396,13 @@ const ViewStudent = () => {
               </div>
               <div className="bg-purple-50 p-4 rounded-lg">
                 <div className="text-purple-600 font-semibold">Fees Paid</div>
-                <div className="text-xl font-bold">₹{student.paidAmount || 0}</div>
+                <div className="text-xl font-bold">₹{activePaidAmount}</div>
               </div>
               <div className="bg-orange-50 p-4 rounded-lg">
                 <div className="text-orange-600 font-semibold">Balance</div>
                 <div className="text-xl font-bold">
-                  ₹{student.balanceAmount || 10000}
-                </div>
+  ₹{activeBalanceAmount}
+</div>
               </div>
             </div>
           </div>
