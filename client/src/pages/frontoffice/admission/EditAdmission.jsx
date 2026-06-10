@@ -390,9 +390,24 @@ setCategories(categories || []);
 
 
 let newFeeSchedule = null;
+
 if (courseChanged && selectedCourseDetails && formData.courseId) {
-  newFeeSchedule = generateFeeSchedule(selectedCourseDetails, formData.admissionDate);
-  console.log("📋 New fee schedule generated:", newFeeSchedule.length, "months");
+  // Course changed — with or without scholarship
+  const courseToUse = (formData.hasScholarship && formData.finalMonthlyFee > 0)
+    ? { ...selectedCourseDetails, monthlyFee: formData.finalMonthlyFee }
+    : selectedCourseDetails;
+
+  newFeeSchedule = generateFeeSchedule(courseToUse, formData.admissionDate);
+  console.log("📋 Fee schedule generated (course changed):", newFeeSchedule.length, "months @ ₹", courseToUse.monthlyFee);
+
+} else if (!courseChanged && formData.hasScholarship && formData.finalMonthlyFee > 0 && selectedCourseDetails) {
+  // Same course but scholarship applied — regenerate with discounted fee
+  const discountedCourse = {
+    ...selectedCourseDetails,
+    monthlyFee: formData.finalMonthlyFee,  // ← 500 instead of 1000
+  };
+  newFeeSchedule = generateFeeSchedule(discountedCourse, formData.admissionDate);
+  console.log("🎓 Fee schedule generated (scholarship):", newFeeSchedule.length, "months @ ₹", formData.finalMonthlyFee);
 }
 
 
