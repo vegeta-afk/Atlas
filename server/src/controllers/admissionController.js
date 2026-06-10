@@ -326,6 +326,12 @@ exports.updateAdmission = async (req, res) => {
       req.body.hasScholarship = req.body.hasScholarship === "true";
     }
 
+    // ── FIX: parse feeSchedule if sent as JSON string via FormData ──
+    if (typeof req.body.feeSchedule === "string") {
+      try { req.body.feeSchedule = JSON.parse(req.body.feeSchedule); }
+      catch (e) { req.body.feeSchedule = undefined; }
+    }
+
     const admission = await Admission.findById(req.params.id);
     if (!admission) {
       return res.status(404).json({ success: false, message: "Admission not found" });
@@ -349,16 +355,22 @@ exports.updateAdmission = async (req, res) => {
       admission.set("scholarship", null);
     }
 
-   if (!bodyToApply.email?.trim()) {
-  bodyToApply.email = "";  // ← overwrite old email with empty, fallback will kick in
-}
+    if (!bodyToApply.email?.trim()) {
+      bodyToApply.email = "";
+    }
 
-  
     Object.assign(admission, bodyToApply);
 
+    // ── Force feeSchedule replacement (Object.assign alone isn't reliable for arrays) ──
+    if (bodyToApply.feeSchedule && Array.isArray(bodyToApply.feeSchedule)) {
+      admission.feeSchedule = bodyToApply.feeSchedule;
+      admission.markModified("feeSchedule");
+      console.log(`✅ Admission feeSchedule replaced: ${bodyToApply.feeSchedule.length} months`);
+    }
+
     if (!admission.email?.trim()) {
-  admission.email = "";  // keep as empty string, student sync will use fallback
-}
+      admission.email = "";
+    }
 
     await admission.save();
 
@@ -394,6 +406,27 @@ exports.updateAdmission = async (req, res) => {
           student.photo = admission.photo;
         }
 
+        // ── Sync fee schedule when course changed ───────────────────
+        if (
+          bodyToApply.feeSchedule &&
+          Array.isArray(bodyToApply.feeSchedule) &&
+          bodyToApply.feeSchedule.length > 0
+        ) {
+          student.feeSchedule    = bodyToApply.feeSchedule;
+          student.totalCourseFee = bodyToApply.totalFees ||
+            bodyToApply.feeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0);
+          student.balanceAmount  = student.totalCourseFee - (student.paidAmount || 0);
+          student.monthlyFee     = bodyToApply.feeSchedule.find(f => !f.isExamMonth)?.monthlyFee
+                                   || bodyToApply.feeSchedule[0]?.monthlyFee
+                                   || student.monthlyFee;
+          student.markModified("feeSchedule");
+          console.log(`✅ Student feeSchedule replaced: ${student.feeSchedule.length} months`);
+        }
+        // ───────────────────────────────────────────────────────────
+
+        // ── Scholarship overrides fee values if applicable ──────────
+        // NOTE: this runs AFTER feeSchedule sync intentionally —
+        // scholarship adjusts totalCourseFee/monthlyFee on top
         if (admission.hasScholarship && admission.scholarship) {
           student.hasScholarship = true;
           student.scholarship    = admission.scholarship;
@@ -420,13 +453,13 @@ exports.updateAdmission = async (req, res) => {
 
             if (!emailTaken) {
               userAccount.email = newEmail;
-              student.email = newEmail;
+              student.email     = newEmail;
             } else {
               console.log(`⚠️ Email ${newEmail} already taken, skipping email update`);
             }
 
             userAccount.fullName = student.fullName;
-            userAccount.name = student.fullName;
+            userAccount.name     = student.fullName;
             await userAccount.save();
             await student.save();
             console.log(`✅ User account synced for ${student.studentId} → ${newEmail}`);

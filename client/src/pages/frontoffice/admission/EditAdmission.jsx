@@ -60,6 +60,9 @@ const EditAdmission = () => {
   const [errors, setErrors]         = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [originalCourseId, setOriginalCourseId] = useState("");
+  const [courseChanged, setCourseChanged] = useState(false);
+
   const [formData, setFormData] = useState({
     admissionNo: "", admissionBy: "", admissionDate: "", enquiryNo: "",
     fullName: "", dateOfBirth: "", gender: "",
@@ -173,6 +176,9 @@ category: "",
           scholarshipPercent:   d.scholarship?.percent || 0,
           scholarshipDocuments: d.scholarship?.documents || [],
         });
+
+        setOriginalCourseId(resolvedCourseId);
+        setCourseChanged(false);
 
         if (d.photo) setPhotoPreview(d.photo);
       } else {
@@ -301,8 +307,11 @@ setCategories(categories || []);
     scholarshipName: "",
     scholarshipCode: "",
   }));
-  setIsCourseScholarshipEligible(false); // ✅ reset immediately on course change
+  setIsCourseScholarshipEligible(false);
   setCalculatedFees(null);
+
+  // ── NEW: flag whether course actually changed from original ──
+  setCourseChanged(value !== originalCourseId);
   return;
 }
     setFormData((p) => ({ ...p, [name]: value }));
@@ -378,13 +387,32 @@ setCategories(categories || []);
     try {
      // EditAdmission.jsx — handleSubmit → updateData object
 
+
+let newFeeSchedule = null;
+if (courseChanged && selectedCourseDetails && formData.courseId) {
+  try {
+    // Import generateFeeSchedule (see step 4 below)
+    const { generateFeeSchedule } = await import("../../../utils/feeGenerator");
+    newFeeSchedule = generateFeeSchedule(selectedCourseDetails, formData.admissionDate);
+    console.log("📋 New fee schedule generated:", newFeeSchedule.length, "months");
+  } catch (err) {
+    console.error("Fee generation failed:", err);
+    alert("Failed to generate new fee schedule. Save aborted.");
+    setIsSubmitting(false);
+    return;
+  }
+}
+
+
+
+
 const updateData = {
   fullName: formData.fullName, dateOfBirth: formData.dateOfBirth,
   gender: formData.gender, fatherName: formData.fatherName, motherName: formData.motherName,
   email: formData.email || "", mobileNumber: formData.mobileNumber,
   fatherNumber: formData.fatherNumber, motherNumber: formData.motherNumber,
   aadharNumber: formData.aadharNumber,
-  place: formData.place,          // ← FIX 1: was missing entirely
+  place: formData.place,
   address: formData.address, city: formData.city, state: formData.state, pincode: formData.pincode,
   lastQualification: formData.lastQualification, yearOfPassing: formData.yearOfPassing,
   course: formData.interestedCourse, courseId: formData.courseId,
@@ -398,9 +426,17 @@ const updateData = {
   remarks: formData.remarks || "",
   admissionBy: formData.admissionBy, admissionDate: formData.admissionDate,
   hasScholarship: formData.hasScholarship,
-  totalFees: formData.finalTotalFee || 0,
-  // ← FIX 3: Never send scholarship: null — omit key entirely when not applicable.
-  // Sending null triggers Mongoose subdocument validation → 500 error.
+
+  // ── CHANGED: use newFeeSchedule total if course changed, otherwise original ──
+  totalFees: newFeeSchedule
+    ? newFeeSchedule.reduce((s, f) => s + f.totalFee, 0)
+    : (formData.finalTotalFee || 0),
+
+  // ── NEW: only sent when course was changed ──
+  ...(newFeeSchedule && {
+    feeSchedule: newFeeSchedule,
+  }),
+
   ...(formData.hasScholarship && {
     scholarship: {
       applied: true,
