@@ -1893,10 +1893,16 @@ const deletePaymentLocally = (fee) => {
 
 const feeRegisterRows = useMemo(() => {
   if (!feeData) return [];
+
+  console.log("🧾 feeSchedule for register:", 
+    feeData.feeSchedule?.filter(f => f.receiptNo).map(f => ({
+      month: f.month, receiptNo: f.receiptNo, paidAmount: f.paidAmount
+    }))
+  );
   const rows = [];
 
   for (const fee of (feeData.feeSchedule || [])) {
-    if (!fee.receiptNo || !fee.paidAmount) continue;
+    if (!fee.receiptNo || !(fee.paidAmount > 0)) continue;
 
     if (fee.isExamMonth && (fee.monthlyPaid || fee.examPaid)) {
       if ((fee.monthlyPaid || 0) > 0) {
@@ -1941,7 +1947,7 @@ const feeRegisterRows = useMemo(() => {
   }
 
   return rows.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-}, [feeData, student]);
+}, [feeData, student, courseShortNames]);
 
 
   const printReceipt = () => {
