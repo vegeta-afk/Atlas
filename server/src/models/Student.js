@@ -273,7 +273,12 @@ scholarship: {
         months: [Number],
         receiptNo: String,
         collectedBy: String,
-        remarks: String
+        remarks: String,
+        otherFees: [{        // ← ADD THIS
+      feeName: String,
+      amount: Number,
+      description: String
+    }]
       }
     ],
 

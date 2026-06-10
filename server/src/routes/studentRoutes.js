@@ -8,6 +8,7 @@ const { generateFeeSchedule } = require("../utils/feeGenerator");
 const studentController = require("../controllers/studentController");
 const User = require("../models/user");
 const bcrypt = require("bcryptjs");
+const { otherFees: otherFeesData } = req.body;
 
 
 router.use(protect);
