@@ -57,6 +57,8 @@ const FeeManagement = ({ studentId, student, course, additionalCourseIndex }) =>
 
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+  const [showFeeRegister, setShowFeeRegister] = useState(false);
+
   useEffect(() => {
   if (studentId) {
     fetchStudentFees();
@@ -147,6 +149,9 @@ const calculateMonthNames = useMemo(() => {
   
   return monthNames;
 }, [student?.admissionDate, course?.duration]);
+
+
+
 
 // ============================================
 // PROCESSOR FOR NEW STUDENTS (regular course)
@@ -581,6 +586,58 @@ const calcTotals = (schedule) => ({
     });
   }
 };
+
+const feeRegisterRows = useMemo(() => {
+  if (!feeData) return [];
+  const rows = [];
+
+  for (const fee of (feeData.feeSchedule || [])) {
+    if (!fee.receiptNo || !fee.paidAmount) continue;
+
+    if (fee.isExamMonth && (fee.monthlyPaid || fee.examPaid)) {
+      if ((fee.monthlyPaid || 0) > 0) {
+        rows.push({
+          date:        fee.paymentDate,
+          receiptNo:   fee.receiptNo,
+          rollNo:      student?.admissionNo || feeData.student?.admissionNo || '—',
+          studentName: feeData.student?.fullName,
+          course:      getCourseShortName(fee),
+          batchTime:   student?.batchTime || '—',
+          faculty:     student?.facultyAllot || '—',
+          feeType:     'Monthly Fee',
+          amount:      fee.monthlyPaid
+        });
+      }
+      if ((fee.examPaid || 0) > 0) {
+        rows.push({
+          date:        fee.paymentDate,
+          receiptNo:   fee.receiptNo,
+          rollNo:      student?.admissionNo || feeData.student?.admissionNo || '—',
+          studentName: feeData.student?.fullName,
+          course:      getCourseShortName(fee),
+          batchTime:   student?.batchTime || '—',
+          faculty:     student?.facultyAllot || '—',
+          feeType:     'Exam Fee',
+          amount:      fee.examPaid
+        });
+      }
+    } else {
+      rows.push({
+        date:        fee.paymentDate,
+        receiptNo:   fee.receiptNo,
+        rollNo:      student?.admissionNo || feeData.student?.admissionNo || '—',
+        studentName: feeData.student?.fullName,
+        course:      getCourseShortName(fee),
+        batchTime:   student?.batchTime || '—',
+        faculty:     student?.facultyAllot || '—',
+        feeType:     fee.isExamMonth ? 'Exam Fee' : 'Monthly Fee',
+        amount:      fee.paidAmount
+      });
+    }
+  }
+
+  return rows.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+}, [feeData, student]);
 
  // Open month management modal - FIXED with proper defaults
 const openMonthModal = (fee = null, action = "add") => {
@@ -1990,61 +2047,54 @@ const deletePaymentLocally = (fee) => {
             </button>
 
             {showMoreActions && (
-              <div className="absolute right-0 mt-1 w-52 bg-white border rounded-lg shadow-lg z-10 py-1">
-                {/* Toggle between fee table and receipt table */}
-                <button
-                  onClick={() => {
-                    setShowReceiptTable(!showReceiptTable);
-                    setShowMoreActions(false);
-                  }}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-indigo-600 font-medium"
-                >
-                  <Receipt size={14} />
-                  {showReceiptTable ? "Fee Schedule View" : "Receipt Table View"}
-                </button>
+  <div className="absolute right-0 mt-1 w-52 bg-white border rounded-lg shadow-lg z-10 py-1">
 
-                <div className="border-t my-1" />
+    <button
+      onClick={() => {
+        setShowFeeRegister(!showFeeRegister);
+        setShowReceiptTable(false);
+        setShowMoreActions(false);
+      }}
+      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-blue-600 font-medium"
+    >
+      <FileText size={14} />
+      {showFeeRegister ? "Fee Schedule View" : "Fee Register View"}
+    </button>
 
-                <button
-                  onClick={() => {
-                    openMonthModal(null, "add");
-                    setShowMoreActions(false);
-                  }}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
-                >
-                  <Plus size={14} />
-                  Add Month(s)
-                </button>
-                <button
-                  onClick={() => {
-                    saveChangesToBackend();
-                    setShowMoreActions(false);
-                  }}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
-                >
-                  <FileText size={14} />
-                  Save Changes
-                </button>
+    <div className="border-t my-1" />
 
-                <div className="border-t my-1" />
+    <button
+      onClick={() => { openMonthModal(null, "add"); setShowMoreActions(false); }}
+      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+    >
+      <Plus size={14} />
+      Add Month(s)
+    </button>
+    <button
+      onClick={() => { saveChangesToBackend(); setShowMoreActions(false); }}
+      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+    >
+      <FileText size={14} />
+      Save Changes
+    </button>
 
-                <button
-                  onClick={() => {
-                    const pendingMonth = feeData.feeSchedule.find(f => f.status === "pending");
-                    if (pendingMonth) {
-                      openPaymentModal(pendingMonth, "add");
-                    } else {
-                      alert("All months are already paid!");
-                    }
-                    setShowMoreActions(false);
-                  }}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-green-600"
-                >
-                  <Plus size={14} />
-                  Add Payment
-                </button>
-              </div>
-            )}
+    <div className="border-t my-1" />
+
+    <button
+      onClick={() => {
+        const pendingMonth = feeData.feeSchedule.find(f => f.status === "pending");
+        if (pendingMonth) { openPaymentModal(pendingMonth, "add"); }
+        else { alert("All months are already paid!"); }
+        setShowMoreActions(false);
+      }}
+      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-green-600"
+    >
+      <Plus size={14} />
+      Add Payment
+    </button>
+
+  </div>
+)}
           </div>
         </div>
       </div>
@@ -2102,450 +2152,442 @@ const deletePaymentLocally = (fee) => {
         </div>
       </div>
 
-      {/* STEP 3 — Fee Schedule / Receipt Table Toggle */}
-      <div className="overflow-x-auto border rounded-lg">
-        {showReceiptTable ? (
-          // ── RECEIPT TABLE VIEW ────────────────────────────────────
-          <>
-            {/* View label */}
-            <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border-b">
-              <Receipt size={14} className="text-indigo-600" />
-              <span className="text-sm font-medium text-indigo-700">Receipt Table View</span>
-              <span className="text-xs text-indigo-500 ml-1">— showing months with payments</span>
-            </div>
-
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Month</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Receipt No</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Payment Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Mode</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Total Fee</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Amount Paid</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Balance</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {feeData.feeSchedule.map((fee, index) => {
-                  const hasPaid = fee.status === "paid" || fee.status === "partial";
-                  return (
-                    <tr
-                      key={index}
-                      className={`hover:bg-gray-50 ${
-                        !hasPaid ? "opacity-40" : ""
-                      } ${fee.status === "paid" ? "bg-green-50" : fee.status === "partial" ? "bg-blue-50" : ""}`}
-                    >
-                      <td className="px-4 py-3 whitespace-nowrap border-r">
-                        <div className="font-medium text-sm">{fee.month}</div>
-                        <div className="text-xs text-gray-400">Month {fee.monthNumber}</div>
-                      </td>
-
-                      <td className="px-4 py-3 whitespace-nowrap border-r">
-                        {fee.receiptNo ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-indigo-50 text-indigo-700 text-xs font-mono font-semibold">
-                            <Receipt size={10} />
-                            {fee.receiptNo}
-                          </span>
-                        ) : (
-                          <span className="text-gray-300 text-sm">—</span>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3 whitespace-nowrap border-r">
-                        {fee.paymentDate ? (
-                          <div className="flex items-center gap-1 text-sm">
-                            <Calendar size={13} className="text-gray-400" />
-                            {new Date(fee.paymentDate).toLocaleDateString("en-IN")}
-                          </div>
-                        ) : (
-                          <span className="text-gray-300 text-sm">—</span>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3 whitespace-nowrap border-r">
-                        {fee.paymentMode ? (
-                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 uppercase">
-                            {fee.paymentMode}
-                          </span>
-                        ) : (
-                          <span className="text-gray-300 text-sm">—</span>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3 whitespace-nowrap border-r text-sm font-medium">
-                        {formatCurrency(fee.totalFee || 0)}
-                      </td>
-
-                      <td className="px-4 py-3 whitespace-nowrap border-r">
-                        <span className={`text-sm font-semibold ${hasPaid ? "text-green-600" : "text-gray-300"}`}>
-                          {fee.paidAmount > 0 ? formatCurrency(fee.paidAmount) : "₹0"}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-3 whitespace-nowrap border-r">
-                        <span className={`text-sm font-medium ${fee.balanceAmount > 0 ? "text-red-500" : "text-green-600"}`}>
-                          {formatCurrency(fee.balanceAmount || 0)}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {fee.receiptNo ? (
-                          <button
-                            onClick={() => {
-                              setSelectedReceipt({
-                                receiptNo: fee.receiptNo,
-                                date: fee.paymentDate || fee.dueDate,
-                                studentId: feeData.student.studentId,
-                                studentName: feeData.student.fullName,
-                                course: feeData.course?.courseFullName || feeData.student.course,
-                                month: fee.month,
-                                amount: fee.paidAmount || 0,
-                                paymentMode: fee.paymentMode || "cash",
-                                balance: feeData.summary.balanceAmount,
-                              });
-                              setShowReceiptModal(true);
-                            }}
-                            className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium"
-                          >
-                            <Receipt size={12} /> View
-                          </button>
-                        ) : (
-                          <span className="text-gray-300 text-sm">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-
-              {/* Footer totals */}
-              <tfoot className="bg-gray-50 border-t-2 border-gray-200">
-                <tr>
-                  <td colSpan="4" className="px-4 py-3 font-bold text-right text-sm">TOTALS:</td>
-                  <td className="px-4 py-3 font-bold border-r text-sm">{formatCurrency(feeData.summary.totalCourseFee || 0)}</td>
-                  <td className="px-4 py-3 font-bold text-green-600 border-r text-sm">{formatCurrency(feeData.summary.paidAmount || 0)}</td>
-                  <td className="px-4 py-3 font-bold text-red-500 border-r text-sm">{formatCurrency(feeData.summary.balanceAmount || 0)}</td>
-                  <td className="px-4 py-3" />
-                </tr>
-              </tfoot>
-            </table>
-          </>
-        ) : (
-          // ── ORIGINAL FEE SCHEDULE TABLE ───────────────────────────
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                  Month
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                  Course
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                  Due Date
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                  Monthly Fee
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                  Exam Fee
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                  Total Fee
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                  Received Amount
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
-                  Actions
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Receipt
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {feeData.feeSchedule?.map((fee, index) => (
-                <tr
-                  key={index}
-                  className={`hover:bg-gray-50 ${
-  fee.status === "suspended" ? "bg-red-50 border-l-4 border-l-red-400" :
-  fee.isExamMonth ? "bg-yellow-50" : ""
-} ${fee.status === "paid" ? "bg-green-50" : ""} ${
-  fee.status === "partial" ? "bg-blue-50" : ""
-}`}
-                >
-                  <td className="px-4 py-3 whitespace-nowrap border-r">
-                    <div className="font-medium">{fee.month}</div>
-                    {fee.isExamMonth && (
-                      <div className="text-xs text-yellow-600">
-                        {fee.examType || "Exam Month"}
-                      </div>
-                    )}
-                    <div className="text-xs text-gray-500">
-                      Month {fee.monthNumber}
-                      <button
-                        onClick={() => openMonthModal(fee, "edit")}
-                        className="ml-2 text-blue-600 hover:text-blue-900"
-                        title="Edit Monthly Fee"
-                      >
-                        <Edit size={10} />
-                      </button>
-                      <button
-                        onClick={() => deleteMonth(fee.monthNumber)}
-                        className="ml-1 text-red-400 hover:text-red-700"
-                        title="Delete Month"
-                      >
-                        <Trash2 size={10} />
-                      </button>
-                    </div>
-                  </td>
-
-                  <td className="px-4 py-3 whitespace-nowrap border-r">
-  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${
-    feeData?.student?.conversionHistory?.length > 0 &&
-    feeData.student.conversionHistory.some(c => fee.monthNumber < c.conversionMonth)
-      ? "bg-blue-100 text-blue-700"   // old course months
-      : "bg-purple-100 text-purple-700" // new/current course months
-  }`}>
-    {getCourseShortName(fee)}
-  </span>
-</td>
-                  <td className="px-4 py-3 whitespace-nowrap border-r">
-                    <div className="flex items-center gap-1">
-                      <Calendar size={14} />
-                      {fee.dueDate ? new Date(fee.dueDate).toLocaleDateString("en-IN") : "N/A"}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap border-r">
-  <div className="font-medium">
-    {formatCurrency(fee.monthlyFee || fee.amount || 0)}
-  </div>
-  {fee.isExamMonth && (
-    <div className="text-xs mt-1">
-      {(fee.monthlyPaid || 0) >= (fee.monthlyFee || fee.amount || 0) ? (
-        <span className="text-green-600">✅ Monthly paid</span>
-      ) : (fee.monthlyPaid || 0) > 0 ? (
-        <span className="text-orange-500">⚡ Partial: {formatCurrency(fee.monthlyPaid || 0)}</span>
-      ) : (
-        <span className="text-gray-400">⏳ Unpaid</span>
-      )}
-    </div>
-  )}
-</td>
-                  <td className="px-4 py-3 whitespace-nowrap border-r">
-  <div className={`font-medium ${fee.isExamMonth ? "text-red-600" : "text-gray-400"}`}>
-    {fee.isExamMonth ? formatCurrency(fee.examFee || 0) : "-"}
-  </div>
-  {fee.isExamMonth && (
-    <div className="text-xs mt-1">
-      {(fee.examPaid || 0) >= (fee.examFee || 0) && (fee.examFee || 0) > 0 ? (
-        <span className="text-green-600">✅ Exam eligible</span>
-      ) : (fee.examPaid || 0) > 0 ? (
-        <span className="text-orange-500">⚡ {formatCurrency(fee.examPaid || 0)} paid</span>
-      ) : (
-        <span className="text-red-400">❌ Not eligible</span>
-      )}
-    </div>
-  )}
-</td>
-                  <td className="px-4 py-3 whitespace-nowrap border-r">
-                    <div className="font-bold">
-                      {formatCurrency(
-                        fee.totalFee ||
-                          fee.totalAmount ||
-                          (fee.amount || 0) +
-                            (fee.isExamMonth ? fee.examFee || 0 : 0)
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap border-r">
-                    {fee.status === "suspended" ? (
-  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-    <AlertCircle size={12} className="mr-1" />
-    Suspended
-    {fee.remarks && (
-      <span className="ml-1 text-red-600 truncate max-w-[100px]" title={fee.remarks}>
-        — {fee.remarks.replace("Suspended: ", "")}
-      </span>
-    )}
-  </span>
-) : (
-  <span
-    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-      fee.status === "paid"
-        ? "bg-green-100 text-green-800"
-        : fee.status === "overdue"
-        ? "bg-red-100 text-red-800"
-        : fee.status === "partial"
-        ? "bg-blue-100 text-blue-800"
-        : "bg-yellow-100 text-yellow-800"
-    }`}
-  >
-    {fee.status === "paid" && (
-      <CheckCircle size={12} className="mr-1" />
-    )}
-    {fee.status === "overdue" && (
-      <AlertCircle size={12} className="mr-1" />
-    )}
-    {fee.status === "partial" && (
-      <AlertCircle size={12} className="mr-1" />
-    )}
-    {fee.status?.charAt(0).toUpperCase() + fee.status?.slice(1)}
-    {fee.status === "partial" && fee.balanceAmount > 0 && (
-      <span className="ml-1">({formatCurrency(fee.balanceAmount)} due)</span>
-    )}
-  </span>
-)}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap border-r">
-                    <div className={`font-medium ${fee.paidAmount > 0 ? "text-green-600" : "text-gray-400"}`}>
-                      {fee.paidAmount > 0
-                        ? formatCurrency(fee.paidAmount)
-                        : "₹0"}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap border-r">
-  <div className="flex gap-2">
-    {fee.status === "paid" || fee.status === "partial" ? (
-  <>
-    <button
-      onClick={() => openPaymentModal(fee, "edit")}
-      className="p-1 text-blue-600 hover:text-blue-900 rounded hover:bg-blue-50"
-      title="Edit Payment"
-    >
-      <Edit size={16} />
-    </button>
-
-    {fee.isExamMonth ? (
-      // ── EXAM MONTH: Split delete buttons ──
-      <div className="flex flex-col gap-1">
-        <button
-          onClick={() => deleteMonthlyFee(fee)}
-          disabled={(fee.monthlyPaid || 0) === 0}
-          className="px-1.5 py-0.5 text-xs text-orange-600 border border-orange-300 rounded hover:bg-orange-50 disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Delete Monthly Fee Only"
-        >
-          -Monthly
-        </button>
-        <button
-          onClick={() => deleteExamFee(fee)}
-          disabled={(fee.examPaid || 0) === 0}
-          className="px-1.5 py-0.5 text-xs text-red-600 border border-red-300 rounded hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Delete Exam Fee Only"
-        >
-          -Exam
-        </button>
+      {/* Fee Schedule / Receipt Table / Fee Register Toggle */}
+<div className="overflow-x-auto border rounded-lg">
+  {showFeeRegister ? (
+    // ── FEE REGISTER VIEW ──────────────────────────────────
+    <>
+      <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border-b">
+        <FileText size={14} className="text-blue-600" />
+        <span className="text-sm font-medium text-blue-700">Fee Register</span>
+        <span className="text-xs text-blue-400 ml-1">— all payments for this student</span>
       </div>
-    ) : (
-      // ── REGULAR MONTH: Single delete ──
-      <button
-        onClick={() => deletePayment(fee)}
-        className="p-1 text-red-600 hover:text-red-900 rounded hover:bg-red-50"
-        title="Delete Payment"
-      >
-        <Trash2 size={16} />
-      </button>
-    )}
-  </>
-    ) : fee.status === "suspended" ? (
-  <button
-    type="button"
-    onClick={() => handleUnsuspend(fee)}
-    className="px-2 py-1 text-xs text-red-500 border border-red-300 rounded hover:bg-red-50 hover:text-red-700 transition-colors"
-    title="Unsuspend Month"
-  >
-    Unsuspend
-  </button>
-    ) : (
-      <>
-        <button
-          onClick={() => openPaymentModal(fee, "add")}
-          className="p-1 text-green-600 hover:text-green-900 rounded hover:bg-green-50"
-          title="Add Payment"
-        >
-          <Plus size={16} />
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setSuspendData({ monthNumber: fee.monthNumber, month: fee.month, reason: "" });
-            setShowSuspendModal(true);
-          }}
-          className="p-1 text-red-500 hover:text-red-700 rounded hover:bg-red-50"
-          title="Suspend Month"
-        >
-          <AlertCircle size={16} />
-        </button>
-      </>
-    )}
-  </div>
-</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {fee.receiptNo ? (
-                      <div className="flex gap-2">
+      <table className="min-w-full">
+        <thead>
+          <tr style={{ backgroundColor: '#7B1C1C' }}>
+            {['Date', 'Receipt No', 'Roll No', 'Student Name', 'Course', 'Batch Time', 'Faculty', 'Fee Type', 'Amount'].map(h => (
+              <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {feeRegisterRows.length === 0 ? (
+            <tr>
+              <td colSpan={9} className="py-16 text-center text-gray-400">
+                <FileText className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+                No fee payments recorded yet.
+              </td>
+            </tr>
+          ) : (
+            feeRegisterRows.map((record, idx) => (
+              <tr key={idx} className={`hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  {record.date ? new Date(record.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                </td>
+                <td className="px-4 py-3 text-sm font-semibold text-gray-900 whitespace-nowrap">
+                  {record.receiptNo}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  {record.rollNo}
+                </td>
+                <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
+                  {record.studentName}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  <span className="px-2 py-1 rounded text-xs font-bold bg-purple-100 text-purple-700">
+                    {record.course}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  {record.batchTime}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  {record.faculty}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    record.feeType === 'Exam Fee'    ? 'bg-yellow-100 text-yellow-800' :
+                    record.feeType === 'Monthly Fee' ? 'bg-blue-100 text-blue-800'    :
+                                                       'bg-green-100 text-green-800'
+                  }`}>
+                    {record.feeType}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-sm font-bold text-green-700 whitespace-nowrap">
+                  ₹{(record.amount || 0).toLocaleString('en-IN')}
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+        {feeRegisterRows.length > 0 && (
+          <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+            <tr>
+              <td colSpan={8} className="px-4 py-3 font-bold text-right text-sm">
+                Total Collected ({feeRegisterRows.length} entries):
+              </td>
+              <td className="px-4 py-3 font-bold text-green-700 text-sm">
+                ₹{feeRegisterRows.reduce((s, r) => s + (r.amount || 0), 0).toLocaleString('en-IN')}
+              </td>
+            </tr>
+          </tfoot>
+        )}
+      </table>
+    </>
+
+  ) : showReceiptTable ? (
+    // ── RECEIPT TABLE VIEW ──────────────────────────────────
+    <>
+      <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border-b">
+        <Receipt size={14} className="text-indigo-600" />
+        <span className="text-sm font-medium text-indigo-700">Receipt Table View</span>
+        <span className="text-xs text-indigo-500 ml-1">— showing months with payments</span>
+      </div>
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Month</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Receipt No</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Payment Date</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Mode</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Total Fee</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Amount Paid</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Balance</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {feeData.feeSchedule.map((fee, index) => {
+            const hasPaid = fee.status === "paid" || fee.status === "partial";
+            return (
+              <tr
+                key={index}
+                className={`hover:bg-gray-50 ${!hasPaid ? "opacity-40" : ""} ${
+                  fee.status === "paid" ? "bg-green-50" :
+                  fee.status === "partial" ? "bg-blue-50" : ""
+                }`}
+              >
+                <td className="px-4 py-3 whitespace-nowrap border-r">
+                  <div className="font-medium text-sm">{fee.month}</div>
+                  <div className="text-xs text-gray-400">Month {fee.monthNumber}</div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap border-r">
+                  {fee.receiptNo ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-indigo-50 text-indigo-700 text-xs font-mono font-semibold">
+                      <Receipt size={10} />
+                      {fee.receiptNo}
+                    </span>
+                  ) : (
+                    <span className="text-gray-300 text-sm">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap border-r">
+                  {fee.paymentDate ? (
+                    <div className="flex items-center gap-1 text-sm">
+                      <Calendar size={13} className="text-gray-400" />
+                      {new Date(fee.paymentDate).toLocaleDateString("en-IN")}
+                    </div>
+                  ) : (
+                    <span className="text-gray-300 text-sm">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap border-r">
+                  {fee.paymentMode ? (
+                    <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 uppercase">
+                      {fee.paymentMode}
+                    </span>
+                  ) : (
+                    <span className="text-gray-300 text-sm">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap border-r text-sm font-medium">
+                  {formatCurrency(fee.totalFee || 0)}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap border-r">
+                  <span className={`text-sm font-semibold ${hasPaid ? "text-green-600" : "text-gray-300"}`}>
+                    {fee.paidAmount > 0 ? formatCurrency(fee.paidAmount) : "₹0"}
+                  </span>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap border-r">
+                  <span className={`text-sm font-medium ${fee.balanceAmount > 0 ? "text-red-500" : "text-green-600"}`}>
+                    {formatCurrency(fee.balanceAmount || 0)}
+                  </span>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {fee.receiptNo ? (
+                    <button
+                      onClick={() => {
+                        setSelectedReceipt({
+                          receiptNo: fee.receiptNo,
+                          date: fee.paymentDate || fee.dueDate,
+                          studentId: feeData.student.studentId,
+                          studentName: feeData.student.fullName,
+                          course: feeData.course?.courseFullName || feeData.student.course,
+                          month: fee.month,
+                          amount: fee.paidAmount || 0,
+                          paymentMode: fee.paymentMode || "cash",
+                          balance: feeData.summary.balanceAmount,
+                        });
+                        setShowReceiptModal(true);
+                      }}
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium"
+                    >
+                      <Receipt size={12} /> View
+                    </button>
+                  ) : (
+                    <span className="text-gray-300 text-sm">—</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+          <tr>
+            <td colSpan="4" className="px-4 py-3 font-bold text-right text-sm">TOTALS:</td>
+            <td className="px-4 py-3 font-bold border-r text-sm">{formatCurrency(feeData.summary.totalCourseFee || 0)}</td>
+            <td className="px-4 py-3 font-bold text-green-600 border-r text-sm">{formatCurrency(feeData.summary.paidAmount || 0)}</td>
+            <td className="px-4 py-3 font-bold text-red-500 border-r text-sm">{formatCurrency(feeData.summary.balanceAmount || 0)}</td>
+            <td className="px-4 py-3" />
+          </tr>
+        </tfoot>
+      </table>
+    </>
+
+  ) : (
+    // ── DEFAULT FEE SCHEDULE TABLE ──────────────────────────
+    <table className="min-w-full divide-y divide-gray-200">
+      <thead className="bg-gray-50">
+        <tr>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Month</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Course</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Due Date</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Monthly Fee</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Exam Fee</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Total Fee</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Status</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Received Amount</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">Actions</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt</th>
+        </tr>
+      </thead>
+      <tbody className="bg-white divide-y divide-gray-200">
+        {feeData.feeSchedule?.map((fee, index) => (
+          <tr
+            key={index}
+            className={`hover:bg-gray-50 ${
+              fee.status === "suspended" ? "bg-red-50 border-l-4 border-l-red-400" :
+              fee.isExamMonth ? "bg-yellow-50" : ""
+            } ${fee.status === "paid" ? "bg-green-50" : ""} ${
+              fee.status === "partial" ? "bg-blue-50" : ""
+            }`}
+          >
+            <td className="px-4 py-3 whitespace-nowrap border-r">
+              <div className="font-medium">{fee.month}</div>
+              {fee.isExamMonth && (
+                <div className="text-xs text-yellow-600">{fee.examType || "Exam Month"}</div>
+              )}
+              <div className="text-xs text-gray-500">
+                Month {fee.monthNumber}
+                <button onClick={() => openMonthModal(fee, "edit")} className="ml-2 text-blue-600 hover:text-blue-900" title="Edit Monthly Fee">
+                  <Edit size={10} />
+                </button>
+                <button onClick={() => deleteMonth(fee.monthNumber)} className="ml-1 text-red-400 hover:text-red-700" title="Delete Month">
+                  <Trash2 size={10} />
+                </button>
+              </div>
+            </td>
+            <td className="px-4 py-3 whitespace-nowrap border-r">
+              <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${
+                feeData?.student?.conversionHistory?.length > 0 &&
+                feeData.student.conversionHistory.some(c => fee.monthNumber < c.conversionMonth)
+                  ? "bg-blue-100 text-blue-700"
+                  : "bg-purple-100 text-purple-700"
+              }`}>
+                {getCourseShortName(fee)}
+              </span>
+            </td>
+            <td className="px-4 py-3 whitespace-nowrap border-r">
+              <div className="flex items-center gap-1">
+                <Calendar size={14} />
+                {fee.dueDate ? new Date(fee.dueDate).toLocaleDateString("en-IN") : "N/A"}
+              </div>
+            </td>
+            <td className="px-4 py-3 whitespace-nowrap border-r">
+              <div className="font-medium">{formatCurrency(fee.monthlyFee || fee.amount || 0)}</div>
+              {fee.isExamMonth && (
+                <div className="text-xs mt-1">
+                  {(fee.monthlyPaid || 0) >= (fee.monthlyFee || fee.amount || 0) ? (
+                    <span className="text-green-600">✅ Monthly paid</span>
+                  ) : (fee.monthlyPaid || 0) > 0 ? (
+                    <span className="text-orange-500">⚡ Partial: {formatCurrency(fee.monthlyPaid || 0)}</span>
+                  ) : (
+                    <span className="text-gray-400">⏳ Unpaid</span>
+                  )}
+                </div>
+              )}
+            </td>
+            <td className="px-4 py-3 whitespace-nowrap border-r">
+              <div className={`font-medium ${fee.isExamMonth ? "text-red-600" : "text-gray-400"}`}>
+                {fee.isExamMonth ? formatCurrency(fee.examFee || 0) : "-"}
+              </div>
+              {fee.isExamMonth && (
+                <div className="text-xs mt-1">
+                  {(fee.examPaid || 0) >= (fee.examFee || 0) && (fee.examFee || 0) > 0 ? (
+                    <span className="text-green-600">✅ Exam eligible</span>
+                  ) : (fee.examPaid || 0) > 0 ? (
+                    <span className="text-orange-500">⚡ {formatCurrency(fee.examPaid || 0)} paid</span>
+                  ) : (
+                    <span className="text-red-400">❌ Not eligible</span>
+                  )}
+                </div>
+              )}
+            </td>
+            <td className="px-4 py-3 whitespace-nowrap border-r">
+              <div className="font-bold">
+                {formatCurrency(fee.totalFee || fee.totalAmount || (fee.amount || 0) + (fee.isExamMonth ? fee.examFee || 0 : 0))}
+              </div>
+            </td>
+            <td className="px-4 py-3 whitespace-nowrap border-r">
+              {fee.status === "suspended" ? (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  <AlertCircle size={12} className="mr-1" />
+                  Suspended
+                  {fee.remarks && (
+                    <span className="ml-1 text-red-600 truncate max-w-[100px]" title={fee.remarks}>
+                      — {fee.remarks.replace("Suspended: ", "")}
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  fee.status === "paid"    ? "bg-green-100 text-green-800" :
+                  fee.status === "overdue" ? "bg-red-100 text-red-800"    :
+                  fee.status === "partial" ? "bg-blue-100 text-blue-800"  :
+                                             "bg-yellow-100 text-yellow-800"
+                }`}>
+                  {fee.status === "paid"    && <CheckCircle size={12} className="mr-1" />}
+                  {fee.status === "overdue" && <AlertCircle size={12} className="mr-1" />}
+                  {fee.status === "partial" && <AlertCircle size={12} className="mr-1" />}
+                  {fee.status?.charAt(0).toUpperCase() + fee.status?.slice(1)}
+                  {fee.status === "partial" && fee.balanceAmount > 0 && (
+                    <span className="ml-1">({formatCurrency(fee.balanceAmount)} due)</span>
+                  )}
+                </span>
+              )}
+            </td>
+            <td className="px-4 py-3 whitespace-nowrap border-r">
+              <div className={`font-medium ${fee.paidAmount > 0 ? "text-green-600" : "text-gray-400"}`}>
+                {fee.paidAmount > 0 ? formatCurrency(fee.paidAmount) : "₹0"}
+              </div>
+            </td>
+            <td className="px-4 py-3 whitespace-nowrap border-r">
+              <div className="flex gap-2">
+                {fee.status === "paid" || fee.status === "partial" ? (
+                  <>
+                    <button onClick={() => openPaymentModal(fee, "edit")} className="p-1 text-blue-600 hover:text-blue-900 rounded hover:bg-blue-50" title="Edit Payment">
+                      <Edit size={16} />
+                    </button>
+                    {fee.isExamMonth ? (
+                      <div className="flex flex-col gap-1">
                         <button
-                          onClick={() => {
-                            setSelectedReceipt({
-                              receiptNo: fee.receiptNo,
-                              date: fee.paymentDate || fee.dueDate,
-                              studentId: feeData.student.studentId,
-                              studentName: feeData.student.fullName,
-                              course:
-                                feeData.course?.courseFullName ||
-                                feeData.student.course,
-                              month: fee.month,
-                              amount: fee.paidAmount || 0,
-                              paymentMode: fee.paymentMode || "cash",
-                              balance: feeData.summary.balanceAmount,
-                            });
-                            setShowReceiptModal(true);
-                          }}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="View Receipt"
+                          onClick={() => deleteMonthlyFee(fee)}
+                          disabled={(fee.monthlyPaid || 0) === 0}
+                          className="px-1.5 py-0.5 text-xs text-orange-600 border border-orange-300 rounded hover:bg-orange-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Delete Monthly Fee Only"
                         >
-                          <Receipt size={16} />
+                          -Monthly
+                        </button>
+                        <button
+                          onClick={() => deleteExamFee(fee)}
+                          disabled={(fee.examPaid || 0) === 0}
+                          className="px-1.5 py-0.5 text-xs text-red-600 border border-red-300 rounded hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Delete Exam Fee Only"
+                        >
+                          -Exam
                         </button>
                       </div>
                     ) : (
-                      <div className="text-gray-400 text-sm">-</div>
+                      <button onClick={() => deletePayment(fee)} className="p-1 text-red-600 hover:text-red-900 rounded hover:bg-red-50" title="Delete Payment">
+                        <Trash2 size={16} />
+                      </button>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            {/* Footer with Totals */}
-            <tfoot className="bg-gray-50">
-              <tr>
-                <td colSpan="3" className="px-4 py-3 font-bold text-right">
-                  TOTALS:
-                </td>
-                <td className="px-4 py-3 font-bold border-r">
-                  {formatCurrency(feeData.summary.totalMonthlyFees || 0)}
-                </td>
-                <td className="px-4 py-3 font-bold border-r">
-                  {formatCurrency(feeData.summary.totalExamFees || 0)}
-                </td>
-                <td className="px-4 py-3 font-bold border-r">
-                  {formatCurrency(feeData.summary.totalCourseFee || 0)}
-                </td>
-                <td className="px-4 py-3 border-r"></td>
-                <td className="px-4 py-3 font-bold border-r">
-                  {formatCurrency(feeData.summary.paidAmount || 0)}
-                </td>
-                <td className="px-4 py-3 border-r"></td>
-                <td className="px-4 py-3"></td>
-              </tr>
-            </tfoot>
-          </table>
-        )}
-      </div>
-
+                  </>
+                ) : fee.status === "suspended" ? (
+                  <button
+                    type="button"
+                    onClick={() => handleUnsuspend(fee)}
+                    className="px-2 py-1 text-xs text-red-500 border border-red-300 rounded hover:bg-red-50 hover:text-red-700 transition-colors"
+                    title="Unsuspend Month"
+                  >
+                    Unsuspend
+                  </button>
+                ) : (
+                  <>
+                    <button onClick={() => openPaymentModal(fee, "add")} className="p-1 text-green-600 hover:text-green-900 rounded hover:bg-green-50" title="Add Payment">
+                      <Plus size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSuspendData({ monthNumber: fee.monthNumber, month: fee.month, reason: "" });
+                        setShowSuspendModal(true);
+                      }}
+                      className="p-1 text-red-500 hover:text-red-700 rounded hover:bg-red-50"
+                      title="Suspend Month"
+                    >
+                      <AlertCircle size={16} />
+                    </button>
+                  </>
+                )}
+              </div>
+            </td>
+            <td className="px-4 py-3 whitespace-nowrap">
+              {fee.receiptNo ? (
+                <button
+                  onClick={() => {
+                    setSelectedReceipt({
+                      receiptNo: fee.receiptNo,
+                      date: fee.paymentDate || fee.dueDate,
+                      studentId: feeData.student.studentId,
+                      studentName: feeData.student.fullName,
+                      course: feeData.course?.courseFullName || feeData.student.course,
+                      month: fee.month,
+                      amount: fee.paidAmount || 0,
+                      paymentMode: fee.paymentMode || "cash",
+                      balance: feeData.summary.balanceAmount,
+                    });
+                    setShowReceiptModal(true);
+                  }}
+                  className="text-blue-600 hover:text-blue-900"
+                  title="View Receipt"
+                >
+                  <Receipt size={16} />
+                </button>
+              ) : (
+                <div className="text-gray-400 text-sm">-</div>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+      <tfoot className="bg-gray-50">
+        <tr>
+          <td colSpan="3" className="px-4 py-3 font-bold text-right">TOTALS:</td>
+          <td className="px-4 py-3 font-bold border-r">{formatCurrency(feeData.summary.totalMonthlyFees || 0)}</td>
+          <td className="px-4 py-3 font-bold border-r">{formatCurrency(feeData.summary.totalExamFees || 0)}</td>
+          <td className="px-4 py-3 font-bold border-r">{formatCurrency(feeData.summary.totalCourseFee || 0)}</td>
+          <td className="px-4 py-3 border-r"></td>
+          <td className="px-4 py-3 font-bold border-r">{formatCurrency(feeData.summary.paidAmount || 0)}</td>
+          <td className="px-4 py-3 border-r"></td>
+          <td className="px-4 py-3"></td>
+        </tr>
+      </tfoot>
+    </table>
+  )}
+</div>
       {/* Course Fee Breakdown */}
       <div className="mt-6 p-4 bg-gray-50 rounded-lg">
         <h4 className="font-semibold mb-2">Fee Breakdown</h4>
