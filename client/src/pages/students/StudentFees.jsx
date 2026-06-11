@@ -177,10 +177,13 @@ const StudentFees = () => {
   const activeFeeSchedule = (student.feeSchedule || []).filter(
     f => f.status !== "suspended"
   );
-  const activeTotalFee = activeFeeSchedule.length > 0
-    ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
-    : (student.totalCourseFee || 0);
-  const activeBalance = activeTotalFee - (student.paidAmount || 0);
+  const scheduleFees = activeFeeSchedule.length > 0
+  ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
+  : (student.totalCourseFee || 0);
+const activeTotalFee = scheduleFees + (student.admissionFee || 0);  // ← add admissionFee
+const schedulesPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
+const totalPaid = (student.paidAmount || 0) + schedulesPaid;        // ← root + monthly
+const activeBalance = activeTotalFee - totalPaid;
 
   return {
     _id: student._id,
@@ -193,7 +196,7 @@ const StudentFees = () => {
     batch: student.batch || student.batchName || student.batchTime || student.originalData?.batch || "N/A",
     status: student.status || "Active",
     monthlyFee: student.monthlyFee || student.feeAmount || 0,
-    paidAmount: student.paidAmount || 0,
+    paidAmount: totalPaid,
     balanceAmount: Math.max(0, activeBalance),
     originalData: student
   };
@@ -579,10 +582,13 @@ console.log("🔍 Payment data:", JSON.stringify({
   const activeFeeSchedule = (student.feeSchedule || []).filter(
     f => f.status !== "suspended"
   );
-  const activeTotalFee = activeFeeSchedule.length > 0
-    ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
-    : (student.totalCourseFee || 0);
-  const activeBalance = activeTotalFee - (student.paidAmount || 0);
+  const scheduleFees = activeFeeSchedule.length > 0
+  ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
+  : (student.totalCourseFee || 0);
+const activeTotalFee = scheduleFees + (student.admissionFee || 0);  // ← add admissionFee
+const schedulesPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
+const totalPaid = (student.paidAmount || 0) + schedulesPaid;        // ← root + monthly
+const activeBalance = activeTotalFee - totalPaid;
 
   return {
     _id: student._id,
@@ -595,7 +601,7 @@ console.log("🔍 Payment data:", JSON.stringify({
     batch: student.batch || student.batchName || student.batchTime || student.originalData?.batch || "N/A",
     status: student.status || "Active",
     monthlyFee: student.monthlyFee || student.feeAmount || 0,
-    paidAmount: student.paidAmount || 0,
+    paidAmount: totalPaid,
     balanceAmount: Math.max(0, activeBalance),
     originalData: student
   };
@@ -1562,9 +1568,11 @@ console.log("🔍 Payment data:", JSON.stringify({
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    record.feeType === 'Exam Fee'    ? 'bg-yellow-100 text-yellow-800' :
-                    record.feeType === 'Monthly Fee' ? 'bg-blue-100 text-blue-800'   :
-                                                       'bg-green-100 text-green-800'
+                    record.feeType === 'Exam Fee'      ? 'bg-yellow-100 text-yellow-800' :
+record.feeType === 'Monthly Fee'   ? 'bg-blue-100 text-blue-800'     :
+record.feeType === 'Admission Fee' ? 'bg-purple-100 text-purple-800' :
+                                     'bg-green-100 text-green-800'
+                                                       
                   }`}>
                     {record.feeType}
                   </span>

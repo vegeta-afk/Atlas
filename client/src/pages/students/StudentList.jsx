@@ -79,10 +79,12 @@ const StudentList = () => {
   const activeFeeSchedule = (student.feeSchedule || []).filter(
     f => f.status !== "suspended"
   );
-  const totalFee = activeFeeSchedule.length > 0
+  const scheduleFees = activeFeeSchedule.length > 0
     ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
     : (student.totalCourseFee || 0);
-  const paidAmount = student.paidAmount || 0;
+  const totalFee = scheduleFees + (student.admissionFee || 0);  // ← add admissionFee
+  const paidAmount = (student.paidAmount || 0) +                // ← root paidAmount (admission)
+    activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0); // ← monthly paid
   if (totalFee === 0) return 0;
   return Math.min(100, Math.round((paidAmount / totalFee) * 100));
 };
@@ -148,16 +150,19 @@ const StudentList = () => {
           { label: "Total Students", value: students.length, color: "text-gray-800" },
           { label: "Active", value: students.filter((s) => s.status === "active").length, color: "text-green-600" },
           { 
-  label: "Pending Fees", 
-  value: students.filter((s) => {
-    const active = (s.feeSchedule || []).filter(f => f.status !== "suspended");
-    const activeBalance = active.length > 0
-      ? active.reduce((sum, f) => sum + (f.totalFee || 0), 0) - (s.paidAmount || 0)
-      : (s.balanceAmount || 0);
-    return activeBalance > 0;
-  }).length, 
-  color: "text-orange-600" 
-},
+            label: "Pending Fees", 
+            value: students.filter((s) => {
+            const active = (s.feeSchedule || []).filter(f => f.status !== "suspended");
+            const activeBalance = active.length > 0
+  ? active.reduce((sum, f) => sum + (f.totalFee || 0), 0) 
+    + (s.admissionFee || 0)                               // ← add admissionFee
+    - (s.paidAmount || 0)                                 // ← root paidAmount
+    - active.reduce((sum, f) => sum + (f.paidAmount || 0), 0)  // ← monthly paid
+  : (s.balanceAmount || 0);
+            return activeBalance > 0;
+            }).length, 
+            color: "text-orange-600" 
+          },
           { label: "Completed", value: students.filter((s) => s.status === "completed").length, color: "text-blue-600" },
         ].map((stat) => (
           <div key={stat.label} className="bg-white rounded-lg shadow p-4">
@@ -232,10 +237,12 @@ const StudentList = () => {
 const activeFeeSchedule = (student.feeSchedule || []).filter(
   f => f.status !== "suspended"
 );
-const totalFee = activeFeeSchedule.length > 0
+const scheduleFees = activeFeeSchedule.length > 0
   ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
   : (student.totalCourseFee || 0);
-const paidAmount = student.paidAmount || 0;
+const totalFee = scheduleFees + (student.admissionFee || 0);  // ← add admissionFee
+const paidAmount = (student.paidAmount || 0) +                // ← root = admission paid
+  activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);  // ← monthly paid
 
                   return (
                     <tr key={student._id} className="hover:bg-gray-50 transition-colors">

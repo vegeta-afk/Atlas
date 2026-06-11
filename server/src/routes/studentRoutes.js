@@ -352,6 +352,26 @@ router.get('/fee-register', async (req, res) => {
         }
       }
 
+
+      if (
+  student.admissionFeePaid &&
+  student.admissionFeeReceiptNo &&
+  inRange(student.admissionFeePaidDate) &&
+  matchesReceipt(student.admissionFeeReceiptNo)
+) {
+  records.push({
+    date:        student.admissionFeePaidDate,
+    receiptNo:   student.admissionFeeReceiptNo,
+    rollNo:      student.admissionNo,
+    studentName: student.fullName,
+    course:      student.course      || 'N/A',
+    batchTime:   student.batchTime   || 'N/A',
+    faculty:     student.facultyAllot || 'N/A',
+    feeType:     'Admission Fee',
+    amount:      student.admissionFee || 0
+  });
+}
+
       // ── 3. paymentHistory — other/fine fees ───────────────────
       // (only if your payment handler stores otherFees inside paymentHistory)
       for (const ph of (student.paymentHistory || [])) {

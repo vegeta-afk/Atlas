@@ -297,10 +297,12 @@ const ViewStudent = () => {
 );
 const activeTotalFee = activeFeeSchedule.reduce(
   (s, f) => s + (f.totalFee || 0), 0
-);
+) + (student.admissionFee || 0);  // ← add admission fee to total
+
 const activePaidAmount = activeFeeSchedule.reduce(
   (s, f) => s + (f.paidAmount || 0), 0
-);
+) + (student.paidAmount || 0);  // ← root paidAmount = admission fee paid
+
 const activeBalanceAmount = activeTotalFee - activePaidAmount;
 
   const tabs = [
