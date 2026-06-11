@@ -294,7 +294,36 @@ const StudentFees = () => {
           };
         });
 
-        return processedFeeSchedule.sort((a, b) => a.monthNumber - b.monthNumber);
+        const sorted = processedFeeSchedule.sort((a, b) => a.monthNumber - b.monthNumber);
+
+// ✅ Add admission fee as first row if exists and unpaid
+const admissionFee = feeData?.student?.admissionFee || data?.data?.student?.admissionFee || 0;
+const admissionFeePaid = data?.data?.student?.admissionFeePaid || false;
+
+if (admissionFee > 0 && !admissionFeePaid) {
+  sorted.unshift({
+    id: `admission-fee-${studentId}`,
+    monthNumber: 0,
+    month: "Admission Fee",
+    description: `${studentData?.course || "Course"} - Admission Fee`,
+    type: "admission",
+    totalAmount: admissionFee,
+    pendingAmount: admissionFee,
+    balanceAmount: admissionFee,
+    paidAmount: 0,
+    status: "pending",
+    selected: false,
+    payingAmount: admissionFee,
+    isExamMonth: false,
+    isAdmissionFee: true,
+    examFee: 0,
+    examPaid: 0,
+    monthlyPaid: 0,
+    dueDate: null
+  });
+}
+
+return sorted;
       }
       return [];
     } catch (error) {
@@ -431,13 +460,24 @@ const StudentFees = () => {
 
       const totalAmount = calculateTotal();
 
-      const paymentData = {
+      // Separate admission fee from monthly fees
+const admissionFeeEntry = selectedFees.find(f => f.isAdmissionFee);
+const monthlyFees = selectedFees.filter(f => !f.isAdmissionFee);
+
+const paymentData = {
   studentId: selectedStudent._id,
-  months: selectedFees.map(fee => fee.monthNumber),
-  amounts: selectedFees.map(fee => fee.payingAmount),
-  additionalCourseIndices: selectedFees.map(fee => fee.additionalCourseIndex ?? null),
-  monthlyAmounts: selectedFees.map(fee => fee.isExamMonth ? (fee.monthlyPayingAmount ?? (fee.payingAmount - (fee.examFee || 0))) : fee.payingAmount),
-  examAmounts: selectedFees.map(fee => fee.isExamMonth ? (fee.examPayingAmount ?? 0) : 0),
+  months: monthlyFees.map(fee => fee.monthNumber),
+  amounts: monthlyFees.map(fee => fee.payingAmount),
+  additionalCourseIndices: monthlyFees.map(fee => fee.additionalCourseIndex ?? null),
+  monthlyAmounts: monthlyFees.map(fee => fee.isExamMonth ? (fee.monthlyPayingAmount ?? (fee.payingAmount - (fee.examFee || 0))) : fee.payingAmount),
+  examAmounts: monthlyFees.map(fee => fee.isExamMonth ? (fee.examPayingAmount ?? 0) : 0),
+  // ✅ Admission fee
+  admissionFeePayment: admissionFeeEntry ? {
+    amount: admissionFeeEntry.payingAmount,
+    paymentDate,
+    receiptNo,
+    paymentMode
+  } : null,
   paymentType: "multiple",
   paymentDate,
   receiptNo,
@@ -891,7 +931,10 @@ console.log("🔍 Payment data:", JSON.stringify({
                           </div>
                         ) : (
                           getCurrentFees().map((fee) => (
-                            <div key={fee.id} className={`p-4 hover:bg-gray-50 ${fee.isExamMonth ? 'bg-yellow-50' : ''}`}>
+                            <div key={fee.id} className={`p-4 hover:bg-gray-50 ${
+  fee.isAdmissionFee ? 'bg-purple-50 border-l-4 border-l-purple-400' :
+  fee.isExamMonth ? 'bg-yellow-50' : ''
+}`}>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-4">
                                   <input
@@ -904,11 +947,14 @@ console.log("🔍 Payment data:", JSON.stringify({
                                     <div className="font-medium text-gray-900">{fee.month}</div>
                                     <div className="text-sm text-gray-600">{fee.description}</div>
                                     <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
-                                      <span>Type: {fee.type}</span>
-                                      {fee.isExamMonth && (
-                                        <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">Exam Month</span>
-                                      )}
-                                    </div>
+  <span>Type: {fee.type}</span>
+  {fee.isExamMonth && (
+    <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">Exam Month</span>
+  )}
+  {fee.isAdmissionFee && (
+    <span className="px-1.5 py-0.5 bg-purple-100 text-purple-800 rounded text-xs font-medium">One-time Fee</span>
+  )}
+</div>
                                   </div>
                                 </div>
                                 <div className="text-right">

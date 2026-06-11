@@ -638,6 +638,8 @@ router.post("/payment", async (req, res) => {
       otherFees: otherFeesData,
     } = req.body;
 
+    
+
     const student = await Student.findById(studentId);
     if (!student) {
       return res.status(404).json({
@@ -650,6 +652,17 @@ router.post("/payment", async (req, res) => {
     student.feeSchedule.forEach((fee, idx) => {
       console.log(`[${idx}] monthNumber: ${fee.monthNumber} (type: ${typeof fee.monthNumber}), month: "${fee.month}"`);
     });
+
+    const { admissionFeePayment } = req.body;
+if (admissionFeePayment && admissionFeePayment.amount > 0 && !student.admissionFeePaid) {
+  student.admissionFeePaid = true;
+  student.admissionFeePaidDate = new Date(admissionFeePayment.paymentDate || paymentDate || Date.now());
+  student.admissionFeeReceiptNo = admissionFeePayment.receiptNo || receiptNo;
+  student.admissionFeePaymentMode = admissionFeePayment.paymentMode || paymentMode;
+  student.paidAmount = (student.paidAmount || 0) + parseFloat(admissionFeePayment.amount);
+  student.balanceAmount = Math.max(0, (student.totalCourseFee || 0) - student.paidAmount);
+  console.log(`✅ Admission fee paid: ₹${admissionFeePayment.amount}`);
+}
 
     let totalPaid = 0;
     const updatedMonths = [];
@@ -876,9 +889,14 @@ student.markModified("feeSchedule");
     paidAmount: student.paidAmount,
     balanceAmount: student.balanceAmount,
     paymentHistory: student.paymentHistory,
+    admissionFeePaid: student.admissionFeePaid,
+    admissionFeePaidDate: student.admissionFeePaidDate,
+    admissionFeeReceiptNo: student.admissionFeeReceiptNo,
+    admissionFeePaymentMode: student.admissionFeePaymentMode,
   },
   { new: true }
 );
+
 
 console.log(`✅ Payment recorded for ${student.fullName}`);
     console.log(`💰 Total: ₹${totalPaid}, Receipt: ${receiptNo}`);
@@ -1630,6 +1648,11 @@ const student = await Student.findOne(
           totalCourseFee: student.totalCourseFee,
           paidAmount: student.paidAmount,
           balanceAmount: student.balanceAmount,
+          admissionFee: student.admissionFee || 0,
+          admissionFeePaid: student.admissionFeePaid || false,
+          admissionFeeReceiptNo: student.admissionFeeReceiptNo || "",
+          admissionFeePaymentMode: student.admissionFeePaymentMode || "",
+          admissionFeePaidDate: student.admissionFeePaidDate || null,
           conversionHistory: student.conversionHistory || [],
           feeSchedule: feeSchedule,
           paymentHistory: student.paymentHistory || [],
