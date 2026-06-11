@@ -731,11 +731,11 @@ const updateData = {
     name="courseId"
     value={formData.courseId}
     onChange={handleChange}
-    className={errors.interestedCourse ? "error-field" : ""}
+    disabled={true}
+    className={`${errors.interestedCourse ? "error-field" : ""} readonly-input`}
   >
     <option value="">Select Course</option>
 
-    {/* Fallback: show saved course even if it's inactive or missing from active list */}
     {formData.courseId && !courses.find((c) => c._id === formData.courseId) && (
       <option value={formData.courseId}>
         {formData.interestedCourse || formData.courseId}
@@ -748,7 +748,15 @@ const updateData = {
       </option>
     ))}
   </select>
-  {errors.interestedCourse && <span className="error-text">{errors.interestedCourse}</span>}
+
+  {/* Lock message */}
+  <p style={{ fontSize: "11px", color: "#6b7280", marginTop: "4px" }}>
+    🔒 Use <strong>Course Conversion</strong> to change course.
+  </p>
+
+  {errors.interestedCourse && (
+    <span className="error-text">{errors.interestedCourse}</span>
+  )}
 </div>
 
             {formData.courseId && isCourseScholarshipEligible && (
