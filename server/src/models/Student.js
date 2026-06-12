@@ -279,6 +279,7 @@ scholarship: {
         receiptNo: String,
         collectedBy: String,
         remarks: String,
+        admissionFeeAmount: { type: Number, default: 0 },
         otherFees: [{        // ← ADD THIS
       feeName: String,
       amount: Number,

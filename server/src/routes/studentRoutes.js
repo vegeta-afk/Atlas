@@ -353,23 +353,27 @@ router.get('/fee-register', async (req, res) => {
       }
 
 
-      if (
-  student.admissionFeePaid &&
-  student.admissionFeeReceiptNo &&
-  inRange(student.admissionFeePaidDate) &&
-  matchesReceipt(student.admissionFeeReceiptNo)
-) {
-  records.push({
-    date:        student.admissionFeePaidDate,
-    receiptNo:   student.admissionFeeReceiptNo,
-    rollNo:      student.admissionNo,
-    studentName: student.fullName,
-    course:      student.course      || 'N/A',
-    batchTime:   student.batchTime   || 'N/A',
-    faculty:     student.facultyAllot || 'N/A',
-    feeType:     'Admission Fee',
-    amount:      student.admissionFee || 0
-  });
+      // ── Admission fee: show EVERY partial/full payment from paymentHistory ──
+for (const ph of (student.paymentHistory || [])) {
+  if (!ph.receiptNo)                 continue;
+  if (!inRange(ph.date))             continue;
+  if (!matchesReceipt(ph.receiptNo)) continue;
+
+  // Check if this paymentHistory entry has an admission fee payment
+  const admissionAmount = ph.admissionFeeAmount || 0;
+  if (admissionAmount > 0) {
+    records.push({
+      date:        ph.date,
+      receiptNo:   ph.receiptNo,
+      rollNo:      student.admissionNo,
+      studentName: student.fullName,
+      course:      student.course       || 'N/A',
+      batchTime:   student.batchTime    || 'N/A',
+      faculty:     student.facultyAllot || 'N/A',
+      feeType:     'Admission Fee',
+      amount:      admissionAmount
+    });
+  }
 }
 
       // ── 3. paymentHistory — other/fine fees ───────────────────
@@ -908,7 +912,8 @@ student.markModified("feeSchedule");
       remarks: remarks || "",
       paymentType: paymentType,
       fineAmount: fineAmount || 0,
-      otherFees: Array.isArray(otherFeesData) ? otherFeesData : []
+      otherFees: Array.isArray(otherFeesData) ? otherFeesData : [],
+      admissionFeeAmount: admissionFeePayment ? parseFloat(admissionFeePayment.amount) || 0 : 0
     });
 
     await Student.findByIdAndUpdate(
