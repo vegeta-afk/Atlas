@@ -1990,6 +1990,26 @@ const feeRegisterRows = useMemo(() => {
     }
   }
 
+  // ── 3. Admission Fee ───────────────────────────────────────
+const admStudent = feeData.student;
+if (
+  admStudent?.admissionFeePaid &&
+  admStudent?.admissionFeeReceiptNo &&
+  (admStudent?.admissionFee || 0) > 0
+) {
+  rows.push({
+    date:        admStudent.admissionFeePaidDate,
+    receiptNo:   admStudent.admissionFeeReceiptNo,
+    rollNo:      student?.admissionNo || admStudent?.admissionNo || '—',
+    studentName: admStudent.fullName,
+    course:      getShortName({ monthNumber: 0 }),
+    batchTime:   student?.batchTime || '—',
+    faculty:     student?.facultyAllot || '—',
+    feeType:     'Admission Fee',
+    amount:      admStudent.admissionFee,
+  });
+}
+
   return rows.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 }, [feeData, student, courseShortNames]);
 

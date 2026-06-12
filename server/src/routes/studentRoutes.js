@@ -674,14 +674,24 @@ router.post("/payment", async (req, res) => {
     });
 
     const { admissionFeePayment } = req.body;
-if (admissionFeePayment && admissionFeePayment.amount > 0 && !student.admissionFeePaid) {
-  student.admissionFeePaid = true;
-  student.admissionFeePaidDate = new Date(admissionFeePayment.paymentDate || paymentDate || Date.now());
-  student.admissionFeeReceiptNo = admissionFeePayment.receiptNo || receiptNo;
-  student.admissionFeePaymentMode = admissionFeePayment.paymentMode || paymentMode;
-  student.paidAmount = (student.paidAmount || 0) + parseFloat(admissionFeePayment.amount);
-  student.balanceAmount = Math.max(0, (student.totalCourseFee || 0) - student.paidAmount);
-  console.log(`✅ Admission fee paid: ₹${admissionFeePayment.amount}`);
+if (admissionFeePayment && admissionFeePayment.amount > 0) {
+  const admissionTotal = student.admissionFee || 0;
+  const alreadyPaid = student.admissionFeePaidAmount || 0;
+  const remainingDue = admissionTotal - alreadyPaid;
+
+  if (remainingDue > 0) {
+    const paying = Math.min(parseFloat(admissionFeePayment.amount), remainingDue);
+    const newAdmissionPaid = alreadyPaid + paying;
+
+    student.admissionFeePaidAmount = newAdmissionPaid;
+    student.admissionFeePaid = newAdmissionPaid >= admissionTotal; // only true when fully paid
+    student.admissionFeePaidDate = new Date(admissionFeePayment.paymentDate || paymentDate || Date.now());
+    student.admissionFeeReceiptNo = admissionFeePayment.receiptNo || receiptNo;
+    student.admissionFeePaymentMode = admissionFeePayment.paymentMode || paymentMode;
+    student.paidAmount = (student.paidAmount || 0) + paying;
+    student.balanceAmount = Math.max(0, (student.totalCourseFee || 0) - student.paidAmount);
+    console.log(`✅ Admission fee payment: ₹${paying} | Total paid: ₹${newAdmissionPaid}/${admissionTotal} | Fully paid: ${student.admissionFeePaid}`);
+  }
 }
 
     let totalPaid = 0;
@@ -910,6 +920,7 @@ student.markModified("feeSchedule");
     balanceAmount: student.balanceAmount,
     paymentHistory: student.paymentHistory,
     admissionFeePaid: student.admissionFeePaid,
+    admissionFeePaidAmount: student.admissionFeePaidAmount,
     admissionFeePaidDate: student.admissionFeePaidDate,
     admissionFeeReceiptNo: student.admissionFeeReceiptNo,
     admissionFeePaymentMode: student.admissionFeePaymentMode,

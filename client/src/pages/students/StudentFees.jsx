@@ -302,8 +302,10 @@ const activeBalance = activeTotalFee - totalPaid;
 // ✅ Add admission fee as first row if exists and unpaid
 const admissionFee = feeData?.student?.admissionFee || data?.data?.student?.admissionFee || 0;
 const admissionFeePaid = data?.data?.student?.admissionFeePaid || false;
+const admissionFeePaidAmount = data?.data?.student?.admissionFeePaidAmount || 0;
+const admissionFeeRemaining = admissionFee - admissionFeePaidAmount;
 
-if (admissionFee > 0 && !admissionFeePaid) {
+if (admissionFee > 0 && !admissionFeePaid && admissionFeeRemaining > 0) {
   sorted.unshift({
     id: `admission-fee-${studentId}`,
     monthNumber: 0,
@@ -311,12 +313,12 @@ if (admissionFee > 0 && !admissionFeePaid) {
     description: `${studentData?.course || "Course"} - Admission Fee`,
     type: "admission",
     totalAmount: admissionFee,
-    pendingAmount: admissionFee,
-    balanceAmount: admissionFee,
-    paidAmount: 0,
-    status: "pending",
+    pendingAmount: admissionFeeRemaining,      // ← remaining, not full amount
+    balanceAmount: admissionFeeRemaining,
+    paidAmount: admissionFeePaidAmount,        // ← already paid so far
+    status: admissionFeePaidAmount > 0 ? "partial" : "pending",
     selected: false,
-    payingAmount: admissionFee,
+    payingAmount: admissionFeeRemaining,
     isExamMonth: false,
     isAdmissionFee: true,
     examFee: 0,
@@ -325,7 +327,6 @@ if (admissionFee > 0 && !admissionFeePaid) {
     dueDate: null
   });
 }
-
 return sorted;
       }
       return [];
@@ -1569,9 +1570,9 @@ const activeBalance = activeTotalFee - totalPaid;
                 <td className="px-4 py-3 whitespace-nowrap">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     record.feeType === 'Exam Fee'      ? 'bg-yellow-100 text-yellow-800' :
-record.feeType === 'Monthly Fee'   ? 'bg-blue-100 text-blue-800'     :
-record.feeType === 'Admission Fee' ? 'bg-purple-100 text-purple-800' :
-                                     'bg-green-100 text-green-800'
+                    record.feeType === 'Monthly Fee'   ? 'bg-blue-100 text-blue-800'     :
+                    record.feeType === 'Admission Fee' ? 'bg-purple-100 text-purple-800' :
+                                                          'bg-green-100 text-green-800'
                                                        
                   }`}>
                     {record.feeType}

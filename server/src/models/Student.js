@@ -193,6 +193,7 @@ scholarship: {
     examFee: Number,
     admissionFee: Number,
     admissionFeePaid: { type: Boolean, default: false },
+    admissionFeePaidAmount: { type: Number, default: 0 },
     admissionFeePaidDate: Date,
     admissionFeeReceiptNo: String,
     admissionFeePaymentMode: String,
