@@ -930,7 +930,7 @@ const NewEnquiry = () => {
                   rows="3"
                 />
               </div>
-              <div className="form-group">
+              {/* <div className="form-group">
                 <label>Prospectus Fees Submit (Optional)</label>
                 <div className="radio-group">
                   <label>
@@ -954,7 +954,7 @@ const NewEnquiry = () => {
                     No
                   </label>
                 </div>
-              </div>
+              </div> */}
 
               {formData.prospectusFees === "yes" && (
                 <div className="form-group">
