@@ -1213,7 +1213,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
               )}
             </div>
             <div className="form-group">
-              <label>Father's Name *</label>
+              <label>Father's Name / Husband's Name *</label>
               <input
                 type="text"
                 name="fatherName"
@@ -1395,7 +1395,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
               )}
             </div>
             <div className="form-group">
-              <label>Pincode *</label>
+              <label>Pincode (optional)</label>
               <input
                 type="text"
                 name="pincode"
@@ -1446,7 +1446,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
               )}
             </div>
             <div className="form-group">
-              <label>Year of Passing *</label>
+              <label>Year of Passing (optional)</label>
               <input
                 type="number"
                 name="yearOfPassing"

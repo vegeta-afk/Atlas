@@ -101,6 +101,7 @@ const admissionSchema = new mongoose.Schema(
     pincode: {
       type: String,
       match: [/^\d{6}$/, "Please enter a valid 6-digit pincode"],
+      required: false,
     },
 
     place: {                    // ← ADD THIS
@@ -131,6 +132,7 @@ photo: {
     schoolCollege: {
       type: String,
       trim: true,
+      required: false,
     },
 
     // Course Information

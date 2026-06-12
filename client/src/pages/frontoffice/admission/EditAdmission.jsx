@@ -621,7 +621,7 @@ const updateData = {
               {errors.gender && <span className="error-text">{errors.gender}</span>}
             </div>
             <div className="form-group">
-              <label>Father's Name *</label>
+              <label>Father's Name / Husband's Name *</label>
               <input type="text" name="fatherName" value={formData.fatherName} onChange={handleChange} onBlur={handleBlur} className={errors.fatherName ? "error-field" : ""} />
               {errors.fatherName && <span className="error-text">{errors.fatherName}</span>}
             </div>
@@ -692,7 +692,7 @@ const updateData = {
               {errors.state && <span className="error-text">{errors.state}</span>}
             </div>
             <div className="form-group">
-              <label>Pincode *</label>
+              <label>Pincode (optional)</label>
               <input type="text" name="pincode" value={formData.pincode} onChange={handleChange} maxLength="6" className={errors.pincode ? "error-field" : ""} />
               {errors.pincode && <span className="error-text">{errors.pincode}</span>}
             </div>
@@ -716,7 +716,7 @@ const updateData = {
               {errors.lastQualification && <span className="error-text">{errors.lastQualification}</span>}
             </div>
             <div className="form-group">
-              <label>Year of Passing *</label>
+              <label>Year of Passing (optional)</label>
               <input type="number" name="yearOfPassing" value={formData.yearOfPassing} onChange={handleChange} min="2000" max={new Date().getFullYear()} className={errors.yearOfPassing ? "error-field" : ""} />
               {errors.yearOfPassing && <span className="error-text">{errors.yearOfPassing}</span>}
             </div>
