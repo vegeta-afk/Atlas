@@ -1686,6 +1686,7 @@ const student = await Student.findOne(
           balanceAmount: student.balanceAmount,
           admissionFee: student.admissionFee || 0,
           admissionFeePaid: student.admissionFeePaid || false,
+          admissionFeePaidAmount: student.admissionFeePaidAmount || 0,
           admissionFeeReceiptNo: student.admissionFeeReceiptNo || "",
           admissionFeePaymentMode: student.admissionFeePaymentMode || "",
           admissionFeePaidDate: student.admissionFeePaidDate || null,
