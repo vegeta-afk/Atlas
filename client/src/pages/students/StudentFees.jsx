@@ -16,7 +16,8 @@ import {
   Edit,
   Check,
   Plus,
-  Minus
+  Minus,
+  Trash2
 } from "lucide-react";
 
 
@@ -69,6 +70,12 @@ const StudentFees = () => {
   // ✅ NEW: Course tab states
   const [selectedCourseTab, setSelectedCourseTab] = useState(0);
   const [allCourseFeeSchedules, setAllCourseFeeSchedules] = useState([]);
+
+
+  const [showRegisterEditModal, setShowRegisterEditModal] = useState(false);
+  const [editingRegRecord, setEditingRegRecord]           = useState(null);
+  const [editRegReceiptNo, setEditRegReceiptNo]           = useState('');
+  const [editRegDate, setEditRegDate]                     = useState('');
 
   // ✅ Get current tab's fees
   const getCurrentFees = () => {
@@ -137,6 +144,48 @@ const StudentFees = () => {
     console.error('Fee register fetch error:', err);
   } finally {
     setRegLoading(false);
+  }
+};
+
+const handleRegisterEdit = async () => {
+  try {
+    const response = await authFetch('/api/students/fee-register/receipt', {
+      method: 'PUT',
+      body: JSON.stringify({
+        oldReceiptNo: editingRegRecord.receiptNo,
+        newReceiptNo: editRegReceiptNo,
+        newDate:      editRegDate
+      })
+    });
+    const data = await response.json();
+    if (data.success) {
+      alert('Receipt updated!');
+      setShowRegisterEditModal(false);
+      fetchFeeRegister();
+    } else {
+      alert('Failed: ' + data.message);
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+};
+
+const handleRegisterDelete = async (receiptNo) => {
+  if (!confirm(`Delete ALL entries for receipt ${receiptNo}?\nFees will be restored to pending.`)) return;
+  try {
+    const response = await authFetch(
+      `/api/students/fee-register/receipt/${encodeURIComponent(receiptNo)}`,
+      { method: 'DELETE' }
+    );
+    const data = await response.json();
+    if (data.success) {
+      alert('Receipt deleted. Fees restored to pending.');
+      fetchFeeRegister();
+    } else {
+      alert('Failed: ' + data.message);
+    }
+  } catch (err) {
+    alert('Error: ' + err.message);
   }
 };
 
@@ -1522,7 +1571,7 @@ const activeBalance = activeTotalFee - totalPaid;
       <table className="min-w-full">
         <thead>
           <tr style={{ backgroundColor: '#7B1C1C' }}>
-            {['Date', 'Receipt No', 'Roll No', 'Student Name', 'Course', 'Batch Time', 'Faculty', 'Fee Type', 'Amount'].map(h => (
+            {['Date', 'Receipt No', 'Roll No', 'Student Name', 'Course', 'Batch Time', 'Faculty', 'Fee Type', 'Amount' , 'Actions'].map(h => (
               <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
                 {h}
               </th>
@@ -1581,6 +1630,30 @@ const activeBalance = activeTotalFee - totalPaid;
                 <td className="px-4 py-3 text-sm font-bold text-green-700 whitespace-nowrap">
                   ₹{(record.amount || 0).toLocaleString('en-IN')}
                 </td>
+
+                <td className="px-4 py-3 whitespace-nowrap">
+  <div className="flex gap-1">
+    <button
+      onClick={() => {
+        setEditingRegRecord(record);
+        setEditRegReceiptNo(record.receiptNo);
+        setEditRegDate(record.date ? new Date(record.date).toISOString().split('T')[0] : '');
+        setShowRegisterEditModal(true);
+      }}
+      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+      title="Edit Date & Receipt No"
+    >
+      <Edit size={13} />
+    </button>
+    <button
+      onClick={() => handleRegisterDelete(record.receiptNo)}
+      className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+      title="Delete Receipt (restores fees)"
+    >
+      <Trash2 size={13} />
+    </button>
+  </div>
+</td>
               </tr>
             ))
           )}
@@ -1621,6 +1694,47 @@ const activeBalance = activeTotalFee - totalPaid;
       )}
     </div>
 
+  </div>
+)}
+
+{showRegisterEditModal && editingRegRecord && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex justify-between items-center">
+        <div>
+          <h3 className="text-white font-bold">Edit Receipt</h3>
+          <p className="text-white/70 text-xs mt-0.5">{editingRegRecord.studentName}</p>
+        </div>
+        <button onClick={() => setShowRegisterEditModal(false)} className="text-white/70 hover:text-white text-2xl leading-none">&times;</button>
+      </div>
+      <div className="p-6 space-y-4">
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Receipt Number</label>
+          <input
+            type="text"
+            value={editRegReceiptNo}
+            onChange={e => setEditRegReceiptNo(e.target.value.toUpperCase())}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Payment Date</label>
+          <input
+            type="date"
+            value={editRegDate}
+            onChange={e => setEditRegDate(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-700">
+          ⚠ Updates <strong>all entries</strong> with receipt <strong>{editingRegRecord.receiptNo}</strong>
+        </div>
+      </div>
+      <div className="px-6 pb-6 flex justify-end gap-3">
+        <button onClick={() => setShowRegisterEditModal(false)} className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600">Cancel</button>
+        <button onClick={handleRegisterEdit} className="px-5 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">Update</button>
+      </div>
+    </div>
   </div>
 )}
     </div>

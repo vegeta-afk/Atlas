@@ -1435,6 +1435,153 @@ router.delete("/:id/fees/payment/:monthNumber", async (req, res) => {
   }
 });
 
+// PUT /api/students/fee-register/receipt — edit receipt no + date
+router.put('/fee-register/receipt', async (req, res) => {
+  try {
+    const { oldReceiptNo, newReceiptNo, newDate } = req.body;
+    if (!oldReceiptNo) return res.status(400).json({ success: false, message: 'oldReceiptNo required' });
+
+    const students = await Student.find({
+      $or: [
+        { 'feeSchedule.receiptNo': oldReceiptNo },
+        { 'paymentHistory.receiptNo': oldReceiptNo },
+        { admissionFeeReceiptNo: oldReceiptNo },
+        { 'additionalCourses.feeSchedule.receiptNo': oldReceiptNo }
+      ]
+    });
+
+    for (const student of students) {
+      let modified = false;
+
+      student.feeSchedule.forEach((fee, i) => {
+        if (fee.receiptNo === oldReceiptNo) {
+          student.feeSchedule[i].receiptNo = newReceiptNo || oldReceiptNo;
+          if (newDate) student.feeSchedule[i].paymentDate = new Date(newDate);
+          modified = true;
+        }
+      });
+
+      (student.additionalCourses || []).forEach((ac, ai) => {
+        (ac.feeSchedule || []).forEach((fee, fi) => {
+          if (fee.receiptNo === oldReceiptNo) {
+            student.additionalCourses[ai].feeSchedule[fi].receiptNo = newReceiptNo || oldReceiptNo;
+            if (newDate) student.additionalCourses[ai].feeSchedule[fi].paymentDate = new Date(newDate);
+            modified = true;
+          }
+        });
+      });
+
+      (student.paymentHistory || []).forEach((ph, i) => {
+        if (ph.receiptNo === oldReceiptNo) {
+          student.paymentHistory[i].receiptNo = newReceiptNo || oldReceiptNo;
+          if (newDate) student.paymentHistory[i].date = new Date(newDate);
+          modified = true;
+        }
+      });
+
+      if (student.admissionFeeReceiptNo === oldReceiptNo) {
+        student.admissionFeeReceiptNo = newReceiptNo || oldReceiptNo;
+        if (newDate) student.admissionFeePaidDate = new Date(newDate);
+        modified = true;
+      }
+
+      if (modified) {
+        student.markModified('feeSchedule');
+        student.markModified('additionalCourses');
+        student.markModified('paymentHistory');
+        await student.save();
+      }
+    }
+
+    res.json({ success: true, message: 'Receipt updated successfully' });
+  } catch (err) {
+    console.error('Edit receipt error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// DELETE /api/students/fee-register/receipt/:receiptNo — delete + restore fees to pending
+router.delete('/fee-register/receipt/:receiptNo', async (req, res) => {
+  try {
+    const { receiptNo } = req.params;
+
+    const students = await Student.find({
+      $or: [
+        { 'feeSchedule.receiptNo': receiptNo },
+        { 'paymentHistory.receiptNo': receiptNo },
+        { admissionFeeReceiptNo: receiptNo },
+        { 'additionalCourses.feeSchedule.receiptNo': receiptNo }
+      ]
+    });
+
+    for (const student of students) {
+      let totalRefunded = 0;
+      let modified = false;
+
+      // Reset primary feeSchedule entries
+      student.feeSchedule.forEach((fee, i) => {
+        if (fee.receiptNo === receiptNo) {
+          totalRefunded += fee.paidAmount || 0;
+          student.feeSchedule[i].paidAmount   = 0;
+          student.feeSchedule[i].monthlyPaid  = 0;
+          student.feeSchedule[i].examPaid     = 0;
+          student.feeSchedule[i].balanceAmount = fee.totalFee || 0;
+          student.feeSchedule[i].status       = 'pending';
+          student.feeSchedule[i].receiptNo    = '';
+          student.feeSchedule[i].paymentDate  = null;
+          student.feeSchedule[i].paymentMode  = '';
+          modified = true;
+        }
+      });
+
+      // Reset additional course feeSchedule entries
+      (student.additionalCourses || []).forEach((ac, ai) => {
+        (ac.feeSchedule || []).forEach((fee, fi) => {
+          if (fee.receiptNo === receiptNo) {
+            totalRefunded += fee.paidAmount || 0;
+            student.additionalCourses[ai].feeSchedule[fi].paidAmount    = 0;
+            student.additionalCourses[ai].feeSchedule[fi].balanceAmount = fee.totalFee || 0;
+            student.additionalCourses[ai].feeSchedule[fi].status        = 'pending';
+            student.additionalCourses[ai].feeSchedule[fi].receiptNo     = '';
+            student.additionalCourses[ai].feeSchedule[fi].paymentDate   = null;
+            student.additionalCourses[ai].feeSchedule[fi].paymentMode   = '';
+            modified = true;
+          }
+        });
+      });
+
+      // Remove from paymentHistory
+      const before = student.paymentHistory.length;
+      student.paymentHistory = student.paymentHistory.filter(ph => ph.receiptNo !== receiptNo);
+      if (student.paymentHistory.length !== before) modified = true;
+
+      // Reset admission fee if receipt matches
+      if (student.admissionFeeReceiptNo === receiptNo) {
+        totalRefunded += student.admissionFee || 0;
+        student.admissionFeePaid        = false;
+        student.admissionFeeReceiptNo   = '';
+        student.admissionFeePaidDate    = null;
+        student.admissionFeePaymentMode = '';
+        modified = true;
+      }
+
+      if (modified) {
+        student.paidAmount    = Math.max(0, (student.paidAmount || 0) - totalRefunded);
+        student.balanceAmount = Math.max(0, (student.totalCourseFee || 0) - student.paidAmount);
+        student.markModified('feeSchedule');
+        student.markModified('additionalCourses');
+        student.markModified('paymentHistory');
+        await student.save();
+      }
+    }
+
+    res.json({ success: true, message: 'Receipt deleted. Fees restored to pending.' });
+  } catch (err) {
+    console.error('Delete receipt error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ========== SEARCH ROUTE ==========
 
 // @route   GET /api/students/search
