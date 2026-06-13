@@ -1559,6 +1559,7 @@ router.delete('/fee-register/receipt/:receiptNo', async (req, res) => {
       if (student.admissionFeeReceiptNo === receiptNo) {
         totalRefunded += student.admissionFee || 0;
         student.admissionFeePaid        = false;
+        student.admissionFeePaidAmount  = 0;  
         student.admissionFeeReceiptNo   = '';
         student.admissionFeePaidDate    = null;
         student.admissionFeePaymentMode = '';
