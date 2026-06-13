@@ -305,9 +305,6 @@ const monthlyPaid = activeFeeSchedule.reduce(
 const admissionPaid = student.admissionFeePaidAmount || 0;
 const activePaidAmount = monthlyPaid + admissionPaid;
 
-const activeTotalFee = activeFeeSchedule.reduce(
-  (s, f) => s + (f.totalFee || 0), 0
-) + (student.admissionFee || 0);
 
 const activeBalanceAmount = activeTotalFee - activePaidAmount;
 
