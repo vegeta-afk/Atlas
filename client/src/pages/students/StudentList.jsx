@@ -83,8 +83,9 @@ const StudentList = () => {
     ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
     : (student.totalCourseFee || 0);
   const totalFee = scheduleFees + (student.admissionFee || 0);  // ← add admissionFee
-  const paidAmount = (student.paidAmount || 0) +                // ← root paidAmount (admission)
-    activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0); // ← monthly paid
+  const monthlyPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
+const admissionPaid = student.admissionFeePaidAmount || 0;
+const paidAmount = monthlyPaid + admissionPaid;
   if (totalFee === 0) return 0;
   return Math.min(100, Math.round((paidAmount / totalFee) * 100));
 };
@@ -241,8 +242,9 @@ const scheduleFees = activeFeeSchedule.length > 0
   ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
   : (student.totalCourseFee || 0);
 const totalFee = scheduleFees + (student.admissionFee || 0);  // ← add admissionFee
-const paidAmount = (student.paidAmount || 0) +                // ← root = admission paid
-  activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);  // ← monthly paid
+const monthlyPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
+const admissionPaid = student.admissionFeePaidAmount || 0;
+const paidAmount = monthlyPaid + admissionPaid;
 
                   return (
                     <tr key={student._id} className="hover:bg-gray-50 transition-colors">
