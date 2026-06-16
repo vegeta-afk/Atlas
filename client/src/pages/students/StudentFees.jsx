@@ -293,7 +293,7 @@ const activeBalance = activeTotalFee - totalPaid;
     dateOfJoining: student.admissionDate || student.dateOfJoining,
     course: student.course || student.courseName || "N/A",
     batch: student.batch || student.batchName || student.batchTime || student.originalData?.batch || "N/A",
-    faculty: student.faculty || student.facultyName || student.assignedFaculty || student.teacherName || student.teacher || "—",
+    faculty: student.facultyAllot || "—",
     status: student.status || "Active",
     monthlyFee: student.monthlyFee || student.feeAmount || 0,
     paidAmount: totalPaid,
@@ -701,7 +701,7 @@ const activeBalance = activeTotalFee - totalPaid;
     dateOfJoining: student.admissionDate || student.dateOfJoining,
     course: student.course || student.courseName || "N/A",
     batch: student.batch || student.batchName || student.batchTime || student.originalData?.batch || "N/A",
-    faculty: student.faculty || student.facultyName || student.assignedFaculty || student.teacherName || student.teacher || "—",
+    faculty: student.facultyAllot || "—",
     status: student.status || "Active",
     monthlyFee: student.monthlyFee || student.feeAmount || 0,
     paidAmount: totalPaid,
@@ -1606,12 +1606,12 @@ const activeBalance = activeTotalFee - totalPaid;
                 .reduce((sum, f) => sum + (f.paidAmount || 0), 0);
  
               // Faculty — check every possible field name your backend might use
-              const faculty = student.faculty || '—';
+              const faculty = student.faculty || student.originalData?.facultyAllot || '—';
               // Batch — check every possible field name
               const batch =
                 student.batch ||
-                o.batch ||
-                o.batchTime ||
+                student.originalData?.batch ||
+                student.originalData?.batchTime ||
                 o.batchName ||
                 o.batchTiming ||
                 o.timing ||
