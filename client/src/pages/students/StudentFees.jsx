@@ -52,9 +52,7 @@ const StudentFees = () => {
   const [studentFeeSchedule, setStudentFeeSchedule] = useState([]);
   const [searchTimeout, setSearchTimeout] = useState(null);
   const [otherFees, setOtherFees] = useState([]);
-  const [selectedOtherFee, setSelectedOtherFee] = useState(null);
-  const [otherFeeAmount, setOtherFeeAmount] = useState(0);
-  const [otherFeeDescription, setOtherFeeDescription] = useState("");
+  const [otherFeesList, setOtherFeesList] = useState([]);
   const [feeRegisterData, setFeeRegisterData] = useState([]);
   const [regLoading, setRegLoading] = useState(false);
   const [regFromDate, setRegFromDate] = useState(() => {
@@ -494,7 +492,7 @@ return sorted;
 
   const calculateTotal = () => {
     const selectedFeesTotal = calculateMonthlyFeesTotal();
-    const otherFeeTotal = parseFloat(otherFeeAmount) || 0;
+    const otherFeeTotal = otherFeesList.reduce((sum, f) => sum + (parseFloat(f.amount) || 0), 0);
     const fineTotal = parseFloat(fineAmount) || 0;
     return selectedFeesTotal + otherFeeTotal + fineTotal;
   };
@@ -537,12 +535,14 @@ const paymentData = {
   receiptNo,
   paymentMode,
   remarks: remarks || "",
-  otherFees: otherFeeAmount > 0 ? [{
-    feeId: selectedOtherFee,
-    feeName: otherFees.find(f => f.id === selectedOtherFee)?.name || "Other Fee",
-    amount: otherFeeAmount,
-    description: otherFeeDescription
-  }] : [],
+  otherFees: otherFeesList
+    .filter(f => parseFloat(f.amount) > 0)
+    .map(f => ({
+      feeId: f.feeId,
+      feeName: f.feeName || "Other Fee",
+      amount: parseFloat(f.amount),
+      description: f.description || ""
+    })),
 };
 
 // ← ADD THIS RIGHT HERE
@@ -595,9 +595,7 @@ console.log("🔍 Payment data:", JSON.stringify({
           }));
 
           setAllCourseFeeSchedules(updatedSchedules);
-          setSelectedOtherFee(null);
-          setOtherFeeAmount(0);
-          setOtherFeeDescription("");
+          setOtherFeesList([]);
 
           alert(`Payment submitted successfully!\nReceipt: ${receiptNo}\nAmount: ₹${totalAmount}`);
           await fetchStudents();
@@ -1262,82 +1260,119 @@ const activeBalance = activeTotalFee - totalPaid;
                     </div>
                     {/* END Fee Table */}
 
-                    {/* Other Fees */}
-                    <div className="border border-gray-200 rounded-lg p-6 bg-gray-50">
-                      <h3 className="font-semibold text-gray-700 mb-4 flex items-center">
-                        <Plus className="mr-2 h-5 w-5 text-blue-600" />
-                        Additional Other Fees
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-sm font-medium mb-2 text-gray-700">Select Other Fee</label>
-                          <select
-                            value={selectedOtherFee || ""}
-                            onChange={(e) => {
-                              const feeId = e.target.value;
-                              const selectedFee = otherFees.find(fee => fee.id === feeId);
-                              setSelectedOtherFee(feeId);
-                              if (selectedFee) {
-                                setOtherFeeAmount(selectedFee.amount);
-                                setOtherFeeDescription(selectedFee.description);
-                              } else {
-                                setOtherFeeAmount(0);
-                                setOtherFeeDescription("");
-                              }
-                            }}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="">Select a fee type</option>
-                            {otherFees.map(fee => (
-                              <option key={fee.id} value={fee.id}>{fee.name} - ₹{fee.amount}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2 text-gray-700">Amount (₹)</label>
-                          <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-500" />
-                            <input
-                              type="number"
-                              value={otherFeeAmount}
-                              onChange={(e) => setOtherFeeAmount(parseFloat(e.target.value) || 0)}
-                              onWheel={(e) => e.target.blur()}
-                              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                              placeholder="Enter amount"
-                              min="0"
-                            />
-                          </div>
-                          <div className="mt-2">
-                            <input
-                              type="text"
-                              value={otherFeeDescription}
-                              onChange={(e) => setOtherFeeDescription(e.target.value)}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                              placeholder="Optional description"
-                            />
-                          </div>
-                        </div>
+                    {/* Other Fees - Dynamic List */}
+                    <div className="border border-gray-200 rounded-lg p-5 bg-gray-50">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-gray-700 flex items-center">
+                          <Plus className="mr-2 h-5 w-5 text-blue-600" />
+                          Additional Other Fees
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => setOtherFeesList(prev => [
+                            ...prev,
+                            { feeId: '', feeName: '', amount: 0, description: '' }
+                          ])}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Fee
+                        </button>
                       </div>
-                      {otherFeeAmount > 0 && (
-                        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <div className="font-medium text-gray-900">
-                                {otherFees.find(f => f.id === selectedOtherFee)?.name || "Other Fee"}
+
+                      {otherFeesList.length === 0 ? (
+                        <div className="text-center py-5 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-lg">
+                          Click <strong>+ Add Fee</strong> to add additional charges
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {otherFeesList.map((item, index) => (
+                            <div key={index} className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+                              <div className="flex items-end gap-3">
+                                {/* Fee Type Dropdown */}
+                                <div className="flex-1 min-w-0">
+                                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                                    Fee Type
+                                  </label>
+                                  <select
+                                    value={item.feeId || ''}
+                                    onChange={(e) => {
+                                      const feeId = e.target.value;
+                                      const found = otherFees.find(f => f.id === feeId);
+                                      setOtherFeesList(prev => prev.map((it, i) =>
+                                        i === index ? {
+                                          ...it,
+                                          feeId,
+                                          feeName: found?.name || '',
+                                          amount: found?.amount || 0,
+                                          description: found?.description || ''
+                                        } : it
+                                      ));
+                                    }}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  >
+                                    <option value="">Select a fee type</option>
+                                    {otherFees.map(fee => (
+                                      <option key={fee.id} value={fee.id}>
+                                        {fee.name} — ₹{fee.amount}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                {/* Amount */}
+                                <div className="w-28 flex-shrink-0">
+                                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                                    Amount (₹)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={item.amount || 0}
+                                    onChange={(e) => setOtherFeesList(prev => prev.map((it, i) =>
+                                      i === index ? { ...it, amount: parseFloat(e.target.value) || 0 } : it
+                                    ))}
+                                    onWheel={(e) => e.target.blur()}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                                    min="0"
+                                    placeholder="0"
+                                  />
+                                </div>
+
+                                {/* Remove Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => setOtherFeesList(prev => prev.filter((_, i) => i !== index))}
+                                  className="mb-0.5 p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                                  title="Remove this fee"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
                               </div>
-                              <div className="text-sm text-gray-600">{otherFeeDescription || "Additional charge"}</div>
+
+                              {/* Optional Description */}
+                              <input
+                                type="text"
+                                value={item.description || ''}
+                                onChange={(e) => setOtherFeesList(prev => prev.map((it, i) =>
+                                  i === index ? { ...it, description: e.target.value } : it
+                                ))}
+                                placeholder="Description (optional)"
+                                className="mt-2 w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-600 focus:ring-1 focus:ring-blue-400 focus:outline-none"
+                              />
                             </div>
-                            <div className="text-right">
-                              <div className="font-bold text-green-600 text-lg">₹{otherFeeAmount}</div>
-                              <button
-                                type="button"
-                                onClick={() => { setSelectedOtherFee(null); setOtherFeeAmount(0); setOtherFeeDescription(""); }}
-                                className="text-sm text-red-600 hover:text-red-800 mt-1"
-                              >
-                                Remove
-                              </button>
+                          ))}
+
+                          {/* Other fees subtotal */}
+                          {otherFeesList.filter(f => parseFloat(f.amount) > 0).length > 0 && (
+                            <div className="flex justify-between items-center pt-2 border-t border-gray-300 mt-1">
+                              <span className="text-sm font-medium text-gray-600">
+                                Other Fees Total ({otherFeesList.filter(f => parseFloat(f.amount) > 0).length} item{otherFeesList.filter(f => parseFloat(f.amount) > 0).length > 1 ? 's' : ''}):
+                              </span>
+                              <span className="font-bold text-green-700">
+                                {formatCurrency(otherFeesList.reduce((sum, f) => sum + (parseFloat(f.amount) || 0), 0))}
+                              </span>
                             </div>
-                          </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1365,10 +1400,10 @@ const activeBalance = activeTotalFee - totalPaid;
                               <span>Monthly Fees (All Courses):</span>
                               <span>{formatCurrency(calculateMonthlyFeesTotal())}</span>
                             </div>
-                            {otherFeeAmount > 0 && (
+                            {otherFeesList.filter(f => parseFloat(f.amount) > 0).length > 0 && (
                               <div className="flex justify-between mb-1">
-                                <span>Other Fee:</span>
-                                <span>{formatCurrency(otherFeeAmount)}</span>
+                                <span>Other Fees ({otherFeesList.filter(f => parseFloat(f.amount) > 0).length}):</span>
+                                <span>{formatCurrency(otherFeesList.reduce((sum, f) => sum + (parseFloat(f.amount) || 0), 0))}</span>
                               </div>
                             )}
                             <div className="border-t border-gray-300 mt-2 pt-2 font-semibold">
