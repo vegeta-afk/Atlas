@@ -293,6 +293,7 @@ const activeBalance = activeTotalFee - totalPaid;
     dateOfJoining: student.admissionDate || student.dateOfJoining,
     course: student.course || student.courseName || "N/A",
     batch: student.batch || student.batchName || student.batchTime || student.originalData?.batch || "N/A",
+    faculty: student.faculty || student.facultyName || student.assignedFaculty || student.teacherName || student.teacher || "—",
     status: student.status || "Active",
     monthlyFee: student.monthlyFee || student.feeAmount || 0,
     paidAmount: totalPaid,
@@ -700,6 +701,7 @@ const activeBalance = activeTotalFee - totalPaid;
     dateOfJoining: student.admissionDate || student.dateOfJoining,
     course: student.course || student.courseName || "N/A",
     batch: student.batch || student.batchName || student.batchTime || student.originalData?.batch || "N/A",
+    faculty: student.faculty || student.facultyName || student.assignedFaculty || student.teacherName || student.teacher || "—",
     status: student.status || "Active",
     monthlyFee: student.monthlyFee || student.feeAmount || 0,
     paidAmount: totalPaid,
@@ -1573,24 +1575,24 @@ const activeBalance = activeTotalFee - totalPaid;
       </div>
  
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200" style={{ tableLayout: 'fixed', width: '100%' }}>
+        <table className="min-w-full divide-y divide-gray-200">
  
           {/* ── HEADER — fixed consistent padding px-4 across all columns ── */}
           <thead style={{ backgroundColor: '#1e3a5f' }}>
-            <tr>
-              <th style={{ width: '40px'  }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">#</th>
-              <th style={{ width: '130px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Admission No</th>
-              <th style={{ width: '180px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Student Name</th>
-              <th style={{ width: '130px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Faculty</th>
-              <th style={{ width: '160px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Batch</th>
-              <th style={{ width: '160px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Course</th>
-              <th style={{ width: '110px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Monthly Fee</th>
-              <th style={{ width: '120px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Paid (Monthly)</th>
-              <th style={{ width: '110px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Balance Due</th>
-              <th style={{ width: '180px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Overdue Months</th>
-              <th style={{ width: '120px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Action</th>
-            </tr>
-          </thead>
+  <tr>
+    <th style={{ minWidth: '40px'  }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">#</th>
+    <th style={{ minWidth: '120px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Admission No</th>
+    <th style={{ minWidth: '160px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Student Name</th>
+    <th style={{ minWidth: '120px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Faculty</th>
+    <th style={{ minWidth: '150px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Batch</th>
+    <th style={{ minWidth: '150px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Course</th>
+    <th style={{ minWidth: '100px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Monthly Fee</th>
+    <th style={{ minWidth: '110px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Paid (Monthly)</th>
+    <th style={{ minWidth: '100px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Balance Due</th>
+    <th style={{ minWidth: '170px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Overdue Months</th>
+    <th style={{ minWidth: '110px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Action</th>
+  </tr>
+</thead>
  
           <tbody className="bg-white divide-y divide-gray-200">
             {(pendingFilter === 'defaulters' ? defaulterStudents : pendingStudents).map((student, idx) => {
@@ -1604,20 +1606,7 @@ const activeBalance = activeTotalFee - totalPaid;
                 .reduce((sum, f) => sum + (f.paidAmount || 0), 0);
  
               // Faculty — check every possible field name your backend might use
-              const o = student.originalData || {};
-              const faculty =
-                o.faculty ||
-                o.facultyName ||
-                o.assignedFaculty ||
-                o.teacherName ||
-                o.teacher ||
-                o.instructorName ||
-                o.instructor ||
-                o.allocatedFaculty ||
-                o.facultyAssigned ||
-                o.mentorName ||
-                '—';
- 
+              const faculty = student.faculty || '—';
               // Batch — check every possible field name
               const batch =
                 student.batch ||
