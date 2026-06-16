@@ -75,6 +75,10 @@ const StudentFees = () => {
   const [editRegReceiptNo, setEditRegReceiptNo]           = useState('');
   const [editRegDate, setEditRegDate]                     = useState('');
   const [pendingFilter, setPendingFilter]                 = useState('all'); // 'all' | 'defaulters'
+  const [paidYear, setPaidYear]                           = useState(new Date().getFullYear());
+  const [paidFeeTypeFilter, setPaidFeeTypeFilter]         = useState('all');
+  const [monthlyData, setMonthlyData]                     = useState([]);
+  const [monthlyLoading, setMonthlyLoading]               = useState(false);
 
   // ✅ Get current tab's fees
   const getCurrentFees = () => {
@@ -146,6 +150,46 @@ const StudentFees = () => {
   }
 };
 
+const fetchYearlyCollection = async (year) => {
+  try {
+    setMonthlyLoading(true);
+    const params = new URLSearchParams({
+      from: `${year}-01-01`,
+      to:   `${year}-12-31`
+    });
+    const response = await authFetch(`/api/students/fee-register?${params}`);
+    if (response.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; return; }
+    const data = await response.json();
+    if (data.success) setMonthlyData(data.data || []);
+  } catch (err) {
+    console.error('Yearly collection error:', err);
+  } finally {
+    setMonthlyLoading(false);
+  }
+};
+
+const getMonthlyTotals = () => {
+  return Array.from({ length: 12 }, (_, i) => {
+    const monthName = new Date(paidYear, i, 1).toLocaleString('en-IN', { month: 'long' });
+    const recs = monthlyData.filter(r => {
+      const d = new Date(r.date);
+      return d.getFullYear() === paidYear && d.getMonth() === i;
+    });
+    const monthlyFee    = recs.filter(r => r.feeType === 'Monthly Fee').reduce((s, r) => s + (r.amount || 0), 0);
+    const admissionFee  = recs.filter(r => r.feeType === 'Admission Fee').reduce((s, r) => s + (r.amount || 0), 0);
+    const examFee       = recs.filter(r => r.feeType === 'Exam Fee').reduce((s, r) => s + (r.amount || 0), 0);
+    const otherFee      = recs.filter(r => !['Monthly Fee','Admission Fee','Exam Fee'].includes(r.feeType)).reduce((s, r) => s + (r.amount || 0), 0);
+
+    const filteredRecs = paidFeeTypeFilter === 'all' ? recs
+      : paidFeeTypeFilter === 'Other Fee'
+        ? recs.filter(r => !['Monthly Fee','Admission Fee','Exam Fee'].includes(r.feeType))
+        : recs.filter(r => r.feeType === paidFeeTypeFilter);
+
+    const filtered = filteredRecs.reduce((s, r) => s + (r.amount || 0), 0);
+    return { monthName, monthlyFee, admissionFee, examFee, otherFee, filtered, count: filteredRecs.length };
+  });
+};
+
 const handleRegisterEdit = async () => {
   try {
     const response = await authFetch('/api/students/fee-register/receipt', {
@@ -207,8 +251,13 @@ const handleRegisterDelete = async (receiptNo) => {
   }, []);
 
   useEffect(() => {
-  if (activeTab === 'feeRegister') fetchFeeRegister();
-}, [activeTab]);
+    if (activeTab === 'feeRegister') fetchFeeRegister();
+    if (activeTab === 'paid') fetchYearlyCollection(paidYear);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'paid') fetchYearlyCollection(paidYear);
+  }, [paidYear]);
 
   const fetchStudents = async () => {
     try {
@@ -1645,69 +1694,194 @@ const activeBalance = activeTotalFee - totalPaid;
           </div>
         )}
 
-        {/* Paid Fees */}
-        {activeTab === "paid" && (
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold flex items-center">
-                <CheckCircle className="mr-3 h-6 w-6 text-green-600" />
-                Students with Paid Fees
-              </h2>
-              <p className="text-gray-600 mt-1">Students who have completed their fee payments</p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Student Details</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Course</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Monthly Fee</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Total Paid</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Payment Status</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {paidStudents.map((student) => (
-                    <tr key={student._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-                            <User className="h-6 w-6 text-green-600" />
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-semibold text-gray-900">{student.fullName}</div>
-                            <div className="text-sm text-gray-500">{student.admissionNo}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 max-w-xs truncate">{student.course}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{formatCurrency(student.monthlyFee)}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-bold text-green-600">{formatCurrency(student.paidAmount)}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Fully Paid</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {paidStudents.length === 0 && (
-                <div className="text-center py-16">
-                  <div className="inline-flex items-center justify-center h-16 w-16 bg-yellow-100 rounded-full mb-4">
-                    <AlertCircle className="h-8 w-8 text-yellow-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Paid Records</h3>
-                  <p className="text-gray-600">No students have completed their fee payments yet</p>
+        {/* Paid Fees - Monthly Collection View */}
+        {activeTab === "paid" && (() => {
+          const monthlyTotals = getMonthlyTotals();
+          const grandTotal    = monthlyTotals.reduce((s, m) => s + m.filtered, 0);
+          const totalTxns     = monthlyTotals.reduce((s, m) => s + m.count, 0);
+          const bestMonth     = monthlyTotals.reduce((best, m) => m.filtered > best.filtered ? m : best, monthlyTotals[0]);
+
+          return (
+            <div className="space-y-4">
+
+              {/* ── Year + Fee Type Controls ── */}
+              <div className="bg-white rounded-xl shadow p-4 flex flex-col sm:flex-row items-center justify-between gap-4 flex-wrap">
+                {/* Year Navigator */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setPaidYear(y => y - 1)}
+                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <ChevronLeft className="h-5 w-5 text-gray-600" />
+                  </button>
+                  <div className="text-2xl font-bold text-gray-800 min-w-[72px] text-center">{paidYear}</div>
+                  <button
+                    onClick={() => setPaidYear(y => y + 1)}
+                    disabled={paidYear >= new Date().getFullYear()}
+                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-40"
+                  >
+                    <ChevronRight className="h-5 w-5 text-gray-600" />
+                  </button>
                 </div>
-              )}
+
+                {/* Fee Type Filter */}
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'all',           label: 'All Fees',      color: 'bg-gray-800 text-white',     inactive: 'bg-gray-100 text-gray-600' },
+                    { key: 'Monthly Fee',   label: 'Monthly Fee',   color: 'bg-blue-600 text-white',     inactive: 'bg-blue-50 text-blue-700' },
+                    { key: 'Admission Fee', label: 'Admission Fee', color: 'bg-purple-600 text-white',   inactive: 'bg-purple-50 text-purple-700' },
+                    { key: 'Exam Fee',      label: 'Exam Fee',      color: 'bg-yellow-500 text-white',   inactive: 'bg-yellow-50 text-yellow-700' },
+                    { key: 'Other Fee',     label: 'Other Fee',     color: 'bg-green-600 text-white',    inactive: 'bg-green-50 text-green-700' },
+                  ].map(({ key, label, color, inactive }) => (
+                    <button
+                      key={key}
+                      onClick={() => setPaidFeeTypeFilter(key)}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${
+                        paidFeeTypeFilter === key ? color : inactive + ' hover:opacity-80'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Summary Cards ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-white rounded-xl shadow p-5 border-l-4 border-green-500">
+                  <div className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Total Collection {paidYear}</div>
+                  <div className="text-3xl font-bold text-green-700 mt-1">{formatCurrency(grandTotal)}</div>
+                  <div className="text-xs text-gray-400 mt-1">{paidFeeTypeFilter === 'all' ? 'All fee types' : paidFeeTypeFilter}</div>
+                </div>
+                <div className="bg-white rounded-xl shadow p-5 border-l-4 border-blue-500">
+                  <div className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Total Transactions</div>
+                  <div className="text-3xl font-bold text-blue-700 mt-1">{totalTxns}</div>
+                  <div className="text-xs text-gray-400 mt-1">payments recorded</div>
+                </div>
+                <div className="bg-white rounded-xl shadow p-5 border-l-4 border-purple-500">
+                  <div className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Best Month</div>
+                  <div className="text-2xl font-bold text-purple-700 mt-1">{bestMonth?.filtered > 0 ? bestMonth.monthName : '—'}</div>
+                  <div className="text-xs text-gray-400 mt-1">{bestMonth?.filtered > 0 ? formatCurrency(bestMonth.filtered) : 'No data yet'}</div>
+                </div>
+              </div>
+
+              {/* ── Monthly Table ── */}
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div className="p-6 border-b border-gray-200">
+                  <h2 className="text-xl font-semibold flex items-center">
+                    <CheckCircle className="mr-3 h-6 w-6 text-green-600" />
+                    Monthly Collection — {paidYear}
+                  </h2>
+                  <p className="text-gray-500 mt-1 text-sm">
+                    {paidFeeTypeFilter === 'all' ? 'All fee types combined' : paidFeeTypeFilter + ' only'}
+                  </p>
+                </div>
+
+                {monthlyLoading ? (
+                  <div className="flex justify-center items-center py-20">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                      <thead>
+                        <tr style={{ backgroundColor: '#1e3a5f' }}>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase">#</th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase">Month</th>
+                          {paidFeeTypeFilter === 'all' && (
+                            <>
+                              <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase">Monthly Fee</th>
+                              <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase">Admission Fee</th>
+                              <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase">Exam Fee</th>
+                              <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase">Other Fee</th>
+                            </>
+                          )}
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase">
+                            {paidFeeTypeFilter === 'all' ? 'Grand Total' : 'Total'}
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase">Txns</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {monthlyTotals.map((month, idx) => (
+                          <tr
+                            key={idx}
+                            className={`transition-colors ${
+                              month.filtered > 0
+                                ? 'hover:bg-green-50 bg-white'
+                                : 'bg-white hover:bg-gray-50'
+                            }`}
+                          >
+                            <td className="px-6 py-4 text-sm text-gray-400 font-medium">{idx + 1}</td>
+                            <td className="px-6 py-4">
+                              <div className="font-semibold text-gray-900">{month.monthName}</div>
+                              <div className="text-xs text-gray-400">{paidYear}</div>
+                            </td>
+                            {paidFeeTypeFilter === 'all' && (
+                              <>
+                                <td className="px-6 py-4 text-sm font-medium text-blue-700">
+                                  {month.monthlyFee > 0 ? formatCurrency(month.monthlyFee) : <span className="text-gray-300">—</span>}
+                                </td>
+                                <td className="px-6 py-4 text-sm font-medium text-purple-700">
+                                  {month.admissionFee > 0 ? formatCurrency(month.admissionFee) : <span className="text-gray-300">—</span>}
+                                </td>
+                                <td className="px-6 py-4 text-sm font-medium text-yellow-700">
+                                  {month.examFee > 0 ? formatCurrency(month.examFee) : <span className="text-gray-300">—</span>}
+                                </td>
+                                <td className="px-6 py-4 text-sm font-medium text-green-700">
+                                  {month.otherFee > 0 ? formatCurrency(month.otherFee) : <span className="text-gray-300">—</span>}
+                                </td>
+                              </>
+                            )}
+                            <td className="px-6 py-4">
+                              <span className={`text-sm font-bold ${month.filtered > 0 ? 'text-green-800' : 'text-gray-300'}`}>
+                                {month.filtered > 0 ? formatCurrency(month.filtered) : '—'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              {month.count > 0
+                                ? <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-semibold">{month.count}</span>
+                                : <span className="text-gray-300 text-xs">—</span>
+                              }
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-gray-100 border-t-2 border-gray-300">
+                          <td colSpan={2} className="px-6 py-4 text-sm font-bold text-gray-800 uppercase tracking-wide">
+                            Total {paidYear}
+                          </td>
+                          {paidFeeTypeFilter === 'all' && (
+                            <>
+                              <td className="px-6 py-4 text-sm font-bold text-blue-800">
+                                {formatCurrency(monthlyTotals.reduce((s, m) => s + m.monthlyFee, 0))}
+                              </td>
+                              <td className="px-6 py-4 text-sm font-bold text-purple-800">
+                                {formatCurrency(monthlyTotals.reduce((s, m) => s + m.admissionFee, 0))}
+                              </td>
+                              <td className="px-6 py-4 text-sm font-bold text-yellow-800">
+                                {formatCurrency(monthlyTotals.reduce((s, m) => s + m.examFee, 0))}
+                              </td>
+                              <td className="px-6 py-4 text-sm font-bold text-green-800">
+                                {formatCurrency(monthlyTotals.reduce((s, m) => s + m.otherFee, 0))}
+                              </td>
+                            </>
+                          )}
+                          <td className="px-6 py-4 text-base font-bold text-green-900">
+                            {formatCurrency(grandTotal)}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-bold text-gray-700">{totalTxns}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
+              </div>
+
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* ── Fee Register ───────────────────────────────────────────── */}
