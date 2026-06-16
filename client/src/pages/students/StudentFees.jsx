@@ -1573,35 +1573,25 @@ const activeBalance = activeTotalFee - totalPaid;
       </div>
  
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y divide-gray-200" style={{ tableLayout: 'fixed', width: '100%' }}>
  
-          {/* ── NEW HEADER ── */}
+          {/* ── HEADER — fixed consistent padding px-4 across all columns ── */}
           <thead style={{ backgroundColor: '#1e3a5f' }}>
             <tr>
-              {[
-                '#',
-                'Admission No',
-                'Student Name',
-                'Faculty',
-                'Batch',
-                'Course',
-                'Monthly Fee',
-                'Paid (Monthly)',
-                'Balance Due',
-                'Overdue Months',
-                'Action',
-              ].map(h => (
-                <th
-                  key={h}
-                  className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap"
-                >
-                  {h}
-                </th>
-              ))}
+              <th style={{ width: '40px'  }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">#</th>
+              <th style={{ width: '130px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Admission No</th>
+              <th style={{ width: '180px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Student Name</th>
+              <th style={{ width: '130px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Faculty</th>
+              <th style={{ width: '160px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Batch</th>
+              <th style={{ width: '160px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Course</th>
+              <th style={{ width: '110px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Monthly Fee</th>
+              <th style={{ width: '120px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Paid (Monthly)</th>
+              <th style={{ width: '110px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Balance Due</th>
+              <th style={{ width: '180px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Overdue Months</th>
+              <th style={{ width: '120px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Action</th>
             </tr>
           </thead>
  
-          {/* ── NEW BODY ── */}
           <tbody className="bg-white divide-y divide-gray-200">
             {(pendingFilter === 'defaulters' ? defaulterStudents : pendingStudents).map((student, idx) => {
               const overdueList = getOverdueMonths(student);
@@ -1613,19 +1603,29 @@ const activeBalance = activeTotalFee - totalPaid;
                 .filter(f => f.status !== 'suspended')
                 .reduce((sum, f) => sum + (f.paidAmount || 0), 0);
  
-              // Faculty — try all common field names
+              // Faculty — check every possible field name your backend might use
+              const o = student.originalData || {};
               const faculty =
-                student.originalData?.faculty ||
-                student.originalData?.facultyName ||
-                student.originalData?.assignedFaculty ||
-                student.originalData?.teacherName ||
+                o.faculty ||
+                o.facultyName ||
+                o.assignedFaculty ||
+                o.teacherName ||
+                o.teacher ||
+                o.instructorName ||
+                o.instructor ||
+                o.allocatedFaculty ||
+                o.facultyAssigned ||
+                o.mentorName ||
                 '—';
  
-              // Batch
+              // Batch — check every possible field name
               const batch =
                 student.batch ||
-                student.originalData?.batchTime ||
-                student.originalData?.batchName ||
+                o.batch ||
+                o.batchTime ||
+                o.batchName ||
+                o.batchTiming ||
+                o.timing ||
                 '—';
  
               return (
@@ -1635,67 +1635,67 @@ const activeBalance = activeTotalFee - totalPaid;
                 >
  
                   {/* # */}
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-400 font-medium">
+                  <td className="px-4 py-4 text-sm text-gray-400 font-medium">
                     {idx + 1}
                   </td>
  
                   {/* Admission No */}
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4">
                     <span className="inline-block bg-gray-100 text-gray-700 text-xs font-semibold px-2 py-1 rounded">
                       {student.admissionNo || '—'}
                     </span>
                   </td>
  
                   {/* Student Name */}
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div className={`h-9 w-9 rounded-lg flex-shrink-0 flex items-center justify-center text-sm font-bold ${
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-2">
+                      <div className={`h-8 w-8 rounded-lg flex-shrink-0 flex items-center justify-center text-sm font-bold ${
                         overdueList.length >= 3 ? 'bg-red-100 text-red-700'
                         : overdueList.length >= 1 ? 'bg-orange-100 text-orange-700'
                         : 'bg-blue-100 text-blue-700'
                       }`}>
                         {(student.fullName || '?')[0].toUpperCase()}
                       </div>
-                      <div>
-                        <div className="text-sm font-semibold text-gray-900">{student.fullName}</div>
-                        <div className="text-xs text-gray-400">{student.studentId || ''}</div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-gray-900 truncate">{student.fullName}</div>
+                        <div className="text-xs text-gray-400 truncate">{student.studentId || ''}</div>
                       </div>
                     </div>
                   </td>
  
                   {/* Faculty */}
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
-                    {faculty}
+                  <td className="px-4 py-4">
+                    <div className="text-sm text-gray-700 truncate">{faculty}</div>
                   </td>
  
                   {/* Batch */}
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
-                    {batch}
+                  <td className="px-4 py-4">
+                    <div className="text-sm text-gray-700 truncate">{batch}</div>
                   </td>
  
                   {/* Course */}
                   <td className="px-4 py-4">
-                    <div className="text-sm text-gray-900 max-w-[160px] truncate" title={student.course}>
+                    <div className="text-sm text-gray-900 truncate" title={student.course}>
                       {student.course}
                     </div>
                   </td>
  
                   {/* Monthly Fee */}
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4">
                     <div className="text-sm font-medium text-gray-900">
                       {formatCurrency(student.monthlyFee)}
                     </div>
                   </td>
  
-                  {/* Paid (Monthly fees only) */}
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  {/* Paid (Monthly only) */}
+                  <td className="px-4 py-4">
                     <div className="text-sm font-semibold text-green-600">
                       {formatCurrency(monthlyPaidAmount)}
                     </div>
                   </td>
  
                   {/* Balance Due */}
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4">
                     <div className="text-sm font-bold text-red-600">
                       {formatCurrency(student.balanceAmount)}
                     </div>
@@ -1713,7 +1713,7 @@ const activeBalance = activeTotalFee - totalPaid;
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold group-hover:opacity-75 transition-opacity ${severity.badgeBg} ${severity.badgeText}`}>
                           {overdueList.length} month{overdueList.length > 1 ? 's' : ''} overdue ↗
                         </span>
-                        <span className="text-xs text-gray-500 truncate max-w-[150px]">
+                        <span className="text-xs text-gray-500 truncate max-w-[140px]">
                           {overdueList.slice(0, 2).map(f => f.month || `M${f.monthNumber}`).join(', ')}
                           {overdueList.length > 2 ? `, +${overdueList.length - 2} more` : ''}
                         </span>
@@ -1725,10 +1725,10 @@ const activeBalance = activeTotalFee - totalPaid;
                   </td>
  
                   {/* Action */}
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4">
                     <button
                       onClick={() => { handleStudentSelect(student); setActiveTab("payFees"); }}
-                      className={`px-4 py-2 text-white rounded-lg transition-colors font-medium text-sm ${
+                      className={`px-4 py-2 text-white rounded-lg transition-colors font-medium text-sm whitespace-nowrap ${
                         overdueList.length >= 3
                           ? 'bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900'
                           : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700'
@@ -1794,15 +1794,9 @@ const activeBalance = activeTotalFee - totalPaid;
  
           {/* Student info strip */}
           <div className="bg-red-50 border-b border-red-100 px-6 py-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-600">
-            <span>
-              <span className="font-semibold">Course:</span> {overdueModal.student.course}
-            </span>
-            <span>
-              <span className="font-semibold">Batch:</span> {overdueModal.student.batch || '—'}
-            </span>
-            <span>
-              <span className="font-semibold">Monthly Fee:</span> {formatCurrency(overdueModal.student.monthlyFee)}
-            </span>
+            <span><span className="font-semibold">Course:</span> {overdueModal.student.course}</span>
+            <span><span className="font-semibold">Batch:</span> {overdueModal.student.batch || '—'}</span>
+            <span><span className="font-semibold">Monthly Fee:</span> {formatCurrency(overdueModal.student.monthlyFee)}</span>
           </div>
  
           {/* Months Table */}
@@ -1810,16 +1804,12 @@ const activeBalance = activeTotalFee - totalPaid;
             <table className="min-w-full">
               <thead className="bg-gray-100 sticky top-0">
                 <tr>
-                  {['#', 'Month', 'Due Date', 'Total Fee', 'Paid', 'Balance'].map(h => (
-                    <th
-                      key={h}
-                      className={`px-4 py-2.5 text-xs font-semibold text-gray-600 uppercase whitespace-nowrap ${
-                        h === '#' || h === 'Month' || h === 'Due Date' ? 'text-left' : 'text-right'
-                      } ${h === 'Balance' ? 'text-red-600' : ''}`}
-                    >
-                      {h}
-                    </th>
-                  ))}
+                  <th className="px-4 py-2.5 text-left   text-xs font-semibold text-gray-600 uppercase">#</th>
+                  <th className="px-4 py-2.5 text-left   text-xs font-semibold text-gray-600 uppercase">Month</th>
+                  <th className="px-4 py-2.5 text-left   text-xs font-semibold text-gray-600 uppercase">Due Date</th>
+                  <th className="px-4 py-2.5 text-right  text-xs font-semibold text-gray-600 uppercase">Total Fee</th>
+                  <th className="px-4 py-2.5 text-right  text-xs font-semibold text-gray-600 uppercase">Paid</th>
+                  <th className="px-4 py-2.5 text-right  text-xs font-semibold text-red-600   uppercase">Balance</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -1852,15 +1842,9 @@ const activeBalance = activeTotalFee - totalPaid;
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{dueDate}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700 text-right font-medium">
-                        {formatCurrency(total)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-green-600 text-right font-medium">
-                        {formatCurrency(paid)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-red-600 text-right font-bold">
-                        {formatCurrency(balance)}
-                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700   text-right font-medium">{formatCurrency(total)}</td>
+                      <td className="px-4 py-3 text-sm text-green-600  text-right font-medium">{formatCurrency(paid)}</td>
+                      <td className="px-4 py-3 text-sm text-red-600    text-right font-bold"  >{formatCurrency(balance)}</td>
                     </tr>
                   );
                 })}
