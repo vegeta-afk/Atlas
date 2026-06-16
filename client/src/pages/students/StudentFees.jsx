@@ -76,6 +76,7 @@ const StudentFees = () => {
   const [editingRegRecord, setEditingRegRecord]           = useState(null);
   const [editRegReceiptNo, setEditRegReceiptNo]           = useState('');
   const [editRegDate, setEditRegDate]                     = useState('');
+  const [pendingFilter, setPendingFilter]                 = useState('all'); // 'all' | 'defaulters'
 
   // ✅ Get current tab's fees
   const getCurrentFees = () => {
@@ -635,7 +636,7 @@ console.log("🔍 Payment data:", JSON.stringify({
   const scheduleFees = activeFeeSchedule.length > 0
   ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
   : (student.totalCourseFee || 0);
-const activeTotalFee = scheduleFees; // ← add admissionFee
+const activeTotalFee = scheduleFees;// ← add admissionFee
 const totalPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0)
   + (student.admissionFeePaidAmount || 0);       // ← root + monthly
 const activeBalance = activeTotalFee - totalPaid;
@@ -682,7 +683,7 @@ const activeBalance = activeTotalFee - totalPaid;
     }).format(amount || 0);
   };
 
-  const formatDate = (dateString) => {
+   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
       return new Date(dateString).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -691,8 +692,72 @@ const activeBalance = activeTotalFee - totalPaid;
     }
   };
 
-  const pendingStudents = students.filter(s => s.balanceAmount > 0);
+  // Returns array of fee entries whose calendar month has arrived but are still unpaid
+  const getOverdueMonths = (student) => {
+    const feeSchedule = student.originalData?.feeSchedule || [];
+    if (!feeSchedule.length) return [];
+
+    const today = new Date();
+    const admissionDate =
+      student.originalData?.admissionDate ||
+      student.originalData?.dateOfJoining ||
+      student.dateOfJoining;
+
+    return feeSchedule.filter(fee => {
+      if (fee.status === 'paid' || fee.status === 'suspended') return false;
+
+      const balance =
+        fee.balanceAmount !== undefined
+          ? fee.balanceAmount
+          : (fee.totalFee || 0) - (fee.paidAmount || 0);
+      if (balance <= 0) return false;
+
+      // Find the 1st of the month this fee belongs to
+      let feeMonthStart = null;
+
+      if (fee.dueDate) {
+        const d = new Date(fee.dueDate);
+        feeMonthStart = new Date(d.getFullYear(), d.getMonth(), 1);
+      } else if (fee.monthNumber && admissionDate) {
+        const base = new Date(admissionDate);
+        feeMonthStart = new Date(
+          base.getFullYear(),
+          base.getMonth() + fee.monthNumber - 1,
+          1
+        );
+      }
+
+      if (!feeMonthStart) return false;
+      // If today >= 1st of that fee's month → month has come → overdue
+      return today >= feeMonthStart;
+    });
+  };
+
+  const getOverdueAmount = (overdueList) =>
+    overdueList.reduce((sum, fee) => {
+      const balance =
+        fee.balanceAmount !== undefined
+          ? fee.balanceAmount
+          : (fee.totalFee || 0) - (fee.paidAmount || 0);
+      return sum + balance;
+    }, 0);
+
+  const getDefaulterSeverity = (count) => {
+    if (count <= 0) return null;
+    if (count === 1) return { badgeBg: 'bg-yellow-100', badgeText: 'text-yellow-700', rowBg: '' };
+    if (count <= 3) return { badgeBg: 'bg-orange-100', badgeText: 'text-orange-700', rowBg: 'bg-orange-50' };
+    return { badgeBg: 'bg-red-100', badgeText: 'text-red-700', rowBg: 'bg-red-50' };
+  };
+
+   const pendingStudents = students.filter(s => s.balanceAmount > 0);
   const paidStudents = students.filter(s => s.balanceAmount === 0);
+
+  // Defaulter = pending student with at least 1 month whose calendar date has passed
+  const defaulterStudents  = pendingStudents.filter(s => getOverdueMonths(s).length > 0);
+  const criticalDefaulters = pendingStudents.filter(s => getOverdueMonths(s).length >= 3);
+  const totalOverdueAmount = defaulterStudents.reduce(
+    (sum, s) => sum + getOverdueAmount(getOverdueMonths(s)), 0
+  );
   const totalRegPages   = Math.max(1, Math.ceil(feeRegisterData.length / REG_PAGE_SIZE));
   const paginatedRegister = feeRegisterData.slice((regPage - 1) * REG_PAGE_SIZE, regPage * REG_PAGE_SIZE);
 
@@ -1363,74 +1428,185 @@ const activeBalance = activeTotalFee - totalPaid;
 
         {/* Pending Fees */}
         {activeTab === "pending" && (
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold flex items-center">
-                <AlertCircle className="mr-3 h-6 w-6 text-red-600" />
-                Students with Pending Fees
-              </h2>
-              <p className="text-gray-600 mt-1">Students who have unpaid fee installments</p>
+          <div className="space-y-4">
+
+            {/* ── Summary Cards ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white rounded-xl shadow p-5 border-l-4 border-red-500">
+                <div className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Total Defaulters</div>
+                <div className="text-3xl font-bold text-red-600 mt-1">{defaulterStudents.length}</div>
+                <div className="text-xs text-gray-400 mt-1">out of {pendingStudents.length} pending students</div>
+              </div>
+              <div className="bg-white rounded-xl shadow p-5 border-l-4 border-orange-500">
+                <div className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Critical (3+ Months)</div>
+                <div className="text-3xl font-bold text-orange-600 mt-1">{criticalDefaulters.length}</div>
+                <div className="text-xs text-gray-400 mt-1">students severely overdue</div>
+              </div>
+              <div className="bg-white rounded-xl shadow p-5 border-l-4 border-yellow-500">
+                <div className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Total Overdue Amount</div>
+                <div className="text-3xl font-bold text-yellow-700 mt-1">{formatCurrency(totalOverdueAmount)}</div>
+                <div className="text-xs text-gray-400 mt-1">from all defaulter students</div>
+              </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Student Details</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Course</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Monthly Fee</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Paid Amount</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Balance Due</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {pendingStudents.map((student) => (
-                    <tr key={student._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center">
-                            <User className="h-6 w-6 text-red-600" />
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-semibold text-gray-900">{student.fullName}</div>
-                            <div className="text-sm text-gray-500">{student.admissionNo}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 max-w-xs truncate">{student.course}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{formatCurrency(student.monthlyFee)}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-green-600">{formatCurrency(student.paidAmount)}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-bold text-red-600">{formatCurrency(student.balanceAmount)}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => { handleStudentSelect(student); setActiveTab("payFees"); }}
-                          className="px-4 py-2 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-lg hover:from-red-700 hover:to-orange-700 transition-colors font-medium"
-                        >
-                          Collect Now
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {pendingStudents.length === 0 && (
-                <div className="text-center py-16">
-                  <div className="inline-flex items-center justify-center h-16 w-16 bg-green-100 rounded-full mb-4">
-                    <CheckCircle className="h-8 w-8 text-green-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Pending Fees</h3>
-                  <p className="text-gray-600">All students have cleared their fee payments</p>
+
+            {/* ── Main Table ── */}
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+
+              {/* Header + Filter Toggle */}
+              <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold flex items-center">
+                    <AlertCircle className="mr-3 h-6 w-6 text-red-600" />
+                    Students with Pending Fees
+                  </h2>
+                  <p className="text-gray-600 mt-1">Students who have unpaid fee installments</p>
                 </div>
-              )}
+                <div className="flex bg-gray-100 rounded-lg p-1 gap-1 self-start sm:self-center">
+                  <button
+                    onClick={() => setPendingFilter('all')}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      pendingFilter === 'all'
+                        ? 'bg-white shadow text-gray-800'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    All Pending ({pendingStudents.length})
+                  </button>
+                  <button
+                    onClick={() => setPendingFilter('defaulters')}
+                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      pendingFilter === 'defaulters'
+                        ? 'bg-red-600 shadow text-white'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    🚨 Defaulters ({defaulterStudents.length})
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">#</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Student Details</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Course</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Monthly Fee</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Paid Amount</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Balance Due</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Overdue Months</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {(pendingFilter === 'defaulters' ? defaulterStudents : pendingStudents).map((student, idx) => {
+                      const overdueList = getOverdueMonths(student);
+                      const overdueAmt  = getOverdueAmount(overdueList);
+                      const severity    = getDefaulterSeverity(overdueList.length);
+                      const monthNames  = overdueList.map(f => f.month || `M${f.monthNumber}`).join(', ');
+
+                      return (
+                        <tr
+                          key={student._id}
+                          className={`hover:bg-gray-50 transition-colors ${severity?.rowBg || ''}`}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400 font-medium">{idx + 1}</td>
+
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className={`flex-shrink-0 h-12 w-12 rounded-lg flex items-center justify-center ${
+                                overdueList.length >= 3 ? 'bg-red-100'
+                                : overdueList.length >= 1 ? 'bg-orange-100'
+                                : 'bg-yellow-100'
+                              }`}>
+                                <User className={`h-6 w-6 ${
+                                  overdueList.length >= 3 ? 'text-red-600'
+                                  : overdueList.length >= 1 ? 'text-orange-500'
+                                  : 'text-yellow-600'
+                                }`} />
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-semibold text-gray-900">{student.fullName}</div>
+                                <div className="text-sm text-gray-500">{student.admissionNo}</div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900 max-w-xs truncate">{student.course}</div>
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{formatCurrency(student.monthlyFee)}</div>
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-green-600">{formatCurrency(student.paidAmount)}</div>
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-bold text-red-600">{formatCurrency(student.balanceAmount)}</div>
+                          </td>
+
+                          {/* Overdue column */}
+                          <td className="px-6 py-4">
+                            {overdueList.length === 0 ? (
+                              <span className="text-xs text-gray-400">No overdue</span>
+                            ) : (
+                              <div className="space-y-1">
+                                <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${severity.badgeBg} ${severity.badgeText}`}>
+                                  {overdueList.length} month{overdueList.length > 1 ? 's' : ''} overdue
+                                </span>
+                                <div
+                                  className="text-xs text-gray-500 max-w-[170px] truncate"
+                                  title={monthNames}
+                                >
+                                  {monthNames}
+                                </div>
+                                <div className="text-xs font-semibold text-red-600">
+                                  {formatCurrency(overdueAmt)} due
+                                </div>
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <button
+                              onClick={() => { handleStudentSelect(student); setActiveTab("payFees"); }}
+                              className={`px-4 py-2 text-white rounded-lg transition-colors font-medium text-sm ${
+                                overdueList.length >= 3
+                                  ? 'bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900'
+                                  : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700'
+                              }`}
+                            >
+                              Collect Now
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                {(pendingFilter === 'defaulters' ? defaulterStudents : pendingStudents).length === 0 && (
+                  <div className="text-center py-16">
+                    <div className="inline-flex items-center justify-center h-16 w-16 bg-green-100 rounded-full mb-4">
+                      <CheckCircle className="h-8 w-8 text-green-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      {pendingFilter === 'defaulters' ? 'No Defaulters!' : 'No Pending Fees'}
+                    </h3>
+                    <p className="text-gray-600">
+                      {pendingFilter === 'defaulters'
+                        ? 'All students are up to date with their payments'
+                        : 'All students have cleared their fee payments'}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
+
           </div>
         )}
 
