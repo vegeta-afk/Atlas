@@ -277,9 +277,10 @@ const handleRegisterDelete = async (receiptNo) => {
   const scheduleFees = activeFeeSchedule.length > 0
   ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
   : (student.totalCourseFee || 0);
-const activeTotalFee = scheduleFees;// ← add admissionFee
-const totalPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0)
-  + (student.admissionFeePaidAmount || 0);// ← root + monthly
+const activeTotalFee = scheduleFees + (student.admissionFee || 0);
+const schedulesPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
+const admissionPaid = student.admissionFeePaidAmount || 0;
+const totalPaid = schedulesPaid + admissionPaid;
 const activeBalance = activeTotalFee - totalPaid;
 
   return {
@@ -683,9 +684,10 @@ console.log("🔍 Payment data:", JSON.stringify({
   const scheduleFees = activeFeeSchedule.length > 0
   ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
   : (student.totalCourseFee || 0);
-const activeTotalFee = scheduleFees;// ← add admissionFee
-const totalPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0)
-  + (student.admissionFeePaidAmount || 0);       // ← root + monthly
+const activeTotalFee = scheduleFees + (student.admissionFee || 0);
+const schedulesPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
+const admissionPaid = student.admissionFeePaidAmount || 0;
+const totalPaid = schedulesPaid + admissionPaid;
 const activeBalance = activeTotalFee - totalPaid;
 
   return {
