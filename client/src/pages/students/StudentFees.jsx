@@ -74,7 +74,6 @@ const StudentFees = () => {
   const [editingRegRecord, setEditingRegRecord]           = useState(null);
   const [editRegReceiptNo, setEditRegReceiptNo]           = useState('');
   const [editRegDate, setEditRegDate]                     = useState('');
-  const [pendingFilter, setPendingFilter]                 = useState('all'); // 'all' | 'defaulters'
   const [paidYear, setPaidYear]                           = useState(new Date().getFullYear());
   const [paidFeeTypeFilter, setPaidFeeTypeFilter]         = useState('all');
   const [monthlyData, setMonthlyData]                     = useState([]);
@@ -1550,28 +1549,6 @@ const activeBalance = activeTotalFee - totalPaid;
           </h2>
           <p className="text-gray-600 mt-1">Students who have unpaid fee installments</p>
         </div>
-        <div className="flex bg-gray-100 rounded-lg p-1 gap-1 self-start sm:self-center">
-          <button
-            onClick={() => setPendingFilter('all')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              pendingFilter === 'all'
-                ? 'bg-white shadow text-gray-800'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            All Pending ({pendingStudents.length})
-          </button>
-          <button
-            onClick={() => setPendingFilter('defaulters')}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              pendingFilter === 'defaulters'
-                ? 'bg-red-600 shadow text-white'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            🚨 Defaulters ({defaulterStudents.length})
-          </button>
-        </div>
       </div>
  
       <div className="overflow-x-auto">
@@ -1595,7 +1572,7 @@ const activeBalance = activeTotalFee - totalPaid;
 </thead>
  
           <tbody className="bg-white divide-y divide-gray-200">
-            {(pendingFilter === 'defaulters' ? defaulterStudents : pendingStudents).map((student, idx) => {
+            {defaulterStudents.map((student, idx) => {
               const overdueList = getOverdueMonths(student);
               const overdueAmt  = getOverdueAmount(overdueList);
               const severity    = getDefaulterSeverity(overdueList.length);
@@ -1733,19 +1710,13 @@ const activeBalance = activeTotalFee - totalPaid;
           </tbody>
         </table>
  
-        {(pendingFilter === 'defaulters' ? defaulterStudents : pendingStudents).length === 0 && (
+        {defaulterStudents.length === 0 && (
           <div className="text-center py-16">
             <div className="inline-flex items-center justify-center h-16 w-16 bg-green-100 rounded-full mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              {pendingFilter === 'defaulters' ? 'No Defaulters!' : 'No Pending Fees'}
-            </h3>
-            <p className="text-gray-600">
-              {pendingFilter === 'defaulters'
-                ? 'All students are up to date with their payments'
-                : 'All students have cleared their fee payments'}
-            </p>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Defaulters!</h3>
+<p className="text-gray-600">All students are up to date with their payments</p>
           </div>
         )}
       </div>
