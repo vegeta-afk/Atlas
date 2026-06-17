@@ -247,9 +247,9 @@ const Login = () => {
             <p className="text-xs text-blue-700 text-center">
               <strong>Test Credentials:</strong>
               <br />
-              Email: test@example.com
+              Email:         test@example.com
               <br />
-              Password: password123
+              Password:         password123
             </p>
           </div>
         </div>
