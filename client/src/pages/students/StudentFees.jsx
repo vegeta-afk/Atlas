@@ -63,6 +63,7 @@ const StudentFees = () => {
   const [regSearchReceipt, setRegSearchReceipt] = useState('');
   const [regPage, setRegPage] = useState(1);
   const REG_PAGE_SIZE = 15;
+  const [defaulterMonthFilter, setDefaulterMonthFilter] = useState(6);
 
 
   // ✅ NEW: Course tab states
@@ -809,8 +810,15 @@ const activeBalance = activeTotalFee - totalPaid;
   const totalOverdueAmount = defaulterStudents.reduce(
     (sum, s) => sum + getOverdueAmount(getOverdueMonths(s)), 0
   );
+
+
+
   const totalRegPages   = Math.max(1, Math.ceil(feeRegisterData.length / REG_PAGE_SIZE));
   const paginatedRegister = feeRegisterData.slice((regPage - 1) * REG_PAGE_SIZE, regPage * REG_PAGE_SIZE);
+
+  const displayedDefaulters = defaulterMonthFilter >= 6
+  ? defaulterStudents
+  : defaulterStudents.filter(s => getOverdueMonths(s).length === defaulterMonthFilter);
 
  return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -1542,14 +1550,31 @@ const activeBalance = activeTotalFee - totalPaid;
  
       {/* Header + Filter Toggle */}
       <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center">
-            <AlertCircle className="mr-3 h-6 w-6 text-red-600" />
-            Students with Pending Fees
-          </h2>
-          <p className="text-gray-600 mt-1">Students who have unpaid fee installments</p>
-        </div>
-      </div>
+  <div>
+    <h2 className="text-xl font-semibold flex items-center">
+      <AlertCircle className="mr-3 h-6 w-6 text-red-600" />
+      Students with Pending Fees
+    </h2>
+    <p className="text-gray-600 mt-1">Students who have unpaid fee installments</p>
+  </div>
+  <div className="flex items-center gap-3 self-start sm:self-center bg-gray-100 rounded-xl px-4 py-2">
+    <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Filter Months:</span>
+    <input
+      type="range"
+      min={1}
+      max={6}
+      step={1}
+      value={defaulterMonthFilter}
+      onChange={e => setDefaulterMonthFilter(Number(e.target.value))}
+      className="w-32 accent-red-600 cursor-pointer"
+    />
+    <span className={`text-sm font-bold min-w-[36px] text-center ${
+      defaulterMonthFilter >= 6 ? 'text-gray-700' : 'text-red-600'
+    }`}>
+      {defaulterMonthFilter >= 6 ? 'All' : `${defaulterMonthFilter}M`}
+    </span>
+  </div>
+</div>
  
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
@@ -1572,7 +1597,7 @@ const activeBalance = activeTotalFee - totalPaid;
 </thead>
  
           <tbody className="bg-white divide-y divide-gray-200">
-            {defaulterStudents.map((student, idx) => {
+            {displayedDefaulters.map((student, idx) => {
               const overdueList = getOverdueMonths(student);
               const overdueAmt  = getOverdueAmount(overdueList);
               const severity    = getDefaulterSeverity(overdueList.length);
@@ -1710,13 +1735,17 @@ const activeBalance = activeTotalFee - totalPaid;
           </tbody>
         </table>
  
-        {defaulterStudents.length === 0 && (
+        {displayedDefaulters.length === 0 && (
           <div className="text-center py-16">
             <div className="inline-flex items-center justify-center h-16 w-16 bg-green-100 rounded-full mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Defaulters!</h3>
-<p className="text-gray-600">All students are up to date with their payments</p>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Defaulters!</h3>
+                   <p className="text-gray-600">
+                        {defaulterMonthFilter >= 6
+                         ? 'All students are up to date with their payments'
+                        : `No students with exactly ${defaulterMonthFilter} overdue month(s)`}
+                    </p>
           </div>
         )}
       </div>
