@@ -1965,9 +1965,9 @@ const activeBalance = activeTotalFee - totalPaid;
                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full">
-                      <thead className="sticky top-0 z-10">
+                  <div className="overflow-auto max-h-[560px]">
+  <table className="min-w-full">
+    <thead className="sticky top-0 z-10">
                         <tr style={{ backgroundColor: '#1e3a5f' }}>
                           <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase">#</th>
                           <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase">Month</th>
