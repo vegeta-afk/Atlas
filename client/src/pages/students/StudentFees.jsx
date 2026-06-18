@@ -1967,7 +1967,7 @@ const activeBalance = activeTotalFee - totalPaid;
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="min-w-full">
-                      <thead>
+                      <thead className="sticky top-0 z-10">
                         <tr style={{ backgroundColor: '#1e3a5f' }}>
                           <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase">#</th>
                           <th className="px-6 py-3 text-left text-xs font-semibold text-white uppercase">Month</th>
