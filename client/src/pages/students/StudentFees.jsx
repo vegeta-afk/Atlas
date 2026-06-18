@@ -1933,17 +1933,17 @@ const activeBalance = activeTotalFee - totalPaid;
               {/* ── Summary Cards ── */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-white rounded-xl shadow p-5 border-l-4 border-green-500">
-                  <div className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Total Collection {paidYear}</div>
+                  <div className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Total Collection {paidYear} Yearly</div>
                   <div className="text-3xl font-bold text-green-700 mt-1">{formatCurrency(grandTotal)}</div>
                   <div className="text-xs text-gray-400 mt-1">{paidFeeTypeFilter === 'all' ? 'All fee types' : paidFeeTypeFilter}</div>
                 </div>
                 <div className="bg-white rounded-xl shadow p-5 border-l-4 border-blue-500">
-                  <div className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Total Transactions</div>
+                  <div className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Total Transactions {paidYear} Yearly</div>
                   <div className="text-3xl font-bold text-blue-700 mt-1">{totalTxns}</div>
                   <div className="text-xs text-gray-400 mt-1">payments recorded</div>
                 </div>
                 <div className="bg-white rounded-xl shadow p-5 border-l-4 border-purple-500">
-                  <div className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Best Month</div>
+                  <div className="text-xs text-gray-500 uppercase font-semibold tracking-wide">Best Month {paidYear} Yearly</div>
                   <div className="text-2xl font-bold text-purple-700 mt-1">{bestMonth?.filtered > 0 ? bestMonth.monthName : '—'}</div>
                   <div className="text-xs text-gray-400 mt-1">{bestMonth?.filtered > 0 ? formatCurrency(bestMonth.filtered) : 'No data yet'}</div>
                 </div>
