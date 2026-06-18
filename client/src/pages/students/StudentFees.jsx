@@ -1102,7 +1102,7 @@ const activeBalance = activeTotalFee - totalPaid;
                       </div>
 
                       {/* Fee Rows */}
-                      <div className="divide-y divide-gray-100">
+                      <div className="divide-y divide-gray-100 overflow-y-auto max-h-[285px]">
                         {getCurrentFees().length === 0 ? (
                           <div className="p-8 text-center">
                             <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
