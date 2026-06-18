@@ -1636,6 +1636,13 @@ const activeBalance = activeTotalFee - totalPaid;
                       {student.admissionNo || '—'}
                     </span>
                   </td>
+
+                  {/* Date of Admission */}
+                  <td className="px-4 py-4">
+                    <div className="text-sm text-gray-700 whitespace-nowrap">
+                      {formatDate(student.dateOfJoining)}
+                    </div>
+                  </td>
  
                   {/* Student Name */}
                   <td className="px-4 py-4">
@@ -1685,12 +1692,6 @@ const activeBalance = activeTotalFee - totalPaid;
                     </div>
                   </td>
  
-                  {/* Date of Admission */}
-                  <td className="px-4 py-4">
-                    <div className="text-sm text-gray-700 whitespace-nowrap">
-                      {formatDate(student.dateOfJoining)}
-                    </div>
-                  </td>
  
                   {/* Overdue Months — clickable badge opens modal */}
                   <td className="px-4 py-4">
