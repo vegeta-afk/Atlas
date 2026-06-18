@@ -1584,13 +1584,13 @@ const activeBalance = activeTotalFee - totalPaid;
   <tr>
     <th style={{ minWidth: '40px'  }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">#</th>
     <th style={{ minWidth: '120px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Admission No</th>
+    <th style={{ minWidth: '130px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Date of Admission</th>
     <th style={{ minWidth: '160px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Student Name</th>
     <th style={{ minWidth: '120px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Faculty</th>
     <th style={{ minWidth: '150px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Batch</th>
     <th style={{ minWidth: '150px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Course</th>
     <th style={{ minWidth: '100px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Monthly Fee</th>
     <th style={{ minWidth: '110px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Paid (Monthly)</th>
-    <th style={{ minWidth: '100px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Balance Due</th>
     <th style={{ minWidth: '170px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Overdue Months</th>
     <th style={{ minWidth: '110px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Action</th>
   </tr>
@@ -1685,10 +1685,10 @@ const activeBalance = activeTotalFee - totalPaid;
                     </div>
                   </td>
  
-                  {/* Balance Due */}
+                  {/* Date of Admission */}
                   <td className="px-4 py-4">
-                    <div className="text-sm font-bold text-red-600">
-                      {formatCurrency(student.balanceAmount)}
+                    <div className="text-sm text-gray-700 whitespace-nowrap">
+                      {formatDate(student.dateOfJoining)}
                     </div>
                   </td>
  
