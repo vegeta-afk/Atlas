@@ -1439,7 +1439,7 @@ const activeBalance = activeTotalFee - totalPaid;
                     </div>
 
                     {/* Remarks */}
-                    <div>
+                    {/* <div>
                       <label className="block text-sm font-medium mb-2 text-gray-700">Remarks (Optional)</label>
                       <textarea
                         value={remarks}
@@ -1448,7 +1448,7 @@ const activeBalance = activeTotalFee - totalPaid;
                         rows="3"
                         placeholder="Additional notes..."
                       />
-                    </div>
+                    </div> */}
 
                     {/* Payment Summary */}
                     <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200">
