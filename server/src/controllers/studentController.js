@@ -4,15 +4,39 @@ const Course = require("../models/Course");
 const { generateFeeSchedule } = require("../utils/feeGenerator");
 const { generateFeeScheduleWithScholarship } = require("../utils/feeGenerator");
 
-// @desc    Get all students
+// @desc    Get all students (with search & pagination)
 // @route   GET /api/students
 // @access  Private
 const getAllStudents = async (req, res) => {
   try {
-    const students = await Student.find({ isActive: true })
+    const { search, limit, page } = req.query;
+
+    let query = { isActive: true };
+
+    if (search && search.trim() !== "") {
+      const searchRegex = new RegExp(search.trim(), "i");
+      query.$or = [
+        { fullName: searchRegex },
+        { studentId: searchRegex },
+        { admissionNo: searchRegex },
+        { rollNo: searchRegex },
+        { mobileNumber: searchRegex },
+      ];
+    }
+
+    const pageSize = parseInt(limit) || 0; // 0 = no limit, return all matches
+    const pageNum = parseInt(page) || 1;
+
+    let studentsQuery = Student.find(query)
       .sort({ createdAt: -1 })
       .populate("admissionId", "admissionNo admissionDate")
       .populate("courseCode", "courseFullName duration monthlyFee examFee");
+
+    if (pageSize > 0) {
+      studentsQuery = studentsQuery.skip((pageNum - 1) * pageSize).limit(pageSize);
+    }
+
+    const students = await studentsQuery;
 
     res.status(200).json({
       success: true,
@@ -28,7 +52,6 @@ const getAllStudents = async (req, res) => {
     });
   }
 };
-
 // @desc    Get single student
 // @route   GET /api/students/:id
 // @access  Private
