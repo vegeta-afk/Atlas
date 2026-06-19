@@ -83,10 +83,35 @@ exports.getAdmissions = async (req, res) => {
     sortObject[dbField] = sortDirection;
 
     // Execute query with pagination
-    const admissions = await Admission.find(filter)
+    // Execute query with pagination
+    const admissionDocs = await Admission.find(filter)
       .sort(sortObject)
       .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .skip((page - 1) * limit)
+      .lean();
+
+    // ── Pull live batch/faculty from Student for any converted admissions ──
+    const admissionIds = admissionDocs.map((a) => a._id);
+    const linkedStudents = await Student.find({
+      admissionId: { $in: admissionIds },
+    }).select("admissionId batchTime facultyAllot");
+
+    const studentMap = {};
+    linkedStudents.forEach((s) => {
+      studentMap[s.admissionId.toString()] = s;
+    });
+
+    const admissions = admissionDocs.map((admission) => {
+      const liveStudent = studentMap[admission._id.toString()];
+      if (liveStudent) {
+        return {
+          ...admission,
+          batchTime: liveStudent.batchTime || admission.batchTime,
+          facultyAllot: liveStudent.facultyAllot || admission.facultyAllot,
+        };
+      }
+      return admission;
+    });
 
     // Get total count
     const total = await Admission.countDocuments(filter);
@@ -114,13 +139,23 @@ exports.getAdmissions = async (req, res) => {
 // @access  Private (Admin, Front Office, Accountant)
 exports.getAdmission = async (req, res) => {
   try {
-    const admission = await Admission.findById(req.params.id);
+    const admission = await Admission.findById(req.params.id).lean();
 
     if (!admission) {
       return res.status(404).json({
         success: false,
         message: "Admission not found",
       });
+    }
+
+    // ── Pull live batch/faculty from Student if this admission was converted ──
+    const linkedStudent = await Student.findOne({
+      admissionId: admission._id,
+    }).select("batchTime facultyAllot");
+
+    if (linkedStudent) {
+      admission.batchTime = linkedStudent.batchTime || admission.batchTime;
+      admission.facultyAllot = linkedStudent.facultyAllot || admission.facultyAllot;
     }
 
     res.json({
