@@ -655,3 +655,174 @@ exports.getStats = async (req, res) => {
     });
   }
 };
+
+// @desc    Revert batch transfer back to pending (undo approve/reject)
+// @route   PUT /api/batch-transfers/:id/revert
+// @access  Private (Admin only)
+exports.revertTransfer = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const transfer = await BatchTransfer.findById(req.params.id).session(session);
+    if (!transfer) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({
+        success: false,
+        message: 'Transfer request not found',
+      });
+    }
+
+    if (transfer.status === 'pending') {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({
+        success: false,
+        message: 'Request is already pending',
+      });
+    }
+
+    // ── If it was APPROVED, undo the student/batch changes ──────────
+    if (transfer.status === 'approved') {
+      const student = await Student.findById(transfer.studentId).session(session);
+      if (!student) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(404).json({
+          success: false,
+          message: 'Student not found, cannot revert',
+        });
+      }
+
+      // Find the PREVIOUS faculty (the one before approval)
+      let prevFaculty = null;
+      if (transfer.previousTeacherId) {
+        prevFaculty = await Faculty.findById(transfer.previousTeacherId).session(session);
+      }
+      if (!prevFaculty && transfer.previousTeacher) {
+        prevFaculty = await Faculty.findOne({ facultyName: transfer.previousTeacher }).session(session);
+      }
+
+      // Find the PREVIOUS batch
+      let prevBatch = null;
+      if (transfer.previousBatchTime) {
+        prevBatch = await Batch.findOne({
+          $or: [
+            { displayName: transfer.previousBatchTime },
+            { displayName: { $regex: transfer.previousBatchTime, $options: "i" } }
+          ]
+        }).session(session);
+      }
+
+      // Remove student from ALL current TeacherBatches
+      const currentBatches = await TeacherBatch.find({
+        "assignedStudents.student": student._id
+      }).session(session);
+
+      for (const tb of currentBatches) {
+        tb.assignedStudents = tb.assignedStudents.filter(
+          s => s.student.toString() !== student._id.toString()
+        );
+        await tb.save({ session });
+      }
+
+      // Re-assign to previous faculty/batch, if we can find both
+      if (prevFaculty && prevBatch) {
+        const prevFacultyUser = await User.findOne({
+          facultyId: prevFaculty._id,
+          role: "instructor"
+        }).session(session);
+
+        if (prevFacultyUser) {
+          let prevTeacherBatch = await TeacherBatch.findOne({
+            teacher: prevFacultyUser._id,
+            batch: prevBatch._id,
+            isActive: true
+          }).session(session);
+
+          if (!prevTeacherBatch) {
+            prevTeacherBatch = new TeacherBatch({
+              teacher: prevFacultyUser._id,
+              batch: prevBatch._id,
+              assignedStudents: [{
+                student: student._id,
+                assignedDate: new Date(),
+                isActive: true
+              }],
+              isActive: true,
+              roomNumber: "Default",
+              subject: prevFaculty.courseAssigned || "General",
+            });
+            await prevTeacherBatch.save({ session });
+          } else {
+            const alreadyAssigned = prevTeacherBatch.assignedStudents.some(
+              s => s.student.toString() === student._id.toString()
+            );
+            if (!alreadyAssigned) {
+              prevTeacherBatch.assignedStudents.push({
+                student: student._id,
+                assignedDate: new Date(),
+                isActive: true
+              });
+              await prevTeacherBatch.save({ session });
+            }
+          }
+
+          // Revert future attendance back to previous teacher/batch
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          await Attendance.updateMany(
+            {
+              student: student._id,
+              date: { $gte: today }
+            },
+            {
+              $set: {
+                teacher: prevFacultyUser._id,
+                batch: prevBatch._id
+              }
+            }
+          ).session(session);
+        } else {
+          console.warn(`⚠️ Previous faculty user account not found — student removed from current batch but not reassigned`);
+        }
+      } else {
+        console.warn(`⚠️ Could not find previous faculty/batch — student removed from current batch but not reassigned`);
+      }
+
+      // Revert student fields back to what they were before approval
+      student.batchTime = transfer.previousBatchTime || transfer.previousBatch || student.batchTime;
+      student.facultyAllot = transfer.previousTeacher || student.facultyAllot;
+      await student.save({ session });
+    }
+
+    // ── Reset transfer back to pending ───────────────────────────────
+    transfer.status = 'pending';
+    transfer.approvedBy = undefined;
+    transfer.approvedDate = undefined;
+    transfer.rejectionReason = undefined;
+    await transfer.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.json({
+      success: true,
+      message: 'Transfer reverted to pending successfully',
+      data: transfer,
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error('❌ Revert transfer error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during transfer revert',
+      error: error.message,
+    });
+  }
+};

@@ -15,6 +15,8 @@ import {
   User,
   ThumbsUp,
   ThumbsDown,
+  RotateCcw,
+  MoreVertical, Trash2,
 } from "lucide-react";
 import { setupAPI } from "../../services/api";
 import useBasePath from "../../hooks/useBasePath";
@@ -80,6 +82,18 @@ const BatchTransferList = () => {
       console.error("Error fetching batches:", err);
     }
   };
+
+  const [openDropdown, setOpenDropdown] = useState(null);
+
+const toggleDropdown = (id) => {
+  setOpenDropdown(openDropdown === id ? null : id);
+};
+
+useEffect(() => {
+  const handleClickOutside = () => setOpenDropdown(null);
+  document.addEventListener("click", handleClickOutside);
+  return () => document.removeEventListener("click", handleClickOutside);
+}, []);
 
   const fetchTransfers = async () => {
     try {
@@ -257,6 +271,68 @@ const handleApprove = async (id) => {
   }
 };
 
+
+  const handleRevert = async (id) => {
+  if (!window.confirm("Revert this request back to Pending? This will undo the batch change if it was approved.")) return;
+
+  try {
+    setLoading(true);
+    const token = localStorage.getItem("token");
+
+    const response = await fetch(`${API_BASE}/api/batch-transfers/${id}/revert`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      alert("✅ Reverted to pending!");
+      fetchTransfers();
+    } else {
+      alert(data.message || "Failed to revert transfer");
+    }
+  } catch (err) {
+    console.error("Error reverting transfer:", err);
+    alert(err.message || "Failed to revert transfer");
+  } finally {
+    setLoading(false);
+    setOpenDropdown(null);
+  }
+};
+
+const handleDelete = async (id) => {
+  if (!window.confirm("Delete this transfer request permanently? This cannot be undone.")) return;
+
+  try {
+    setLoading(true);
+    const token = localStorage.getItem("token");
+
+    const response = await fetch(`${API_BASE}/api/batch-transfers/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      alert("🗑️ Request deleted!");
+      fetchTransfers();
+    } else {
+      alert(data.message || "Failed to delete transfer");
+    }
+  } catch (err) {
+    console.error("Error deleting transfer:", err);
+    alert(err.message || "Failed to delete transfer");
+  } finally {
+    setLoading(false);
+    setOpenDropdown(null);
+  }
+};
+
   const handleSearch = () => {
     setPagination({ ...pagination, page: 1 });
     fetchTransfers();
@@ -361,7 +437,7 @@ const handleApprove = async (id) => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 mb-1">
-            Batch Transfer Requests
+            Batch Transfer Reports
           </h1>
           <p className="text-sm text-gray-500">
             Manage student batch change requests
@@ -569,7 +645,7 @@ const handleApprove = async (id) => {
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <div className="flex justify-center gap-2">
+                      <div className="flex justify-center gap-2 relative">
                         <Link
                           to={`${basePath}/students/batch-transfer/${transfer._id}`}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -595,6 +671,45 @@ const handleApprove = async (id) => {
                               <ThumbsDown size={18} />
                             </button>
                           </>
+                        )}
+
+                        {isAdmin && (
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleDropdown(transfer._id);
+                              }}
+                              className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="More options"
+                            >
+                              <MoreVertical size={18} />
+                            </button>
+
+                            {openDropdown === transfer._id && (
+                              <div
+                                className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {(transfer.status === "approved" || transfer.status === "rejected") && (
+                                  <button
+                                    onClick={() => handleRevert(transfer._id)}
+                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-blue-600 hover:bg-blue-50 transition-colors"
+                                  >
+                                    <RotateCcw size={14} />
+                                    Revert to Pending
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDelete(transfer._id)}
+                                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                  Delete Request
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     </td>

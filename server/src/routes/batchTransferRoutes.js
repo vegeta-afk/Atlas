@@ -9,6 +9,7 @@ const {
   approveTransfer,
   rejectTransfer,
   deleteTransfer,
+  revertTransfer,
   getStats,
 } = require('../controllers/batchTransferController');
 const { protect, authorize } = require('../middlewares/authMiddleware'); // Changed from '../middleware/auth' to './middleware/auth'
@@ -42,5 +43,6 @@ router.route('/:id')
 // Approval/Rejection routes
 router.put('/:id/approve', authorize('admin'), approveTransfer);
 router.put('/:id/reject', authorize('admin'), rejectTransfer);
+router.put('/:id/revert', authorize('admin'), revertTransfer);
 
 module.exports = router;
