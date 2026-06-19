@@ -16,7 +16,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   RotateCcw,
-  MoreVertical, Trash2,
+  MoreVertical, Trash2, X,
 } from "lucide-react";
 import { setupAPI } from "../../services/api";
 import useBasePath from "../../hooks/useBasePath";
@@ -84,6 +84,7 @@ const BatchTransferList = () => {
   };
 
   const [openDropdown, setOpenDropdown] = useState(null);
+  const [viewTransfer, setViewTransfer] = useState(null);
 
 const toggleDropdown = (id) => {
   setOpenDropdown(openDropdown === id ? null : id);
@@ -646,13 +647,13 @@ const handleDelete = async (id) => {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex justify-center gap-2 relative">
-                        <Link
-                          to={`${basePath}/students/batch-transfer/${transfer._id}`}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="View Details"
-                        >
-                          <Eye size={18} />
-                        </Link>
+                        <button
+  onClick={() => setViewTransfer(transfer)}
+  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+  title="View Details"
+>
+  <Eye size={18} />
+</button>
                         
                         {transfer.status === "pending" &&  isAdmin && (
                           <>
@@ -750,6 +751,84 @@ const handleDelete = async (id) => {
           </div>
         </div>
       )}
+
+      {viewTransfer && (
+  <div
+    className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+    onClick={() => setViewTransfer(null)}
+  >
+    <div
+      className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        onClick={() => setViewTransfer(null)}
+        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+      >
+        <X size={20} />
+      </button>
+
+      <h2 className="text-lg font-bold text-gray-800 mb-1">Transfer Request Details</h2>
+      <p className="text-xs text-gray-400 mb-4">Request ID: {viewTransfer.requestId || viewTransfer._id}</p>
+
+      <div className="space-y-3 text-sm">
+        <div className="flex justify-between">
+          <span className="text-gray-500">Student</span>
+          <span className="font-medium text-gray-800">{viewTransfer.studentName}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">Roll No</span>
+          <span className="font-medium text-gray-800">{viewTransfer.rollNo}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">Request Date</span>
+          <span className="font-medium text-gray-800">{formatDate(viewTransfer.requestDate)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">Status</span>
+          {getStatusBadge(viewTransfer.status)}
+        </div>
+
+        <hr className="my-2 border-gray-100" />
+
+        <div className="flex justify-between">
+          <span className="text-gray-500">Previous Batch</span>
+          <span className="font-medium text-gray-800">{viewTransfer.previousBatch || viewTransfer.previousBatchTime || "N/A"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">Previous Teacher</span>
+          <span className="font-medium text-gray-800">{viewTransfer.previousTeacher || "N/A"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">New Batch</span>
+          <span className="font-medium text-green-600">{getBatchDisplayName(viewTransfer)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">New Teacher</span>
+          <span className="font-medium text-gray-800">{viewTransfer.newTeacher || "N/A"}</span>
+        </div>
+
+        <hr className="my-2 border-gray-100" />
+
+        <div>
+          <span className="text-gray-500 block mb-1">Reason for Transfer</span>
+          <p className="text-gray-800 bg-gray-50 rounded-lg p-3">
+            {viewTransfer.reason || viewTransfer.transferReason || viewTransfer.requestReason || "No reason provided"}
+          </p>
+        </div>
+
+        {viewTransfer.status === "rejected" && viewTransfer.rejectionReason && (
+          <div>
+            <span className="text-gray-500 block mb-1">Rejection Reason</span>
+            <p className="text-red-700 bg-red-50 rounded-lg p-3">
+              {viewTransfer.rejectionReason}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
