@@ -217,30 +217,40 @@ router.get("/check-all-admissions", async (req, res) => {
 // ========== ROOT ROUTE ==========
 
 // @route   GET /api/students
+// ========== ROOT ROUTE ==========
 router.get("/", async (req, res) => {
   try {
     console.log("📋 GET /api/students called");
     console.log("📊 Query params:", req.query);
 
-    const students = await Student.find({ isActive: true })
+    const { search, limit, page } = req.query;
+
+    let query = { isActive: true };
+
+    if (search && search.trim() !== "") {
+      const searchRegex = new RegExp(search.trim(), "i");
+      query.$or = [
+        { fullName: searchRegex },
+        { studentId: searchRegex },
+        { admissionNo: searchRegex },
+        { mobileNumber: searchRegex },
+      ];
+    }
+
+    let studentsQuery = Student.find(query)
       .sort({ createdAt: -1 })
       .populate("admissionId", "admissionNo admissionDate fullName")
       .populate("courseCode", "courseFullName duration monthlyFee examFee");
 
-    console.log(`✅ Found ${students.length} students`);
-
-    if (students.length === 0) {
-      console.log("⚠️ No students found in database");
-      const count = await Student.countDocuments({});
-      console.log(`📊 Total documents in Student collection: ${count}`);
-    } else {
-      console.log("📝 First student:", {
-        id: students[0]._id,
-        studentId: students[0].studentId,
-        name: students[0].fullName,
-        course: students[0].course,
-      });
+    const pageSize = parseInt(limit) || 0;
+    if (pageSize > 0) {
+      const pageNum = parseInt(page) || 1;
+      studentsQuery = studentsQuery.skip((pageNum - 1) * pageSize).limit(pageSize);
     }
+
+    const students = await studentsQuery;
+
+    console.log(`✅ Found ${students.length} students (search: "${search || 'none'}")`);
 
     res.json({
       success: true,
