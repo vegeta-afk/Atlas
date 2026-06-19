@@ -478,13 +478,12 @@ const handleApprove = async (id) => {
           <table className="w-full min-w-[1200px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Request ID</th>
+                <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Request Date</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Student Details</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Previous Batch</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Previous Teacher</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">New Batch</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">New Teacher</th>
-                <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Request Date</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
               </tr>
@@ -536,40 +535,35 @@ const handleApprove = async (id) => {
               ) : (
                 filteredTransfers.map((transfer) => (
                   <tr key={transfer._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-4 text-center">
-                      <span className="font-mono text-sm font-medium text-indigo-600">
-                        {transfer.requestId || `TRF${String(transfer._id).slice(-6)}`}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-left">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-sm flex-shrink-0">
-                          {getInitials(transfer.studentName)}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-800">{transfer.studentName}</p>
-                          <p className="text-xs text-gray-500">Roll No: {transfer.rollNo}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className="text-sm text-gray-700">{transfer.previousBatch}</span>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className="text-sm text-gray-700">{transfer.previousTeacher}</span>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className="text-sm font-medium text-green-600">
-                        {getBatchDisplayName(transfer)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className="text-sm text-gray-700">{transfer.newTeacher}</span>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className="text-sm text-gray-700">{formatDate(transfer.requestDate)}</span>
-                    </td>
-                    <td className="px-4 py-4">
+  <td className="px-4 py-4 text-center">
+    <span className="text-sm text-gray-700">{formatDate(transfer.requestDate)}</span>
+  </td>
+  <td className="px-4 py-4 text-left">
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-sm flex-shrink-0">
+        {getInitials(transfer.studentName)}
+      </div>
+      <div>
+        <p className="font-medium text-gray-800">{transfer.studentName}</p>
+        <p className="text-xs text-gray-500">Roll No: {transfer.rollNo}</p>
+      </div>
+    </div>
+  </td>
+  <td className="px-4 py-4 text-center">
+    <span className="text-sm text-gray-700">{transfer.previousBatch}</span>
+  </td>
+  <td className="px-4 py-4 text-center">
+    <span className="text-sm text-gray-700">{transfer.previousTeacher}</span>
+  </td>
+  <td className="px-4 py-4 text-center">
+    <span className="text-sm font-medium text-green-600">
+      {getBatchDisplayName(transfer)}
+    </span>
+  </td>
+  <td className="px-4 py-4 text-center">
+    <span className="text-sm text-gray-700">{transfer.newTeacher}</span>
+  </td>
+  <td className="px-4 py-4">
                       <div className="flex justify-center">
                         {getStatusBadge(transfer.status)}
                       </div>
