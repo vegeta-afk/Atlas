@@ -96,18 +96,12 @@ const fetchBatches = async () => {
     }
   };
 
-  const searchStudent = async () => {
-  if (!searchQuery.trim()) {
-    alert("Please enter a roll number or student name");
-    return;
-  }
-
+// Actual search logic, reusable
+const fetchSearchResults = async (query) => {
   try {
     setSearching(true);
-
-    // ✅ Use studentAPI instead of raw fetch("/api/students")
     const response = await studentAPI.getStudents({ 
-      search: searchQuery, 
+      search: query, 
       limit: 20 
     });
 
@@ -118,11 +112,33 @@ const fetchBatches = async () => {
     }
   } catch (err) {
     console.error("Error searching students:", err);
-    alert("Failed to search students. Please try again.");
   } finally {
     setSearching(false);
   }
 };
+
+// Keep this for the manual "Search" button (optional to keep)
+const searchStudent = () => {
+  if (!searchQuery.trim()) {
+    alert("Please enter a roll number or student name");
+    return;
+  }
+  fetchSearchResults(searchQuery);
+};
+
+// Auto-search as the user types, debounced by 400ms
+useEffect(() => {
+  if (!searchQuery.trim() || searchQuery.trim().length < 2) {
+    setSearchResults([]);
+    return;
+  }
+
+  const timer = setTimeout(() => {
+    fetchSearchResults(searchQuery);
+  }, 400);
+
+  return () => clearTimeout(timer); // cancel if user keeps typing
+}, [searchQuery]);
 
  // In AddBatchTransfer.jsx, update the selectStudent function:
 
