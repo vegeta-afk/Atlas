@@ -376,13 +376,13 @@ const handleApprove = async (id) => {
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
             Refresh
           </button>
-          <Link
+          {/* <Link
             to={`${basePath}/students/batch-transfer/add`}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
             <Plus size={18} />
             New Transfer Request
-          </Link>
+          </Link> */}
         </div>
       </div>
 

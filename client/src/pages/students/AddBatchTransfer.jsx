@@ -1,6 +1,6 @@
 // pages/students/AddBatchTransfer.jsx
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   User,
   Save,
@@ -30,6 +30,9 @@ const AddBatchTransfer = () => {
   const [batches, setBatches] = useState([]);
   const [facultyMembers, setFacultyMembers] = useState([]);
   const [loadingData, setLoadingData] = useState(false);
+
+  const [searchParams] = useSearchParams();
+  const admissionIdParam = searchParams.get("admissionId");
   
   // Form data
   const [formData, setFormData] = useState({
@@ -96,7 +99,39 @@ const fetchBatches = async () => {
     }
   };
 
-// Actual search logic, reusable
+useEffect(() => {
+  if (admissionIdParam) {
+    loadStudentFromAdmission(admissionIdParam);
+  }
+}, [admissionIdParam]);
+
+const loadStudentFromAdmission = async (admissionId) => {
+  try {
+    setSearching(true);
+    const token = localStorage.getItem("token");
+    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+    const response = await fetch(`${API_BASE}/api/students/${admissionId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+
+    if (data.success && data.data) {
+      selectStudent(data.data); // jumps straight to step 2
+    } else {
+      alert("Could not find a student record linked to this admission.");
+    }
+  } catch (err) {
+    console.error("Error loading student from admission:", err);
+    alert("Failed to load student details.");
+  } finally {
+    setSearching(false);
+  }
+};
+
+
+
+  // Actual search logic, reusable
 const fetchSearchResults = async (query) => {
   try {
     setSearching(true);

@@ -20,7 +20,8 @@ import {
   XCircle,
   PauseCircle,
   CheckCircle2,
-  RotateCcw
+  RotateCcw,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import "./AdmissionList.css";
@@ -822,6 +823,14 @@ setFilteredAdmissions(activeAdmissions);
                             >
                               <Edit size={14} />
                               <span>Edit Admission</span>
+                            </Link>
+
+                            <Link
+                              to={`${basePath}/students/batch-transfer/add?admissionId=${admission.id}`}
+                              className="dropdown-item"
+                            >
+                              <ArrowLeftRight size={14} />
+                              <span>Batch Transfer</span>
                             </Link>
                             
                             {/* Cancel Option - Only show if not already cancelled */}
