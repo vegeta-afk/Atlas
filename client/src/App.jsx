@@ -78,6 +78,8 @@ import StudentScanQR from "./pages/student/StudentScanQR";
 
 import FacultyStudentList from "./pages/Faculty/FacultyStudentList";
 
+import MaterialIssue from "./pages/students/MaterialIssue";
+
 function App() {
   return (
     <Routes>
@@ -129,6 +131,7 @@ function App() {
           <Route path="course-conversion" element={<CourseConversion />} />
           <Route path="course-extension" element={<CourseExtension />} />
           <Route path="exams" element={<StudentExamResults />} />
+          <Route path="material-issue" element={<MaterialIssue />} />
         </Route>
 
         <Route path="exam">

@@ -30,6 +30,7 @@ import {
   PauseCircle,
   CheckCircle,
   X,
+  Package,
 } from "lucide-react";
 import "./Sidebar.css";
 
@@ -95,6 +96,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { path: "/admin/students/batch-transfer",    label: "Batch Transfer",    icon: <ArrowLeftRight size={15} /> },
         { path: "/admin/students/course-conversion", label: "Course Conversion", icon: <TrendingUp size={15} /> },
         { path: "/admin/students/course-extension",  label: "Course Extension",  icon: <Plus size={15} /> },
+        { path: "/admin/students/material-issue", label: "Material Issue", icon: <Package size={15} /> },
       ],
     },
     {

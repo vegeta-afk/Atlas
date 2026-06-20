@@ -60,6 +60,7 @@ const examReportRoutes = require("./routes/examReportRoutes");
 const courseConversionRoutes = require("./routes/courseConversionRoutes");
 const courseExtensionRoutes = require("./routes/courseExtensionRoutes");
 const callLogRoutes = require("./routes/callLogRoutes");
+const materialRoutes = require("./routes/materialRoutes");
 
 
 // Use routes
@@ -81,7 +82,7 @@ app.use("/api/course-extension", courseExtensionRoutes);
 app.use("/api/call-logs", callLogRoutes);
 app.use("/api/call-logs", require("./routes/callLogRoutes"));
 app.use('/api/tests', testRouter);
-
+app.use("/api/materials", materialRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

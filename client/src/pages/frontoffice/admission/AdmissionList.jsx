@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   RotateCcw,
   ArrowLeftRight,
+  Package,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import "./AdmissionList.css";
@@ -831,6 +832,14 @@ setFilteredAdmissions(activeAdmissions);
                             >
                               <ArrowLeftRight size={14} />
                               <span>Batch Transfer</span>
+                            </Link>
+
+                            <Link
+                              to={`${basePath}/students/material-issue?search=${encodeURIComponent(admission.name)}`}
+                              className="dropdown-item"
+                          >
+                              <Package size={14} />
+                              <span>Issue Material</span>
                             </Link>
                             
                             {/* Cancel Option - Only show if not already cancelled */}

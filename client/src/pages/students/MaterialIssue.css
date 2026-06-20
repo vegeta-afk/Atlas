@@ -1,0 +1,7 @@
+.material-issue-container { padding: 24px; }
+.material-table .sticky-col { position: sticky; left: 0; background: #fff; z-index: 2; min-width: 220px; }
+.material-table th.material-col { text-align: center; white-space: nowrap; padding: 12px; display: table-cell; }
+.material-table th.material-col svg { vertical-align: middle; margin-right: 4px; }
+.checkbox-cell { text-align: center; }
+.checkbox-cell input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+.modal-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
