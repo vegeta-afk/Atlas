@@ -27,6 +27,7 @@ import {
   ChevronUp,
   Plus,
   Layers,
+  Package,
 } from "lucide-react";
 
 const ViewStudent = () => {
@@ -49,6 +50,10 @@ const ViewStudent = () => {
   const [expandedDate, setExpandedDate] = useState(null);
   const [selectedAdditionalCourse, setSelectedAdditionalCourse] = useState(null);
   const [showAdditionalCourseModal, setShowAdditionalCourseModal] = useState(false);
+  const [materials, setMaterials] = useState([]);
+  const [materialIssues, setMaterialIssues] = useState({}); // materialId -> issue record
+  const [materialLoading, setMaterialLoading] = useState(false);
+  const [togglingMaterial, setTogglingMaterial] = useState(null);
 
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -63,6 +68,12 @@ const ViewStudent = () => {
       calculateMonthlyStats();
     }
   }, [attendanceData]);
+
+  useEffect(() => {
+  fetchStudentDetails();
+  fetchStudentAttendance();
+  fetchStudentMaterials();
+}, [id]);
 
 
 
@@ -139,6 +150,71 @@ const ViewStudent = () => {
     }
   } finally {
     setAttendanceLoading(false);
+  }
+};
+
+  const fetchStudentMaterials = async () => {
+  setMaterialLoading(true);
+  try {
+    const token = localStorage.getItem("token");
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const [materialsRes, issuesRes] = await Promise.all([
+      fetch(`${BASE_URL}/api/materials`, { headers }),
+      fetch(`${BASE_URL}/api/materials/issues?studentId=${id}`, { headers }),
+    ]);
+
+    const materialsData = await materialsRes.json();
+    const issuesData = await issuesRes.json();
+
+    setMaterials(materialsData.data || []);
+
+    const map = {};
+    (issuesData.data || []).forEach((issue) => {
+      map[issue.materialId] = issue;
+    });
+    setMaterialIssues(map);
+  } catch (error) {
+    console.error("Error fetching materials:", error);
+  } finally {
+    setMaterialLoading(false);
+  }
+};
+
+const handleMaterialToggle = async (materialId) => {
+  const current = materialIssues[materialId];
+  const nextIssued = !current?.issued;
+
+  setMaterialIssues((prev) => ({
+    ...prev,
+    [materialId]: { ...(prev[materialId] || {}), materialId, studentId: id, issued: nextIssued },
+  }));
+  setTogglingMaterial(materialId);
+
+  try {
+    const token = localStorage.getItem("token");
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const response = await fetch(`${BASE_URL}/api/materials/issues/toggle`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ studentId: id, materialId, issued: nextIssued }),
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      setMaterialIssues((prev) => ({ ...prev, [materialId]: result.data }));
+    }
+  } catch (error) {
+    console.error("Error toggling material:", error);
+    setMaterialIssues((prev) => ({
+      ...prev,
+      [materialId]: { ...(prev[materialId] || {}), issued: !nextIssued },
+    }));
+  } finally {
+    setTogglingMaterial(null);
   }
 };
 
@@ -314,6 +390,7 @@ const activeBalanceAmount = activeTotalFee - activePaidAmount;
     { id: "attendance", label: "Attendance", icon: <Calendar size={18} /> },
     { id: "academic", label: "Academic", icon: <BookOpen size={18} /> },
     { id: "documents", label: "Documents", icon: <FileText size={18} /> },
+    { id: "material", label: "Material Issue", icon: <Package size={18} /> },
   ];
 
   const filteredAttendance = getFilteredAttendance();
@@ -758,6 +835,60 @@ const activeBalanceAmount = activeTotalFee - activePaidAmount;
           )}
         </div>
       </div>
+      {activeTab === "material" && (
+  <div>
+    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+      <Package size={20} className="text-orange-600" />
+      Material Issued
+    </h3>
+
+    {materialLoading ? (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    ) : materials.length === 0 ? (
+      <div className="text-center py-8 text-gray-500">
+        <Package size={40} className="mx-auto mb-3 text-gray-300" />
+        <p>No materials added yet. Add some from the Material Issue page.</p>
+      </div>
+    ) : (
+      <div className="space-y-3">
+        {materials.map((m) => {
+          const issue = materialIssues[m._id];
+          const isIssued = !!issue?.issued;
+          return (
+            <div key={m._id} className="flex justify-between items-center p-4 border border-gray-200 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Package size={18} className="text-gray-400" />
+                <div>
+                  <p className="font-medium">{m.name}</p>
+                  {isIssued && issue?.issuedDate && (
+                    <p className="text-xs text-gray-500">
+                      Issued on {new Date(issue.issuedDate).toLocaleDateString("en-GB")}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${isIssued ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}>
+                  {isIssued ? "Issued" : "Not Issued"}
+                </span>
+                <input
+                  type="checkbox"
+                  checked={isIssued}
+                  disabled={togglingMaterial === m._id}
+                  onChange={() => handleMaterialToggle(m._id)}
+                  className="w-5 h-5"
+                />
+              </label>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+)}
     </div>
   );
 };
