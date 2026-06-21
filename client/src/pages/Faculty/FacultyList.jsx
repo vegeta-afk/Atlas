@@ -78,8 +78,8 @@ const FacultyList = () => {
 
   const [openDropdown, setOpenDropdown] = useState(null);
 
-  const [selectedStudents, setSelectedStudents] = useState({}); // { studentId: { student, batchId, batchName, facultyId, facultyName } }
-  const [expandedBatchStudents, setExpandedBatchStudents] = useState({}); // batchId -> bool
+  const [selectedStudents, setSelectedStudents] = useState({}); 
+  const [viewingBatchStudents, setViewingBatchStudents] = useState(null); // { batch, fac } | null
   const [setupBatches, setSetupBatches] = useState([]);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkTargetFaculty, setBulkTargetFaculty] = useState("");
@@ -475,9 +475,12 @@ const FacultyList = () => {
     );
   });
 
-  const toggleBatchStudents = (batchId) => {
-  setExpandedBatchStudents((prev) => ({ ...prev, [batchId]: !prev[batchId] }));
+  const openBatchStudentsModal = (batch, fac) => {
+  if ((batch.students || []).length === 0) return;
+  setViewingBatchStudents({ batch, fac });
 };
+
+const closeBatchStudentsModal = () => setViewingBatchStudents(null);
 
 const toggleStudentSelection = (student, batch, fac) => {
   setSelectedStudents((prev) => {
@@ -1003,16 +1006,12 @@ const handleBulkTransferSubmit = async () => {
                               <div className="fba-batch-grid">
                                 {f.batches.map((batch, idx) => {
   const studentCount = batch.studentCount ?? batch.students?.length ?? 0;
-  const isExpanded = expandedBatchStudents[batch._id];
-  const studentsInBatch = batch.students || [];
-  const allChecked = studentsInBatch.length > 0 && studentsInBatch.every((s) => selectedStudents[s._id]);
-
   return (
     <div key={batch._id || idx} className="fba-batch-card">
       <div
         className="fba-card-header"
         style={{ cursor: studentCount > 0 ? "pointer" : "default" }}
-        onClick={() => studentCount > 0 && toggleBatchStudents(batch._id)}
+        onClick={() => openBatchStudentsModal(batch, f)}
       >
         <div className="fba-card-icon"><BookOpen size={15} /></div>
         <div className="fba-card-title">
@@ -1027,34 +1026,8 @@ const handleBulkTransferSubmit = async () => {
           <Users size={12} />
           {studentCount} student{studentCount !== 1 ? "s" : ""}
         </span>
-        {studentCount > 0 && (
-          <ChevronDown size={14} className={`fba-chevron ${isExpanded ? "fba-chevron--open" : ""}`} style={{ marginLeft: 8 }} />
-        )}
+        {studentCount > 0 && <ChevronDown size={14} className="fba-chevron" style={{ marginLeft: 8 }} />}
       </div>
-
-      {isExpanded && studentsInBatch.length > 0 && (
-        <div className="fba-student-select-list" onClick={(e) => e.stopPropagation()}>
-          <label className="fba-student-select-row fba-student-select-row--header">
-            <input type="checkbox" checked={allChecked} onChange={() => toggleSelectAllInBatch(batch, f)} />
-            <span>Select All</span>
-          </label>
-          {studentsInBatch.map((s) => (
-            <label key={s._id} className="fba-student-select-row">
-  <input
-    type="checkbox"
-    checked={!!selectedStudents[s._id]}
-    onChange={() => toggleStudentSelection(s, batch, f)}
-  />
-  <span className="fba-student-select-name">
-    {s.fullName} {s.studentId ? <span style={{ color: "#94a3b8", fontWeight: 400 }}>({s.studentId})</span> : null}
-  </span>
-  <span className="fba-student-course-badge">
-    {getCourseShortName(s.courses && s.courses.length > 0 ? s.courses[0] : (batch.courseAssigned || f.courseAssigned || ""))}
-  </span>
-</label>
-          ))}
-        </div>
-      )}
     </div>
   );
 })}
@@ -1181,6 +1154,60 @@ const handleBulkTransferSubmit = async () => {
     </div>
   </div>
 )}
+
+{viewingBatchStudents && (() => {
+  const { batch, fac } = viewingBatchStudents;
+  const studentsInBatch = batch.students || [];
+  const allChecked = studentsInBatch.length > 0 && studentsInBatch.every((s) => selectedStudents[s._id]);
+
+  return (
+    <div className="fba-modal-overlay" onClick={closeBatchStudentsModal}>
+      <div className="fba-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="fba-modal-header">
+          <div>
+            <h3>{batch.batchName || batch.name} Students</h3>
+            <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 0" }}>
+              {fac.facultyName} • {studentsInBatch.length} student{studentsInBatch.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <button onClick={closeBatchStudentsModal}><X size={18} /></button>
+        </div>
+
+        <div className="fba-modal-body">
+          <label className="fba-student-select-row fba-student-select-row--header">
+            <input type="checkbox" checked={allChecked} onChange={() => toggleSelectAllInBatch(batch, fac)} />
+            <span>Select All</span>
+          </label>
+
+          <div className="fba-student-modal-list">
+            {studentsInBatch.map((s) => (
+              <label key={s._id} className="fba-student-select-row">
+                <input
+                  type="checkbox"
+                  checked={!!selectedStudents[s._id]}
+                  onChange={() => toggleStudentSelection(s, batch, fac)}
+                />
+                <span className="fba-student-select-name">
+                  {s.fullName} {s.studentId ? <span style={{ color: "#94a3b8", fontWeight: 400 }}>({s.studentId})</span> : null}
+                </span>
+                <span className="fba-student-course-badge">
+                  {getCourseShortName(s.courses?.length ? s.courses[0] : (batch.courseAssigned || fac.courseAssigned || ""))}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="fba-modal-footer">
+          <span style={{ fontSize: 13, color: "#6b7280" }}>
+            {Object.keys(selectedStudents).length} total selected
+          </span>
+          <button className="btn-primary" onClick={closeBatchStudentsModal}>Done</button>
+        </div>
+      </div>
+    </div>
+  );
+})()}
     </div>
   );
 };
