@@ -87,6 +87,16 @@ const FacultyList = () => {
   const [bulkReason, setBulkReason] = useState("");
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
 
+  const getCourseShortName = (courseName) => {
+  if (!courseName) return "";
+  const skipWords = ["and", "of", "the", "for", "in", "&"];
+  return courseName
+    .split(/\s+/)
+    .filter((w) => w && !skipWords.includes(w.toLowerCase()))
+    .map((w) => w[0].toUpperCase())
+    .join("");
+};
+
   const statusOptions = [
     { value: "all", label: "All Status" },
     { value: "active", label: "Active" },
@@ -1030,16 +1040,18 @@ const handleBulkTransferSubmit = async () => {
           </label>
           {studentsInBatch.map((s) => (
             <label key={s._id} className="fba-student-select-row">
-              <input
-                type="checkbox"
-                checked={!!selectedStudents[s._id]}
-                onChange={() => toggleStudentSelection(s, batch, f)}
-              />
-              <span className="fba-student-select-name">{s.fullName}</span>
-              <span className="fba-student-select-name">
-                {s.fullName} {s.studentId ? <span style={{ color: "#94a3b8", fontWeight: 400 }}>({s.studentId})</span> : null}
-              </span>
-            </label>
+  <input
+    type="checkbox"
+    checked={!!selectedStudents[s._id]}
+    onChange={() => toggleStudentSelection(s, batch, f)}
+  />
+  <span className="fba-student-select-name">
+    {s.fullName} {s.studentId ? <span style={{ color: "#94a3b8", fontWeight: 400 }}>({s.studentId})</span> : null}
+  </span>
+  <span className="fba-student-course-badge">
+    {getCourseShortName(s.courses && s.courses.length > 0 ? s.courses[0] : (batch.courseAssigned || f.courseAssigned || ""))}
+  </span>
+</label>
           ))}
         </div>
       )}
