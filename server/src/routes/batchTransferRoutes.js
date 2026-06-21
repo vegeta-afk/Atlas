@@ -11,6 +11,7 @@ const {
   deleteTransfer,
   revertTransfer,
   getStats,
+  bulkTransferStudents,
 } = require('../controllers/batchTransferController');
 const { protect, authorize } = require('../middlewares/authMiddleware'); // Changed from '../middleware/auth' to './middleware/auth'
 
@@ -28,6 +29,8 @@ router.use(protect);
 
 // Stats route
 router.get('/stats', getStats);
+
+router.post('/bulk', authorize('admin'), bulkTransferStudents);
 
 // Main routes
 router.route('/')

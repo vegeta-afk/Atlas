@@ -284,6 +284,8 @@ export const batchTransferAPI = {
 
 getTransfers: (params) => {
   console.log("🔵 batchTransferAPI.getTransfers called with params:", params);
+
+  
   
   // Clean up params - remove undefined values
   const cleanParams = {};
@@ -301,6 +303,8 @@ getTransfers: (params) => {
   console.log("🔵 Final URL:", url);
   
   return api.get(url);
+
+  
 },
 
   // Get single transfer
@@ -326,6 +330,11 @@ getTransfers: (params) => {
 
   // Get statistics
   getStats: () => api.get('/batch-transfers/stats'),
+
+  bulkTransfer: (data) => {
+    console.log("API call - bulkTransfer with data:", data);
+    return api.post('/batch-transfers/bulk', data);
+  },
 };
 
 export const studentAPI = {

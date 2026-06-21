@@ -826,3 +826,187 @@ exports.revertTransfer = async (req, res) => {
     });
   }
 };
+
+// @desc    Bulk transfer multiple students to a new batch/faculty immediately
+// @route   POST /api/batch-transfers/bulk
+// @access  Private (Admin only)
+exports.bulkTransferStudents = async (req, res) => {
+  const { studentIds, newTeacherId, newBatch, transferReason } = req.body;
+
+  if (!Array.isArray(studentIds) || studentIds.length === 0) {
+    return res.status(400).json({ success: false, message: 'Please select at least one student' });
+  }
+  if (!newTeacherId || !newBatch) {
+    return res.status(400).json({ success: false, message: 'New teacher and new batch are required' });
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  const results = { success: [], failed: [] };
+
+  try {
+    const newFaculty = await Faculty.findById(newTeacherId).session(session);
+    if (!newFaculty) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ success: false, message: 'New faculty not found' });
+    }
+
+    const newFacultyUser = await User.findOne({
+      facultyId: newFaculty._id,
+      role: 'instructor',
+    }).session(session);
+
+    if (!newFacultyUser) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ success: false, message: 'New faculty user account not found' });
+    }
+
+    // Resolve new batch (by _id or displayName, same fallback as approveTransfer)
+    let newBatchDoc = mongoose.Types.ObjectId.isValid(newBatch)
+      ? await Batch.findById(newBatch).session(session)
+      : null;
+
+    if (!newBatchDoc) {
+      newBatchDoc = await Batch.findOne({
+        $or: [
+          { displayName: newBatch },
+          { displayName: { $regex: newBatch, $options: 'i' } },
+        ],
+      }).session(session);
+    }
+
+    if (!newBatchDoc) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ success: false, message: 'New batch not found' });
+    }
+
+    const newBatchDisplay = newBatchDoc.displayName || `${newBatchDoc.startTime} to ${newBatchDoc.endTime}`;
+
+    // Find or create the target TeacherBatch once, reuse for all students
+    let targetTeacherBatch = await TeacherBatch.findOne({
+      teacher: newFacultyUser._id,
+      batch: newBatchDoc._id,
+      isActive: true,
+    }).session(session);
+
+    if (!targetTeacherBatch) {
+      targetTeacherBatch = new TeacherBatch({
+        teacher: newFacultyUser._id,
+        batch: newBatchDoc._id,
+        assignedStudents: [],
+        isActive: true,
+        roomNumber: 'Default',
+        subject: newFaculty.courseAssigned || 'General',
+        assignedBy: req.user?.id,
+      });
+      await targetTeacherBatch.save({ session });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let idx = 0;
+    for (const studentId of studentIds) {
+      idx++;
+      try {
+        const student = await Student.findById(studentId).session(session);
+        if (!student) {
+          results.failed.push({ studentId, reason: 'Student not found' });
+          continue;
+        }
+
+        const previousBatch = student.batchTime || student.batch || '';
+        const previousTeacher = student.facultyAllot || '';
+
+        let previousTeacherId = null;
+        if (previousTeacher) {
+          const prevFac = await Faculty.findOne({ facultyName: previousTeacher }).session(session);
+          if (prevFac) previousTeacherId = prevFac._id;
+        }
+
+        // Remove student from ALL existing TeacherBatches
+        const existingBatches = await TeacherBatch.find({
+          'assignedStudents.student': student._id,
+        }).session(session);
+
+        for (const tb of existingBatches) {
+          tb.assignedStudents = tb.assignedStudents.filter(
+            (s) => s.student.toString() !== student._id.toString()
+          );
+          await tb.save({ session });
+        }
+
+        // Add to target TeacherBatch if not already there
+        const alreadyIn = targetTeacherBatch.assignedStudents.some(
+          (s) => s.student.toString() === student._id.toString()
+        );
+        if (!alreadyIn) {
+          targetTeacherBatch.assignedStudents.push({
+            student: student._id,
+            assignedDate: new Date(),
+            isActive: true,
+          });
+        }
+
+        // Update future attendance
+        await Attendance.updateMany(
+          { student: student._id, date: { $gte: today } },
+          { $set: { teacher: newFacultyUser._id, batch: newBatchDoc._id } }
+        ).session(session);
+
+        // Update student record
+        student.batchTime = newBatchDisplay;
+        student.facultyAllot = newFaculty.facultyName;
+        await student.save({ session });
+
+        // Audit trail record — status 'approved' so it shows in history and can be reverted
+        await BatchTransfer.create([{
+          requestId: `BLK${Date.now()}${idx}${Math.floor(100 + Math.random() * 900)}`,
+          studentId: student._id,
+          studentName: student.fullName,
+          rollNo: student.studentId || student.admissionNo || '',
+          previousBatch: previousBatch,
+          previousBatchTime: previousBatch,
+          previousTeacher: previousTeacher,
+          previousTeacherId: previousTeacherId,
+          newBatch: newBatchDoc._id.toString(),
+          newBatchTime: newBatchDisplay,
+          newTeacher: newFaculty.facultyName,
+          newTeacherId: newFaculty._id,
+          transferReason: transferReason || 'Bulk faculty/batch reassignment',
+          status: 'approved',
+          approvedBy: req.user?.id,
+          approvedDate: new Date(),
+        }], { session });
+
+        results.success.push(studentId);
+      } catch (innerErr) {
+        console.error(`❌ Bulk transfer failed for student ${studentId}:`, innerErr);
+        results.failed.push({ studentId, reason: innerErr.message });
+      }
+    }
+
+    await targetTeacherBatch.save({ session });
+    await session.commitTransaction();
+    session.endSession();
+
+    res.json({
+      success: true,
+      message: `Bulk transfer complete: ${results.success.length} moved, ${results.failed.length} failed.`,
+      data: results,
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error('❌ Bulk transfer error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during bulk transfer',
+      error: error.message,
+    });
+  }
+};

@@ -1198,3 +1198,78 @@ input:disabled {
     font-size: 12px;
   }
 }
+
+.fba-student-select-list {
+  padding: 10px 14px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fba-student-select-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.fba-student-select-row--header {
+  font-weight: 600;
+  color: #4f46e5;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+.fba-student-select-name { flex: 1; color: #1f2937; }
+.fba-student-select-course { font-size: 11px; color: #94a3b8; }
+
+.fba-bulk-bar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 14px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  z-index: 50;
+}
+.fba-bulk-bar-info { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.fba-bulk-bar-actions { display: flex; gap: 10px; }
+
+.fba-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.fba-modal {
+  background: white;
+  border-radius: 12px;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.fba-modal-header, .fba-modal-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+}
+.fba-modal-header { border-bottom: 1px solid #e5e7eb; }
+.fba-modal-footer { border-top: 1px solid #e5e7eb; }
+.fba-modal-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+.fba-modal-field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #374151; }
+.fba-modal-field select, .fba-modal-field textarea {
+  width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;
+}
+.fba-modal-selected-list { display: flex; flex-wrap: wrap; gap: 6px; max-height: 100px; overflow-y: auto; }
+.fba-modal-chip {
+  background: #eef2ff; color: #4f46e5; font-size: 12px;
+  padding: 4px 10px; border-radius: 999px;
+}

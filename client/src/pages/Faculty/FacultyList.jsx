@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { facultyAPI } from "../../services/api";
+import { facultyAPI, setupAPI, batchTransferAPI } from "../../services/api";
 import {
   Search,
   Filter,
@@ -32,6 +32,7 @@ import {
   Users,
   BookOpen,
   X,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import "./FacultyList.css";
@@ -76,6 +77,15 @@ const FacultyList = () => {
   });
 
   const [openDropdown, setOpenDropdown] = useState(null);
+
+  const [selectedStudents, setSelectedStudents] = useState({}); // { studentId: { student, batchId, batchName, facultyId, facultyName } }
+  const [expandedBatchStudents, setExpandedBatchStudents] = useState({}); // batchId -> bool
+  const [setupBatches, setSetupBatches] = useState([]);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkTargetFaculty, setBulkTargetFaculty] = useState("");
+  const [bulkTargetBatch, setBulkTargetBatch] = useState("");
+  const [bulkReason, setBulkReason] = useState("");
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
 
   const statusOptions = [
     { value: "all", label: "All Status" },
@@ -209,12 +219,28 @@ const FacultyList = () => {
     }
   };
 
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    if (tab === "batches" && !batchesFetched && faculty.length > 0) {
-      fetchAllBatches(faculty);
+  
+  const fetchSetupBatches = async () => {
+  try {
+    const response = await setupAPI.getAll();
+    if (response.data.success) {
+      const batchesData = response.data.data.batches || [];
+      setSetupBatches(batchesData.sort((a, b) => (a.order || 0) - (b.order || 0)));
     }
-  };
+  } catch (err) {
+    console.error("Error fetching setup batches:", err);
+  }
+};
+  
+  const handleTabChange = (tab) => {
+  setActiveTab(tab);
+  if (tab === "batches" && !batchesFetched && faculty.length > 0) {
+    fetchAllBatches(faculty);
+    fetchSetupBatches();
+  }
+};
+
+
 
   const calculateStats = (data) => {
     const total = data.length;
@@ -438,6 +464,87 @@ const FacultyList = () => {
       batch.courseAssigned?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
+
+  const toggleBatchStudents = (batchId) => {
+  setExpandedBatchStudents((prev) => ({ ...prev, [batchId]: !prev[batchId] }));
+};
+
+const toggleStudentSelection = (student, batch, fac) => {
+  setSelectedStudents((prev) => {
+    const updated = { ...prev };
+    if (updated[student._id]) {
+      delete updated[student._id];
+    } else {
+      updated[student._id] = {
+        student,
+        batchId: batch._id,
+        batchName: batch.batchName || batch.name,
+        facultyId: fac.facultyId,
+        facultyName: fac.facultyName,
+      };
+    }
+    return updated;
+  });
+};
+
+const toggleSelectAllInBatch = (batch, fac) => {
+  const studentList = batch.students || [];
+  setSelectedStudents((prev) => {
+    const updated = { ...prev };
+    const allSelected = studentList.length > 0 && studentList.every((s) => updated[s._id]);
+    if (allSelected) {
+      studentList.forEach((s) => delete updated[s._id]);
+    } else {
+      studentList.forEach((s) => {
+        updated[s._id] = {
+          student: s,
+          batchId: batch._id,
+          batchName: batch.batchName || batch.name,
+          facultyId: fac.facultyId,
+          facultyName: fac.facultyName,
+        };
+      });
+    }
+    return updated;
+  });
+};
+
+const clearSelection = () => setSelectedStudents({});
+
+const handleBulkTransferSubmit = async () => {
+  const studentIds = Object.keys(selectedStudents);
+  if (studentIds.length === 0) return;
+  if (!bulkTargetFaculty || !bulkTargetBatch) {
+    alert("Please select target teacher and batch");
+    return;
+  }
+  setBulkSubmitting(true);
+  try {
+    const response = await batchTransferAPI.bulkTransfer({
+      studentIds,
+      newTeacherId: bulkTargetFaculty,
+      newBatch: bulkTargetBatch,
+      transferReason: bulkReason || "Bulk faculty/batch reassignment",
+    });
+    if (response.data.success) {
+      const { success = [], failed = [] } = response.data.data || {};
+      alert(`✅ ${success.length} student(s) transferred successfully.${failed.length ? ` ${failed.length} failed.` : ""}`);
+      setShowBulkModal(false);
+      setBulkTargetFaculty("");
+      setBulkTargetBatch("");
+      setBulkReason("");
+      clearSelection();
+      setBatchesFetched(false);
+      await fetchAllBatches(faculty);
+    } else {
+      throw new Error(response.data.message || "Bulk transfer failed");
+    }
+  } catch (err) {
+    alert(err.response?.data?.message || err.message || "Bulk transfer failed");
+  } finally {
+    setBulkSubmitting(false);
+  }
+};
 
   return (
     <div className="faculty-list-container">
@@ -885,27 +992,60 @@ const FacultyList = () => {
                             <td colSpan="5" className="fba-expanded-cell">
                               <div className="fba-batch-grid">
                                 {f.batches.map((batch, idx) => {
-                                  const studentCount = batch.studentCount ?? batch.students?.length ?? 0;
-                                  return (
-                                    <div key={batch._id || idx} className="fba-batch-card">
-                                      <div className="fba-card-header">
-                                        <div className="fba-card-icon"><BookOpen size={15} /></div>
-                                        <div className="fba-card-title">
-                                          <span className="fba-batch-name">
-                                            {batch.batchName || batch.name || `Batch ${idx + 1}`}
-                                          </span>
-                                          <span className="fba-batch-course">
-                                            {batch.courseAssigned || f.courseAssigned || "N/A"}
-                                          </span>
-                                        </div>
-                                        <span className="fba-student-badge">
-                                          <Users size={12} />
-                                          {studentCount} student{studentCount !== 1 ? "s" : ""}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
+  const studentCount = batch.studentCount ?? batch.students?.length ?? 0;
+  const isExpanded = expandedBatchStudents[batch._id];
+  const studentsInBatch = batch.students || [];
+  const allChecked = studentsInBatch.length > 0 && studentsInBatch.every((s) => selectedStudents[s._id]);
+
+  return (
+    <div key={batch._id || idx} className="fba-batch-card">
+      <div
+        className="fba-card-header"
+        style={{ cursor: studentCount > 0 ? "pointer" : "default" }}
+        onClick={() => studentCount > 0 && toggleBatchStudents(batch._id)}
+      >
+        <div className="fba-card-icon"><BookOpen size={15} /></div>
+        <div className="fba-card-title">
+          <span className="fba-batch-name">
+            {batch.batchName || batch.name || `Batch ${idx + 1}`}
+          </span>
+          <span className="fba-batch-course">
+            {batch.courseAssigned || f.courseAssigned || "N/A"}
+          </span>
+        </div>
+        <span className="fba-student-badge">
+          <Users size={12} />
+          {studentCount} student{studentCount !== 1 ? "s" : ""}
+        </span>
+        {studentCount > 0 && (
+          <ChevronDown size={14} className={`fba-chevron ${isExpanded ? "fba-chevron--open" : ""}`} style={{ marginLeft: 8 }} />
+        )}
+      </div>
+
+      {isExpanded && studentsInBatch.length > 0 && (
+        <div className="fba-student-select-list" onClick={(e) => e.stopPropagation()}>
+          <label className="fba-student-select-row fba-student-select-row--header">
+            <input type="checkbox" checked={allChecked} onChange={() => toggleSelectAllInBatch(batch, f)} />
+            <span>Select All</span>
+          </label>
+          {studentsInBatch.map((s) => (
+            <label key={s._id} className="fba-student-select-row">
+              <input
+                type="checkbox"
+                checked={!!selectedStudents[s._id]}
+                onChange={() => toggleStudentSelection(s, batch, f)}
+              />
+              <span className="fba-student-select-name">{s.fullName}</span>
+              <span className="fba-student-select-name">
+                {s.fullName} {s.studentId ? <span style={{ color: "#94a3b8", fontWeight: 400 }}>({s.studentId})</span> : null}
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+})}
                               </div>
                             </td>
                           </tr>
@@ -951,6 +1091,84 @@ const FacultyList = () => {
           </div>
         </div>
       )}
+      {Object.keys(selectedStudents).length > 0 && (
+  <div className="fba-bulk-bar">
+    <div className="fba-bulk-bar-info">
+      <Users size={16} />
+      <strong>{Object.keys(selectedStudents).length}</strong> student{Object.keys(selectedStudents).length !== 1 ? "s" : ""} selected
+    </div>
+    <div className="fba-bulk-bar-actions">
+      <button className="btn-secondary" onClick={clearSelection}>Clear</button>
+      <button className="btn-primary" onClick={() => setShowBulkModal(true)}>
+        <ArrowLeftRight size={16} />
+        Bulk Transfer
+      </button>
+    </div>
+  </div>
+)}
+
+{showBulkModal && (
+  <div className="fba-modal-overlay" onClick={() => !bulkSubmitting && setShowBulkModal(false)}>
+    <div className="fba-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="fba-modal-header">
+        <h3>Bulk Transfer {Object.keys(selectedStudents).length} Student(s)</h3>
+        <button onClick={() => setShowBulkModal(false)} disabled={bulkSubmitting}><X size={18} /></button>
+      </div>
+
+      <div className="fba-modal-body">
+        <div className="fba-modal-field">
+          <label>New Teacher *</label>
+          <select value={bulkTargetFaculty} onChange={(e) => setBulkTargetFaculty(e.target.value)}>
+            <option value="">Select Teacher</option>
+            {faculty.map((fac) => (
+              <option key={fac._id} value={fac._id}>
+                {fac.facultyName} {fac.facultyNo ? `(${fac.facultyNo})` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="fba-modal-field">
+          <label>New Batch *</label>
+          <select value={bulkTargetBatch} onChange={(e) => setBulkTargetBatch(e.target.value)}>
+            <option value="">Select Batch</option>
+            {setupBatches.map((b) => {
+              const displayName = b.displayName || `${b.startTime || ""} to ${b.endTime || ""}`.trim();
+              return (
+                <option key={b._id} value={b._id}>
+                  {b.batchName} {displayName ? `(${displayName})` : ""}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        <div className="fba-modal-field">
+          <label>Reason (optional)</label>
+          <textarea
+            rows="2"
+            value={bulkReason}
+            onChange={(e) => setBulkReason(e.target.value)}
+            placeholder="e.g. Faculty reassignment, batch merge..."
+          />
+        </div>
+
+        <div className="fba-modal-selected-list">
+          {Object.values(selectedStudents).map(({ student }) => (
+            <span key={student._id} className="fba-modal-chip">{student.fullName}</span>
+          ))}
+        </div>
+      </div>
+
+      <div className="fba-modal-footer">
+        <button className="btn-secondary" onClick={() => setShowBulkModal(false)} disabled={bulkSubmitting}>Cancel</button>
+        <button className="btn-primary" onClick={handleBulkTransferSubmit} disabled={bulkSubmitting}>
+          {bulkSubmitting ? "Transferring..." : "Confirm Transfer"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
