@@ -1016,8 +1016,10 @@ const handleBulkTransferSubmit = async () => {
         <div className="fba-card-icon"><BookOpen size={15} /></div>
         <div className="fba-card-title">
           <span className="fba-batch-name">
-            {batch.batchName || batch.name || `Batch ${idx + 1}`}
-          </span>
+  {batch.startTime && batch.endTime
+    ? `${formatTimeRange(batch.startTime)} to ${formatTimeRange(batch.endTime)}`
+    : batch.batchName || batch.name || `Batch ${idx + 1}`}
+</span>
           <span className="fba-batch-course">
             {batch.courseAssigned || f.courseAssigned || "N/A"}
           </span>
