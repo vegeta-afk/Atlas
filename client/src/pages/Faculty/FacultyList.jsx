@@ -1167,7 +1167,11 @@ const handleBulkTransferSubmit = async () => {
       <div className="fba-modal" onClick={(e) => e.stopPropagation()}>
         <div className="fba-modal-header">
           <div>
-            <h3>{batch.batchName || batch.name} Students</h3>
+            <h3>
+  {batch.startTime && batch.endTime
+    ? `${formatTimeRange(batch.startTime)} to ${formatTimeRange(batch.endTime)}`
+    : batch.batchName || batch.name} Students
+</h3>
             <p style={{ fontSize: 12, color: "#6b7280", margin: "2px 0 0" }}>
               {fac.facultyName} • {studentsInBatch.length} student{studentsInBatch.length !== 1 ? "s" : ""}
             </p>
