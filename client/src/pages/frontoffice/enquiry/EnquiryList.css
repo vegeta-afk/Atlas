@@ -1372,10 +1372,10 @@ input:disabled {
 }
 .action-buttons {
   gap: 3px !important;
-  min-width: unset !important;
+  min-width: 160px !important;
 }
 .data-table td:last-child {
-  min-width: unset !important;
+  min-width: 160px !important;
 }
 
 /* ── Dropdown ────────────────────────────────────────────────── */
