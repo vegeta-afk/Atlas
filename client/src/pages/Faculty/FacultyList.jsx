@@ -1171,7 +1171,7 @@ const handleBulkTransferSubmit = async () => {
 )}
 
 {showBulkModal && (
-  <div className="fba-modal-overlay" onClick={() => !bulkSubmitting && setShowBulkModal(false)}>
+  <div className="fba-modal-overlay">
     <div className="fba-modal" onClick={(e) => e.stopPropagation()}>
       <div className="fba-modal-header">
         <h3>Bulk Transfer {Object.keys(selectedStudents).length} Student(s)</h3>
@@ -1239,8 +1239,8 @@ const handleBulkTransferSubmit = async () => {
   const allChecked = studentsInBatch.length > 0 && studentsInBatch.every((s) => selectedStudents[s._id]);
 
   return (
-    <div className="fba-modal-overlay" onClick={closeBatchStudentsModal}>
-      <div className="fba-modal" onClick={(e) => e.stopPropagation()}>
+  <div className="fba-modal-overlay">
+    <div className="fba-modal" onClick={(e) => e.stopPropagation()}>
         <div className="fba-modal-header">
           <div>
             <h3>
