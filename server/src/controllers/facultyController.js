@@ -598,7 +598,9 @@ exports.getFacultyWithBatches = async (req, res) => {
       }
       
       // Count active students
-      const activeStudents = (tb.assignedStudents || []).filter(s => s && (s.isActive !== undefined ? s.isActive : true)).length;
+      const activeStudents = (tb.assignedStudents || []).filter(s => 
+  s && s.student && (s.isActive !== undefined ? s.isActive : true)
+).length;
       
       userBatchesMap[userId].push({
         _id: tb.batch._id,
@@ -798,9 +800,10 @@ exports.getFacultyBatches = async (req, res) => {
     const batch = tb.batch;
     const assignedStudents = tb.assignedStudents || [];
     const activeStudents = assignedStudents.filter(s => {
-      const isActive = s.isActive !== undefined ? s.isActive : true;
-      return isActive;
-    }).length;
+  if (!s || !s.student) return false;  // ← THIS WAS MISSING
+  const isActive = s.isActive !== undefined ? s.isActive : true;
+  return isActive;
+}).length;
     
     const todayAttendance = await Attendance.find({
   teacher: facultyUser._id,  // ✅ FIXED: was user._id
@@ -1197,9 +1200,10 @@ exports.getMyBatches = async (req, res) => {
     const batch = tb.batch;
     const assignedStudents = tb.assignedStudents || [];
     const activeStudents = assignedStudents.filter(s => {
-      const isActive = s.isActive !== undefined ? s.isActive : true;
-      return isActive;
-    }).length;
+  if (!s || !s.student) return false;  // ← THIS WAS MISSING
+  const isActive = s.isActive !== undefined ? s.isActive : true;
+  return isActive;
+}).length;
     
     const todayAttendance = await Attendance.find({
   teacher: user._id,   // ← use req.user directly
