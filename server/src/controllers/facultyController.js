@@ -580,6 +580,7 @@ exports.getFacultyWithBatches = async (req, res) => {
       isActive: true
     })
     .populate("batch", "batchName startTime endTime displayName")
+    .populate("assignedStudents.student", "_id")
     .lean();
     
     // Create map of userId -> batches
@@ -775,6 +776,7 @@ exports.getFacultyBatches = async (req, res) => {
       isActive: true
     })
     .populate("batch", "batchName startTime endTime displayName")
+    .populate("assignedStudents.student", "_id")
     .lean();
     
     console.log(`✅ Teacher batches found: ${teacherBatches.length}`);
@@ -1175,6 +1177,7 @@ exports.getMyBatches = async (req, res) => {
       isActive: true
     })
     .populate("batch", "batchName startTime endTime displayName")
+    .populate("assignedStudents.student", "_id")
     .lean();
     
     console.log(`✅ Found ${teacherBatches.length} batches for faculty`);
