@@ -451,6 +451,44 @@ exports.updateFacultyStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
+    // ── Block deactivation if faculty has students currently assigned ──
+    if (status === "inactive") {
+      const facultyUser = await User.findOne({
+        facultyId: new mongoose.Types.ObjectId(req.params.id),
+        role: "instructor"
+      }).select("_id").lean();
+
+      if (facultyUser) {
+        const TeacherBatch = require("../models/TeacherBatch");
+        const teacherBatches = await TeacherBatch.find({
+          teacher: facultyUser._id,
+          isActive: true
+        })
+          .populate("assignedStudents.student", "_id")
+          .lean();
+
+        let totalActiveStudents = 0;
+        let batchesWithStudents = 0;
+
+        teacherBatches.forEach(tb => {
+          const activeCount = (tb.assignedStudents || []).filter(s =>
+            s && s.student && (s.isActive !== undefined ? s.isActive : true)
+          ).length;
+          if (activeCount > 0) {
+            totalActiveStudents += activeCount;
+            batchesWithStudents += 1;
+          }
+        });
+
+        if (totalActiveStudents > 0) {
+          return res.status(400).json({
+            success: false,
+            message: `Cannot deactivate this faculty. ${totalActiveStudents} student(s) are currently assigned across ${batchesWithStudents} batch(es). Please transfer these students to another faculty first.`
+          });
+        }
+      }
+    }
+
     const faculty = await Faculty.findByIdAndUpdate(
       req.params.id,
       { status },
