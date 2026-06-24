@@ -272,7 +272,7 @@ export const facultyAPI = {
   deleteFaculty: (id) => api.delete(`/faculty/${id}`),
   updateFacultyStatus: (id, data) => api.put(`/faculty/${id}/status`, data),
   getFacultyStats: () => api.get("/faculty/stats/dashboard"),
-  getFacultyBatches: (id) => api.get(`/faculty/${id}/batches`),
+  getFacultyBatches: (id, params = {}) => api.get(`/faculty/${id}/batches`, { params }),
   getBatchStudents: (facultyId, batchId) =>
     api.get(`/faculty/${facultyId}/batches/${batchId}/students`),
 };

@@ -849,7 +849,10 @@ exports.getFacultyBatches = async (req, res) => {
     }));
     
     // Sort by start time
-    const filteredBatches = batchesWithStats.filter(b => b.totalStudents > 0);
+    const { includeEmpty } = req.query;
+const filteredBatches = includeEmpty === 'true'
+  ? batchesWithStats
+  : batchesWithStats.filter(b => b.totalStudents > 0);
     filteredBatches.sort((a, b) => a.startTime.localeCompare(b.startTime));
     
     console.log(`✅ Returning ${filteredBatches.length} batches`);

@@ -61,6 +61,11 @@ const FacultyList = () => {
   const [totalBatches, setTotalBatches] = useState(0);
   const [totalStudentsCount, setTotalStudentsCount] = useState(0);
 
+  const [freeBatchesData, setFreeBatchesData] = useState([]);
+  const [freeBatchesLoading, setFreeBatchesLoading] = useState(false);
+  const [freeBatchesFetched, setFreeBatchesFetched] = useState(false);
+  const [totalFreeBatches, setTotalFreeBatches] = useState(0);
+
   const [expandedFaculty, setExpandedFaculty] = useState({});
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -155,6 +160,8 @@ const FacultyList = () => {
         }
         setBatchesFetched(false);
         setAllBatchesData([]);
+        setFreeBatchesFetched(false);   // ← add
+        setFreeBatchesData([]); 
       } else {
         throw new Error(response.data.message || "Failed to fetch faculty");
       }
@@ -229,6 +236,48 @@ const FacultyList = () => {
     }
   };
 
+  const fetchFreeBatches = async (facultyList) => {
+  setFreeBatchesLoading(true);
+  try {
+    const batchResults = await Promise.all(
+      facultyList.map(async (f) => {
+        try {
+          const res = await facultyAPI.getFacultyBatches(f._id, { includeEmpty: true });
+          const allBatches = res.data?.data?.batches || [];
+          const freeBatches = allBatches.filter(b => b.totalStudents === 0);
+          return { faculty: f, batches: freeBatches };
+        } catch {
+          return { faculty: f, batches: [] };
+        }
+      })
+    );
+
+    const results = batchResults.flatMap(({ faculty: f, batches }) =>
+      batches.map(batch => ({
+        ...batch,
+        students: [],
+        studentCount: 0,
+        facultyName: f.facultyName,
+        facultyNo: f.facultyNo,
+        facultyId: f._id,
+        facultyStatus: f.status,
+        facultyEmail: f.email,
+        facultyMobile: f.mobileNo,
+        facultyPhoto: f.photo || null,
+        courseAssigned: f.courseAssigned,
+      }))
+    );
+
+    setFreeBatchesData(results);
+    setTotalFreeBatches(results.length);
+    setFreeBatchesFetched(true);
+  } catch (err) {
+    console.error("Error fetching free batches:", err);
+  } finally {
+    setFreeBatchesLoading(false);
+  }
+};
+
   
   const fetchSetupBatches = async () => {
   try {
@@ -247,6 +296,9 @@ const FacultyList = () => {
   if (tab === "batches" && !batchesFetched && faculty.length > 0) {
     fetchAllBatches(faculty);
     fetchSetupBatches();
+  }
+  if (tab === "free" && !freeBatchesFetched && faculty.length > 0) {  // ← add
+    fetchFreeBatches(faculty);
   }
 };
 
@@ -465,6 +517,22 @@ const FacultyList = () => {
       )
     );
   });
+
+  const freeBatchesByFaculty = faculty.map((f) => {
+  const batches = freeBatchesData.filter((b) => b.facultyId === f._id);
+  return {
+    facultyId:      f._id,
+    facultyName:    f.facultyName,
+    facultyNo:      f.facultyNo,
+    facultyStatus:  f.status,
+    facultyEmail:   f.email,
+    facultyMobile:  f.mobileNo,
+    facultyPhoto:   f.photo || null,
+    courseAssigned: f.courseAssigned,
+    batches,
+    totalBatchCount: batches.length,
+  };
+}).filter(f => f.totalBatchCount > 0); // only show faculty with at least 1 free batch
 
   const filteredBatches = allBatchesData.filter((batch) => {
     if (!searchTerm) return true;
@@ -718,6 +786,18 @@ const handleBulkTransferSubmit = async () => {
               <span className="tab-pill__count">{totalBatches}</span>
             )}
           </button>
+          <button
+      className={`tab-pill ${activeTab === "free" ? "tab-pill--active" : ""}`}
+      onClick={() => handleTabChange("free")}
+    >
+      <Users size={16} />
+      Free Batches
+      {freeBatchesFetched && (
+        <span className="tab-pill__count" style={{ background: "#f59e0b" }}>
+          {totalFreeBatches}
+        </span>
+      )}
+    </button>
         </div>
       )}
 
@@ -1214,6 +1294,149 @@ const handleBulkTransferSubmit = async () => {
     </div>
   );
 })()}
+
+{/* ═══════════════════════════════════════
+    TAB 3 — FREE BATCHES (0 students)
+═══════════════════════════════════════ */}
+{!loading && !error && activeTab === "free" && (
+  <div className="table-container">
+    {freeBatchesLoading ? (
+      <div className="loading-overlay">
+        <div className="loading-spinner"></div>
+        <p>Loading free batches...</p>
+      </div>
+    ) : (
+      <>
+        <table className="data-table fba-main-table">
+          <thead>
+            <tr>
+              <th style={{ width: "28%" }}>FACULTY DETAILS</th>
+              <th style={{ width: "22%" }}>CONTACT INFORMATION</th>
+              <th style={{ width: "18%" }}>FREE BATCH SLOTS</th>
+              <th style={{ width: "14%" }}>STATUS</th>
+              <th style={{ width: "18%" }}>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {freeBatchesByFaculty.length > 0 ? (
+              freeBatchesByFaculty.map((f) => (
+                <React.Fragment key={f.facultyId}>
+                  <tr className={`fba-faculty-row ${expandedFaculty[f.facultyId + "_free"] ? "fba-faculty-row--open" : ""}`}>
+                    <td>
+                      <div className="student-info">
+                        {f.facultyPhoto ? (
+                          <img
+                            src={f.facultyPhoto}
+                            alt={f.facultyName}
+                            style={{ width: "36px", height: "36px", borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}
+                            onError={(e) => { e.target.onerror = null; e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
+                          />
+                        ) : null}
+                        <div className="avatar fba-avatar-indigo" style={{ display: f.facultyPhoto ? "none" : "flex" }}>
+                          {f.facultyName?.charAt(0) || "?"}
+                        </div>
+                        <div>
+                          <strong>{f.facultyName || "N/A"}</strong>
+                          <small>{f.facultyNo || ""}</small>
+                          <small style={{ color: "#94a3b8" }}>{f.courseAssigned || ""}</small>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td>
+                      <div className="contact-info">
+                        {f.facultyEmail && <div><Mail size={13} /> {f.facultyEmail}</div>}
+                        {f.facultyMobile && <div><Phone size={13} /> {formatPhoneNumber(f.facultyMobile)}</div>}
+                      </div>
+                    </td>
+
+                    <td>
+                      <div className="fba-stats-cell">
+                        <div className="fba-stat-item" style={{ color: "#f59e0b" }}>
+                          <span className="fba-stat-num">{f.totalBatchCount}</span>
+                          <span className="fba-stat-label">Free Slots</span>
+                        </div>
+                        <div className="fba-stat-item" style={{ color: "#94a3b8" }}>
+                          <span className="fba-stat-num">0</span>
+                          <span className="fba-stat-label">Students</span>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td>
+                      <div className="status-cell">{getStatusBadge(f.facultyStatus)}</div>
+                    </td>
+
+                    <td>
+                      <button
+                        className={`fba-view-btn ${expandedFaculty[f.facultyId + "_free"] ? "fba-view-btn--active" : ""}`}
+                        onClick={() => setExpandedFaculty(prev => ({ ...prev, [f.facultyId + "_free"]: !prev[f.facultyId + "_free"] }))}
+                      >
+                        <Eye size={15} />
+                        {expandedFaculty[f.facultyId + "_free"] ? "Hide Slots" : "View Slots"}
+                        <ChevronDown
+                          size={14}
+                          className={`fba-chevron ${expandedFaculty[f.facultyId + "_free"] ? "fba-chevron--open" : ""}`}
+                        />
+                      </button>
+                    </td>
+                  </tr>
+
+                  {expandedFaculty[f.facultyId + "_free"] && (
+                    <tr className="fba-expanded-row">
+                      <td colSpan="5" className="fba-expanded-cell">
+                        <div className="fba-batch-grid">
+                          {f.batches.map((batch, idx) => (
+                            <div key={batch._id || idx} className="fba-batch-card">
+                              <div className="fba-card-header" style={{ cursor: "default" }}>
+                                <div className="fba-card-icon"><BookOpen size={15} /></div>
+                                <div className="fba-card-title">
+                                  <span className="fba-batch-name">
+                                    {batch.startTime && batch.endTime
+                                      ? `${formatTimeRange(batch.startTime)} to ${formatTimeRange(batch.endTime)}`
+                                      : batch.batchName || batch.name || `Batch ${idx + 1}`}
+                                  </span>
+                                  <span className="fba-batch-course">
+                                    {batch.courseAssigned || f.courseAssigned || "N/A"}
+                                  </span>
+                                </div>
+                                <span className="fba-student-badge" style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d" }}>
+                                  <Users size={12} />
+                                  Free slot
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="5" className="empty-row">
+                  <div className="empty-state">
+                    <CheckCircle size={48} />
+                    <h3>No free batch slots</h3>
+                    <p>All faculty batches have students assigned.</p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+
+        {freeBatchesFetched && (
+          <div className="batches-summary-footer">
+            <span><BookOpen size={14} /> <strong>{totalFreeBatches}</strong> free batch slots</span>
+            <span><Users size={14} /> <strong>{freeBatchesByFaculty.length}</strong> faculty with free slots</span>
+          </div>
+        )}
+      </>
+    )}
+  </div>
+)}
     </div>
   );
 };
