@@ -598,7 +598,7 @@ exports.getFacultyWithBatches = async (req, res) => {
       }
       
       // Count active students
-      const activeStudents = (tb.assignedStudents || []).filter(s => s && s.isActive).length;
+      const activeStudents = (tb.assignedStudents || []).filter(s => s && (s.isActive !== undefined ? s.isActive : true)).length;
       
       userBatchesMap[userId].push({
         _id: tb.batch._id,
@@ -618,7 +618,8 @@ exports.getFacultyWithBatches = async (req, res) => {
     // Combine faculty data with batches
     const facultyWithBatches = facultyList.map(faculty => {
       const userId = facultyToUserMap[faculty._id.toString()];
-      const batches = userId ? userBatchesMap[userId.toString()] || [] : [];
+      const batches = (userId ? userBatchesMap[userId.toString()] || [] : [])
+  .filter(b => b.totalStudents > 0);
       
       return {
         _id: faculty._id,
@@ -843,27 +844,30 @@ exports.getFacultyBatches = async (req, res) => {
     }));
     
     // Sort by start time
-    batchesWithStats.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    const filteredBatches = batchesWithStats.filter(b => b.totalStudents > 0);
+    filteredBatches.sort((a, b) => a.startTime.localeCompare(b.startTime));
     
-    console.log(`✅ Returning ${batchesWithStats.length} batches`);
+    console.log(`✅ Returning ${filteredBatches.length} batches`);
     
     res.json({
-      success: true,
-      data: {
-        faculty: {
-          _id: faculty._id,
-          facultyId: faculty.facultyNo,
-          name: faculty.facultyName,
-          email: faculty.email,
-          status: faculty.status,
-          shift: faculty.shift,
-          courseAssigned: faculty.courseAssigned
-        },
-        batches: batchesWithStats,
-        totalBatches: batchesWithStats.length,
-        totalStudents: batchesWithStats.reduce((sum, batch) => sum + batch.totalStudents, 0)
-      }
-    });
+  success: true,
+  data: {
+    faculty: {
+      _id: faculty._id,
+      facultyId: faculty.facultyNo,
+      name: faculty.facultyName,
+      email: faculty.email,
+      status: faculty.status,
+      shift: faculty.shift,
+      courseAssigned: faculty.courseAssigned,
+      totalBatches: filteredBatches.length,           // ← fixes header "0"
+      totalStudents: filteredBatches.reduce((sum, b) => sum + b.totalStudents, 0)  // ← fixes header "0"
+    },
+    batches: filteredBatches,
+    totalBatches: filteredBatches.length,
+    totalStudents: filteredBatches.reduce((sum, b) => sum + b.totalStudents, 0)
+  }
+});
     
   } catch (error) {
     console.error("❌ Get faculty batches error:", error);
@@ -1239,25 +1243,28 @@ exports.getMyBatches = async (req, res) => {
     }));
     
     // Sort by start time
-    batchesWithStats.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    const filteredBatches = batchesWithStats.filter(b => b.totalStudents > 0);
+    filteredBatches.sort((a, b) => a.startTime.localeCompare(b.startTime));
     
     res.json({
-      success: true,
-      data: {
-        faculty: {
-          _id: faculty._id,
-          facultyId: faculty.facultyNo,
-          name: faculty.facultyName,
-          email: faculty.email,
-          status: faculty.status,
-          shift: faculty.shift,
-          courseAssigned: faculty.courseAssigned
-        },
-        batches: batchesWithStats,
-        totalBatches: batchesWithStats.length,
-        totalStudents: batchesWithStats.reduce((sum, batch) => sum + batch.totalStudents, 0)
-      }
-    });
+  success: true,
+  data: {
+    faculty: {
+      _id: faculty._id,
+      facultyId: faculty.facultyNo,
+      name: faculty.facultyName,
+      email: faculty.email,
+      status: faculty.status,
+      shift: faculty.shift,
+      courseAssigned: faculty.courseAssigned,
+      totalBatches: filteredBatches.length,
+      totalStudents: filteredBatches.reduce((sum, b) => sum + b.totalStudents, 0)
+    },
+    batches: filteredBatches,
+    totalBatches: filteredBatches.length,
+    totalStudents: filteredBatches.reduce((sum, b) => sum + b.totalStudents, 0)
+  }
+});
     
   } catch (error) {
     console.error("Get my batches error:", error);
