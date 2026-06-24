@@ -850,9 +850,9 @@ exports.getFacultyBatches = async (req, res) => {
     
     // Sort by start time
     const { includeEmpty } = req.query;
-const filteredBatches = includeEmpty === 'true'
-  ? batchesWithStats
-  : batchesWithStats.filter(b => b.totalStudents > 0);
+    const filteredBatches = includeEmpty === 'true'
+      ? batchesWithStats
+      : batchesWithStats.filter(b => b.totalStudents > 0);
     filteredBatches.sort((a, b) => a.startTime.localeCompare(b.startTime));
     
     console.log(`✅ Returning ${filteredBatches.length} batches`);
@@ -1493,5 +1493,148 @@ exports.getFacultyStats = async (req, res) => {
       message: "Server error",
       error: error.message,
     });
+  }
+};
+
+// @desc    Get faculty's free batch slots (based on shift timing)
+// @route   GET /api/faculty/:id/free-batches
+// @access  Private (Admin)
+exports.getFacultyFreeBatches = async (req, res) => {
+  try {
+    const facultyId = req.params.id;
+
+    // Get faculty with shift and lunch time
+    const faculty = await Faculty.findById(facultyId)
+      .select("_id facultyNo facultyName email status shift lunchTime courseAssigned photo")
+      .lean();
+
+    if (!faculty) {
+      return res.status(404).json({ success: false, message: "Faculty not found" });
+    }
+
+    // ── Parse shift time range e.g. "08:00-12:00" ──
+    const parseTimeRange = (str) => {
+      if (!str) return null;
+      const match = str.match(/(\d{2}):(\d{2})[^\d]*(\d{2}):(\d{2})/);
+      if (!match) return null;
+      return {
+        start: parseInt(match[1]) * 60 + parseInt(match[2]), // minutes from midnight
+        end:   parseInt(match[3]) * 60 + parseInt(match[4]),
+      };
+    };
+
+    const toMinutes = (timeStr) => {
+      if (!timeStr) return null;
+      const [h, m] = timeStr.split(":").map(Number);
+      return h * 60 + m;
+    };
+
+    const shiftRange  = parseTimeRange(faculty.shift);
+    const lunchRange  = parseTimeRange(faculty.lunchTime);
+
+    if (!shiftRange) {
+      return res.status(400).json({
+        success: false,
+        message: "Faculty shift time format is invalid"
+      });
+    }
+
+    // ── Get all setup batches ──
+    const { Batch } = require("../models/Setup");
+    const allBatches = await Batch.find({}).lean();
+
+    // ── Filter: batches within shift, excluding lunch ──
+    const batchesInShift = allBatches.filter(batch => {
+      const bStart = toMinutes(batch.startTime);
+      const bEnd   = toMinutes(batch.endTime);
+      if (bStart === null || bEnd === null) return false;
+
+      // Must fall within shift
+      const inShift = bStart >= shiftRange.start && bEnd <= shiftRange.end;
+      if (!inShift) return false;
+
+      // Must NOT overlap with lunch
+      if (lunchRange) {
+        const overlapsLunch = bStart < lunchRange.end && bEnd > lunchRange.start;
+        if (overlapsLunch) return false;
+      }
+
+      return true;
+    });
+
+    // ── Get faculty's user account ──
+    const facultyUser = await User.findOne({
+      facultyId: new mongoose.Types.ObjectId(facultyId),
+      role: "instructor"
+    }).select("_id").lean();
+
+    // ── Get TeacherBatch records for this faculty ──
+    const TeacherBatch = require("../models/TeacherBatch");
+    let occupiedBatchIds = new Set();
+
+    if (facultyUser) {
+      const teacherBatches = await TeacherBatch.find({
+        teacher: facultyUser._id,
+        isActive: true
+      })
+      .populate("assignedStudents.student", "_id")
+      .lean();
+
+      teacherBatches.forEach(tb => {
+        // Count real active students
+        const activeCount = (tb.assignedStudents || []).filter(s =>
+          s && s.student && (s.isActive !== undefined ? s.isActive : true)
+        ).length;
+
+        // Mark as occupied only if has real students
+        if (activeCount > 0) {
+          occupiedBatchIds.add(tb.batch.toString());
+        }
+      });
+    }
+
+    // ── Free = in shift + not occupied ──
+    const freeBatches = batchesInShift
+      .filter(b => !occupiedBatchIds.has(b._id.toString()))
+      .sort((a, b) => {
+        const aMin = toMinutes(a.startTime);
+        const bMin = toMinutes(b.startTime);
+        return aMin - bMin;
+      })
+      .map(b => ({
+        _id: b._id,
+        batchId: b._id,
+        name: b.batchName || b.displayName,
+        displayName: b.displayName,
+        startTime: b.startTime,
+        endTime: b.endTime,
+        timing: `${b.startTime} - ${b.endTime}`,
+        totalStudents: 0,
+      }));
+
+    res.json({
+      success: true,
+      data: {
+        faculty: {
+          _id: faculty._id,
+          facultyId: faculty.facultyNo,
+          name: faculty.facultyName,
+          email: faculty.email,
+          status: faculty.status,
+          shift: faculty.shift,
+          lunchTime: faculty.lunchTime,
+          courseAssigned: faculty.courseAssigned,
+          photo: faculty.photo,
+        },
+        freeBatches,
+        totalFreeBatches: freeBatches.length,
+        shiftRange: faculty.shift,
+        lunchRange: faculty.lunchTime,
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Get faculty free batches error:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };

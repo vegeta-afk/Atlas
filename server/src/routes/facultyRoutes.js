@@ -23,6 +23,8 @@ router.get("/me/batches", authorize("instructor"), facultyController.getMyBatche
 
 router.get("/me/batches/:batchId/students", authorize("instructor"), facultyController.getMyBatchStudents);
 
+router.get("/:id/free-batches", protect, getFacultyFreeBatches);
+
 // ======================
 // PARAM ROUTES AFTER — these must come last
 // ======================

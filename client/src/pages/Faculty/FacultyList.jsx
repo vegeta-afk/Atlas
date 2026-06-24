@@ -236,40 +236,36 @@ const FacultyList = () => {
     }
   };
 
-  const fetchFreeBatches = async (facultyList) => {
+const fetchFreeBatches = async (facultyList) => {
   setFreeBatchesLoading(true);
   try {
-    const batchResults = await Promise.all(
+    const results = await Promise.all(
       facultyList.map(async (f) => {
         try {
-          const res = await facultyAPI.getFacultyBatches(f._id, { includeEmpty: true });
-          const allBatches = res.data?.data?.batches || [];
-          const freeBatches = allBatches.filter(b => b.totalStudents === 0);
-          return { faculty: f, batches: freeBatches };
+          const res = await facultyAPI.getFreeBatches(f._id);
+          const freeBatches = res.data?.data?.freeBatches || [];
+          return freeBatches.map(batch => ({
+            ...batch,
+            facultyName:    f.facultyName,
+            facultyNo:      f.facultyNo,
+            facultyId:      f._id,
+            facultyStatus:  f.status,
+            facultyEmail:   f.email,
+            facultyMobile:  f.mobileNo,
+            facultyPhoto:   f.photo || null,
+            courseAssigned: f.courseAssigned,
+            shiftRange:     res.data?.data?.shiftRange,
+            lunchRange:     res.data?.data?.lunchRange,
+          }));
         } catch {
-          return { faculty: f, batches: [] };
+          return [];
         }
       })
     );
 
-    const results = batchResults.flatMap(({ faculty: f, batches }) =>
-      batches.map(batch => ({
-        ...batch,
-        students: [],
-        studentCount: 0,
-        facultyName: f.facultyName,
-        facultyNo: f.facultyNo,
-        facultyId: f._id,
-        facultyStatus: f.status,
-        facultyEmail: f.email,
-        facultyMobile: f.mobileNo,
-        facultyPhoto: f.photo || null,
-        courseAssigned: f.courseAssigned,
-      }))
-    );
-
-    setFreeBatchesData(results);
-    setTotalFreeBatches(results.length);
+    const flat = results.flat();
+    setFreeBatchesData(flat);
+    setTotalFreeBatches(flat.length);
     setFreeBatchesFetched(true);
   } catch (err) {
     console.error("Error fetching free batches:", err);
