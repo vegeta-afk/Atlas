@@ -94,6 +94,34 @@ const StudentFees = () => {
     setAllCourseFeeSchedules(updated);
   };
 
+  const getMergedSchedule = () => {
+  const allFees = allCourseFeeSchedules.flatMap(s => s.fees);
+  const admissionRows = allFees.filter(f => f.isAdmissionFee);
+  const monthlyFees = allFees.filter(f => !f.isAdmissionFee);
+
+  // Group by calendar month using dueDate (this is what actually overlaps across courses)
+  const groups = {};
+  monthlyFees.forEach(fee => {
+    const key = fee.dueDate ? fee.dueDate.slice(0, 7) : fee.month;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(fee);
+  });
+
+  const sortedKeys = Object.keys(groups).sort();
+
+  const merged = sortedKeys.map(key => {
+    const feesInMonth = groups[key];
+    return {
+      key,
+      displayMonth: feesInMonth[0].month,
+      isMerged: feesInMonth.length > 1,
+      fees: feesInMonth
+    };
+  });
+
+  return { admissionRows, merged };
+};
+
   // Fetch other fees from setup management
   const fetchOtherFees = async () => {
     try {
@@ -242,6 +270,18 @@ const handleRegisterDelete = async (receiptNo) => {
     return `RCPT${year}${month}${day}${random}`;
   };
 
+  const getCourseShortName = (courseName) => {
+  if (!courseName) return "C";
+  return courseName
+    .replace(/[()]/g, '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 6);
+};
+
   useEffect(() => {
     fetchStudents();
     fetchOtherFees();
@@ -382,6 +422,9 @@ const activeBalance = activeTotalFee - totalPaid;
             month: monthName || `Month ${monthNumber}`,
             description: fee.description || `${studentData?.course || "Course"} - ${fee.isExamMonth ? "Exam Fee" : "Monthly Fee"}`,
             type: fee.isExamMonth ? "exam" : "monthly",
+            courseName: studentData?.course || "Primary Course",
+            courseShortName: getCourseShortName(studentData?.course),
+            courseIndex: 0,
             totalAmount,
             pendingAmount: balanceAmount,
             balanceAmount,
@@ -463,6 +506,9 @@ return sorted;
               month: fee.month,
               description: `${ac.courseName} - ${fee.isExamMonth ? "Exam Fee" : "Monthly Fee"}`,
               type: fee.isExamMonth ? "exam" : "monthly",
+              courseName: ac.courseName,
+              courseShortName: getCourseShortName(ac.courseName),
+              courseIndex: acIndex + 1,
               totalAmount: fee.totalFee || 0,
               pendingAmount: fee.balanceAmount || fee.totalFee || 0,
               paidAmount: fee.paidAmount || 0,
@@ -493,45 +539,40 @@ return sorted;
   };
 
   // ✅ UPDATED: Uses updateCurrentFees
-  const toggleFeeSelection = (feeId) => {
-  const updatedFees = getCurrentFees().map(fee => {
-    if (fee.id === feeId) {
-      const newSelected = !fee.selected;
-      if (newSelected && fee.isExamMonth) {
-        // ✅ Initialize split amounts for exam months
-        const remainingExam = Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0));
-        const remainingMonthly = Math.max(0, (fee.pendingAmount || 0) - remainingExam);
-        return {
-          ...fee,
-          selected: true,
-          monthlyPayingAmount: remainingMonthly,
-          examPayingAmount: remainingExam,
-          payingAmount: remainingMonthly + remainingExam
-        };
-      }
-      return {
-        ...fee,
-        selected: newSelected,
-        payingAmount: newSelected ? (fee.pendingAmount || 0) : 0,
-        monthlyPayingAmount: undefined,
-        examPayingAmount: undefined
-      };
-    }
-    return fee;
+  const toggleFeeSelection = (courseIndex, feeId) => {
+  const updated = allCourseFeeSchedules.map((schedule, idx) => {
+    if (idx !== courseIndex) return schedule;
+    return {
+      ...schedule,
+      fees: schedule.fees.map(fee => {
+        if (fee.id !== feeId) return fee;
+        const newSelected = !fee.selected;
+        if (newSelected && fee.isExamMonth) {
+          const remainingExam = Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0));
+          const remainingMonthly = Math.max(0, (fee.pendingAmount || 0) - remainingExam);
+          return { ...fee, selected: true, monthlyPayingAmount: remainingMonthly, examPayingAmount: remainingExam, payingAmount: remainingMonthly + remainingExam };
+        }
+        return { ...fee, selected: newSelected, payingAmount: newSelected ? (fee.pendingAmount || 0) : 0, monthlyPayingAmount: undefined, examPayingAmount: undefined };
+      })
+    };
   });
-  updateCurrentFees(updatedFees);
+  setAllCourseFeeSchedules(updated);
 };
   // ✅ UPDATED: Uses updateCurrentFees
-  const handleAmountChange = (feeId, amount) => {
-    const updatedFees = getCurrentFees().map(fee => {
-      if (fee.id === feeId) {
+  const handleAmountChange = (courseIndex, feeId, amount) => {
+  const updated = allCourseFeeSchedules.map((schedule, idx) => {
+    if (idx !== courseIndex) return schedule;
+    return {
+      ...schedule,
+      fees: schedule.fees.map(fee => {
+        if (fee.id !== feeId) return fee;
         const maxAmount = fee.pendingAmount || 0;
         return { ...fee, payingAmount: Math.min(Math.max(0, amount), maxAmount) };
-      }
-      return fee;
-    });
-    updateCurrentFees(updatedFees);
-  };
+      })
+    };
+  });
+  setAllCourseFeeSchedules(updated);
+};
 
   // ✅ UPDATED: Calculates across ALL courses
   const calculateMonthlyFeesTotal = () => {
@@ -820,6 +861,318 @@ const activeBalance = activeTotalFee - totalPaid;
   ? defaulterStudents
   : defaulterStudents.filter(s => getOverdueMonths(s).length === defaulterMonthFilter);
 
+  const SingleFeeRow = ({ fee, allCourseFeeSchedules, setAllCourseFeeSchedules, toggleFeeSelection, handleAmountChange, formatCurrency }) => {
+  const courseIdx = fee.courseIndex ?? 0;
+
+  const updateFee = (updater) => {
+    setAllCourseFeeSchedules(prev => prev.map((schedule, idx) => {
+      if (idx !== courseIdx) return schedule;
+      return {
+        ...schedule,
+        fees: schedule.fees.map(f => f.id === fee.id ? updater(f) : f)
+      };
+    }));
+  };
+
+  return (
+    <div className={`p-4 hover:bg-gray-50 ${
+      fee.isAdmissionFee ? 'bg-purple-50 border-l-4 border-l-purple-400' :
+      fee.isExamMonth ? 'bg-yellow-50' : ''
+    }`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <input
+            type="checkbox"
+            checked={fee.selected || false}
+            onChange={() => toggleFeeSelection(courseIdx, fee.id)}
+            className="h-5 w-5 rounded text-blue-600 cursor-pointer"
+          />
+          <div>
+            <div className="font-medium text-gray-900">
+              {fee.month}
+              {fee.courseShortName && (
+                <span className="ml-2 px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-bold">{fee.courseShortName}</span>
+              )}
+            </div>
+            <div className="text-sm text-gray-600">{fee.description}</div>
+            <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+              <span>Type: {fee.type}</span>
+              {fee.isExamMonth && (
+                <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">Exam Month</span>
+              )}
+              {fee.isAdmissionFee && (
+                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-800 rounded text-xs font-medium">One-time Fee</span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="font-bold text-gray-900">
+            {formatCurrency(fee.pendingAmount || 0)}
+            {fee.status === "partial" && (
+              <span className="text-sm font-normal text-gray-500 ml-1">remaining</span>
+            )}
+          </div>
+          <div className="text-sm">
+            {fee.status === "partial" ? (
+              <div className="text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
+            ) : (
+              <div className="text-red-600">Due: {formatCurrency(fee.pendingAmount || 0)}</div>
+            )}
+          </div>
+          {fee.status === "partial" && (
+            <div className="text-xs text-gray-500 mt-1">Original: {formatCurrency(fee.totalAmount)}</div>
+          )}
+        </div>
+      </div>
+
+      {fee.selected && (
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="text-sm text-gray-600 mb-3">Paying for {fee.month}</div>
+
+          {fee.isExamMonth ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Monthly Fee
+                    <span className="ml-1 text-xs text-gray-400">
+                      (Max: {formatCurrency(Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))))})
+                    </span>
+                  </label>
+                  <input
+                    type="number"
+                    value={fee.monthlyPayingAmount ?? Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      const maxMonthly = Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)));
+                      const clampedVal = Math.min(val, maxMonthly);
+                      updateFee(f => {
+                        const examPaying = f.examPayingAmount ?? (f.examFee || 0);
+                        return { ...f, monthlyPayingAmount: clampedVal, payingAmount: clampedVal + examPaying };
+                      });
+                    }}
+                    onWheel={(e) => e.target.blur()}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    min="0"
+                    max={Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-yellow-700 mb-1">
+                    Exam Fee
+                    <span className="ml-1 text-xs text-gray-400">
+                      (Max: {formatCurrency(Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))})
+                    </span>
+                  </label>
+
+                  {(fee.examPaid || 0) >= (fee.examFee || 0) && (fee.examFee || 0) > 0 ? (
+                    <div className="w-full px-3 py-2 border border-green-300 rounded-lg bg-green-50 text-green-700 text-sm font-medium">
+                      ✅ Exam fee already paid — ₹{fee.examFee}
+                    </div>
+                  ) : (
+                    <input
+                      type="number"
+                      value={fee.examPayingAmount ?? Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        const maxExam = Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0));
+                        const clampedVal = Math.min(val, maxExam);
+                        updateFee(f => {
+                          const monthlyPaying = f.monthlyPayingAmount ?? ((f.pendingAmount || 0) - maxExam);
+                          return { ...f, examPayingAmount: clampedVal, payingAmount: monthlyPaying + clampedVal };
+                        });
+                      }}
+                      onWheel={(e) => e.target.blur()}
+                      className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 bg-yellow-50"
+                      min="0"
+                      max={Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))}
+                    />
+                  )}
+
+                  {(fee.examPaid || 0) >= (fee.examFee || 0) && (fee.examFee || 0) > 0 ? (
+                    <p className="text-xs text-green-600 mt-1">✅ Exam fee fully paid — eligible for exam</p>
+                  ) : (fee.examPayingAmount ?? Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))) + (fee.examPaid || 0) >= (fee.examFee || 0) ? (
+                    <p className="text-xs text-green-600 mt-1">✅ Will be exam eligible after this payment</p>
+                  ) : (
+                    <p className="text-xs text-red-500 mt-1">❌ Exam fee not fully paid</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center bg-white rounded-lg px-3 py-2 border border-blue-200">
+                <span className="text-sm text-gray-600">Total paying:</span>
+                <span className="font-bold text-blue-700">
+                  {formatCurrency(
+                    (fee.monthlyPayingAmount ?? Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))) +
+                    (fee.examPayingAmount ?? Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))
+                  )}
+                </span>
+              </div>
+
+              {fee.status === "partial" && (
+                <div className="text-xs text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center space-x-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Amount to Pay</label>
+                <input
+                  type="number"
+                  value={fee.payingAmount || 0}
+                  onChange={(e) => handleAmountChange(courseIdx, fee.id, parseFloat(e.target.value) || 0)}
+                  onWheel={(e) => e.target.blur()}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  min="0"
+                  max={fee.pendingAmount || 0}
+                />
+                <div className="text-xs text-gray-500 mt-1">Max: {formatCurrency(fee.pendingAmount || 0)}</div>
+              </div>
+              <div className="text-sm">
+                <div className="text-gray-600">Remaining: {formatCurrency(fee.pendingAmount)}</div>
+                {fee.status === "partial" && (
+                  <div className="text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
+                )}
+                {fee.payingAmount > 0 && (
+                  <div className="text-red-600 mt-1">
+                    Will remain: {formatCurrency((fee.pendingAmount || 0) - (fee.payingAmount || 0))}
+                    {(fee.pendingAmount || 0) - (fee.payingAmount || 0) > 0 && (
+                      <span className="text-xs ml-1">(added to next month)</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const SplitMonthRow = ({ group, setAllCourseFeeSchedules, toggleFeeSelection, handleAmountChange, formatCurrency }) => {
+  const updateFeeInGroup = (fee, updater) => {
+    const courseIdx = fee.courseIndex;
+    setAllCourseFeeSchedules(prev => prev.map((schedule, idx) => {
+      if (idx !== courseIdx) return schedule;
+      return {
+        ...schedule,
+        fees: schedule.fees.map(f => f.id === fee.id ? updater(f) : f)
+      };
+    }));
+  };
+
+  return (
+    <div className="p-4 bg-indigo-50 border-l-4 border-l-indigo-400">
+      <div className="text-sm font-semibold text-gray-700 mb-3">{group.displayMonth}</div>
+
+      <div className="bg-white border border-indigo-200 rounded-lg p-4 space-y-4">
+
+        <div className="grid grid-cols-2 gap-4">
+          {group.fees.map(fee => (
+            <label key={fee.id} className="flex items-center justify-between gap-2 cursor-pointer">
+              <span className="flex items-center gap-2 text-sm font-medium text-gray-800">
+                <input
+                  type="checkbox"
+                  checked={fee.selected || false}
+                  onChange={() => toggleFeeSelection(fee.courseIndex, fee.id)}
+                />
+                <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-bold">{fee.courseShortName}</span>
+                {fee.isExamMonth && (
+                  <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">Exam</span>
+                )}
+              </span>
+              <span className="text-sm font-bold text-gray-900">{formatCurrency(fee.pendingAmount || 0)}</span>
+            </label>
+          ))}
+        </div>
+
+        {group.fees.map(fee => {
+          if (!fee.selected) return null;
+
+          return (
+            <div key={fee.id} className="pt-3 border-t border-gray-100">
+              <div className="text-xs font-semibold text-indigo-600 mb-2">{fee.courseShortName}</div>
+
+              {fee.isExamMonth ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Monthly Fee
+                      <span className="ml-1 text-gray-400">
+                        (Max: {formatCurrency(Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))))})
+                      </span>
+                    </label>
+                    <input
+                      type="number"
+                      value={fee.monthlyPayingAmount ?? Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        const maxMonthly = Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)));
+                        const clamped = Math.min(val, maxMonthly);
+                        updateFeeInGroup(fee, f => {
+                          const examPaying = f.examPayingAmount ?? (f.examFee || 0);
+                          return { ...f, monthlyPayingAmount: clamped, payingAmount: clamped + examPaying };
+                        });
+                      }}
+                      onWheel={(e) => e.target.blur()}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-400"
+                      min="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-yellow-700 mb-1">
+                      Exam Fee
+                      <span className="ml-1 text-gray-400">
+                        (Max: {formatCurrency(Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))})
+                      </span>
+                    </label>
+                    {(fee.examPaid || 0) >= (fee.examFee || 0) && (fee.examFee || 0) > 0 ? (
+                      <div className="px-3 py-2 border border-green-300 rounded-lg bg-green-50 text-green-700 text-xs font-medium">
+                        ✅ Already paid — ₹{fee.examFee}
+                      </div>
+                    ) : (
+                      <input
+                        type="number"
+                        value={fee.examPayingAmount ?? Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          const maxExam = Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0));
+                          const clamped = Math.min(val, maxExam);
+                          updateFeeInGroup(fee, f => {
+                            const monthlyPaying = f.monthlyPayingAmount ?? ((f.pendingAmount || 0) - maxExam);
+                            return { ...f, examPayingAmount: clamped, payingAmount: monthlyPaying + clamped };
+                          });
+                        }}
+                        onWheel={(e) => e.target.blur()}
+                        className="w-full px-3 py-2 border border-yellow-300 rounded-lg text-sm bg-yellow-50 focus:ring-2 focus:ring-yellow-400"
+                        min="0"
+                      />
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <input
+                  type="number"
+                  value={fee.payingAmount || 0}
+                  onChange={(e) => handleAmountChange(fee.courseIndex, fee.id, parseFloat(e.target.value) || 0)}
+                  onWheel={(e) => e.target.blur()}
+                  className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-400"
+                  min="0"
+                  max={fee.pendingAmount || 0}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
  return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       {/* Header */}
@@ -1067,30 +1420,7 @@ const activeBalance = activeTotalFee - totalPaid;
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
 
                       {/* Course Tabs - only show if multiple courses */}
-                      {allCourseFeeSchedules.length > 1 && (
-                        <div className="flex border-b bg-gray-50 overflow-x-auto">
-                          {allCourseFeeSchedules.map((schedule, idx) => (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => setSelectedCourseTab(idx)}
-                              className={`px-5 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex items-center gap-2 ${
-                                selectedCourseTab === idx
-                                  ? "border-blue-600 text-blue-600 bg-white"
-                                  : "border-transparent text-gray-500 hover:text-gray-700"
-                              }`}
-                            >
-                              <span>{idx === 0 ? "📚" : "➕"}</span>
-                              <span>{schedule.courseName}</span>
-                              {schedule.fees.filter(f => f.selected).length > 0 && (
-                                <span className="bg-blue-100 text-blue-700 text-xs px-1.5 py-0.5 rounded-full">
-                                  {schedule.fees.filter(f => f.selected).length}
-                                </span>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      
 
                       {/* Header */}
                       <div className="bg-gray-50 p-4 border-b">
@@ -1102,210 +1432,59 @@ const activeBalance = activeTotalFee - totalPaid;
                       </div>
 
                       {/* Fee Rows */}
-                      <div className="divide-y divide-gray-100 overflow-y-auto max-h-[285px]">
-                        {getCurrentFees().length === 0 ? (
-                          <div className="p-8 text-center">
-                            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900">All Fees Paid!</h3>
-                            <p className="text-gray-600">No pending fees for this course.</p>
-                          </div>
-                        ) : (
-                          getCurrentFees().map((fee) => (
-                            <div key={fee.id} className={`p-4 hover:bg-gray-50 ${
-  fee.isAdmissionFee ? 'bg-purple-50 border-l-4 border-l-purple-400' :
-  fee.isExamMonth ? 'bg-yellow-50' : ''
-}`}>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                  <input
-                                    type="checkbox"
-                                    checked={fee.selected || false}
-                                    onChange={() => toggleFeeSelection(fee.id)}
-                                    className="h-5 w-5 rounded text-blue-600 cursor-pointer"
-                                  />
-                                  <div>
-                                    <div className="font-medium text-gray-900">{fee.month}</div>
-                                    <div className="text-sm text-gray-600">{fee.description}</div>
-                                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
-  <span>Type: {fee.type}</span>
-  {fee.isExamMonth && (
-    <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">Exam Month</span>
-  )}
-  {fee.isAdmissionFee && (
-    <span className="px-1.5 py-0.5 bg-purple-100 text-purple-800 rounded text-xs font-medium">One-time Fee</span>
-  )}
-</div>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-bold text-gray-900">
-                                    {formatCurrency(fee.pendingAmount || 0)}
-                                    {fee.status === "partial" && (
-                                      <span className="text-sm font-normal text-gray-500 ml-1">remaining</span>
-                                    )}
-                                  </div>
-                                  <div className="text-sm">
-                                    {fee.status === "partial" ? (
-                                      <div className="text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
-                                    ) : (
-                                      <div className="text-red-600">Due: {formatCurrency(fee.pendingAmount || 0)}</div>
-                                    )}
-                                  </div>
-                                  {fee.status === "partial" && (
-                                    <div className="text-xs text-gray-500 mt-1">Original: {formatCurrency(fee.totalAmount)}</div>
-                                  )}
-                                </div>
-                              </div>
+<div className="divide-y divide-gray-100 overflow-y-auto max-h-[285px]">
+  {(() => {
+    const { admissionRows, merged } = getMergedSchedule();
+    const hasAnyFees = admissionRows.length > 0 || merged.length > 0;
 
-                              {fee.selected && (
-  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-    <div className="text-sm text-gray-600 mb-3">Paying for {fee.month}</div>
-
-    {fee.isExamMonth ? (
-      // ── EXAM MONTH: Split inputs ──────────────────────
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-4">
-          {/* Monthly Fee Input */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Monthly Fee
-              <span className="ml-1 text-xs text-gray-400">
-                (Max: {formatCurrency(Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))))})
-              </span>
-            </label>
-            <input
-              type="number"
-              value={fee.monthlyPayingAmount ?? Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value) || 0;
-                const maxMonthly = Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)));
-                const clampedVal = Math.min(val, maxMonthly);
-                const updatedFees = getCurrentFees().map(f => {
-                  if (f.id === fee.id) {
-                    const examPaying = f.examPayingAmount ?? (f.examFee || 0);
-                    return {
-                      ...f,
-                      monthlyPayingAmount: clampedVal,
-                      payingAmount: clampedVal + examPaying
-                    };
-                  }
-                  return f;
-                });
-                updateCurrentFees(updatedFees);
-              }}
-              onWheel={(e) => e.target.blur()}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              min="0"
-              max={Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))}
-            />
-          </div>
-
-          {/* Exam Fee Input */}
-<div>
-  <label className="block text-sm font-medium text-yellow-700 mb-1">
-    Exam Fee
-    <span className="ml-1 text-xs text-gray-400">
-      (Max: {formatCurrency(Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))})
-    </span>
-  </label>
-
-  {(fee.examPaid || 0) >= (fee.examFee || 0) && (fee.examFee || 0) > 0 ? (
-    // ✅ LOCKED — exam already paid
-    <div className="w-full px-3 py-2 border border-green-300 rounded-lg bg-green-50 text-green-700 text-sm font-medium">
-      ✅ Exam fee already paid — ₹{fee.examFee}
-    </div>
-  ) : (
-    <input
-      type="number"
-      value={fee.examPayingAmount ?? Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))}
-      onChange={(e) => {
-        const val = parseFloat(e.target.value) || 0;
-        const maxExam = Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0));
-        const clampedVal = Math.min(val, maxExam);
-        const updatedFees = getCurrentFees().map(f => {
-          if (f.id === fee.id) {
-            const monthlyPaying = f.monthlyPayingAmount ?? ((f.pendingAmount || 0) - maxExam);
-            return {
-              ...f,
-              examPayingAmount: clampedVal,
-              payingAmount: monthlyPaying + clampedVal
-            };
-          }
-          return f;
-        });
-        updateCurrentFees(updatedFees);
-      }}
-      onWheel={(e) => e.target.blur()}
-      className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 bg-yellow-50"
-      min="0"
-      max={Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))}
-    />
-  )}
-
-  {(fee.examPaid || 0) >= (fee.examFee || 0) && (fee.examFee || 0) > 0 ? (
-    <p className="text-xs text-green-600 mt-1">✅ Exam fee fully paid — eligible for exam</p>
-  ) : (fee.examPayingAmount ?? Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))) + (fee.examPaid || 0) >= (fee.examFee || 0) ? (
-    <p className="text-xs text-green-600 mt-1">✅ Will be exam eligible after this payment</p>
-  ) : (
-    <p className="text-xs text-red-500 mt-1">❌ Exam fee not fully paid</p>
-  )}
-</div>
+    if (!hasAnyFees) {
+      return (
+        <div className="p-8 text-center">
+          <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900">All Fees Paid!</h3>
+          <p className="text-gray-600">No pending fees for this student.</p>
         </div>
+      );
+    }
 
-        {/* Total summary */}
-        <div className="flex justify-between items-center bg-white rounded-lg px-3 py-2 border border-blue-200">
-          <span className="text-sm text-gray-600">Total paying:</span>
-          <span className="font-bold text-blue-700">
-            {formatCurrency(
-  (fee.monthlyPayingAmount ?? Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))) +
-  (fee.examPayingAmount ?? Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))
-)}
-          </span>
-        </div>
-
-        {fee.status === "partial" && (
-          <div className="text-xs text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
-        )}
-      </div>
-
-    ) : (
-      // ── REGULAR MONTH: Single input ───────────────────
-      <div className="flex items-center space-x-4">
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Amount to Pay</label>
-          <input
-            type="number"
-            value={fee.payingAmount || 0}
-            onChange={(e) => handleAmountChange(fee.id, parseFloat(e.target.value) || 0)}
-            onWheel={(e) => e.target.blur()}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            min="0"
-            max={fee.pendingAmount || 0}
+    return (
+      <>
+        {admissionRows.map(fee => (
+          <SingleFeeRow
+            key={fee.id}
+            fee={fee}
+            setAllCourseFeeSchedules={setAllCourseFeeSchedules}
+            toggleFeeSelection={toggleFeeSelection}
+            handleAmountChange={handleAmountChange}
+            formatCurrency={formatCurrency}
           />
-          <div className="text-xs text-gray-500 mt-1">Max: {formatCurrency(fee.pendingAmount || 0)}</div>
-        </div>
-        <div className="text-sm">
-          <div className="text-gray-600">Remaining: {formatCurrency(fee.pendingAmount)}</div>
-          {fee.status === "partial" && (
-            <div className="text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
-          )}
-          {fee.payingAmount > 0 && (
-            <div className="text-red-600 mt-1">
-              Will remain: {formatCurrency((fee.pendingAmount || 0) - (fee.payingAmount || 0))}
-              {(fee.pendingAmount || 0) - (fee.payingAmount || 0) > 0 && (
-                <span className="text-xs ml-1">(added to next month)</span>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    )}
-  </div>
-)}
-                            </div>
-                          ))
-                        )}
-                      </div>
+        ))}
+
+        {merged.map(group =>
+          group.isMerged ? (
+            <SplitMonthRow
+              key={group.key}
+              group={group}
+              setAllCourseFeeSchedules={setAllCourseFeeSchedules}
+              toggleFeeSelection={toggleFeeSelection}
+              handleAmountChange={handleAmountChange}
+              formatCurrency={formatCurrency}
+            />
+          ) : (
+            <SingleFeeRow
+              key={group.fees[0].id}
+              fee={group.fees[0]}
+              setAllCourseFeeSchedules={setAllCourseFeeSchedules}
+              toggleFeeSelection={toggleFeeSelection}
+              handleAmountChange={handleAmountChange}
+              formatCurrency={formatCurrency}
+            />
+          )
+        )}
+      </>
+    );
+  })()}
+</div>
 
                       {/* Total */}
                       <div className="p-4 bg-gray-50 border-t">
