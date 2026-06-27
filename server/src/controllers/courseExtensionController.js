@@ -91,7 +91,9 @@ exports.getExtensionPreview = async (req, res) => {
     const newDuration = parseInt(newCourse.duration) || 0;
     const extensionMonthNum = parseInt(extensionMonth);
 
-    const newMonthlyFee = parseFloat(newCourse.monthlyFee) || 0;
+    const newMonthlyFee = hasScholarship && finalMonthlyFee
+  ? parseFloat(finalMonthlyFee)
+  : parseFloat(newCourse.monthlyFee) || 0;
     const newExamFee = parseFloat(newCourse.examFee) || 0;
     const newExamMonths = newCourse.examMonths
       ? newCourse.examMonths.split(',').map(m => parseInt(m.trim()))
@@ -168,12 +170,15 @@ exports.extendStudentCourse = async (req, res) => {
     console.log("=".repeat(60));
     
     const {
-      studentId,
-      newCourseId,
-      extensionReason,
-      facultyId,
-      batchTime
-    } = req.body;
+  studentId,
+  newCourseId,
+  extensionReason,
+  facultyId,
+  batchTime,
+  scholarshipPercent,
+  finalMonthlyFee,
+  hasScholarship
+} = req.body;
 
     console.log("Request body:", { studentId, newCourseId, facultyId, batchTime, extensionReason });
 
@@ -205,7 +210,9 @@ exports.extendStudentCourse = async (req, res) => {
     // Primary course name comes from student.course (String field)
     const primaryCourseName = student.course;
 
-    const newMonthlyFee = parseFloat(newCourse.monthlyFee) || 0;
+    const newMonthlyFee = hasScholarship && finalMonthlyFee
+  ? parseFloat(finalMonthlyFee)
+  : parseFloat(newCourse.monthlyFee) || 0;
     const newExamFee = parseFloat(newCourse.examFee) || 0;
     const newDuration = parseInt(newCourse.duration) || 0;
     const startDate = new Date(student.admissionDate);
@@ -273,7 +280,10 @@ exports.extendStudentCourse = async (req, res) => {
       attendance: [],
       payments: [],
       isActive: true,
-      enrolledAt: new Date()
+enrolledAt: new Date(),
+hasScholarship: !!hasScholarship,
+scholarshipPercent: scholarshipPercent || 0,
+originalMonthlyFee: parseFloat(newCourse.monthlyFee) || 0,
     };
 
     if (!student.additionalCourses) {

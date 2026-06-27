@@ -63,6 +63,11 @@ const CourseExtension = () => {
   const [previewData, setPreviewData] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
+  const [isNewCourseScholarshipEligible, setIsNewCourseScholarshipEligible] = useState(false);
+const [showScholarshipModal, setShowScholarshipModal] = useState(false);
+const [scholarshipPercent, setScholarshipPercent] = useState("");
+const [scholarshipData, setScholarshipData] = useState(null);
+
   useEffect(() => {
     fetchCourses();
     fetchFaculty();
@@ -147,10 +152,13 @@ const CourseExtension = () => {
   };
 
   const handleSelectCourse = (course) => {
-    setSelectedCourse(course);
-    setStep(3);
-    setError(null);
-  };
+  setSelectedCourse(course);
+  setScholarshipData(null);
+  setScholarshipPercent("");
+  setIsNewCourseScholarshipEligible(course.courseType === "scholarship_based");
+  setStep(3);
+  setError(null);
+};
 
   const getExtensionPreview = async () => {
     if (!selectedStudent || !selectedCourse || !selectedFaculty || !selectedBatch) {
@@ -245,6 +253,9 @@ const CourseExtension = () => {
     setSuccess(null);
     setSearchTerm("");
     setStudents([]);
+    setScholarshipData(null);
+setScholarshipPercent("");
+setIsNewCourseScholarshipEligible(false);
   };
 
   const goBack = () => {
@@ -626,6 +637,50 @@ const CourseExtension = () => {
                 </div>
               </div>
 
+              {/* Scholarship Section */}
+{isNewCourseScholarshipEligible && (
+  <div className="mt-6 p-4 bg-purple-50 rounded-xl border border-purple-200">
+    <h4 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
+      <Award size={16} />
+      Scholarship (Optional)
+    </h4>
+    {!scholarshipData ? (
+      <button
+        type="button"
+        onClick={() => setShowScholarshipModal(true)}
+        className="w-full py-2 px-4 border-2 border-dashed border-purple-300 text-purple-600 rounded-lg hover:bg-purple-100 transition-all text-sm font-medium flex items-center justify-center gap-2"
+      >
+        + Apply Scholarship Discount
+      </button>
+    ) : (
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-purple-700 font-medium">
+            ✅ {scholarshipData.percent}% scholarship applied
+          </span>
+          <button
+            type="button"
+            onClick={() => { setScholarshipData(null); setScholarshipPercent(""); }}
+            className="text-xs text-red-500 hover:text-red-700 underline"
+          >
+            Remove
+          </button>
+        </div>
+        <div className="text-xs text-purple-600 space-y-1">
+          <div className="flex justify-between">
+            <span>Original monthly:</span>
+            <span>₹{selectedCourse.monthlyFee}</span>
+          </div>
+          <div className="flex justify-between font-semibold">
+            <span>Discounted monthly:</span>
+            <span className="text-green-600">₹{scholarshipData.finalMonthlyFee.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+)}
+
               {/* Reason (Optional) */}
               <div className="mt-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -776,6 +831,77 @@ const CourseExtension = () => {
           </div>
         )}
       </div>
+
+      {showScholarshipModal && selectedCourse && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 flex justify-between items-center">
+        <h3 className="text-white font-bold text-lg">Apply Scholarship</h3>
+        <button
+          onClick={() => { setShowScholarshipModal(false); setScholarshipPercent(""); }}
+          className="text-white/70 hover:text-white text-2xl leading-none"
+        >
+          &times;
+        </button>
+      </div>
+      <div className="p-6 space-y-4">
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+            Scholarship Percentage (%)
+          </label>
+          <input
+            type="number" min="0" max="100" step="any"
+            value={scholarshipPercent}
+            onChange={(e) => setScholarshipPercent(e.target.value)}
+            placeholder="e.g. 25"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+          />
+        </div>
+        {parseFloat(scholarshipPercent) > 0 && (
+          <div className="bg-purple-50 rounded-lg p-4 border border-purple-100 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Original monthly:</span>
+              <span>₹{selectedCourse.monthlyFee}</span>
+            </div>
+            <div className="flex justify-between text-green-600">
+              <span>Discount ({scholarshipPercent}%):</span>
+              <span>- ₹{((selectedCourse.monthlyFee * parseFloat(scholarshipPercent)) / 100).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between font-bold border-t border-purple-200 pt-2">
+              <span>New monthly fee:</span>
+              <span className="text-purple-700">
+                ₹{(selectedCourse.monthlyFee * (1 - parseFloat(scholarshipPercent) / 100)).toFixed(2)}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="px-6 pb-6 flex justify-end gap-3">
+        <button
+          onClick={() => { setShowScholarshipModal(false); setScholarshipPercent(""); }}
+          className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600"
+        >
+          Cancel
+        </button>
+        <button
+          disabled={!scholarshipPercent || parseFloat(scholarshipPercent) <= 0}
+          onClick={() => {
+            const pct = parseFloat(scholarshipPercent);
+            setScholarshipData({
+              percent: pct,
+              finalMonthlyFee: selectedCourse.monthlyFee * (1 - pct / 100),
+              originalMonthlyFee: selectedCourse.monthlyFee,
+            });
+            setShowScholarshipModal(false);
+          }}
+          className="px-5 py-2 text-sm text-white rounded-lg font-medium bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Apply Scholarship
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
