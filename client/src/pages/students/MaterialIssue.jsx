@@ -147,22 +147,6 @@ const handleDeleteMaterial = async (id) => {
   }
 };
 
-exports.updateMaterial = async (req, res) => {
-  try {
-    const { name, totalQuantity, unit, description } = req.body;
-    if (!name?.trim()) {
-      return res.status(400).json({ success: false, message: "Material name is required" });
-    }
-    const material = await Material.findByIdAndUpdate(
-      req.params.id,
-      { $set: { name: name.trim(), totalQuantity, unit, description } },
-      { new: true }
-    );
-    res.json({ success: true, data: material });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
 
 const getIssuedCount = (materialId) => {
   return Object.values(issuesMap).filter(
