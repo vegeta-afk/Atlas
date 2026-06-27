@@ -94,33 +94,7 @@ const StudentFees = () => {
     setAllCourseFeeSchedules(updated);
   };
 
-  const getMergedSchedule = () => {
-  const allFees = allCourseFeeSchedules.flatMap(s => s.fees);
-  const admissionRows = allFees.filter(f => f.isAdmissionFee);
-  const monthlyFees = allFees.filter(f => !f.isAdmissionFee);
-
-  // Group by calendar month using dueDate (this is what actually overlaps across courses)
-  const groups = {};
-  monthlyFees.forEach(fee => {
-    const key = fee.dueDate ? fee.dueDate.slice(0, 7) : fee.month;
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(fee);
-  });
-
-  const sortedKeys = Object.keys(groups).sort();
-
-  const merged = sortedKeys.map(key => {
-    const feesInMonth = groups[key];
-    return {
-      key,
-      displayMonth: feesInMonth[0].month,
-      isMerged: feesInMonth.length > 1,
-      fees: feesInMonth
-    };
-  });
-
-  return { admissionRows, merged };
-};
+ 
 
   // Fetch other fees from setup management
   const fetchOtherFees = async () => {
@@ -1052,126 +1026,7 @@ const activeBalance = activeTotalFee - totalPaid;
   );
 };
 
-const SplitMonthRow = ({ group, setAllCourseFeeSchedules, toggleFeeSelection, handleAmountChange, formatCurrency }) => {
-  const updateFeeInGroup = (fee, updater) => {
-    const courseIdx = fee.courseIndex;
-    setAllCourseFeeSchedules(prev => prev.map((schedule, idx) => {
-      if (idx !== courseIdx) return schedule;
-      return {
-        ...schedule,
-        fees: schedule.fees.map(f => f.id === fee.id ? updater(f) : f)
-      };
-    }));
-  };
 
-  return (
-    <div className="p-4 bg-indigo-50 border-l-4 border-l-indigo-400">
-      <div className="text-sm font-semibold text-gray-700 mb-3">{group.displayMonth}</div>
-
-      <div className="bg-white border border-indigo-200 rounded-lg p-4 space-y-4">
-
-        <div className="grid grid-cols-2 gap-4">
-          {group.fees.map(fee => (
-            <label key={fee.id} className="flex items-center justify-between gap-2 cursor-pointer">
-              <span className="flex items-center gap-2 text-sm font-medium text-gray-800">
-                <input
-                  type="checkbox"
-                  checked={fee.selected || false}
-                  onChange={() => toggleFeeSelection(fee.courseIndex, fee.id)}
-                />
-                <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs font-bold">{fee.courseShortName}</span>
-                {fee.isExamMonth && (
-                  <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">Exam</span>
-                )}
-              </span>
-              <span className="text-sm font-bold text-gray-900">{formatCurrency(fee.pendingAmount || 0)}</span>
-            </label>
-          ))}
-        </div>
-
-        {group.fees.map(fee => {
-          if (!fee.selected) return null;
-
-          return (
-            <div key={fee.id} className="pt-3 border-t border-gray-100">
-              <div className="text-xs font-semibold text-indigo-600 mb-2">{fee.courseShortName}</div>
-
-              {fee.isExamMonth ? (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Monthly Fee
-                      <span className="ml-1 text-gray-400">
-                        (Max: {formatCurrency(Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))))})
-                      </span>
-                    </label>
-                    <input
-                      type="number"
-                      value={fee.monthlyPayingAmount ?? Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value) || 0;
-                        const maxMonthly = Math.max(0, (fee.pendingAmount || 0) - Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)));
-                        const clamped = Math.min(val, maxMonthly);
-                        updateFeeInGroup(fee, f => {
-                          const examPaying = f.examPayingAmount ?? (f.examFee || 0);
-                          return { ...f, monthlyPayingAmount: clamped, payingAmount: clamped + examPaying };
-                        });
-                      }}
-                      onWheel={(e) => e.target.blur()}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-400"
-                      min="0"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-yellow-700 mb-1">
-                      Exam Fee
-                      <span className="ml-1 text-gray-400">
-                        (Max: {formatCurrency(Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0)))})
-                      </span>
-                    </label>
-                    {(fee.examPaid || 0) >= (fee.examFee || 0) && (fee.examFee || 0) > 0 ? (
-                      <div className="px-3 py-2 border border-green-300 rounded-lg bg-green-50 text-green-700 text-xs font-medium">
-                        ✅ Already paid — ₹{fee.examFee}
-                      </div>
-                    ) : (
-                      <input
-                        type="number"
-                        value={fee.examPayingAmount ?? Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0))}
-                        onChange={(e) => {
-                          const val = parseFloat(e.target.value) || 0;
-                          const maxExam = Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0));
-                          const clamped = Math.min(val, maxExam);
-                          updateFeeInGroup(fee, f => {
-                            const monthlyPaying = f.monthlyPayingAmount ?? ((f.pendingAmount || 0) - maxExam);
-                            return { ...f, examPayingAmount: clamped, payingAmount: monthlyPaying + clamped };
-                          });
-                        }}
-                        onWheel={(e) => e.target.blur()}
-                        className="w-full px-3 py-2 border border-yellow-300 rounded-lg text-sm bg-yellow-50 focus:ring-2 focus:ring-yellow-400"
-                        min="0"
-                      />
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <input
-                  type="number"
-                  value={fee.payingAmount || 0}
-                  onChange={(e) => handleAmountChange(fee.courseIndex, fee.id, parseFloat(e.target.value) || 0)}
-                  onWheel={(e) => e.target.blur()}
-                  className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-400"
-                  min="0"
-                  max={fee.pendingAmount || 0}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
 
  return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -1419,7 +1274,7 @@ const SplitMonthRow = ({ group, setAllCourseFeeSchedules, toggleFeeSelection, ha
                     {/* Fee Table - separate bordered box */}
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
 
-                      {/* Course Tabs - only show if multiple courses */}
+                      
                       
 
                       {/* Header */}
@@ -1434,56 +1289,33 @@ const SplitMonthRow = ({ group, setAllCourseFeeSchedules, toggleFeeSelection, ha
                       {/* Fee Rows */}
 <div className="divide-y divide-gray-100 overflow-y-auto max-h-[285px]">
   {(() => {
-    const { admissionRows, merged } = getMergedSchedule();
-    const hasAnyFees = admissionRows.length > 0 || merged.length > 0;
-
-    if (!hasAnyFees) {
-      return (
-        <div className="p-8 text-center">
-          <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900">All Fees Paid!</h3>
-          <p className="text-gray-600">No pending fees for this student.</p>
-        </div>
-      );
-    }
-
+  const allFees = allCourseFeeSchedules.flatMap(s => s.fees);
+  if (allFees.length === 0) {
     return (
-      <>
-        {admissionRows.map(fee => (
-          <SingleFeeRow
-            key={fee.id}
-            fee={fee}
-            setAllCourseFeeSchedules={setAllCourseFeeSchedules}
-            toggleFeeSelection={toggleFeeSelection}
-            handleAmountChange={handleAmountChange}
-            formatCurrency={formatCurrency}
-          />
-        ))}
-
-        {merged.map(group =>
-          group.isMerged ? (
-            <SplitMonthRow
-              key={group.key}
-              group={group}
-              setAllCourseFeeSchedules={setAllCourseFeeSchedules}
-              toggleFeeSelection={toggleFeeSelection}
-              handleAmountChange={handleAmountChange}
-              formatCurrency={formatCurrency}
-            />
-          ) : (
-            <SingleFeeRow
-              key={group.fees[0].id}
-              fee={group.fees[0]}
-              setAllCourseFeeSchedules={setAllCourseFeeSchedules}
-              toggleFeeSelection={toggleFeeSelection}
-              handleAmountChange={handleAmountChange}
-              formatCurrency={formatCurrency}
-            />
-          )
-        )}
-      </>
+      <div className="p-8 text-center">
+        <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900">All Fees Paid!</h3>
+        <p className="text-gray-600">No pending fees for this student.</p>
+      </div>
     );
-  })()}
+  }
+  const sorted = [...allFees].sort((a, b) => {
+    if (a.isAdmissionFee && !b.isAdmissionFee) return -1;
+    if (!a.isAdmissionFee && b.isAdmissionFee) return 1;
+    if (a.dueDate && b.dueDate) return new Date(a.dueDate) - new Date(b.dueDate);
+    return (a.monthNumber || 0) - (b.monthNumber || 0);
+  });
+  return sorted.map(fee => (
+    <SingleFeeRow
+      key={fee.id}
+      fee={fee}
+      setAllCourseFeeSchedules={setAllCourseFeeSchedules}
+      toggleFeeSelection={toggleFeeSelection}
+      handleAmountChange={handleAmountChange}
+      formatCurrency={formatCurrency}
+    />
+  ));
+})()}
 </div>
 
                       {/* Total */}
