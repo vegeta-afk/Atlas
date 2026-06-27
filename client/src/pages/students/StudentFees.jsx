@@ -294,6 +294,15 @@ const handleRegisterDelete = async (receiptNo) => {
   : (student.totalCourseFee || 0);
 const activeTotalFee = scheduleFees + (student.admissionFee || 0);
 const schedulesPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
+let additionalTotalFee = 0;
+let additionalPaid = 0;
+if (student.additionalCourses && student.additionalCourses.length > 0) {
+  student.additionalCourses.forEach(course => {
+    const fees = (course.feeSchedule || []).filter(f => f.status !== "suspended");
+    additionalTotalFee += fees.reduce((s, f) => s + (f.totalFee || 0), 0);
+    additionalPaid += fees.reduce((s, f) => s + (f.paidAmount || 0), 0);
+  });
+}
 const admissionPaid = student.admissionFeePaidAmount || 0;
 const totalPaid = schedulesPaid + admissionPaid;
 const activeBalance = activeTotalFee - totalPaid;
@@ -703,6 +712,15 @@ console.log("🔍 Payment data:", JSON.stringify({
   : (student.totalCourseFee || 0);
 const activeTotalFee = scheduleFees + (student.admissionFee || 0);
 const schedulesPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
+let additionalTotalFee = 0;
+let additionalPaid = 0;
+if (student.additionalCourses && student.additionalCourses.length > 0) {
+  student.additionalCourses.forEach(course => {
+    const fees = (course.feeSchedule || []).filter(f => f.status !== "suspended");
+    additionalTotalFee += fees.reduce((s, f) => s + (f.totalFee || 0), 0);
+    additionalPaid += fees.reduce((s, f) => s + (f.paidAmount || 0), 0);
+  });
+}
 const admissionPaid = student.admissionFeePaidAmount || 0;
 const totalPaid = schedulesPaid + admissionPaid;
 const activeBalance = activeTotalFee - totalPaid;
