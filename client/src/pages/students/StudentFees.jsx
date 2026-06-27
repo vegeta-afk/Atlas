@@ -249,7 +249,7 @@ const handleRegisterDelete = async (receiptNo) => {
   return courseName
     .replace(/[()]/g, '')
     .split(/\s+/)
-    .filter(Boolean)
+    .filter(w => w.length > 2)   // ← skip "in", "of", "to", "a" etc.
     .map(w => w[0])
     .join('')
     .toUpperCase()
