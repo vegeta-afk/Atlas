@@ -6,6 +6,7 @@ const { protect } = require("../middlewares/authMiddleware"); // add if your oth
 router.get("/", materialController.getMaterials);
 router.post("/", materialController.createMaterial);
 router.delete("/:id", materialController.deleteMaterial);
+router.put("/:id", materialController.updateMaterial);
 router.get("/issues", materialController.getIssues);
 router.put("/issues/toggle", materialController.toggleIssue);
 

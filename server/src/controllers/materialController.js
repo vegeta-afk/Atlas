@@ -20,7 +20,8 @@ exports.createMaterial = async (req, res) => {
     if (existing) {
       return res.status(400).json({ success: false, message: "Material already exists" });
     }
-    const material = await Material.create({ name: name.trim(), createdBy: req.user?._id });
+    const { totalQuantity, unit, description } = req.body;
+const material = await Material.create({ name: name.trim(), totalQuantity, unit, description, createdBy: req.user?._id });
     res.status(201).json({ success: true, data: material });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
