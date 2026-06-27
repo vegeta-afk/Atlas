@@ -469,6 +469,7 @@ export const materialAPI = {
   getMaterials: () => api.get("/materials"),
   createMaterial: (data) => api.post("/materials", data),
   deleteMaterial: (id) => api.delete(`/materials/${id}`),
+  updateMaterial: (id, data) => api.put(`/materials/${id}`, data),
   getIssues: (params = {}) => api.get("/materials/issues", { params }),
   toggleIssue: (data) => api.put("/materials/issues/toggle", data),
 };
