@@ -1185,48 +1185,47 @@ const activeBalance = activeTotalFee - totalPaid;
 
                     {/* Student Info Card */}
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-xl border border-blue-100">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                              <div className="text-sm text-gray-500">Roll No</div>
-                              <div className="font-bold text-gray-900">{selectedStudent.admissionNo}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-500">Student Name</div>
-                              <div className="font-bold text-gray-900">{selectedStudent.fullName}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-500">Batch</div>
-                              <div className="font-medium">{selectedStudent.batch}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-500">Status</div>
-                              <span className={`px-2 py-1 text-xs rounded-full ${selectedStudent.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                                {selectedStudent.status}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                              <div className="text-sm text-gray-500">D.O.J</div>
-                              <div className="font-medium">{formatDate(selectedStudent.dateOfJoining)}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-500">Father</div>
-                              <div className="font-medium">{selectedStudent.fatherName}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm text-gray-500">Course</div>
-                              <div className="font-medium">{selectedStudent.course}</div>
-                            </div>
-                          </div>
-                        </div>
-                        <button type="button" onClick={() => setSelectedStudent(null)} className="text-gray-400 hover:text-gray-600 ml-4">
-                          <X className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </div>
+  {/* Header row: name + status + close button */}
+  <div className="flex justify-between items-center mb-4 pb-4 border-b border-blue-200/60">
+    <div className="flex items-center gap-3">
+      <div className="h-10 w-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
+        {selectedStudent.fullName?.charAt(0).toUpperCase()}
+      </div>
+      <div>
+        <div className="font-bold text-gray-900 text-lg leading-tight">{selectedStudent.fullName}</div>
+        <div className="text-sm text-gray-500">{selectedStudent.admissionNo}</div>
+      </div>
+    </div>
+    <div className="flex items-center gap-3">
+      <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${selectedStudent.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+        {selectedStudent.status}
+      </span>
+      <button type="button" onClick={() => setSelectedStudent(null)} className="text-gray-400 hover:text-gray-600">
+        <X className="h-5 w-5" />
+      </button>
+    </div>
+  </div>
+
+  {/* Unified field grid */}
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 text-sm">
+    <div>
+      <div className="text-xs text-gray-500 uppercase tracking-wide">Batch</div>
+      <div className="font-semibold text-gray-900 mt-0.5">{selectedStudent.batch}</div>
+    </div>
+    <div>
+      <div className="text-xs text-gray-500 uppercase tracking-wide">D.O.J</div>
+      <div className="font-semibold text-gray-900 mt-0.5">{formatDate(selectedStudent.dateOfJoining)}</div>
+    </div>
+    <div>
+      <div className="text-xs text-gray-500 uppercase tracking-wide">Father</div>
+      <div className="font-semibold text-gray-900 mt-0.5">{selectedStudent.fatherName}</div>
+    </div>
+    <div className="col-span-2 md:col-span-1">
+      <div className="text-xs text-gray-500 uppercase tracking-wide">Course</div>
+      <div className="font-semibold text-gray-900 mt-0.5 break-words">{selectedStudent.course}</div>
+    </div>
+  </div>
+</div>
 
                     {/* Date + Receipt + Payment Mode - OUTSIDE fee box */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
