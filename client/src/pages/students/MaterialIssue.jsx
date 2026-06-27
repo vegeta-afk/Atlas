@@ -337,8 +337,8 @@ const getIssuedCount = (materialId) => {
 )}
 
       {showAddModal && (
-        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay">
+  <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header-row">
               <h3>Add New Material</h3>
               <button className="close-btn" onClick={() => setShowAddModal(false)}><X size={18} /></button>
@@ -372,8 +372,8 @@ const getIssuedCount = (materialId) => {
       )}
 
       {showEditModal && editingMaterial && (
-  <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-    <div className="modal-content" onClick={e => e.stopPropagation()}>
+  <div className="modal-overlay">
+  <div className="modal-content" onClick={e => e.stopPropagation()}>
       <div className="modal-header-row">
         <h3>Edit Material</h3>
         <button className="close-btn" onClick={() => setShowEditModal(false)}><X size={18} /></button>
