@@ -1215,9 +1215,11 @@ const activeBalance = activeTotalFee - totalPaid;
       </div>
     </div>
     <div className="flex items-center gap-3">
-      <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${selectedStudent.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-        {selectedStudent.status}
-      </span>
+      <span className={`px-3 py-1.5 text-sm font-bold rounded-full capitalize ${
+  selectedStudent.status?.toLowerCase() === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+}`}>
+  {selectedStudent.status}
+</span>
       <button type="button" onClick={() => setSelectedStudent(null)} className="text-gray-400 hover:text-gray-600">
         <X className="h-5 w-5" />
       </button>
