@@ -160,51 +160,56 @@ const [scholarshipData, setScholarshipData] = useState(null);
   setError(null);
 };
 
-  const getExtensionPreview = async () => {
-    if (!selectedStudent || !selectedCourse || !selectedFaculty || !selectedBatch) {
-      setError("Please select student, course, faculty, and batch");
-      return;
-    }
+ const getExtensionPreview = async () => {
+  if (!selectedStudent || !selectedCourse || !selectedFaculty || !selectedBatch) {
+    setError("Please select student, course, faculty, and batch");
+    return;
+  }
 
-    try {
-      setPreviewLoading(true);
-      setError(null);
+  try {
+    setPreviewLoading(true);
+    setError(null);
 
-      // Get faculty name for display
-      const faculty = facultyList.find(f => f._id === selectedFaculty);
-      
-      // Calculate course total
-      const monthlyFee = parseFloat(selectedCourse.monthlyFee) || 0;
-      const examFee = parseFloat(selectedCourse.examFee) || 0;
-      const duration = parseInt(selectedCourse.duration) || 0;
-      const examMonths = selectedCourse.examMonths
-        ? selectedCourse.examMonths.split(',').map(m => parseInt(m.trim()))
-        : [];
-      
-      const examCount = examMonths.length;
-      const totalFee = (monthlyFee * duration) + (examFee * examCount);
+    const faculty = facultyList.find(f => f._id === selectedFaculty);
 
-      setPreviewData({
-        student: selectedStudent,
-        course: selectedCourse,
-        faculty: faculty,
-        batch: selectedBatch,
-        totalFee,
-        monthlyFee,
-        examFee,
-        duration,
-        examMonths,
-        examCount
-      });
-      
-      setStep(4);
-    } catch (err) {
-      console.error("Preview error:", err);
-      setError(err.message || "Failed to generate preview");
-    } finally {
-      setPreviewLoading(false);
-    }
-  };
+    // ✅ use discounted fee if scholarship applied
+    const monthlyFee = scholarshipData
+      ? scholarshipData.finalMonthlyFee
+      : parseFloat(selectedCourse.monthlyFee) || 0;
+    const originalMonthlyFee = parseFloat(selectedCourse.monthlyFee) || 0;
+    const examFee = parseFloat(selectedCourse.examFee) || 0;
+    const duration = parseInt(selectedCourse.duration) || 0;
+    const examMonths = selectedCourse.examMonths
+      ? selectedCourse.examMonths.split(',').map(m => parseInt(m.trim()))
+      : [];
+
+    const examCount = examMonths.length;
+    const totalFee = (monthlyFee * duration) + (examFee * examCount);
+
+    setPreviewData({
+      student: selectedStudent,
+      course: selectedCourse,
+      faculty: faculty,
+      batch: selectedBatch,
+      totalFee,
+      monthlyFee,
+      originalMonthlyFee,        // ✅ keep for display
+      hasScholarship: !!scholarshipData,
+      scholarshipPercent: scholarshipData?.percent || 0,
+      examFee,
+      duration,
+      examMonths,
+      examCount
+    });
+
+    setStep(4);
+  } catch (err) {
+    console.error("Preview error:", err);
+    setError(err.message || "Failed to generate preview");
+  } finally {
+    setPreviewLoading(false);
+  }
+};
 
   const handleExtend = async () => {
     if (!selectedStudent || !selectedCourse || !selectedFaculty || !selectedBatch) {
@@ -221,7 +226,11 @@ const [scholarshipData, setScholarshipData] = useState(null);
         newCourseId: selectedCourse._id,
         extensionReason: extensionReason || "Course extension requested",
         facultyId: selectedFaculty,
-        batchTime: selectedBatch
+        batchTime: selectedBatch,
+        scholarshipPercent: scholarshipData ? scholarshipData.percent : 0,
+finalMonthlyFee: scholarshipData ? scholarshipData.finalMonthlyFee : null,
+hasScholarship: !!scholarshipData,
+        
       });
 
       if (response.data.success) {
@@ -739,6 +748,18 @@ setIsNewCourseScholarshipEligible(false);
                       {previewData.duration} months
                     </p>
                   </div>
+
+                  <div className="p-5 bg-green-50 rounded-xl border border-green-200">
+    <p className="text-sm text-green-600 mb-1">Monthly Fee</p>
+    <p className="text-2xl font-bold text-gray-900">
+      {formatCurrency(previewData.monthlyFee)}
+    </p>
+    {previewData.hasScholarship && (
+      <p className="text-xs text-purple-600 mt-1">
+        {previewData.scholarshipPercent}% scholarship applied (was {formatCurrency(previewData.originalMonthlyFee)})
+      </p>
+    )}
+  </div>
                   
                   <div className="p-5 bg-green-50 rounded-xl border border-green-200">
                     <p className="text-sm text-green-600 mb-1">Monthly Fee</p>
@@ -876,6 +897,8 @@ setIsNewCourseScholarshipEligible(false);
           </div>
         )}
       </div>
+
+      
       <div className="px-6 pb-6 flex justify-end gap-3">
         <button
           onClick={() => { setShowScholarshipModal(false); setScholarshipPercent(""); }}

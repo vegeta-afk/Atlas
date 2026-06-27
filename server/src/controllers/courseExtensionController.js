@@ -6,7 +6,7 @@ const User = require("../models/user");
 const { Batch } = require("../models/Setup");
 const { generateFeeSchedule } = require("../utils/feeGenerator");
 const mongoose = require("mongoose");
-
+const { generateFeeScheduleWithScholarship } = require("../utils/feeGenerator");
 // @desc    Get eligible students for extension
 // @route   GET /api/course-extension/eligible-students
 // @access  Private (Admin)
@@ -210,53 +210,29 @@ exports.extendStudentCourse = async (req, res) => {
     // Primary course name comes from student.course (String field)
     const primaryCourseName = student.course;
 
-    const newMonthlyFee = hasScholarship && finalMonthlyFee
-  ? parseFloat(finalMonthlyFee)
-  : parseFloat(newCourse.monthlyFee) || 0;
-    const newExamFee = parseFloat(newCourse.examFee) || 0;
-    const newDuration = parseInt(newCourse.duration) || 0;
-    const startDate = new Date(student.admissionDate);
+  const newExamFee = parseFloat(newCourse.examFee) || 0;
+const newDuration = parseInt(newCourse.duration) || 0;
+const startDate = new Date(student.admissionDate);
 
-    const examMonths = newCourse.examMonths
-      ? newCourse.examMonths.split(',').map(m => parseInt(m.trim()))
-      : [];
+// ============================================
+// STEP 1: Generate fee schedule for new course
+// (uses shared generator so schedule shape matches
+// primary-course schedules — needed for unified fee timeline view)
+// ============================================
+const scholarship = (hasScholarship && finalMonthlyFee && parseFloat(finalMonthlyFee) > 0)
+  ? { percent: parseFloat(scholarshipPercent) || 0, finalMonthlyFee: parseFloat(finalMonthlyFee) }
+  : null;
 
-    // ============================================
-    // STEP 1: Generate fee schedule for new course
-    // ============================================
-    const newFeeSchedule = [];
+const newFeeSchedule = generateFeeScheduleWithScholarship(
+  newCourse.toObject(),
+  scholarship,
+  startDate
+);
 
-    for (let month = 1; month <= newDuration; month++) {
-      const monthDate = new Date(startDate);
-      monthDate.setMonth(startDate.getMonth() + month - 1);
+// keep newMonthlyFee for use further down (additionalCourse object, logs, etc.)
+const newMonthlyFee = scholarship ? scholarship.finalMonthlyFee : (parseFloat(newCourse.monthlyFee) || 0);
 
-      const isExamMonth = examMonths.includes(month);
-      const examFee = isExamMonth ? newExamFee : 0;
-      const totalFee = newMonthlyFee + examFee;
-
-      const dueDate = new Date(monthDate);
-      dueDate.setDate(5);
-
-      newFeeSchedule.push({
-        _id: new mongoose.Types.ObjectId(),
-        month: monthDate.toLocaleString('default', { month: 'long', year: 'numeric' }),
-        monthNumber: month,
-        baseFee: newMonthlyFee,
-        examFee: examFee,
-        totalFee: totalFee,
-        paidAmount: 0,
-        balanceAmount: totalFee,
-        status: "pending",
-        dueDate: dueDate,
-        paymentDate: null,
-        receiptNo: "",
-        paymentMode: "",
-        isExamMonth: isExamMonth,
-        remarks: ""
-      });
-    }
-
-    console.log(`✅ Generated ${newFeeSchedule.length} months for new course`);
+console.log(`✅ Generated ${newFeeSchedule.length} months for new course`);
 
     const additionalFees = newFeeSchedule.reduce((sum, m) => sum + (m.totalFee || 0), 0);
 
