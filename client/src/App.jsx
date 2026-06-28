@@ -11,6 +11,7 @@ import StudentExamResults from "./pages/students/Examresults";
 import MyProfile from "./pages/student/MyProfile";
 import MyExams from "./pages/student/MyExams";
 import MyMarksheet from "./pages/student/Mymarksheet";
+import BirthdayReport from "./reports/BirthdayReport";
 
 
 
