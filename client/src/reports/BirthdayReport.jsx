@@ -43,18 +43,17 @@ const BirthdayReport = () => {
       setLoading(true);
       setError(null);
 
-      const params = new URLSearchParams();
-      params.append("type", typeFilter);
-      if (searchTerm) params.append("search", searchTerm);
+      const queryParams = { type: typeFilter };
+      if (searchTerm) queryParams.search = searchTerm;
 
       if (useRange && dateRange.startDate && dateRange.endDate) {
-        params.append("startDate", dateRange.startDate);
-        params.append("endDate", dateRange.endDate);
+        queryParams.startDate = dateRange.startDate;
+        queryParams.endDate = dateRange.endDate;
       } else {
-        params.append("date", selectedDate);
+        queryParams.date = selectedDate;
       }
 
-      const res = await reportAPI.getBirthdays({ params: Object.fromEntries(params) });
+      const res = await reportAPI.getBirthdays(queryParams);
       const json = res.data;
       if (!json.success) throw new Error(json.message || "Failed to load");
 
@@ -77,9 +76,9 @@ const BirthdayReport = () => {
       const facultyRows = (json.faculty || []).map((f) => ({
         id: f._id,
         type: "faculty",
-        displayName: f.name || "N/A",
-        phone: f.mobileNumber,
-        role: f.designation || "Faculty",
+        displayName: f.facultyName || "N/A",
+        phone: f.mobileNo || f.whatsappNo,
+        role: "Faculty",
         dateOfBirth: f.dateOfBirth,
         email: f.email,
         photo: f.photo,
@@ -114,9 +113,9 @@ const BirthdayReport = () => {
       ...data.faculty.map((f) => ({
         id: f._id,
         type: "faculty",
-        displayName: f.name || "N/A",
-        phone: f.mobileNumber,
-        role: f.designation || "Faculty",
+        displayName: f.facultyName || "N/A",
+        phone: f.mobileNo || f.whatsappNo,
+        role: "Faculty",
         dateOfBirth: f.dateOfBirth,
       })),
     ];
