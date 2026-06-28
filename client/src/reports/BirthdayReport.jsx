@@ -14,18 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import "./ReportList.css";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
-
-const calculateAge = (dob) => {
-  if (!dob) return "N/A";
-  const today = new Date();
-  const birth = new Date(dob);
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-};
+import { facultyAPI } from "../services/api";
 
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -65,12 +54,8 @@ const BirthdayReport = () => {
         params.append("date", selectedDate);
       }
 
-      const res = await fetch(`${API_BASE}/api/reports/birthdays?${params}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      const json = await res.json();
+      const res = await api.get("/reports/birthdays", { params: Object.fromEntries(params) });
+      const json = res.data;
       if (!json.success) throw new Error(json.message || "Failed to load");
 
       setData({ students: json.students || [], faculty: json.faculty || [] });
@@ -172,7 +157,7 @@ const BirthdayReport = () => {
       {/* ── Header ── */}
       <div className="page-header">
         <div>
-          <h1>🎂 Birthday Report</h1>
+          <h1>Birthday Report</h1>
           <p>{getPageDescription()}</p>
         </div>
         <div className="header-actions">
@@ -361,9 +346,7 @@ const BirthdayReport = () => {
               <th>Name</th>
               <th>Type</th>
               <th>Contact</th>
-              <th>Course / Role</th>
               <th>Date of Birth</th>
-              <th>Age</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -420,23 +403,12 @@ const BirthdayReport = () => {
                     </div>
                   </td>
 
-                  {/* Course / Role */}
-                  <td>{person.role}</td>
-
                   {/* DOB */}
                   <td>
                     <div className="date-info">
                       <Calendar size={14} />
                       {formatDate(person.dateOfBirth)}
                     </div>
-                  </td>
-
-                  {/* Age */}
-                  <td>
-                    <strong>{calculateAge(person.dateOfBirth)}</strong>
-                    {calculateAge(person.dateOfBirth) !== "N/A" && (
-                      <span style={{ color: "#999", fontSize: 12 }}> yrs</span>
-                    )}
                   </td>
 
                   {/* Actions */}
@@ -465,7 +437,7 @@ const BirthdayReport = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="8" className="empty-row">
+                <td colSpan="6" className="empty-row">
                   <div className="empty-state">
                     <Gift size={48} />
                     <h3>No birthdays found</h3>
