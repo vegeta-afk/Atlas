@@ -76,8 +76,8 @@ const BirthdayReport = () => {
       const facultyRows = (json.faculty || []).map((f) => ({
         id: f._id,
         type: "faculty",
-        displayName: f.facultyName || f.name || "N/A",
-        phone: f.mobileNo || f.whatsappNo || "N/A",
+        displayName: f.facultyName || f.name || f.fullName || "N/A",
+        phone: f.mobileNo || f.whatsappNo || f.mobileNumber || f.contactNo || "N/A",
         role: "Faculty",
         dateOfBirth: f.dateOfBirth,
         email: f.email,
@@ -113,8 +113,8 @@ const BirthdayReport = () => {
       ...data.faculty.map((f) => ({
         id: f._id,
         type: "faculty",
-        displayName: f.facultyName || f.name || "N/A",
-        phone: f.mobileNo || f.whatsappNo || "N/A",
+        displayName: f.facultyName || f.name || f.fullName || "N/A",
+        phone: f.mobileNo || f.whatsappNo || f.mobileNumber || f.contactNo || "N/A",
         role: "Faculty",
         dateOfBirth: f.dateOfBirth,
       })),

@@ -36,6 +36,11 @@ const getBirthdayReport = async (req, res) => {
       dateConditions = [{ dobMonth: now.getMonth() + 1, dobDay: now.getDate() }];
     }
 
+    // ── Guard: invalid range (startDate > endDate) ──────────────────────
+    if (dateConditions.length === 0) {
+      return res.json({ success: true, students: [], faculty: [], total: 0, upcomingWeekCount: 0 });
+    }
+
     // ── Next 7 days conditions (for "This Week" stat) ───────────────────
     const now = new Date();
     const weekEnd = new Date(now);
@@ -60,8 +65,8 @@ const getBirthdayReport = async (req, res) => {
       ? {
           $match: {
             $or: [
-              { name: { $regex: search, $options: "i" } },
-              { mobileNumber: { $regex: search, $options: "i" } },
+              { facultyName: { $regex: search, $options: "i" } },
+              { mobileNo: { $regex: search, $options: "i" } },
             ],
           },
         }
@@ -106,18 +111,8 @@ const getBirthdayReport = async (req, res) => {
       },
       { $match: { $or: dateConditions } },
       ...(facultySearchStage ? [facultySearchStage] : []),
-      {
-        $project: {
-          _id: 1,
-          name: 1,
-          dateOfBirth: 1,
-          mobileNumber: 1,
-          designation: 1,
-          email: 1,
-          photo: 1,
-        },
-      },
-      { $sort: { name: 1 } },
+      // No $project — return all fields so any field name variant works
+      { $sort: { facultyName: 1 } },
     ];
 
     // ── Upcoming week count pipelines ───────────────────────────────────
