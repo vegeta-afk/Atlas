@@ -2,8 +2,12 @@
 const express = require("express");
 const router = express.Router();
 const { getBirthdayReport } = require("../controllers/birthdayController");
-const { protect } = require("../middleware/authMiddleware"); // adjust path if yours differs
+const { protect, authorize } = require("../middlewares/authMiddleware");
 
-router.get("/", protect, getBirthdayReport);
+const READ_ROLES = ["admin", "front_office", "accountant", "instructor", "faculty"];
+
+router.use(protect);
+
+router.get("/", authorize(...READ_ROLES), getBirthdayReport);
 
 module.exports = router;
