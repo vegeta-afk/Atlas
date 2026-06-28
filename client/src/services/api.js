@@ -368,6 +368,7 @@ export const studentAPI = {
 export const reportAPI = {
   getCountdownReport: (params) => api.get("/reports/countdown", { params }),
   exportCountdownReport: () => api.get("/reports/countdown/export", { responseType: 'blob' }),
+  getBirthdays: (params) => api.get("/reports/birthdays", { params }),
 };
 
 export const examReportAPI = {

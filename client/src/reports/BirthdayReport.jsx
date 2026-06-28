@@ -14,7 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import "./ReportList.css";
-import { facultyAPI } from "../services/api";
+import { reportAPI } from "../services/api";
 
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -54,7 +54,7 @@ const BirthdayReport = () => {
         params.append("date", selectedDate);
       }
 
-      const res = await api.get("/reports/birthdays", { params: Object.fromEntries(params) });
+      const res = await facultyAPI.get("/reports/birthdays", { params: Object.fromEntries(params) });
       const json = res.data;
       if (!json.success) throw new Error(json.message || "Failed to load");
 
