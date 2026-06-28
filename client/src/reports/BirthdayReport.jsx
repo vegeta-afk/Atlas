@@ -281,6 +281,7 @@ const BirthdayReport = () => {
                 type="date"
                 value={dateRange.startDate}
                 placeholder="From"
+                max={dateRange.endDate || undefined}
                 onChange={(e) =>
                   setDateRange((p) => ({ ...p, startDate: e.target.value }))
                 }
@@ -290,6 +291,7 @@ const BirthdayReport = () => {
                 type="date"
                 value={dateRange.endDate}
                 placeholder="To"
+                min={dateRange.startDate || undefined}
                 onChange={(e) =>
                   setDateRange((p) => ({ ...p, endDate: e.target.value }))
                 }
