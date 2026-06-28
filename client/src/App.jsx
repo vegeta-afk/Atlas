@@ -150,6 +150,7 @@ function App() {
           <Route path="cancel-list" element={<CancelList />} />
           <Route path="hold-list" element={<HoldList />} />
           <Route path="complete-list" element={<CompleteList />} />
+          <Route path="birthdays" element={<BirthdayReport />} />
         </Route>
       </Route>
 
