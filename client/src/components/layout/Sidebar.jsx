@@ -31,6 +31,7 @@ import {
   CheckCircle,
   X,
   Package,
+   Cake,
 } from "lucide-react";
 import "./Sidebar.css";
 
@@ -126,6 +127,8 @@ const Sidebar = ({ isOpen, onClose }) => {
         { path: "/admin/reports/cancel-list",    label: "Cancel List",      icon: <XCircle size={15} /> },
         { path: "/admin/reports/hold-list",      label: "Hold List",        icon: <PauseCircle size={15} /> },
         { path: "/admin/reports/complete-list",  label: "Complete List",    icon: <CheckCircle size={15} /> },
+        { divider: true },
+        { path: "/admin/reports/birthdays",      label: "Birthday Report",  icon: <Cake size={15} /> },
       ],
     },
     {
