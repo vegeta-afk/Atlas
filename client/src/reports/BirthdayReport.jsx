@@ -54,7 +54,7 @@ const BirthdayReport = () => {
         params.append("date", selectedDate);
       }
 
-      const res = await facultyAPI.get("/reports/birthdays", { params: Object.fromEntries(params) });
+      const res = await reportAPI.getBirthdays({ params: Object.fromEntries(params) });
       const json = res.data;
       if (!json.success) throw new Error(json.message || "Failed to load");
 
