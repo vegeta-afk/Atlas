@@ -163,12 +163,6 @@ const BatchReportList = () => {
                 <th className="text-left px-5 py-3 font-semibold text-gray-600">
                   Students Enrolled
                 </th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">
-                  Courses
-                </th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">
-                  Faculty
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -192,24 +186,18 @@ const BatchReportList = () => {
                         student{b.studentCount !== 1 ? "s" : ""}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-gray-600">
-                      {b.courses?.join(", ") || "N/A"}
-                    </td>
-                    <td className="px-5 py-3 text-gray-600">
-                      {b.faculties?.join(", ") || "N/A"}
-                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4" className="px-5 py-16 text-center">
+                  <td colSpan="2" className="px-5 py-16 text-center">
                     <div className="flex flex-col items-center gap-2 text-gray-400">
                       <BookOpen size={48} />
                       <h3 className="text-gray-600 font-medium">
                         No batch data found
                       </h3>
                       <p className="text-sm">
-                        No active students with assigned batch times.
+                        No batches configured yet.
                       </p>
                     </div>
                   </td>
