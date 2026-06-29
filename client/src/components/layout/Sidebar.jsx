@@ -32,6 +32,7 @@ import {
   X,
   Package,
    Cake,
+   Users,
 } from "lucide-react";
 import "./Sidebar.css";
 
@@ -129,6 +130,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { path: "/admin/reports/complete-list",  label: "Complete List",    icon: <CheckCircle size={15} /> },
         { divider: true },
         { path: "/admin/reports/birthdays",      label: "Birthday Report",  icon: <Cake size={15} /> },
+        { path: "/admin/reports/batch-report",   label: "Batch Report",     icon: <Users size={15} /> },
       ],
     },
     {
