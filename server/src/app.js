@@ -62,6 +62,7 @@ const courseExtensionRoutes = require("./routes/courseExtensionRoutes");
 const callLogRoutes = require("./routes/callLogRoutes");
 const materialRoutes = require("./routes/materialRoutes");
 const birthdayRoutes = require("./routes/birthdayRoutes");
+const batchReportRoutes = require("./routes/batchReportRoutes");
 
 
 // Use routes
@@ -85,6 +86,7 @@ app.use("/api/call-logs", require("./routes/callLogRoutes"));
 app.use('/api/tests', testRouter);
 app.use("/api/materials", materialRoutes);
 app.use("/api/reports/birthdays", birthdayRoutes);
+app.use("/api/batch-report", batchReportRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

@@ -12,6 +12,7 @@ import MyProfile from "./pages/student/MyProfile";
 import MyExams from "./pages/student/MyExams";
 import MyMarksheet from "./pages/student/Mymarksheet";
 import BirthdayReport from "./reports/BirthdayReport";
+import BatchReportList from "./reports/BatchReportList";
 
 
 
@@ -152,6 +153,7 @@ function App() {
           <Route path="hold-list" element={<HoldList />} />
           <Route path="complete-list" element={<CompleteList />} />
           <Route path="birthdays" element={<BirthdayReport />} />
+          <Route path="batch-report" element={<BatchReportList />} />
         </Route>
       </Route>
 
