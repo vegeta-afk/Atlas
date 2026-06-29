@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { batchReportAPI } from "../../services/api";
+import { batchReportAPI } from "../services/api";
 import {
   Clock,
   Users,

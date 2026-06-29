@@ -474,4 +474,10 @@ export const materialAPI = {
   getIssues: (params = {}) => api.get("/materials/issues", { params }),
   toggleIssue: (data) => api.put("/materials/issues/toggle", data),
 };
+
+export const batchReportAPI = {
+  getBatchReport: () => api.get("/batch-report"),
+};
+
+
 export default api;
