@@ -1,6 +1,6 @@
 // controllers/batchReportController.js
 const Admission = require("../models/Admission");
-const Setup = require("../models/Setup");
+const { Batch } = require("../models/Setup");
 
 // Converts "HH:MM" -> minutes since midnight, for reliable chronological sorting
 const toMinutes = (time) => {
@@ -12,8 +12,7 @@ const toMinutes = (time) => {
 const getBatchReport = async (req, res) => {
   try {
     // 1. Master list of all batch slots (so 0-student batches still show)
-    const setupDoc = await Setup.findOne();
-    const allBatches = setupDoc?.batches || [];
+    const allBatches = await Batch.find({ isActive: true }).lean();
 
     // 2. Count enrolled students per batchTime from Admission
     const counts = await Admission.aggregate([
@@ -38,12 +37,28 @@ const getBatchReport = async (req, res) => {
     });
 
     // 3. Merge: every setup batch shown, 0 if no students, sorted by actual start time
+    //    Tries a few candidate key formats since we don't know the exact stored format
+    //    of Admission.batchTime relative to this Batch doc.
     const batches = allBatches
       .map((b) => {
-        const batchTime = `${b.startTime}-${b.endTime}`;
+        const candidates = [
+          b.displayName,
+          `${b.startTime}-${b.endTime}`,
+          `${b.startTime} to ${b.endTime}`,
+          b.batchName,
+        ].filter(Boolean);
+
+        let studentCount = 0;
+        for (const key of candidates) {
+          if (countMap[key] !== undefined) {
+            studentCount = countMap[key];
+            break;
+          }
+        }
+
         return {
-          batchTime,
-          studentCount: countMap[batchTime] || 0,
+          batchTime: b.displayName || `${b.startTime}-${b.endTime}`,
+          studentCount,
           _sortKey: toMinutes(b.startTime),
         };
       })
