@@ -136,9 +136,18 @@ const BirthdayReport = () => {
   }, [searchTerm, data]);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
-  const openWhatsApp = (phone) => {
-    if (!phone) return alert("No number available");
-    window.open(`https://wa.me/${phone.replace(/\D/g, "")}`, "_blank");
+  const openWhatsApp = (phone, name) => {
+    if (!phone || phone === "N/A") return alert("No WhatsApp number available for this person.");
+    const cleanNumber = phone.replace(/\D/g, "");
+    if (cleanNumber.length < 10) return alert("Invalid phone number.");
+    const message = 
+`🎂 Happy Birthday ${name || ""}! 🎉
+
+Wishing you a day filled with joy, happiness, and success! May this special year bring you new opportunities and wonderful memories. 🌟
+
+Best wishes,
+IIT Computer Institute, Rishikesh`;
+    window.open(`https://wa.me/91${cleanNumber}?text=${encodeURIComponent(message)}`, "_blank");
   };
 
   const isToday = selectedDate === todayStr && !useRange;
@@ -416,7 +425,7 @@ const BirthdayReport = () => {
                       <button
                         className="action-btn"
                         title="Send Birthday Wish on WhatsApp"
-                        onClick={() => openWhatsApp(person.phone)}
+                        onClick={() => openWhatsApp(person.phone, person.displayName)}
                         style={{
                           background: "#e8f5e9",
                           border: "1px solid #4caf50",
