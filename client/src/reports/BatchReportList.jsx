@@ -10,16 +10,6 @@ import {
   Briefcase,
 } from "lucide-react";
 
-const formatTimeRange = (timeRange) => {
-  if (!timeRange) return "N/A";
-  return timeRange.replace(/(\d{2}):(\d{2})/g, (_, h, m) => {
-    const hour = parseInt(h);
-    const period = hour >= 12 ? "PM" : "AM";
-    const hour12 = hour % 12 || 12;
-    return `${hour12}:${m} ${period}`;
-  });
-};
-
 const BatchReportList = () => {
   const [batches, setBatches] = useState([]);
   const [stats, setStats] = useState({
@@ -144,7 +134,7 @@ const BatchReportList = () => {
             <div>
               <h3 className="text-xl font-bold text-gray-800">{stats.maxBatchCount}</h3>
               <p className="text-sm text-gray-500">
-                Busiest: {formatTimeRange(stats.maxBatch)}
+                Busiest: {stats.maxBatch}
               </p>
             </div>
           </div>
@@ -175,7 +165,7 @@ const BatchReportList = () => {
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2 text-gray-700 font-medium">
                         <Clock size={14} className="text-gray-400" />
-                        {formatTimeRange(b.batchTime)}
+                        {b.batchTime}
                       </div>
                     </td>
                     <td className="px-5 py-3">
