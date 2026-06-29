@@ -136,18 +136,12 @@ const BirthdayReport = () => {
   }, [searchTerm, data]);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
-  const openWhatsApp = (phone, name) => {
-    if (!phone || phone === "N/A") return alert("No WhatsApp number available for this person.");
+  const getWhatsAppLink = (phone, name) => {
+    if (!phone || phone === "N/A") return null;
     const cleanNumber = phone.replace(/\D/g, "");
-    if (cleanNumber.length < 10) return alert("Invalid phone number.");
-    const message = 
-`🎂 Happy Birthday ${name || ""}! 🎉
-
-Wishing you a day filled with joy, happiness, and success! May this special year bring you new opportunities and wonderful memories. 🌟
-
-Best wishes,
-IIT Computer Institute, Rishikesh`;
-    window.open(`https://wa.me/91${cleanNumber}?text=${encodeURIComponent(message)}`, "_blank");
+    if (cleanNumber.length < 10) return null;
+    const message = `🎂 Happy Birthday ${name || ""}! 🎉\n\nWishing you a day filled with joy, happiness, and success! May this special year bring you new opportunities and wonderful memories. 🌟\n\nBest wishes,\nIIT Computer Institute, Rishikesh`;
+    return `https://wa.me/91${cleanNumber}?text=${encodeURIComponent(message)}`;
   };
 
   const isToday = selectedDate === todayStr && !useRange;
@@ -422,23 +416,42 @@ IIT Computer Institute, Rishikesh`;
                   {/* Actions */}
                   <td>
                     <div className="action-buttons">
-                      <button
-                        className="action-btn"
-                        title="Send Birthday Wish on WhatsApp"
-                        onClick={() => openWhatsApp(person.phone, person.displayName)}
-                        style={{
-                          background: "#e8f5e9",
-                          border: "1px solid #4caf50",
-                          borderRadius: 6,
-                          padding: "5px 8px",
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          color: "#2e7d32",
-                        }}
-                      >
-                        <MessageCircle size={16} />
-                      </button>
+                      {getWhatsAppLink(person.phone, person.displayName) ? (
+                        <a
+                          href={getWhatsAppLink(person.phone, person.displayName)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Send Birthday Wish on WhatsApp"
+                          style={{
+                            background: "#e8f5e9",
+                            border: "1px solid #4caf50",
+                            borderRadius: 6,
+                            padding: "5px 8px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            color: "#2e7d32",
+                            textDecoration: "none",
+                          }}
+                        >
+                          <MessageCircle size={16} />
+                        </a>
+                      ) : (
+                        <span
+                          title="No number available"
+                          style={{
+                            background: "#f5f5f5",
+                            border: "1px solid #ddd",
+                            borderRadius: 6,
+                            padding: "5px 8px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            color: "#bbb",
+                            cursor: "not-allowed",
+                          }}
+                        >
+                          <MessageCircle size={16} />
+                        </span>
+                      )}
                     </div>
                   </td>
                 </tr>
