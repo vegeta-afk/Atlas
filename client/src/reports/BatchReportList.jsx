@@ -12,7 +12,7 @@ import {
   X,
   CreditCard,
 } from "lucide-react";
-import IdCardModal from "./IdCardModal";
+import IdCardModal from "../components/certifications/IdCardModal";
 
 const BatchReportList = () => {
   const [batches, setBatches] = useState([]);
