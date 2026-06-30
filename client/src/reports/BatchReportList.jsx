@@ -8,7 +8,11 @@ import {
   RefreshCw,
   AlertCircle,
   Briefcase,
+  Eye,
+  X,
+  CreditCard,
 } from "lucide-react";
+import IdCardModal from "./IdCardModal";
 
 const BatchReportList = () => {
   const [batches, setBatches] = useState([]);
@@ -21,6 +25,8 @@ const BatchReportList = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [viewingBatch, setViewingBatch] = useState(null); // batch object whose students are shown
+  const [idCardStudent, setIdCardStudent] = useState(null); // student selected for ID card
 
   const fetchReport = async () => {
     setLoading(true);
@@ -153,6 +159,9 @@ const BatchReportList = () => {
                 <th className="text-left px-5 py-3 font-semibold text-gray-600">
                   Students Enrolled
                 </th>
+                <th className="text-left px-5 py-3 font-semibold text-gray-600">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -176,11 +185,21 @@ const BatchReportList = () => {
                         student{b.studentCount !== 1 ? "s" : ""}
                       </span>
                     </td>
+                    <td className="px-5 py-3">
+                      <button
+                        onClick={() => setViewingBatch(b)}
+                        disabled={b.studentCount === 0}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-50"
+                      >
+                        <Eye size={14} />
+                        View
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="2" className="px-5 py-16 text-center">
+                  <td colSpan="3" className="px-5 py-16 text-center">
                     <div className="flex flex-col items-center gap-2 text-gray-400">
                       <BookOpen size={48} />
                       <h3 className="text-gray-600 font-medium">
@@ -196,6 +215,80 @@ const BatchReportList = () => {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* ===== Student list modal for a given batch ===== */}
+      {viewingBatch && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[900] p-4"
+          onClick={() => setViewingBatch(null)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <h3 className="font-semibold text-gray-800">
+                  {viewingBatch.batchTime}
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {viewingBatch.studentCount} student
+                  {viewingBatch.studentCount !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <button onClick={() => setViewingBatch(null)}>
+                <X size={18} className="text-gray-400 hover:text-gray-600" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-3 flex-1">
+              {viewingBatch.students?.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 transition"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0">
+                      {s.photo ? (
+                        <img
+                          src={s.photo}
+                          alt={s.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-gray-400 text-sm font-medium">
+                          {s.name?.charAt(0) || "?"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">
+                        {s.name || "N/A"}
+                      </p>
+                      <p className="text-xs text-gray-500">{s.studentId}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIdCardStudent(s)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition flex-shrink-0"
+                  >
+                    <CreditCard size={14} />
+                    ID Card
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== ID Card overlay ===== */}
+      {idCardStudent && (
+        <IdCardModal
+          student={idCardStudent}
+          onClose={() => setIdCardStudent(null)}
+        />
       )}
     </div>
   );

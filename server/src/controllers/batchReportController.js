@@ -14,31 +14,34 @@ const getBatchReport = async (req, res) => {
     // 1. Master list of all batch slots (so 0-student batches still show)
     const allBatches = await Batch.find({ isActive: true }).lean();
 
-    // 2. Count enrolled students per batchTime from Admission
-    const counts = await Admission.aggregate([
-      {
-        $match: {
-          isActive: true,
-          status: { $nin: ["cancelled"] },
-          batchTime: { $exists: true, $ne: null, $ne: "" },
-        },
-      },
-      {
-        $group: {
-          _id: "$batchTime",
-          studentCount: { $sum: 1 },
-        },
-      },
-    ]);
+    // 2. Pull students per batchTime from Admission (with ID card fields)
+    const studentDocs = await Admission.find({
+      isActive: true,
+      status: { $nin: ["cancelled"] },
+      batchTime: { $exists: true, $ne: null, $ne: "" },
+    })
+      .select(
+        "fullName admissionNo course batchTime mobileNumber admissionDate photo"
+      )
+      .lean();
 
-    const countMap = {};
-    counts.forEach((c) => {
-      countMap[c._id] = c.studentCount;
+    // Group students by batchTime
+    const studentsByBatch = {};
+    studentDocs.forEach((s) => {
+      if (!studentsByBatch[s.batchTime]) studentsByBatch[s.batchTime] = [];
+      studentsByBatch[s.batchTime].push({
+        id: s._id,
+        name: s.fullName,
+        studentId: s.admissionNo,
+        course: s.course,
+        batch: s.batchTime,
+        mobileNumber: s.mobileNumber,
+        admissionDate: s.admissionDate,
+        photo: s.photo || null,
+      });
     });
 
-    // 3. Merge: every setup batch shown, 0 if no students, sorted by actual start time
-    //    Tries a few candidate key formats since we don't know the exact stored format
-    //    of Admission.batchTime relative to this Batch doc.
+    // 3. Merge: every setup batch shown, empty list if no students, sorted by start time
     const batches = allBatches
       .map((b) => {
         const candidates = [
@@ -48,17 +51,18 @@ const getBatchReport = async (req, res) => {
           b.batchName,
         ].filter(Boolean);
 
-        let studentCount = 0;
+        let students = [];
         for (const key of candidates) {
-          if (countMap[key] !== undefined) {
-            studentCount = countMap[key];
+          if (studentsByBatch[key]) {
+            students = studentsByBatch[key];
             break;
           }
         }
 
         return {
           batchTime: b.displayName || `${b.startTime}-${b.endTime}`,
-          studentCount,
+          studentCount: students.length,
+          students,
           _sortKey: toMinutes(b.startTime),
         };
       })
