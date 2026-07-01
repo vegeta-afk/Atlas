@@ -82,9 +82,6 @@ const TemplateList = () => {
           <LayoutTemplate size={48} />
           <h3>No templates yet</h3>
           <p>Create your first design — birthday card, ID card, certificate, anything.</p>
-          <button className="btn-primary" onClick={() => navigate("/admin/setup/templates/new")}>
-            <Plus size={16} /> New Template
-          </button>
         </div>
       )}
 
