@@ -42,6 +42,7 @@ const BirthdayReport = () => {
 
   // Person currently shown in the birthday card modal (null = closed)
   const [birthdayTemplateId, setBirthdayTemplateId] = useState(null);
+  const [cardPerson, setCardPerson] = useState(null);
 
 useEffect(() => {
   templateAPI.getAll("birthday").then((res) => {
