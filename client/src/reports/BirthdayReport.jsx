@@ -16,7 +16,8 @@ import {
 } from "lucide-react";
 import "./ReportList.css";
 import { reportAPI } from "../services/api";
-import BirthdayCardModal from "../components/certifications/BirthdayCardModal";
+import DynamicCardModal from "../components/dynamic-templates/DynamicCardModal";
+import { templateAPI } from "../services/api";
 
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -40,7 +41,14 @@ const BirthdayReport = () => {
   const [error, setError] = useState(null);
 
   // Person currently shown in the birthday card modal (null = closed)
-  const [cardPerson, setCardPerson] = useState(null);
+  const [birthdayTemplateId, setBirthdayTemplateId] = useState(null);
+
+useEffect(() => {
+  templateAPI.getAll("birthday").then((res) => {
+    const templates = res.data.templates || [];
+    if (templates.length > 0) setBirthdayTemplateId(templates[0]._id);
+  }).catch((err) => console.error("Failed to load birthday template:", err));
+}, []);
 
   // ── Fetch ───────────────────────────────────────────────────────────────
   const fetchBirthdays = useCallback(async () => {
@@ -460,8 +468,14 @@ const BirthdayReport = () => {
 
                       {/* Birthday card button */}
                       <button
-                        title="Generate Birthday Card"
-                        onClick={() => setCardPerson(person)}
+  title="Generate Birthday Card"
+  onClick={() => {
+    if (!birthdayTemplateId) {
+      alert("No birthday template saved yet — create one in Template Designer first.");
+      return;
+    }
+    setCardPerson(person);
+  }}
                         style={{
                           background: "#fff3e0",
                           border: "1px solid #ff9800",
@@ -502,12 +516,19 @@ const BirthdayReport = () => {
       </div>
 
       {/* ── Birthday Card Modal ── */}
-      {cardPerson && (
-        <BirthdayCardModal
-          name={cardPerson.displayName}
-          onClose={() => setCardPerson(null)}
-        />
-      )}
+      {cardPerson && birthdayTemplateId && (
+  <DynamicCardModal
+    templateId={birthdayTemplateId}
+    data={{
+      fullName: cardPerson.displayName,
+      admissionNo: cardPerson.admissionNo,
+      phone: cardPerson.phone,
+      dateOfBirth: cardPerson.dateOfBirth,
+    }}
+    fileName={`Birthday-${cardPerson.displayName}`}
+    onClose={() => setCardPerson(null)}
+  />
+)}
     </div>
   );
 };
