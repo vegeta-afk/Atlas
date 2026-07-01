@@ -48,7 +48,9 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
   const [fields, setFields] = useState(
     (existingTemplate?.fields || []).map((f) => ({ fieldType: "text", ...f }))
   );
+  const [containers, setContainers] = useState(existingTemplate?.containers || []);
   const [selectedId, setSelectedId] = useState(null);
+  const [selectedContainerId, setSelectedContainerId] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const imageWrapRef = useRef(null);
@@ -118,6 +120,36 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
     setFields((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
   };
 
+  const addContainer = () => {
+    const newContainer = {
+      id: uid(),
+      label: `Container ${containers.length + 1}`,
+      xRatio: 0.5,
+      yRatio: 0.5,
+      widthRatio: 0.35,
+      heightRatio: 0.15,
+      borderRadius: 0,
+    };
+    setContainers((prev) => [...prev, newContainer]);
+    setSelectedContainerId(newContainer.id);
+    setSelectedId(null);
+  };
+
+  const updateContainer = (id, patch) => {
+    setContainers((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+  };
+
+  const deleteContainer = (id) => {
+    setContainers((prev) => prev.filter((c) => c.id !== id));
+    // Orphaned children become free-floating again rather than vanishing.
+    setFields((prev) =>
+      prev.map((f) => (f.containerId === id ? { ...f, containerId: null, xRatio: 0.5, yRatio: 0.5 } : f))
+    );
+    if (selectedContainerId === id) setSelectedContainerId(null);
+  };
+
+  const selectedContainer = containers.find((c) => c.id === selectedContainerId) || null;
+
   const deleteField = (id) => {
     setFields((prev) => prev.filter((f) => f.id !== id));
     if (selectedId === id) setSelectedId(null);
@@ -141,27 +173,49 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
   const handleFieldMouseDown = (e, field) => {
     e.stopPropagation();
     setSelectedId(field.id);
+    setSelectedContainerId(null);
+    const imageRect = imageWrapRef.current.getBoundingClientRect();
+
+    let boundsRect = imageRect; // default: field drags relative to whole card
+    if (field.containerId) {
+      const c = containers.find((c) => c.id === field.containerId);
+      if (c) {
+        boundsRect = {
+          left: imageRect.left + (c.xRatio - c.widthRatio / 2) * imageRect.width,
+          top: imageRect.top + (c.yRatio - c.heightRatio / 2) * imageRect.height,
+          width: c.widthRatio * imageRect.width,
+          height: c.heightRatio * imageRect.height,
+        };
+      }
+    }
+
+    dragState.current = { fieldId: field.id, rect: boundsRect };
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleContainerMouseDown = (e, container) => {
+    e.stopPropagation();
+    setSelectedContainerId(container.id);
+    setSelectedId(null);
     const rect = imageWrapRef.current.getBoundingClientRect();
-    dragState.current = {
-      fieldId: field.id,
-      startX: e.clientX,
-      startY: e.clientY,
-      rect,
-    };
+    dragState.current = { containerId: container.id, rect };
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
   };
 
   const handleMouseMove = useCallback((e) => {
     if (!dragState.current) return;
-    const { rect, fieldId } = dragState.current;
+    const { rect, fieldId, containerId } = dragState.current;
     let xRatio = (e.clientX - rect.left) / rect.width;
     let yRatio = (e.clientY - rect.top) / rect.height;
     xRatio = Math.min(1, Math.max(0, xRatio));
     yRatio = Math.min(1, Math.max(0, yRatio));
-    setFields((prev) =>
-      prev.map((f) => (f.id === fieldId ? { ...f, xRatio, yRatio } : f))
-    );
+    if (fieldId) {
+      setFields((prev) => prev.map((f) => (f.id === fieldId ? { ...f, xRatio, yRatio } : f)));
+    } else if (containerId) {
+      setContainers((prev) => prev.map((c) => (c.id === containerId ? { ...c, xRatio, yRatio } : c)));
+    }
   }, []);
 
   const handleMouseUp = useCallback(() => {
@@ -182,6 +236,7 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
       formData.append("name", name);
       formData.append("category", category);
       formData.append("fields", JSON.stringify(fields));
+      formData.append("containers", JSON.stringify(containers));
       if (imageFile) formData.append("image", imageFile);
 
       const res = existingTemplate
@@ -239,7 +294,55 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
                 ref={imgRef}
                 onLoad={updateRenderedWidth}
               />
-              {fields.map((f) =>
+              {containers.map((c) => (
+                <div
+                  key={c.id}
+                  className={`td-container-box ${selectedContainerId === c.id ? "selected" : ""}`}
+                  style={{
+                    position: "absolute",
+                    left: `${c.xRatio * 100}%`,
+                    top: `${c.yRatio * 100}%`,
+                    width: `${c.widthRatio * 100}%`,
+                    height: `${c.heightRatio * 100}%`,
+                    transform: "translate(-50%, -50%)",
+                    border: `2px ${selectedContainerId === c.id ? "solid" : "dashed"} #16357e`,
+                    borderRadius: c.borderRadius ? `${c.borderRadius * 100}%` : 0,
+                    overflow: "hidden",
+                    background: "rgba(22,53,126,0.04)",
+                  }}
+                  onMouseDown={(e) => handleContainerMouseDown(e, c)}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span style={{ position: "absolute", top: 2, left: 4, fontSize: 10, color: "#16357e", opacity: 0.6 }}>
+                    {c.label}
+                  </span>
+                  {fields
+                    .filter((f) => f.containerId === c.id)
+                    .map((f) => (
+                      <div
+                        key={f.id}
+                        className={`td-field-box ${selectedId === f.id ? "selected" : ""}`}
+                        style={{
+                          position: "absolute",
+                          left: `${f.xRatio * 100}%`,
+                          top: `${f.yRatio * 100}%`,
+                          maxWidth: "90%",
+                          fontFamily: f.fontFamily,
+                          fontWeight: f.fontWeight,
+                          color: f.color,
+                          fontSize: renderedWidth ? `${renderedWidth * f.fontSizeRatio}px` : "16px",
+                          textAlign: f.align,
+                          transform: "translate(-50%, -50%)",
+                        }}
+                        onMouseDown={(e) => handleFieldMouseDown(e, f)}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {f.source === "static" ? f.staticText || "(empty)" : `{{${f.dataKey || "field"}}}`}
+                      </div>
+                    ))}
+                </div>
+              ))}
+              {fields.filter((f) => !f.containerId).map((f) =>
                 f.fieldType === "image" ? (
                   <div
                     key={f.id}
@@ -314,6 +417,9 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
           <button className="btn-secondary td-add-field-btn" onClick={addPhotoField}>
             <ImageIcon size={16} /> Add Photo Field
           </button>
+          <button className="btn-secondary td-add-field-btn" onClick={addContainer}>
+            <Plus size={16} /> Add Container
+          </button>
         </div>
       </div>
 
@@ -337,6 +443,49 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
             </div>
           ))}
         </div>
+
+        {/* ── Container editor ── */}
+        {selectedContainer && (
+          <div className="td-field-editor">
+            <label>Label</label>
+            <input
+              type="text"
+              value={selectedContainer.label}
+              onChange={(e) => updateContainer(selectedContainer.id, { label: e.target.value })}
+            />
+
+            <label>Width ({Math.round(selectedContainer.widthRatio * 100)}%)</label>
+            <input
+              type="range" min="0.05" max="0.95" step="0.01"
+              value={selectedContainer.widthRatio}
+              onChange={(e) => updateContainer(selectedContainer.id, { widthRatio: parseFloat(e.target.value) })}
+            />
+
+            <label>Height ({Math.round(selectedContainer.heightRatio * 100)}%)</label>
+            <input
+              type="range" min="0.03" max="0.6" step="0.01"
+              value={selectedContainer.heightRatio}
+              onChange={(e) => updateContainer(selectedContainer.id, { heightRatio: parseFloat(e.target.value) })}
+            />
+
+            <label>Corner Rounding ({Math.round((selectedContainer.borderRadius || 0) * 100)}%)</label>
+            <input
+              type="range" min="0" max="0.1" step="0.005"
+              value={selectedContainer.borderRadius || 0}
+              onChange={(e) => updateContainer(selectedContainer.id, { borderRadius: parseFloat(e.target.value) })}
+            />
+
+            <p style={{ fontSize: 12, opacity: 0.7 }}>
+              Drag any text field onto this container's dropdown ("Parent Container") to make it a child — it'll be clipped to this box and wrap instead of overflowing.
+            </p>
+
+            <button className="btn-danger" onClick={() => deleteContainer(selectedContainer.id)}>
+              <Trash2 size={14} /> Delete Container
+            </button>
+          </div>
+        )}
+
+        {/* ── Photo field editor ── */}
 
         {/* ── Photo field editor ── */}
         {selectedField && selectedField.fieldType === "image" && (
@@ -538,6 +687,23 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
               value={selectedField.maxWidthRatio}
               onChange={(e) => updateField(selectedField.id, { maxWidthRatio: parseFloat(e.target.value) })}
             />
+
+            <label>Parent Container</label>
+            <select
+              value={selectedField.containerId || ""}
+              onChange={(e) =>
+                updateField(selectedField.id, {
+                  containerId: e.target.value || null,
+                  xRatio: 0.5,
+                  yRatio: 0.5,
+                })
+              }
+            >
+              <option value="">None (free position)</option>
+              {containers.map((c) => (
+                <option key={c.id} value={c.id}>{c.label}</option>
+              ))}
+            </select>
 
             <label className="td-checkbox-label">
               <input

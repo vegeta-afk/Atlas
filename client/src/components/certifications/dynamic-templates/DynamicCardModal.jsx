@@ -121,6 +121,18 @@ const DynamicCardModal = ({ templateId, data, fileName = "card", onClose }) => {
         const ctx = canvas.getContext("2d");
         ctx.drawImage(bgImg, 0, 0);
 
+        // Precompute each container's absolute pixel box, so fields with a
+        // containerId can resolve their clip region relative to it instead
+        // of the full card.
+        const containerRects = {};
+        (template.containers || []).forEach((c) => {
+          const w = canvas.width * (c.widthRatio || 0.35);
+          const h = canvas.height * (c.heightRatio || 0.15);
+          const x = canvas.width * c.xRatio - w / 2;
+          const y = canvas.height * c.yRatio - h / 2;
+          containerRects[c.id] = { x, y, w, h, borderRadius: c.borderRadius || 0 };
+        });
+
         // Sequential (not forEach) because photo fields need to await image load
         for (const field of template.fields) {
           if (cancelled) return;
@@ -138,8 +150,13 @@ const DynamicCardModal = ({ templateId, data, fileName = "card", onClose }) => {
 
               const boxW = canvas.width * (field.widthRatio || 0.2);
               const boxH = canvas.height * (field.heightRatio || field.widthRatio || 0.2);
-              const centerX = canvas.width * field.xRatio;
-              const centerY = canvas.height * field.yRatio;
+              const imgParentRect = field.containerId ? containerRects[field.containerId] : null;
+              const centerX = imgParentRect
+                ? imgParentRect.x + field.xRatio * imgParentRect.w
+                : canvas.width * field.xRatio;
+              const centerY = imgParentRect
+                ? imgParentRect.y + field.yRatio * imgParentRect.h
+                : canvas.height * field.yRatio;
               const boxX = centerX - boxW / 2;
               const boxY = centerY - boxH / 2;
 
@@ -190,15 +207,19 @@ const DynamicCardModal = ({ templateId, data, fileName = "card", onClose }) => {
           }
 
           // ── Text field (unchanged logic) ──
+          // ── Text field ──
+          // ── Text field ──
           const text =
             field.source === "static" ? field.staticText : resolveValue(data, field.dataKey);
           if (!text) continue;
 
-          const centerX = bgImg.width * field.xRatio;
-          const centerY = bgImg.height * field.yRatio;
-          const maxWidth = bgImg.width * field.maxWidthRatio;
-
-          let fontSize = Math.round(bgImg.width * field.fontSizeRatio);
+          const parentRect = field.containerId ? containerRects[field.containerId] : null;
+          const centerX = parentRect
+            ? parentRect.x + field.xRatio * parentRect.w
+            : bgImg.width * field.xRatio;
+          const centerY = parentRect
+            ? parentRect.y + field.yRatio * parentRect.h
+            : bgImg.height * field.yRatio;
           ctx.textBaseline = "middle";
           ctx.fillStyle = field.color;
 
@@ -206,26 +227,88 @@ const DynamicCardModal = ({ templateId, data, fileName = "card", onClose }) => {
             ctx.font = `${field.fontWeight} ${size}px "${field.fontFamily}", sans-serif`;
           };
 
-          setFont(fontSize);
-          let textWidth = ctx.measureText(text).width;
-          while (textWidth > maxWidth && fontSize > 10) {
-            fontSize -= 2;
+          if (parentRect || field.boxed) {
+            // ── Boxed text: hard-clipped, wraps to max 2 lines, never overflows.
+            // A parent container's box takes priority over the field's own
+            // boxWidthRatio/boxHeightRatio when both are present.
+            const boxW = parentRect ? parentRect.w : bgImg.width * (field.boxWidthRatio || 0.3);
+            const boxH = parentRect ? parentRect.h : bgImg.height * (field.boxHeightRatio || 0.08);
+            const boxX = parentRect ? parentRect.x : centerX - boxW / 2;
+            const boxY = parentRect ? parentRect.y : centerY - boxH / 2;
+            const boxRadius = parentRect ? parentRect.borderRadius : field.borderRadius || 0;
+            const padding = boxW * 0.04;
+            const innerWidth = boxW - padding * 2;
+
+            let fontSize = Math.round(bgImg.width * field.fontSizeRatio);
+            let lines = [];
+            const lineHeightFor = (size) => size * 1.25;
+
+            while (fontSize > 10) {
+              setFont(fontSize);
+              lines = wrapTextLines(ctx, text, innerWidth, 2);
+              const totalHeight = lines.length * lineHeightFor(fontSize);
+              if (totalHeight <= boxH - padding) break;
+              fontSize -= 2;
+            }
             setFont(fontSize);
-            textWidth = ctx.measureText(text).width;
-          }
+            lines = wrapTextLines(ctx, text, innerWidth, 2);
 
-          let drawX = centerX;
-          if (field.align === "left") {
-            ctx.textAlign = "left";
-            drawX = centerX - maxWidth / 2;
-          } else if (field.align === "right") {
-            ctx.textAlign = "right";
-            drawX = centerX + maxWidth / 2;
+           ctx.save();
+            ctx.beginPath();
+            if (boxRadius) {
+              roundRectPath(ctx, boxX, boxY, boxW, boxH, bgImg.width * boxRadius);
+            } else {
+              ctx.rect(boxX, boxY, boxW, boxH);
+            }
+            ctx.closePath();
+            ctx.clip(); // hard guarantee: text can never spill outside this box
+
+            const lineHeight = lineHeightFor(fontSize);
+            const totalTextHeight = lines.length * lineHeight;
+            let lineY = centerY - totalTextHeight / 2 + lineHeight / 2;
+
+            let textX = centerX;
+            if (field.align === "left") {
+              ctx.textAlign = "left";
+              textX = boxX + padding;
+            } else if (field.align === "right") {
+              ctx.textAlign = "right";
+              textX = boxX + boxW - padding;
+            } else {
+              ctx.textAlign = "center";
+            }
+
+            lines.forEach((line) => {
+              ctx.fillText(line, textX, lineY);
+              lineY += lineHeight;
+            });
+
+            ctx.restore();
           } else {
-            ctx.textAlign = "center";
-          }
+            // ── Unboxed text: original single-line shrink-to-fit behavior ──
+            const maxWidth = bgImg.width * field.maxWidthRatio;
+            let fontSize = Math.round(bgImg.width * field.fontSizeRatio);
+            setFont(fontSize);
+            let textWidth = ctx.measureText(text).width;
+            while (textWidth > maxWidth && fontSize > 10) {
+              fontSize -= 2;
+              setFont(fontSize);
+              textWidth = ctx.measureText(text).width;
+            }
 
-          ctx.fillText(text, drawX, centerY);
+            let drawX = centerX;
+            if (field.align === "left") {
+              ctx.textAlign = "left";
+              drawX = centerX - maxWidth / 2;
+            } else if (field.align === "right") {
+              ctx.textAlign = "right";
+              drawX = centerX + maxWidth / 2;
+            } else {
+              ctx.textAlign = "center";
+            }
+
+            ctx.fillText(text, drawX, centerY);
+          }
         }
 
         if (!cancelled) {
