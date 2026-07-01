@@ -85,6 +85,10 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
       fontWeight: "600",
       color: "#16357e",
       align: "center",
+      boxed: false,
+      boxWidthRatio: 0.3,
+      boxHeightRatio: 0.08,
+      boxBorderRadius: 0,
     };
     setFields((prev) => [...prev, newField]);
     setSelectedId(newField.id);
@@ -259,24 +263,40 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
                     <ImageIcon size={20} color={f.borderColor || "#16357e"} />
                   </div>
                 ) : (
-                  <div
-                    key={f.id}
-                    className={`td-field-box ${selectedId === f.id ? "selected" : ""}`}
-                    style={{
-                      left: `${f.xRatio * 100}%`,
-                      top: `${f.yRatio * 100}%`,
-                      maxWidth: `${f.maxWidthRatio * 100}%`,
-                      fontFamily: f.fontFamily,
-                      fontWeight: f.fontWeight,
-                      color: f.color,
-                      fontSize: renderedWidth ? `${renderedWidth * f.fontSizeRatio}px` : "16px",
-                      textAlign: f.align,
-                    }}
-                    onMouseDown={(e) => handleFieldMouseDown(e, f)}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {f.source === "static" ? f.staticText || "(empty)" : `{{${f.dataKey || "field"}}}`}
-                  </div>
+                  <React.Fragment key={f.id}>
+                    {f.boxed && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: `${f.xRatio * 100}%`,
+                          top: `${f.yRatio * 100}%`,
+                          width: `${(f.boxWidthRatio || 0.3) * 100}%`,
+                          height: `${(f.boxHeightRatio || 0.08) * 100}%`,
+                          transform: "translate(-50%, -50%)",
+                          border: "1.5px dashed #999",
+                          borderRadius: f.boxBorderRadius ? `${f.boxBorderRadius * 100}%` : 0,
+                          pointerEvents: "none",
+                        }}
+                      />
+                    )}
+                    <div
+                      className={`td-field-box ${selectedId === f.id ? "selected" : ""}`}
+                      style={{
+                        left: `${f.xRatio * 100}%`,
+                        top: `${f.yRatio * 100}%`,
+                        maxWidth: f.boxed ? `${(f.boxWidthRatio || 0.3) * 100}%` : `${f.maxWidthRatio * 100}%`,
+                        fontFamily: f.fontFamily,
+                        fontWeight: f.fontWeight,
+                        color: f.color,
+                        fontSize: renderedWidth ? `${renderedWidth * f.fontSizeRatio}px` : "16px",
+                        textAlign: f.align,
+                      }}
+                      onMouseDown={(e) => handleFieldMouseDown(e, f)}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {f.source === "static" ? f.staticText || "(empty)" : `{{${f.dataKey || "field"}}}`}
+                    </div>
+                  </React.Fragment>
                 )
               )}
             </div>
@@ -518,6 +538,49 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
               value={selectedField.maxWidthRatio}
               onChange={(e) => updateField(selectedField.id, { maxWidthRatio: parseFloat(e.target.value) })}
             />
+
+            <label className="td-checkbox-label">
+              <input
+                type="checkbox"
+                checked={!!selectedField.boxed}
+                onChange={(e) => updateField(selectedField.id, { boxed: e.target.checked })}
+              />
+              Constrain to box (prevents overflow into other rows)
+            </label>
+
+            {selectedField.boxed && (
+              <>
+                <label>Box Width ({Math.round((selectedField.boxWidthRatio || 0.3) * 100)}%)</label>
+                <input
+                  type="range"
+                  min="0.05"
+                  max="0.9"
+                  step="0.01"
+                  value={selectedField.boxWidthRatio || 0.3}
+                  onChange={(e) => updateField(selectedField.id, { boxWidthRatio: parseFloat(e.target.value) })}
+                />
+
+                <label>Box Height ({Math.round((selectedField.boxHeightRatio || 0.08) * 100)}%)</label>
+                <input
+                  type="range"
+                  min="0.02"
+                  max="0.5"
+                  step="0.01"
+                  value={selectedField.boxHeightRatio || 0.08}
+                  onChange={(e) => updateField(selectedField.id, { boxHeightRatio: parseFloat(e.target.value) })}
+                />
+
+                <label>Box Corner Rounding ({Math.round((selectedField.boxBorderRadius || 0) * 100)}%)</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="0.1"
+                  step="0.005"
+                  value={selectedField.boxBorderRadius || 0}
+                  onChange={(e) => updateField(selectedField.id, { boxBorderRadius: parseFloat(e.target.value) })}
+                />
+              </>
+            )}
 
             <label>Color</label>
             <input

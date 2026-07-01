@@ -54,6 +54,36 @@ const roundRectPath = (ctx, x, y, w, h, r) => {
   ctx.arcTo(x, y, x + w, y, radius);
 };
 
+// Greedy word-wrap into at most `maxLines` lines that fit maxWidth.
+// If content still overflows after maxLines, the last line gets an ellipsis.
+const wrapTextLines = (ctx, text, maxWidth, maxLines = 2) => {
+  const words = text.split(/\s+/);
+  const lines = [];
+  let current = "";
+
+  for (const word of words) {
+    const test = current ? `${current} ${word}` : word;
+    if (ctx.measureText(test).width <= maxWidth || !current) {
+      current = test;
+    } else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+
+  if (lines.length > maxLines) {
+    const kept = lines.slice(0, maxLines);
+    let last = kept[maxLines - 1] + "…";
+    while (last.length > 2 && ctx.measureText(last).width > maxWidth) {
+      last = last.slice(0, -2) + "…";
+    }
+    kept[maxLines - 1] = last;
+    return kept;
+  }
+  return lines;
+};
+
 /**
  * Props:
  *  - templateId: string (required) — the saved Template._id to render
