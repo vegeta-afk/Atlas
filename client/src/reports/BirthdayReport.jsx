@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import "./ReportList.css";
 import { reportAPI } from "../services/api";
-import DynamicCardModal from "../components/dynamic-templates/DynamicCardModal";
+import DynamicCardModal from "../components/certifications/dynamic-templates/DynamicCardModal";
 import { templateAPI } from "../services/api";
 
 const formatDate = (dateString) => {
