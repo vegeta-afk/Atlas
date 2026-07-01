@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { batchReportAPI } from "../services/api";
+import { batchReportAPI, templateAPI } from "../services/api";
 import {
   Clock,
   Users,
@@ -12,7 +12,7 @@ import {
   X,
   CreditCard,
 } from "lucide-react";
-import IdCardModal from "../components/certifications/IdCardModal";
+import DynamicCardModal from "../components/certifications/dynamic-templates/DynamicCardModal";
 
 const BatchReportList = () => {
   const [batches, setBatches] = useState([]);
@@ -27,6 +27,7 @@ const BatchReportList = () => {
   const [error, setError] = useState(null);
   const [viewingBatch, setViewingBatch] = useState(null); // batch object whose students are shown
   const [idCardStudent, setIdCardStudent] = useState(null); // student selected for ID card
+  const [idCardTemplateId, setIdCardTemplateId] = useState(null);
 
   const fetchReport = async () => {
     setLoading(true);
@@ -51,6 +52,17 @@ const BatchReportList = () => {
 
   useEffect(() => {
     fetchReport();
+  }, []);
+
+  // Load the saved ID Card template (same pattern as birthday template lookup)
+  useEffect(() => {
+    templateAPI
+      .getAll("idcard")
+      .then((res) => {
+        const templates = res.data.templates || [];
+        if (templates.length > 0) setIdCardTemplateId(templates[0]._id);
+      })
+      .catch((err) => console.error("Failed to load ID card template:", err));
   }, []);
 
   return (
@@ -270,7 +282,13 @@ const BatchReportList = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => setIdCardStudent(s)}
+                    onClick={() => {
+                      if (!idCardTemplateId) {
+                        alert("No ID card template saved yet — create one in Template Designer first.");
+                        return;
+                      }
+                      setIdCardStudent(s);
+                    }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-600 hover:bg-blue-100 transition flex-shrink-0"
                   >
                     <CreditCard size={14} />
@@ -283,10 +301,20 @@ const BatchReportList = () => {
         </div>
       )}
 
-      {/* ===== ID Card overlay ===== */}
-      {idCardStudent && (
-        <IdCardModal
-          student={idCardStudent}
+      {/* ===== ID Card overlay (now dynamic) ===== */}
+      {idCardStudent && idCardTemplateId && (
+        <DynamicCardModal
+          templateId={idCardTemplateId}
+          data={{
+            name: idCardStudent.name,
+            studentId: idCardStudent.studentId,
+            course: idCardStudent.course,
+            batch: idCardStudent.batch,
+            mobileNumber: idCardStudent.mobileNumber,
+            admissionDate: idCardStudent.admissionDate,
+            photo: idCardStudent.photo,
+          }}
+          fileName={`IDCard-${idCardStudent.name}`}
           onClose={() => setIdCardStudent(null)}
         />
       )}
