@@ -94,6 +94,20 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
     if (selectedId === id) setSelectedId(null);
   };
 
+
+  const imgRef = useRef(null);
+  const [renderedWidth, setRenderedWidth] = useState(0);
+
+  const updateRenderedWidth = () => {
+    if (imgRef.current) setRenderedWidth(imgRef.current.getBoundingClientRect().width);
+};
+
+  useEffect(() => {
+        window.addEventListener("resize", updateRenderedWidth);
+            return () => window.removeEventListener("resize", updateRenderedWidth);
+   }, []);
+
+
   // ── Dragging fields on the preview ───────────────────────────────────
   const handleFieldMouseDown = (e, field) => {
     e.stopPropagation();
@@ -189,25 +203,32 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
               ref={imageWrapRef}
               onClick={() => setSelectedId(null)}
             >
-              <img src={imagePreview} alt="template" draggable={false} />
+              <img
+  src={imagePreview}
+  alt="template"
+  draggable={false}
+  ref={imgRef}
+  onLoad={updateRenderedWidth}
+/>
               {fields.map((f) => (
                 <div
-                  key={f.id}
-                  className={`td-field-box ${selectedId === f.id ? "selected" : ""}`}
-                  style={{
-                    left: `${f.xRatio * 100}%`,
-                    top: `${f.yRatio * 100}%`,
-                    maxWidth: `${f.maxWidthRatio * 100}%`,
-                    fontFamily: f.fontFamily,
-                    fontWeight: f.fontWeight,
-                    color: f.color,
-                    fontSize: `${f.fontSizeRatio * 100}%`, // scales with wrap width visually
-                    textAlign: f.align,
-                  }}
-                  onMouseDown={(e) => handleFieldMouseDown(e, f)}
-                >
-                  {f.source === "static" ? f.staticText || "(empty)" : `{{${f.dataKey || "field"}}}`}
-                </div>
+  key={f.id}
+  className={`td-field-box ${selectedId === f.id ? "selected" : ""}`}
+  style={{
+    left: `${f.xRatio * 100}%`,
+    top: `${f.yRatio * 100}%`,
+    maxWidth: `${f.maxWidthRatio * 100}%`,
+    fontFamily: f.fontFamily,
+    fontWeight: f.fontWeight,
+    color: f.color,
+    fontSize: renderedWidth ? `${renderedWidth * f.fontSizeRatio}px` : "16px",
+    textAlign: f.align,
+  }}
+  onMouseDown={(e) => handleFieldMouseDown(e, f)}
+  onClick={(e) => e.stopPropagation()}
+>
+  {f.source === "static" ? f.staticText || "(empty)" : `{{${f.dataKey || "field"}}}`}
+</div>
               ))}
             </div>
             <label className="td-replace-image">
