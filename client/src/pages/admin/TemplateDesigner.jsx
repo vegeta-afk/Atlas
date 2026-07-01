@@ -1,6 +1,6 @@
 // pages/admin/TemplateDesigner.jsx
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { Plus, Trash2, Save, Upload, Type } from "lucide-react";
+import { Plus, Trash2, Save, Upload, Type, Image as ImageIcon } from "lucide-react";
 import "./TemplateDesigner.css";
 import { templateAPI } from "../../services/api"; // add this to services/api.js — see note at bottom of file
 
@@ -24,6 +24,7 @@ const DATA_KEY_SUGGESTIONS = [
   "facultyName",
   "grade",
   "duration",
+  "photo",
 ];
 
 const loadFonts = () => {
@@ -43,7 +44,10 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
   const [category, setCategory] = useState(existingTemplate?.category || "custom");
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(existingTemplate?.imageUrl || null);
-  const [fields, setFields] = useState(existingTemplate?.fields || []);
+  // Old saved templates won't have fieldType — default them to "text" so nothing breaks
+  const [fields, setFields] = useState(
+    (existingTemplate?.fields || []).map((f) => ({ fieldType: "text", ...f }))
+  );
   const [selectedId, setSelectedId] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -68,6 +72,7 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
   const addField = () => {
     const newField = {
       id: uid(),
+      fieldType: "text",
       label: `Field ${fields.length + 1}`,
       source: "dynamic",
       dataKey: "fullName",
@@ -80,6 +85,26 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
       fontWeight: "600",
       color: "#16357e",
       align: "center",
+    };
+    setFields((prev) => [...prev, newField]);
+    setSelectedId(newField.id);
+  };
+
+  const addPhotoField = () => {
+    const newField = {
+      id: uid(),
+      fieldType: "image",
+      label: `Photo ${fields.filter((f) => f.fieldType === "image").length + 1}`,
+      source: "dynamic",
+      dataKey: "photo",
+      xRatio: 0.2,
+      yRatio: 0.4,
+      widthRatio: 0.2,
+      heightRatio: 0.3,
+      shape: "square", // "square" | "circle"
+      borderRadius: 0.01,
+      borderWidth: 0.004,
+      borderColor: "#16357e",
     };
     setFields((prev) => [...prev, newField]);
     setSelectedId(newField.id);
@@ -204,32 +229,56 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
               onClick={() => setSelectedId(null)}
             >
               <img
-  src={imagePreview}
-  alt="template"
-  draggable={false}
-  ref={imgRef}
-  onLoad={updateRenderedWidth}
-/>
-              {fields.map((f) => (
-                <div
-  key={f.id}
-  className={`td-field-box ${selectedId === f.id ? "selected" : ""}`}
-  style={{
-    left: `${f.xRatio * 100}%`,
-    top: `${f.yRatio * 100}%`,
-    maxWidth: `${f.maxWidthRatio * 100}%`,
-    fontFamily: f.fontFamily,
-    fontWeight: f.fontWeight,
-    color: f.color,
-    fontSize: renderedWidth ? `${renderedWidth * f.fontSizeRatio}px` : "16px",
-    textAlign: f.align,
-  }}
-  onMouseDown={(e) => handleFieldMouseDown(e, f)}
-  onClick={(e) => e.stopPropagation()}
->
-  {f.source === "static" ? f.staticText || "(empty)" : `{{${f.dataKey || "field"}}}`}
-</div>
-              ))}
+                src={imagePreview}
+                alt="template"
+                draggable={false}
+                ref={imgRef}
+                onLoad={updateRenderedWidth}
+              />
+              {fields.map((f) =>
+                f.fieldType === "image" ? (
+                  <div
+                    key={f.id}
+                    className={`td-field-box td-photo-box ${selectedId === f.id ? "selected" : ""}`}
+                    style={{
+                      left: `${f.xRatio * 100}%`,
+                      top: `${f.yRatio * 100}%`,
+                      width: `${f.widthRatio * 100}%`,
+                      height: `${f.heightRatio * 100}%`,
+                      transform: "translate(-50%, -50%)",
+                      borderRadius: f.shape === "circle" ? "50%" : `${(f.borderRadius || 0) * 100}%`,
+                      border: `2px dashed ${f.borderColor || "#16357e"}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "rgba(22,53,126,0.05)",
+                    }}
+                    onMouseDown={(e) => handleFieldMouseDown(e, f)}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ImageIcon size={20} color={f.borderColor || "#16357e"} />
+                  </div>
+                ) : (
+                  <div
+                    key={f.id}
+                    className={`td-field-box ${selectedId === f.id ? "selected" : ""}`}
+                    style={{
+                      left: `${f.xRatio * 100}%`,
+                      top: `${f.yRatio * 100}%`,
+                      maxWidth: `${f.maxWidthRatio * 100}%`,
+                      fontFamily: f.fontFamily,
+                      fontWeight: f.fontWeight,
+                      color: f.color,
+                      fontSize: renderedWidth ? `${renderedWidth * f.fontSizeRatio}px` : "16px",
+                      textAlign: f.align,
+                    }}
+                    onMouseDown={(e) => handleFieldMouseDown(e, f)}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {f.source === "static" ? f.staticText || "(empty)" : `{{${f.dataKey || "field"}}}`}
+                  </div>
+                )
+              )}
             </div>
             <label className="td-replace-image">
               <Upload size={14} /> Replace image
@@ -238,9 +287,14 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
           </>
         )}
 
-        <button className="btn-secondary td-add-field-btn" onClick={addField}>
-          <Plus size={16} /> Add Text Field
-        </button>
+        <div className="td-add-field-row">
+          <button className="btn-secondary td-add-field-btn" onClick={addField}>
+            <Plus size={16} /> Add Text Field
+          </button>
+          <button className="btn-secondary td-add-field-btn" onClick={addPhotoField}>
+            <ImageIcon size={16} /> Add Photo Field
+          </button>
+        </div>
       </div>
 
       {/* ── Right: field editor ── */}
@@ -256,7 +310,7 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
               className={`td-field-list-item ${selectedId === f.id ? "selected" : ""}`}
               onClick={() => setSelectedId(f.id)}
             >
-              <span>{f.label}</span>
+              <span>{f.fieldType === "image" ? "📷 " : ""}{f.label}</span>
               <button onClick={(e) => { e.stopPropagation(); deleteField(f.id); }}>
                 <Trash2 size={14} />
               </button>
@@ -264,7 +318,127 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
           ))}
         </div>
 
-        {selectedField && (
+        {/* ── Photo field editor ── */}
+        {selectedField && selectedField.fieldType === "image" && (
+          <div className="td-field-editor">
+            <label>Label (for your reference only)</label>
+            <input
+              type="text"
+              value={selectedField.label}
+              onChange={(e) => updateField(selectedField.id, { label: e.target.value })}
+            />
+
+            <label>Content Type</label>
+            <div className="td-radio-row">
+              <label>
+                <input
+                  type="radio"
+                  checked={selectedField.source === "dynamic"}
+                  onChange={() => updateField(selectedField.id, { source: "dynamic" })}
+                />
+                Dynamic (from record)
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  checked={selectedField.source === "static"}
+                  onChange={() => updateField(selectedField.id, { source: "static" })}
+                />
+                Static image URL
+              </label>
+            </div>
+
+            {selectedField.source === "dynamic" ? (
+              <>
+                <label>Data key</label>
+                <input
+                  type="text"
+                  list="data-key-suggestions"
+                  value={selectedField.dataKey}
+                  placeholder="e.g. photo"
+                  onChange={(e) => updateField(selectedField.id, { dataKey: e.target.value })}
+                />
+              </>
+            ) : (
+              <>
+                <label>Static image URL</label>
+                <input
+                  type="text"
+                  value={selectedField.staticUrl || ""}
+                  placeholder="https://..."
+                  onChange={(e) => updateField(selectedField.id, { staticUrl: e.target.value })}
+                />
+              </>
+            )}
+
+            <label>Shape</label>
+            <select
+              value={selectedField.shape}
+              onChange={(e) => updateField(selectedField.id, { shape: e.target.value })}
+            >
+              <option value="square">Square / Rectangle / Rounded</option>
+              <option value="circle">Circle</option>
+            </select>
+
+            <label>Width ({Math.round(selectedField.widthRatio * 100)}%)</label>
+            <input
+              type="range"
+              min="0.05"
+              max="0.6"
+              step="0.01"
+              value={selectedField.widthRatio}
+              onChange={(e) => updateField(selectedField.id, { widthRatio: parseFloat(e.target.value) })}
+            />
+
+            <label>Height ({Math.round(selectedField.heightRatio * 100)}%)</label>
+            <input
+              type="range"
+              min="0.05"
+              max="0.6"
+              step="0.01"
+              value={selectedField.heightRatio}
+              onChange={(e) => updateField(selectedField.id, { heightRatio: parseFloat(e.target.value) })}
+            />
+
+            {selectedField.shape !== "circle" && (
+              <>
+                <label>Corner Rounding ({Math.round((selectedField.borderRadius || 0) * 100)}%)</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="0.1"
+                  step="0.005"
+                  value={selectedField.borderRadius || 0}
+                  onChange={(e) => updateField(selectedField.id, { borderRadius: parseFloat(e.target.value) })}
+                />
+              </>
+            )}
+
+            <label>Border Width</label>
+            <input
+              type="range"
+              min="0"
+              max="0.02"
+              step="0.001"
+              value={selectedField.borderWidth || 0}
+              onChange={(e) => updateField(selectedField.id, { borderWidth: parseFloat(e.target.value) })}
+            />
+
+            <label>Border Color</label>
+            <input
+              type="color"
+              value={selectedField.borderColor || "#16357e"}
+              onChange={(e) => updateField(selectedField.id, { borderColor: e.target.value })}
+            />
+
+            <button className="btn-danger" onClick={() => deleteField(selectedField.id)}>
+              <Trash2 size={14} /> Delete Field
+            </button>
+          </div>
+        )}
+
+        {/* ── Text field editor (unchanged from your original) ── */}
+        {selectedField && selectedField.fieldType !== "image" && (
           <div className="td-field-editor">
             <label>Label (for your reference only)</label>
             <input
@@ -303,11 +477,6 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
                   placeholder="e.g. fullName"
                   onChange={(e) => updateField(selectedField.id, { dataKey: e.target.value })}
                 />
-                <datalist id="data-key-suggestions">
-                  {DATA_KEY_SUGGESTIONS.map((k) => (
-                    <option key={k} value={k} />
-                  ))}
-                </datalist>
               </>
             ) : (
               <>
@@ -382,6 +551,13 @@ const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
             </button>
           </div>
         )}
+
+        {/* Shared datalist used by both text and photo Data Key inputs */}
+        <datalist id="data-key-suggestions">
+          {DATA_KEY_SUGGESTIONS.map((k) => (
+            <option key={k} value={k} />
+          ))}
+        </datalist>
 
         <button className="btn-primary td-save-btn" onClick={handleSave} disabled={saving}>
           <Save size={16} /> {saving ? "Saving..." : "Save Template"}
