@@ -135,6 +135,7 @@ const DynamicCardModal = ({ templateId, data, fileName = "card", onClose }) => {
               ctx.restore();
 
               // Optional border around the photo
+              // Optional border around the photo
               if (field.borderWidth) {
                 ctx.save();
                 ctx.lineWidth = canvas.width * field.borderWidth;
@@ -142,9 +143,12 @@ const DynamicCardModal = ({ templateId, data, fileName = "card", onClose }) => {
                 ctx.beginPath();
                 if (field.shape === "circle") {
                   ctx.arc(centerX, centerY, Math.min(boxW, boxH) / 2, 0, Math.PI * 2);
+                } else if (field.borderRadius) {
+                  roundRectPath(ctx, boxX, boxY, boxW, boxH, canvas.width * field.borderRadius);
                 } else {
                   ctx.rect(boxX, boxY, boxW, boxH);
                 }
+                ctx.closePath();
                 ctx.stroke();
                 ctx.restore();
               }
