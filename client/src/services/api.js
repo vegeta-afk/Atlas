@@ -479,5 +479,17 @@ export const batchReportAPI = {
   getBatchReport: () => api.get("/batch-report"),
 };
 
+export const templateAPI = {
+    getAll: (category) => api.get("/templates", { params: category ? { category } : {} }),
+    getById: (id) => api.get(`/templates/${id}`),
+    create: (formData) => api.post("/templates", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+    update: (id, formData) => api.put(`/templates/${id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+    delete: (id) => api.delete(`/templates/${id}`),
+  };
+
 
 export default api;

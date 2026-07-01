@@ -82,6 +82,10 @@ import FacultyStudentList from "./pages/Faculty/FacultyStudentList";
 
 import MaterialIssue from "./pages/students/MaterialIssue";
 
+import TemplateDesigner from "./pages/admin/TemplateDesigner";
+import TemplateList from "./pages/admin/TemplateList";
+import TemplateEditPage from "./pages/admin/TemplateEditPage";
+
 function App() {
   return (
     <Routes>
@@ -102,6 +106,7 @@ function App() {
           <Route path="admissions/view/:id" element={<ViewAdmission />} />
           <Route path="calls" element={<CallLogs />} />
            <Route path="admissions/edit/:id" element={<EditAdmission />} />
+           
 
         </Route>
 
@@ -109,8 +114,11 @@ function App() {
           <Route path="courses" element={<CourseList />} />
           <Route path="courses/add" element={<AddCourse />} />
           <Route path="courses/edit/:id" element={<EditCourse />} />
-  <Route path="courses/view/:id" element={<ViewCourse />} />
+          <Route path="courses/view/:id" element={<ViewCourse />} />
           <Route path="management" element={<SetupList />} />
+          <Route path="templates" element={<TemplateList />} />
+          <Route path="templates/new" element={<TemplateEditPage />} />
+          <Route path="templates/edit/:id" element={<TemplateEditPage />} />
         </Route>
 
         <Route path="faculty">

@@ -33,6 +33,7 @@ import {
   Package,
    Cake,
    Users,
+   LayoutTemplate,
 } from "lucide-react";
 import "./Sidebar.css";
 
@@ -81,6 +82,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           subItems: [
             { path: "/admin/setup/courses",    label: "Course Management", icon: <GraduationCap size={13} /> },
             { path: "/admin/setup/management", label: "Setup Management",  icon: <Briefcase size={13} /> },
+            { path: "/admin/setup/templates",  label: "Template Designer", icon: <LayoutTemplate size={13} /> },
           ],
         },
       ],

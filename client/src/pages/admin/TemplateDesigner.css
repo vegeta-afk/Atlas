@@ -1,0 +1,217 @@
+.td-container {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  height: calc(100vh - 80px);
+}
+
+.td-preview-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.td-top-bar {
+  display: flex;
+  gap: 10px;
+}
+
+.td-name-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.td-top-bar select {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.td-upload-box {
+  border: 2px dashed #bbb;
+  border-radius: 12px;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #888;
+  cursor: pointer;
+}
+
+.td-upload-box:hover {
+  border-color: #1a56db;
+  color: #1a56db;
+}
+
+.td-image-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  user-select: none;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.td-image-wrap img {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+
+.td-field-box {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: move;
+  padding: 2px 6px;
+  white-space: nowrap;
+  border: 1px dashed transparent;
+  border-radius: 4px;
+}
+
+.td-field-box:hover {
+  border-color: #90caf9;
+  background: rgba(144, 202, 249, 0.15);
+}
+
+.td-field-box.selected {
+  border-color: #1a56db;
+  background: rgba(26, 86, 219, 0.1);
+}
+
+.td-replace-image {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #1a56db;
+  cursor: pointer;
+}
+
+.td-add-field-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.td-editor-panel {
+  width: 320px;
+  border-left: 1px solid #eee;
+  padding-left: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.td-editor-panel h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  margin: 0;
+}
+
+.td-field-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.td-field-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #f8f8f8;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.td-field-list-item.selected {
+  background: #e3edff;
+}
+
+.td-field-list-item button {
+  background: none;
+  border: none;
+  color: #c62828;
+  cursor: pointer;
+}
+
+.td-field-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.td-field-editor label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  margin-top: 6px;
+}
+
+.td-field-editor input[type="text"],
+.td-field-editor select {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.td-radio-row {
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.td-radio-row label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 400;
+  color: #333;
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  background: #fff0f0;
+  border: 1px solid #e57373;
+  color: #c62828;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.td-save-btn {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: 14px;
+}

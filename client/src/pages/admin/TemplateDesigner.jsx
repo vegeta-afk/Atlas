@@ -1,0 +1,389 @@
+// pages/admin/TemplateDesigner.jsx
+import React, { useState, useRef, useCallback, useEffect } from "react";
+import { Plus, Trash2, Save, Upload, Type } from "lucide-react";
+import "./TemplateDesigner.css";
+import { templateAPI } from "../../services/api"; // add this to services/api.js — see note at bottom of file
+
+const FONT_OPTIONS = [
+  { label: "Poppins (clean/sans)", value: "Poppins" },
+  { label: "Georgia (serif)", value: "Georgia" },
+  { label: "Dancing Script (cursive/signature)", value: "Dancing Script" },
+  { label: "Arial", value: "Arial" },
+];
+
+const DATA_KEY_SUGGESTIONS = [
+  "fullName",
+  "admissionNo",
+  "course",
+  "batchTime",
+  "fatherName",
+  "mobileNumber",
+  "email",
+  "issueDate",
+  "dateOfBirth",
+  "facultyName",
+  "grade",
+  "duration",
+];
+
+const loadFonts = () => {
+  if (document.getElementById("template-designer-fonts")) return;
+  const link = document.createElement("link");
+  link.id = "template-designer-fonts";
+  link.rel = "stylesheet";
+  link.href =
+    "https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@400;600;700&display=swap";
+  document.head.appendChild(link);
+};
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+const TemplateDesigner = ({ existingTemplate = null, onSaved }) => {
+  const [name, setName] = useState(existingTemplate?.name || "");
+  const [category, setCategory] = useState(existingTemplate?.category || "custom");
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(existingTemplate?.imageUrl || null);
+  const [fields, setFields] = useState(existingTemplate?.fields || []);
+  const [selectedId, setSelectedId] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const imageWrapRef = useRef(null);
+  const dragState = useRef(null); // { fieldId, offsetX, offsetY }
+
+  useEffect(() => {
+    loadFonts();
+  }, []);
+
+  const selectedField = fields.find((f) => f.id === selectedId) || null;
+
+  // ── Image upload ──────────────────────────────────────────────────────
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  // ── Field CRUD ────────────────────────────────────────────────────────
+  const addField = () => {
+    const newField = {
+      id: uid(),
+      label: `Field ${fields.length + 1}`,
+      source: "dynamic",
+      dataKey: "fullName",
+      staticText: "",
+      xRatio: 0.5,
+      yRatio: 0.5,
+      maxWidthRatio: 0.7,
+      fontSizeRatio: 0.045,
+      fontFamily: "Poppins",
+      fontWeight: "600",
+      color: "#16357e",
+      align: "center",
+    };
+    setFields((prev) => [...prev, newField]);
+    setSelectedId(newField.id);
+  };
+
+  const updateField = (id, patch) => {
+    setFields((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
+  };
+
+  const deleteField = (id) => {
+    setFields((prev) => prev.filter((f) => f.id !== id));
+    if (selectedId === id) setSelectedId(null);
+  };
+
+  // ── Dragging fields on the preview ───────────────────────────────────
+  const handleFieldMouseDown = (e, field) => {
+    e.stopPropagation();
+    setSelectedId(field.id);
+    const rect = imageWrapRef.current.getBoundingClientRect();
+    dragState.current = {
+      fieldId: field.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      rect,
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
+  const handleMouseMove = useCallback((e) => {
+    if (!dragState.current) return;
+    const { rect, fieldId } = dragState.current;
+    let xRatio = (e.clientX - rect.left) / rect.width;
+    let yRatio = (e.clientY - rect.top) / rect.height;
+    xRatio = Math.min(1, Math.max(0, xRatio));
+    yRatio = Math.min(1, Math.max(0, yRatio));
+    setFields((prev) =>
+      prev.map((f) => (f.id === fieldId ? { ...f, xRatio, yRatio } : f))
+    );
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    dragState.current = null;
+    window.removeEventListener("mousemove", handleMouseMove);
+    window.removeEventListener("mouseup", handleMouseUp);
+  }, [handleMouseMove]);
+
+  // ── Save ──────────────────────────────────────────────────────────────
+  const handleSave = async () => {
+    if (!name.trim()) return alert("Give the template a name first.");
+    if (!imageFile && !imagePreview) return alert("Upload a template image first.");
+    if (fields.length === 0) return alert("Add at least one field.");
+
+    try {
+      setSaving(true);
+      const formData = new FormData();
+      formData.append("name", name);
+      formData.append("category", category);
+      formData.append("fields", JSON.stringify(fields));
+      if (imageFile) formData.append("image", imageFile);
+
+      const res = existingTemplate
+        ? await templateAPI.update(existingTemplate._id, formData)
+        : await templateAPI.create(formData);
+
+      alert("Template saved!");
+      if (onSaved) onSaved(res.data.template);
+    } catch (err) {
+      console.error("Save template failed:", err);
+      alert(err?.response?.data?.message || "Failed to save template");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="td-container">
+      {/* ── Left: canvas/preview ── */}
+      <div className="td-preview-panel">
+        <div className="td-top-bar">
+          <input
+            type="text"
+            placeholder="Template name (e.g. Birthday Card - Blue)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="td-name-input"
+          />
+          <select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="birthday">Birthday Card</option>
+            <option value="idcard">ID Card</option>
+            <option value="certificate">Certificate</option>
+            <option value="marksheet">Marksheet</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+
+        {!imagePreview ? (
+          <label className="td-upload-box">
+            <Upload size={32} />
+            <span>Click to upload template image</span>
+            <input type="file" accept="image/*" hidden onChange={handleImageChange} />
+          </label>
+        ) : (
+          <>
+            <div
+              className="td-image-wrap"
+              ref={imageWrapRef}
+              onClick={() => setSelectedId(null)}
+            >
+              <img src={imagePreview} alt="template" draggable={false} />
+              {fields.map((f) => (
+                <div
+                  key={f.id}
+                  className={`td-field-box ${selectedId === f.id ? "selected" : ""}`}
+                  style={{
+                    left: `${f.xRatio * 100}%`,
+                    top: `${f.yRatio * 100}%`,
+                    maxWidth: `${f.maxWidthRatio * 100}%`,
+                    fontFamily: f.fontFamily,
+                    fontWeight: f.fontWeight,
+                    color: f.color,
+                    fontSize: `${f.fontSizeRatio * 100}%`, // scales with wrap width visually
+                    textAlign: f.align,
+                  }}
+                  onMouseDown={(e) => handleFieldMouseDown(e, f)}
+                >
+                  {f.source === "static" ? f.staticText || "(empty)" : `{{${f.dataKey || "field"}}}`}
+                </div>
+              ))}
+            </div>
+            <label className="td-replace-image">
+              <Upload size={14} /> Replace image
+              <input type="file" accept="image/*" hidden onChange={handleImageChange} />
+            </label>
+          </>
+        )}
+
+        <button className="btn-secondary td-add-field-btn" onClick={addField}>
+          <Plus size={16} /> Add Text Field
+        </button>
+      </div>
+
+      {/* ── Right: field editor ── */}
+      <div className="td-editor-panel">
+        <h3>
+          <Type size={18} /> Fields ({fields.length})
+        </h3>
+
+        <div className="td-field-list">
+          {fields.map((f) => (
+            <div
+              key={f.id}
+              className={`td-field-list-item ${selectedId === f.id ? "selected" : ""}`}
+              onClick={() => setSelectedId(f.id)}
+            >
+              <span>{f.label}</span>
+              <button onClick={(e) => { e.stopPropagation(); deleteField(f.id); }}>
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {selectedField && (
+          <div className="td-field-editor">
+            <label>Label (for your reference only)</label>
+            <input
+              type="text"
+              value={selectedField.label}
+              onChange={(e) => updateField(selectedField.id, { label: e.target.value })}
+            />
+
+            <label>Content Type</label>
+            <div className="td-radio-row">
+              <label>
+                <input
+                  type="radio"
+                  checked={selectedField.source === "dynamic"}
+                  onChange={() => updateField(selectedField.id, { source: "dynamic" })}
+                />
+                Dynamic (from record)
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  checked={selectedField.source === "static"}
+                  onChange={() => updateField(selectedField.id, { source: "static" })}
+                />
+                Static text
+              </label>
+            </div>
+
+            {selectedField.source === "dynamic" ? (
+              <>
+                <label>Data key</label>
+                <input
+                  type="text"
+                  list="data-key-suggestions"
+                  value={selectedField.dataKey}
+                  placeholder="e.g. fullName"
+                  onChange={(e) => updateField(selectedField.id, { dataKey: e.target.value })}
+                />
+                <datalist id="data-key-suggestions">
+                  {DATA_KEY_SUGGESTIONS.map((k) => (
+                    <option key={k} value={k} />
+                  ))}
+                </datalist>
+              </>
+            ) : (
+              <>
+                <label>Static text</label>
+                <input
+                  type="text"
+                  value={selectedField.staticText}
+                  onChange={(e) => updateField(selectedField.id, { staticText: e.target.value })}
+                />
+              </>
+            )}
+
+            <label>Font</label>
+            <select
+              value={selectedField.fontFamily}
+              onChange={(e) => updateField(selectedField.id, { fontFamily: e.target.value })}
+            >
+              {FONT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+
+            <label>Font size ({Math.round(selectedField.fontSizeRatio * 1000)}px @ 1000px width)</label>
+            <input
+              type="range"
+              min="0.015"
+              max="0.12"
+              step="0.005"
+              value={selectedField.fontSizeRatio}
+              onChange={(e) => updateField(selectedField.id, { fontSizeRatio: parseFloat(e.target.value) })}
+            />
+
+            <label>Max width ({Math.round(selectedField.maxWidthRatio * 100)}%)</label>
+            <input
+              type="range"
+              min="0.1"
+              max="1"
+              step="0.02"
+              value={selectedField.maxWidthRatio}
+              onChange={(e) => updateField(selectedField.id, { maxWidthRatio: parseFloat(e.target.value) })}
+            />
+
+            <label>Color</label>
+            <input
+              type="color"
+              value={selectedField.color}
+              onChange={(e) => updateField(selectedField.id, { color: e.target.value })}
+            />
+
+            <label>Weight</label>
+            <select
+              value={selectedField.fontWeight}
+              onChange={(e) => updateField(selectedField.id, { fontWeight: e.target.value })}
+            >
+              <option value="400">Normal</option>
+              <option value="600">Semi-bold</option>
+              <option value="700">Bold</option>
+            </select>
+
+            <label>Alignment</label>
+            <select
+              value={selectedField.align}
+              onChange={(e) => updateField(selectedField.id, { align: e.target.value })}
+            >
+              <option value="left">Left</option>
+              <option value="center">Center</option>
+              <option value="right">Right</option>
+            </select>
+
+            <button className="btn-danger" onClick={() => deleteField(selectedField.id)}>
+              <Trash2 size={14} /> Delete Field
+            </button>
+          </div>
+        )}
+
+        <button className="btn-primary td-save-btn" onClick={handleSave} disabled={saving}>
+          <Save size={16} /> {saving ? "Saving..." : "Save Template"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default TemplateDesigner;
+
+/*
+  Add to services/api.js:
+
+  export const templateAPI = {
+    getAll: (category) => api.get("/templates", { params: category ? { category } : {} }),
+    getById: (id) => api.get(`/templates/${id}`),
+    create: (formData) => api.post("/templates", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+    update: (id, formData) => api.put(`/templates/${id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+    delete: (id) => api.delete(`/templates/${id}`),
+  };
+*/
