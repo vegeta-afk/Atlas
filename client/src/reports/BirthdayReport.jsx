@@ -12,9 +12,11 @@ import {
   Briefcase,
   CalendarDays,
   Users,
+  Cake,
 } from "lucide-react";
 import "./ReportList.css";
 import { reportAPI } from "../services/api";
+import BirthdayCardModal from "../components/certifications/BirthdayCardModal";
 
 const formatDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -36,6 +38,9 @@ const BirthdayReport = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Person currently shown in the birthday card modal (null = closed)
+  const [cardPerson, setCardPerson] = useState(null);
 
   // ── Fetch ───────────────────────────────────────────────────────────────
   const fetchBirthdays = useCallback(async () => {
@@ -452,6 +457,25 @@ const BirthdayReport = () => {
                           <MessageCircle size={16} />
                         </span>
                       )}
+
+                      {/* Birthday card button */}
+                      <button
+                        title="Generate Birthday Card"
+                        onClick={() => setCardPerson(person)}
+                        style={{
+                          background: "#fff3e0",
+                          border: "1px solid #ff9800",
+                          borderRadius: 6,
+                          padding: "5px 8px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          color: "#e65100",
+                          cursor: "pointer",
+                          marginLeft: 6,
+                        }}
+                      >
+                        <Cake size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -476,6 +500,14 @@ const BirthdayReport = () => {
           </tbody>
         </table>
       </div>
+
+      {/* ── Birthday Card Modal ── */}
+      {cardPerson && (
+        <BirthdayCardModal
+          name={cardPerson.displayName}
+          onClose={() => setCardPerson(null)}
+        />
+      )}
     </div>
   );
 };
