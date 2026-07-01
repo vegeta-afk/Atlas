@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { X, Download, Share2 } from "lucide-react";
 import "./DynamicCardModal.css";
-import { templateAPI } from "../../services/api";
+import { templateAPI } from "../../../services/api";
 
 const fontsLoaded = new Set();
 const loadFont = (family) => {
