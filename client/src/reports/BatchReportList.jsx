@@ -304,19 +304,19 @@ const BatchReportList = () => {
       {/* ===== ID Card overlay (now dynamic) ===== */}
       {idCardStudent && idCardTemplateId && (
         <DynamicCardModal
-          templateId={idCardTemplateId}
-          data={{
-            name: idCardStudent.name,
-            studentId: idCardStudent.studentId,
-            course: idCardStudent.course,
-            batch: idCardStudent.batch,
-            mobileNumber: idCardStudent.mobileNumber,
-            admissionDate: idCardStudent.admissionDate,
-            photo: idCardStudent.photo,
-          }}
-          fileName={`IDCard-${idCardStudent.name}`}
-          onClose={() => setIdCardStudent(null)}
-        />
+  templateId={idCardTemplateId}
+  data={{
+    fullName: idCardStudent.name,
+    admissionNo: idCardStudent.studentId,
+    course: idCardStudent.course,
+    batchTime: idCardStudent.batch,
+    mobileNumber: idCardStudent.mobileNumber,
+    issueDate: idCardStudent.admissionDate,
+    photo: idCardStudent.photo,
+  }}
+  fileName={`IDCard-${idCardStudent.name}`}
+  onClose={() => setIdCardStudent(null)}
+/>
       )}
     </div>
   );
