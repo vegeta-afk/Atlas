@@ -2,7 +2,7 @@
 // NOTE: This assumes you already have `cloudinary` configured somewhere in your
 // project (same setup you used for faculty/admission photo uploads). Adjust the
 // require path below to match your actual config file.
-const cloudinary = require("../config/cloudinary"); // <-- adjust path if different
+const { cloudinary } = require("../config/cloudinary");
 const streamifier = require("streamifier"); // npm install streamifier --save
 const Template = require("../models/Template");
 
