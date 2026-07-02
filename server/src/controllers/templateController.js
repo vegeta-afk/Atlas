@@ -30,7 +30,7 @@ const getImageSize = (buffer) => {
 // POST /api/templates  (multipart/form-data: image, name, category, fields)
 exports.createTemplate = async (req, res) => {
   try {
-    const { name, category, fields } = req.body;
+    const { name, category, fields, containers } = req.body;
 
     if (!req.file) {
       return res.status(400).json({ success: false, message: "Template image is required" });
@@ -39,6 +39,8 @@ exports.createTemplate = async (req, res) => {
     const uploadResult = await uploadBufferToCloudinary(req.file.buffer);
 
     const parsedFields = typeof fields === "string" ? JSON.parse(fields) : fields || [];
+    const parsedContainers =
+      typeof containers === "string" ? JSON.parse(containers) : containers || [];
 
     const template = await Template.create({
       name,
@@ -47,6 +49,7 @@ exports.createTemplate = async (req, res) => {
       imageWidth: uploadResult.width,
       imageHeight: uploadResult.height,
       fields: parsedFields,
+      containers: parsedContainers,
     });
 
     res.status(201).json({ success: true, template });
@@ -59,13 +62,16 @@ exports.createTemplate = async (req, res) => {
 // PUT /api/templates/:id  (multipart/form-data, image optional on update)
 exports.updateTemplate = async (req, res) => {
   try {
-    const { name, category, fields } = req.body;
+    const { name, category, fields, containers } = req.body;
     const update = {};
 
     if (name !== undefined) update.name = name;
     if (category !== undefined) update.category = category;
     if (fields !== undefined) {
       update.fields = typeof fields === "string" ? JSON.parse(fields) : fields;
+    }
+    if (containers !== undefined) {
+      update.containers = typeof containers === "string" ? JSON.parse(containers) : containers;
     }
 
     if (req.file) {
