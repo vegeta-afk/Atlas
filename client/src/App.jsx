@@ -13,6 +13,7 @@ import MyExams from "./pages/student/MyExams";
 import MyMarksheet from "./pages/student/Mymarksheet";
 import BirthdayReport from "./reports/BirthdayReport";
 import BatchReportList from "./reports/BatchReportList";
+import AttendanceReportList from "./reports/AttendanceReportList";
 
 
 
@@ -85,7 +86,7 @@ import MaterialIssue from "./pages/students/MaterialIssue";
 import TemplateDesigner from "./pages/admin/TemplateDesigner";
 import TemplateList from "./pages/admin/TemplateList";
 import TemplateEditPage from "./pages/admin/TemplateEditPage";
-import AttendanceReportList from "./pages/AttendanceReportList";
+
 
 function App() {
   return (
