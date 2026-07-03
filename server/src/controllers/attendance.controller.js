@@ -9,6 +9,8 @@ const activeQRSessions = new Map();
 const LATE_THRESHOLD_MINUTES = 20;
 const LEAVE_STATUSES = ['sick_leave', 'casual_leave', 'official_leave'];
 
+const User = require('../models/User');
+
 
 setInterval(() => {
   const now = Date.now();
@@ -998,10 +1000,27 @@ exports.getAttendanceReport = async (req, res) => {
     const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
+    // facultyId from the dropdown is a Faculty._id — TeacherBatch/Attendance
+    // store the linked User._id (User.facultyId -> Faculty._id), so resolve it first
+    let resolvedTeacherId = null;
+    if (facultyId) {
+      const userDoc = await User.findOne({ facultyId }).select('_id').lean();
+      if (!userDoc) {
+        return res.status(200).json({
+          success: true,
+          date: startOfDay,
+          stats: { total: 0, present: 0, absent: 0, late: 0, leave: 0 },
+          count: 0,
+          data: []
+        });
+      }
+      resolvedTeacherId = userDoc._id;
+    }
+
     // Roster: which batch/teacher assignments to include
     const tbQuery = { isActive: true };
     if (batchId) tbQuery.batch = batchId;
-    if (facultyId) tbQuery.teacher = facultyId;
+    if (resolvedTeacherId) tbQuery.teacher = resolvedTeacherId;
 
     const teacherBatches = await TeacherBatch.find(tbQuery)
       .populate('batch', 'batchName displayName startTime endTime')
@@ -1022,7 +1041,7 @@ exports.getAttendanceReport = async (req, res) => {
     // Attendance already marked for the day, same scope
     const attQuery = { date: { $gte: startOfDay, $lte: endOfDay } };
     if (batchId) attQuery.batch = batchId;
-    if (facultyId) attQuery.teacher = facultyId;
+    if (resolvedTeacherId) attQuery.teacher = resolvedTeacherId;
 
     const attendanceRecords = await Attendance.find(attQuery).lean();
     const attendanceMap = new Map();
