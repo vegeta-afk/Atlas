@@ -36,6 +36,7 @@ const StudentAttendance = () => {
     new Date().toISOString().split("T")[0]
   );
   const [attendance, setAttendance] = useState({});
+  const [attendanceTimes, setAttendanceTimes] = useState({}); // studentId -> "hh:mm AM/PM" captured at click time
   const [loading, setLoading] = useState(true);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [teacherStats, setTeacherStats] = useState({
@@ -89,6 +90,9 @@ const [qrLoading, setQRLoading] = useState(false);
       return null;
     }
   };
+
+  const getCurrentTimeStr = () =>
+    new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -261,12 +265,18 @@ const fetchBatchStudents = async (batchId) => {
       }
       
       // Initialize attendance status
+      // Initialize attendance status
       const initialAttendance = {};
+      const initialTimes = {};
       studentsData.forEach((student) => {
         const todayStatus = student.todayStatus === 'not_marked' ? 'absent' : student.todayStatus;
-initialAttendance[student._id] = todayStatus;
+        initialAttendance[student._id] = todayStatus;
+        if (student.todayCheckInTime) {
+          initialTimes[student._id] = student.todayCheckInTime;
+        }
       });
       setAttendance(initialAttendance);
+      setAttendanceTimes(initialTimes);
       updateStats(initialAttendance);
       
       // DON'T set view here - it's already set in handleBatchSelect
@@ -316,6 +326,7 @@ const handleBatchSelect = (batch) => {
   setSelectedBatch(batch);
   setStudents([]);  // Clear previous students
   setAttendance({});  // Clear previous attendance
+  setAttendanceTimes({});  // Clear previous check-in times
   
   if (isAdmin) {
     setAdminView("batch-students");
@@ -349,8 +360,11 @@ const handleBatchSelect = (batch) => {
   };
 
   // Update attendance status
+  // Update attendance status
   const updateAttendance = (studentId, status) => {
     if (isAdmin) return; // Admin cannot mark attendance
+
+    const previousStatus = attendance[studentId];
     
     const newAttendance = {
       ...attendance,
@@ -358,6 +372,21 @@ const handleBatchSelect = (batch) => {
     };
     setAttendance(newAttendance);
     updateStats(newAttendance);
+
+    if (status === "present" || status === "late") {
+      // Only stamp a fresh time if this is a genuine transition into present/late
+      // (i.e. re-clicking an already-green button does nothing to the time)
+      const isNewTransition = previousStatus !== "present" && previousStatus !== "late";
+      if (isNewTransition) {
+        setAttendanceTimes((prev) => ({ ...prev, [studentId]: getCurrentTimeStr() }));
+      }
+    } else {
+      setAttendanceTimes((prev) => {
+        const updated = { ...prev };
+        delete updated[studentId];
+        return updated;
+      });
+    }
   };
 
   const updateStats = (attendanceData) => {
@@ -398,10 +427,19 @@ const handleBatchSelect = (batch) => {
     if (isAdmin) return; // Admin cannot mark attendance
     
     const newAttendance = { ...attendance };
+    const newTimes = { ...attendanceTimes };
+    const clickTime = (status === "present" || status === "late") ? getCurrentTimeStr() : null;
+
     selectedStudents.forEach(studentId => {
       newAttendance[studentId] = status;
+      if (clickTime) {
+        newTimes[studentId] = clickTime;
+      } else {
+        delete newTimes[studentId];
+      }
     });
     setAttendance(newAttendance);
+    setAttendanceTimes(newTimes);
     updateStats(newAttendance);
   };
 
@@ -418,6 +456,7 @@ const handleBatchSelect = (batch) => {
         attendance: Object.entries(attendance).map(([studentId, status]) => ({
           studentId,
           status,
+          checkInTime: attendanceTimes[studentId] || "",
           remarks: ""
         }))
       };
@@ -451,10 +490,15 @@ const handleBatchSelect = (batch) => {
     if (isAdmin) return; // Admin cannot mark attendance
     
     const newAttendance = {};
+    const newTimes = {};
+    const clickTime = (status === "present" || status === "late") ? getCurrentTimeStr() : null;
+
     students.forEach(student => {
       newAttendance[student._id] = status;
+      if (clickTime) newTimes[student._id] = clickTime;
     });
     setAttendance(newAttendance);
+    setAttendanceTimes(newTimes);
     updateStats(newAttendance);
   };
 
