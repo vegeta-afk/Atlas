@@ -9,7 +9,7 @@ const activeQRSessions = new Map();
 const LATE_THRESHOLD_MINUTES = 20;
 const LEAVE_STATUSES = ['sick_leave', 'casual_leave', 'official_leave'];
 
-const User = require('../models/User');
+const User = require('../models/user');
 
 
 setInterval(() => {
