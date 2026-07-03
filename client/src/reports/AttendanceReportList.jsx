@@ -31,6 +31,15 @@ const statusBadge = (status) => {
 
 const todayStr = () => new Date().toISOString().split("T")[0];
 
+const formatTime = (time) => {
+  if (!time) return "";
+  const [hours, minutes] = time.split(":");
+  const h = parseInt(hours);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${minutes} ${ampm}`;
+};
+
 const AttendanceReportList = () => {
   const [date, setDate] = useState(todayStr());
   const [batches, setBatches] = useState([]);
@@ -57,11 +66,11 @@ const AttendanceReportList = () => {
       .catch(() => {});
 
     facultyAPI
-      .getFaculty()
+      .getFaculty({ limit: 1000 })
       .then((res) => {
-        // NOTE: verify this matches your actual facultyAPI response shape
-        const list = res.data?.data || res.data?.faculty || [];
-        setFaculty(Array.isArray(list) ? list : []);
+        if (res.data.success) {
+          setFaculty(res.data.data || []);
+        }
       })
       .catch(() => {});
   }, []);
@@ -180,7 +189,7 @@ const AttendanceReportList = () => {
             <option value="">All Batches</option>
             {batches.map((b) => (
               <option key={b._id} value={b._id}>
-                {b.batchName}
+                {b.batchName} ({formatTime(b.startTime)} - {formatTime(b.endTime)})
               </option>
             ))}
           </select>
@@ -196,7 +205,7 @@ const AttendanceReportList = () => {
             <option value="">All Faculty</option>
             {faculty.map((f) => (
               <option key={f._id} value={f._id}>
-                {f.name || f.fullName}
+                {f.facultyName}
               </option>
             ))}
           </select>
