@@ -14,6 +14,7 @@ import MyMarksheet from "./pages/student/Mymarksheet";
 import BirthdayReport from "./reports/BirthdayReport";
 import BatchReportList from "./reports/BatchReportList";
 import AttendanceReportList from "./reports/AttendanceReportList";
+import MonthlyAttendanceReport from "./reports/MonthlyAttendanceReport";
 
 
 
@@ -165,6 +166,7 @@ function App() {
           <Route path="birthdays" element={<BirthdayReport />} />
           <Route path="batch-report" element={<BatchReportList />} />
           <Route path="attendance" element={<AttendanceReportList />} />
+          <Route path="attendance-monthly" element={<MonthlyAttendanceReport />} />
         </Route>
       </Route>
 

@@ -3,7 +3,7 @@ const Attendance = require('../models/Attendance');
 const TeacherBatch = require('../models/TeacherBatch');
 const AttendanceSummary = require('../models/AttendanceSummary');
 const Student = require('../models/Student');
-const { Batch } = require('../models/Setup');
+const { Batch , Holiday } = require('../models/Setup');
 const activeQRSessions = new Map();
 
 const LATE_THRESHOLD_MINUTES = 20;
@@ -1123,6 +1123,166 @@ exports.getAttendanceReport = async (req, res) => {
     });
   } catch (error) {
     console.error('Error in getAttendanceReport:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+exports.getMonthlyAttendanceReport = async (req, res) => {
+  try {
+    const {
+      month, year, batchId, facultyId, search,
+      page = 1, limit = 10
+    } = req.query;
+
+    const targetMonth = parseInt(month) || (new Date().getMonth() + 1);
+    const targetYear = parseInt(year) || new Date().getFullYear();
+    const pageNum = Math.max(parseInt(page) || 1, 1);
+    const pageLimit = Math.max(parseInt(limit) || 10, 1);
+
+    const firstDay = new Date(targetYear, targetMonth - 1, 1);
+    const lastDay = new Date(targetYear, targetMonth, 0);
+    const daysInMonth = lastDay.getDate();
+
+    // Resolve facultyId (Faculty._id from dropdown) -> User._id (stored on TeacherBatch.teacher)
+    let resolvedTeacherId = null;
+    if (facultyId) {
+      const userDoc = await User.findOne({ facultyId }).select('_id').lean();
+      if (!userDoc) {
+        return res.status(200).json({
+          success: true, data: [], daysInMonth,
+          pagination: { page: pageNum, limit: pageLimit, total: 0, totalPages: 0 }
+        });
+      }
+      resolvedTeacherId = userDoc._id;
+    }
+
+    // Build full roster (lightweight — no attendance fetched yet)
+    const tbQuery = { isActive: true };
+    if (batchId) tbQuery.batch = batchId;
+    if (resolvedTeacherId) tbQuery.teacher = resolvedTeacherId;
+
+    const teacherBatches = await TeacherBatch.find(tbQuery)
+      .populate('batch', 'batchName displayName startTime endTime')
+      .populate('teacher', 'name')
+      .populate('assignedStudents.student', 'studentId fullName')
+      .lean();
+
+    let roster = [];
+    teacherBatches.forEach((tb) => {
+      if (!tb.batch) return;
+      (tb.assignedStudents || [])
+        .filter((s) => s.isActive && s.student)
+        .forEach((as) => {
+          roster.push({
+            studentDbId: as.student._id,
+            studentId: as.student.studentId,
+            studentName: as.student.fullName,
+            teacherId: tb.teacher?._id || null,
+            facultyName: tb.teacher?.name || 'Unknown',
+            batchId: tb.batch._id,
+            batchName: tb.batch.batchName || tb.batch.displayName,
+            batchTiming: `${tb.batch.startTime} - ${tb.batch.endTime}`,
+          });
+        });
+    });
+
+    if (search) {
+      const term = search.trim().toLowerCase();
+      roster = roster.filter(
+        (r) =>
+          r.studentName?.toLowerCase().includes(term) ||
+          r.studentId?.toLowerCase().includes(term)
+      );
+    }
+
+    roster.sort((a, b) => (a.studentName || '').localeCompare(b.studentName || ''));
+
+    const total = roster.length;
+    const totalPages = Math.max(Math.ceil(total / pageLimit), 1);
+    const startIdx = (pageNum - 1) * pageLimit;
+    const pageRoster = roster.slice(startIdx, startIdx + pageLimit);
+
+    if (pageRoster.length === 0) {
+      return res.status(200).json({
+        success: true, data: [], daysInMonth,
+        pagination: { page: pageNum, limit: pageLimit, total, totalPages }
+      });
+    }
+
+    // Only fetch Attendance for THIS PAGE's students — this is what keeps the DB load small
+    const studentIds = pageRoster.map((r) => r.studentDbId);
+    const attendanceRecords = await Attendance.find({
+      student: { $in: studentIds },
+      date: { $gte: firstDay, $lte: lastDay }
+    }).select('student teacher batch date status checkInTime').lean();
+
+    const attMap = new Map();
+    attendanceRecords.forEach((rec) => {
+      const day = new Date(rec.date).getDate();
+      const key = `${rec.student}_${rec.teacher}_${rec.batch}_${day}`;
+      attMap.set(key, rec);
+    });
+
+    // Holidays for this month (date-only, applies regardless of batch)
+    const holidays = await Holiday.find({
+      holidayDate: { $gte: firstDay, $lte: lastDay }
+    }).select('holidayDate').lean();
+    const holidayDays = new Set(holidays.map((h) => new Date(h.holidayDate).getDate()));
+
+    const data = pageRoster.map((r) => {
+      const days = {};
+      let present = 0, absent = 0, leave = 0, holidayCount = 0, sundayCount = 0;
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateObj = new Date(targetYear, targetMonth - 1, d);
+        const isSunday = dateObj.getDay() === 0;
+        const isHoliday = holidayDays.has(d);
+
+        if (isSunday) {
+          days[d] = 'S';
+          sundayCount++;
+          continue;
+        }
+        if (isHoliday) {
+          days[d] = 'H';
+          holidayCount++;
+          continue;
+        }
+
+        const key = `${r.studentDbId}_${r.teacherId}_${r.batchId}_${d}`;
+        const rec = attMap.get(key);
+        if (!rec) {
+          days[d] = ''; // not marked
+          continue;
+        }
+        if (rec.status === 'present') { days[d] = 'P'; present++; }
+        else if (rec.status === 'late') { days[d] = 'La'; present++; }
+        else if (['sick_leave', 'casual_leave', 'official_leave'].includes(rec.status)) { days[d] = 'L'; leave++; }
+        else if (rec.status === 'absent') { days[d] = 'A'; absent++; }
+        else { days[d] = ''; }
+      }
+
+      return {
+        studentDbId: r.studentDbId,
+        studentId: r.studentId,
+        studentName: r.studentName,
+        facultyName: r.facultyName,
+        batchName: r.batchName,
+        batchTiming: r.batchTiming,
+        days,
+        present, absent, leave, holidayCount, sundayCount
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      daysInMonth,
+      pagination: { page: pageNum, limit: pageLimit, total, totalPages },
+      data
+    });
+  } catch (error) {
+    console.error('Error in getMonthlyAttendanceReport:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

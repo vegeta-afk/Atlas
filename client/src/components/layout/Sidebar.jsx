@@ -135,6 +135,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { path: "/admin/reports/birthdays",      label: "Birthday Report",  icon: <Cake size={15} /> },
         { path: "/admin/reports/batch-report",   label: "Batch Report",     icon: <Users size={15} /> },
         { path: "/admin/reports/attendance",     label: "Attendance Report", icon: <ClipboardCheck size={15} /> },
+        { path: "/admin/reports/attendance-monthly",     label: "Monthly Attendance Report", icon: <ClipboardCheck size={15} /> },
       ],
     },
     {
