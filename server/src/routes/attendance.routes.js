@@ -15,6 +15,7 @@ router.get('/teacher/monthly-report/:month/:year', authorize('teacher', 'admin',
 
 // Student attendance route
 router.get('/student/:studentId', authorize('teacher', 'admin', 'student', 'instructor'), attendanceController.getStudentAttendance);
+router.get('/report', authorize('admin'), attendanceController.getAttendanceReport);
 
 router.post('/qr/generate', authorize('teacher', 'admin', 'instructor'), attendanceController.generateQR);
 router.post('/qr/scan', authorize('student'), attendanceController.scanQR);

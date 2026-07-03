@@ -34,6 +34,7 @@ import {
    Cake,
    Users,
    LayoutTemplate,
+   ClipboardCheck,
 } from "lucide-react";
 import "./Sidebar.css";
 
@@ -133,6 +134,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { divider: true },
         { path: "/admin/reports/birthdays",      label: "Birthday Report",  icon: <Cake size={15} /> },
         { path: "/admin/reports/batch-report",   label: "Batch Report",     icon: <Users size={15} /> },
+        { path: "/admin/reports/attendance",     label: "Attendance Report", icon: <ClipboardCheck size={15} /> },
       ],
     },
     {

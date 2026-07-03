@@ -6,6 +6,9 @@ const Student = require('../models/Student');
 const { Batch } = require('../models/Setup');
 const activeQRSessions = new Map();
 
+const LATE_THRESHOLD_MINUTES = 20;
+const LEAVE_STATUSES = ['sick_leave', 'casual_leave', 'official_leave'];
+
 
 setInterval(() => {
   const now = Date.now();
@@ -950,5 +953,157 @@ exports.getTeacherMonthlyReport = async (req, res) => {
       success: false,
       message: error.message
     });
+  }
+};
+
+const timeStringToMinutes = (timeStr) => {
+  if (!timeStr) return null;
+  const match = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])?$/);
+  if (!match) return null;
+  let [, hh, mm, ampm] = match;
+  hh = parseInt(hh, 10);
+  mm = parseInt(mm, 10);
+  if (ampm) {
+    ampm = ampm.toUpperCase();
+    if (ampm === 'PM' && hh !== 12) hh += 12;
+    if (ampm === 'AM' && hh === 12) hh = 0;
+  }
+  return hh * 60 + mm;
+};
+
+// Maps raw Attendance.status + checkInTime-vs-batch-start into: present | absent | late | leave
+const resolveDisplayStatus = (rawStatus, checkInTime, batchStartTime) => {
+  if (!rawStatus || rawStatus === 'absent' || rawStatus === 'not_marked') return 'absent';
+  if (LEAVE_STATUSES.includes(rawStatus)) return 'leave';
+  if (rawStatus === 'half_day') return 'present';
+  if (rawStatus === 'late') return 'late';
+  if (rawStatus === 'present') {
+    const startMin = timeStringToMinutes(batchStartTime);
+    const checkInMin = timeStringToMinutes(checkInTime);
+    if (startMin !== null && checkInMin !== null && (checkInMin - startMin) > LATE_THRESHOLD_MINUTES) {
+      return 'late';
+    }
+    return 'present';
+  }
+  return 'absent';
+};
+
+exports.getAttendanceReport = async (req, res) => {
+  try {
+    const { date, batchId, facultyId, status, search } = req.query;
+
+    const targetDate = date ? new Date(date) : new Date();
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Roster: which batch/teacher assignments to include
+    const tbQuery = { isActive: true };
+    if (batchId) tbQuery.batch = batchId;
+    if (facultyId) tbQuery.teacher = facultyId;
+
+    const teacherBatches = await TeacherBatch.find(tbQuery)
+      .populate('batch', 'batchName displayName startTime endTime')
+      .populate('teacher', 'name email')
+      .populate('assignedStudents.student', 'studentId fullName photo course additionalCourses')
+      .lean();
+
+    if (!teacherBatches.length) {
+      return res.status(200).json({
+        success: true,
+        date: startOfDay,
+        stats: { total: 0, present: 0, absent: 0, late: 0, leave: 0 },
+        count: 0,
+        data: []
+      });
+    }
+
+    // Attendance already marked for the day, same scope
+    const attQuery = { date: { $gte: startOfDay, $lte: endOfDay } };
+    if (batchId) attQuery.batch = batchId;
+    if (facultyId) attQuery.teacher = facultyId;
+
+    const attendanceRecords = await Attendance.find(attQuery).lean();
+    const attendanceMap = new Map();
+    attendanceRecords.forEach((rec) => {
+      attendanceMap.set(`${rec.student}_${rec.teacher}_${rec.batch}`, rec);
+    });
+
+    const rows = [];
+
+    teacherBatches.forEach((tb) => {
+      if (!tb.batch) return;
+      const activeStudents = (tb.assignedStudents || []).filter((s) => s.isActive && s.student);
+
+      activeStudents.forEach((as) => {
+        const student = as.student;
+        const key = `${student._id}_${tb.teacher?._id}_${tb.batch._id}`;
+        const record = attendanceMap.get(key);
+
+        const rawStatus = record?.status || 'absent';
+        const displayStatus = resolveDisplayStatus(rawStatus, record?.checkInTime, tb.batch.startTime);
+
+        let course = student.course || 'N/A';
+        if (record?.courseType === 'additional' && student.additionalCourses?.length) {
+          const ac = student.additionalCourses.find(
+            (a) => a.batchId?.toString() === tb.batch._id.toString()
+          );
+          if (ac?.courseName) course = ac.courseName;
+        }
+
+        rows.push({
+          attendanceId: record?._id || null,
+          studentDbId: student._id,
+          studentId: student.studentId,
+          studentName: student.fullName,
+          photo: student.photo || null,
+          course,
+          batchId: tb.batch._id,
+          batchName: tb.batch.batchName || tb.batch.displayName,
+          batchTiming: `${tb.batch.startTime} - ${tb.batch.endTime}`,
+          facultyId: tb.teacher?._id || null,
+          facultyName: tb.teacher?.name || 'Unknown',
+          status: displayStatus,
+          presentTime: ['present', 'late'].includes(displayStatus) ? (record?.checkInTime || null) : null,
+        });
+      });
+    });
+
+    let filteredRows = rows;
+
+    if (status && status !== 'all') {
+      filteredRows = filteredRows.filter((r) => r.status === status);
+    }
+
+    if (search) {
+      const term = search.trim().toLowerCase();
+      filteredRows = filteredRows.filter(
+        (r) =>
+          r.studentName?.toLowerCase().includes(term) ||
+          r.studentId?.toLowerCase().includes(term)
+      );
+    }
+
+    filteredRows.sort((a, b) => (a.studentName || '').localeCompare(b.studentName || ''));
+
+    const stats = {
+      total: filteredRows.length,
+      present: filteredRows.filter((r) => r.status === 'present').length,
+      absent: filteredRows.filter((r) => r.status === 'absent').length,
+      late: filteredRows.filter((r) => r.status === 'late').length,
+      leave: filteredRows.filter((r) => r.status === 'leave').length,
+    };
+
+    res.status(200).json({
+      success: true,
+      date: startOfDay,
+      stats,
+      count: filteredRows.length,
+      data: filteredRows,
+    });
+  } catch (error) {
+    console.error('Error in getAttendanceReport:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };

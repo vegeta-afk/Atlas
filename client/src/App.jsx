@@ -85,6 +85,7 @@ import MaterialIssue from "./pages/students/MaterialIssue";
 import TemplateDesigner from "./pages/admin/TemplateDesigner";
 import TemplateList from "./pages/admin/TemplateList";
 import TemplateEditPage from "./pages/admin/TemplateEditPage";
+import AttendanceReportList from "./pages/AttendanceReportList";
 
 function App() {
   return (
@@ -125,7 +126,7 @@ function App() {
           <Route index element={<FacultyList />} />
           <Route path="add" element={<AddFaculty />} />
           <Route path="view/:facultyId" element={<ViewFaculty />} />  // ← new
-  <Route path="edit/:facultyId" element={<EditFaculty />} />  // ← new
+          <Route path="edit/:facultyId" element={<EditFaculty />} />  // ← new
         </Route>
 
         <Route path="students">
@@ -162,6 +163,7 @@ function App() {
           <Route path="complete-list" element={<CompleteList />} />
           <Route path="birthdays" element={<BirthdayReport />} />
           <Route path="batch-report" element={<BatchReportList />} />
+          <Route path="attendance" element={<AttendanceReportList />} />
         </Route>
       </Route>
 
