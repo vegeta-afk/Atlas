@@ -482,10 +482,6 @@ export const batchReportAPI = {
 
 export const attendanceReportAPI = {
   getReport: (params) => api.get("/attendance/report", { params }),
-};
-
-export const attendanceReportAPI = {
-  getReport: (params) => api.get("/attendance/report", { params }),
   getMonthlyReport: (params) => api.get("/attendance/monthly-report", { params }),
 };
 
@@ -500,8 +496,5 @@ export const templateAPI = {
     }),
     delete: (id) => api.delete(`/templates/${id}`),
   };
-
-
-
 
 export default api;
