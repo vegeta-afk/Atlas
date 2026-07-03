@@ -1386,7 +1386,7 @@ const handleBatchSelect = (batch) => {
     <table className="min-w-full divide-y divide-gray-200">
       <thead className="bg-gray-50">
         <tr>
-          {!isAdmin && (
+          {/* {!isAdmin && (
             <th className="w-12 px-6 py-4">
               <input
                 type="checkbox"
@@ -1395,14 +1395,14 @@ const handleBatchSelect = (batch) => {
                 className="rounded border-gray-300"
               />
             </th>
-          )}
+          )} */}
           <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
             Student ID
           </th>
           <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
             Student Details
           </th>
-          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+          {/* <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
             Courses
           </th>
           <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -1410,7 +1410,7 @@ const handleBatchSelect = (batch) => {
           </th>
           <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
             Today's Status
-          </th>
+          </th> */}
           {!isAdmin && (
             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Quick Actions
@@ -1421,7 +1421,7 @@ const handleBatchSelect = (batch) => {
       <tbody className="bg-white divide-y divide-gray-100">
         {students.length === 0 ? (
           <tr>
-            <td colSpan={isAdmin ? 7 : 8} className="px-6 py-12 text-center">
+            <td colSpan={isAdmin ? 2 : 3} className="px-6 py-12 text-center">
               <Users className="mx-auto text-gray-400 mb-4" size={48} />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Students Found</h3>
               <p className="text-gray-600">There are no students assigned to this batch.</p>
@@ -1430,7 +1430,7 @@ const handleBatchSelect = (batch) => {
         ) : (
           students.map((student) => (
             <tr key={student._id} className="hover:bg-gray-50">
-              {!isAdmin && (
+              {/* {!isAdmin && (
                 <td className="px-6 py-4">
                   <input
                     type="checkbox"
@@ -1439,7 +1439,7 @@ const handleBatchSelect = (batch) => {
                     className="rounded border-gray-300"
                   />
                 </td>
-              )}
+              )} */}
               <td className="px-6 py-4">
                 <span className="font-mono text-sm font-semibold text-gray-800">
                   {student.studentId}
@@ -1469,7 +1469,7 @@ const handleBatchSelect = (batch) => {
                   </div>
                 </div>
               </td>
-              <td className="px-6 py-4">
+              {/* <td className="px-6 py-4">
                 <div className="flex flex-wrap gap-1">
                   {(student.courses && student.courses.length > 0) ? (
                     student.courses.map((course, index) => (
@@ -1481,12 +1481,12 @@ const handleBatchSelect = (batch) => {
                     <span className="text-gray-400 text-xs">No courses</span>
                   )}
                 </div>
-              </td>
-              <td className="px-6 py-4">
+              </td> */}
+              {/* <td className="px-6 py-4">
                 <div className="text-sm text-gray-900">{student.contact || student.mobileNumber || 'N/A'}</div>
                 <div className="text-xs text-gray-500">{student.email || 'N/A'}</div>
-              </td>
-              <td className="px-6 py-4">
+              </td> */}
+              {/* <td className="px-6 py-4">
                 <div className="flex items-center gap-3">
                   <span
                     className={`px-4 py-2 rounded-full text-sm font-semibold ${
@@ -1504,11 +1504,11 @@ const handleBatchSelect = (batch) => {
                     {attendance[student._id] || "Not Marked"}
                   </span>
                 </div>
-              </td>
+              </td> */}
               {!isAdmin && (
                 <td className="px-6 py-4">
                   <div className="flex gap-2">
-                    {["present", "absent", "leave", "late"].map((status) => {
+                    {["present", "absent"].map((status) => {
                       const icons = {
                         present: <CheckCircle size={14} />,
                         absent: <XCircle size={14} />,
