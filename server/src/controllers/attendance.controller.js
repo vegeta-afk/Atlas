@@ -7,6 +7,7 @@ const { Batch , Holiday } = require('../models/Setup');
 const activeQRSessions = new Map();
 
 const LATE_THRESHOLD_MINUTES = 15;
+const EDIT_WINDOW_MINUTES = 120;
 const LEAVE_STATUSES = ['sick_leave', 'casual_leave', 'official_leave'];
 
 const User = require('../models/user');
@@ -544,6 +545,30 @@ exports.markTeacherAttendance = async (req, res) => {
       });
     }
 
+    // Check if attendance already exists for this date/batch — if so, this is an EDIT,
+    // and edits are only allowed within the window (batch start time + EDIT_WINDOW_MINUTES)
+    const attendanceDate = new Date(date);
+    const startOfDay = new Date(attendanceDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(attendanceDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existingCount = await Attendance.countDocuments({
+      teacher: teacherId,
+      batch: batchId,
+      date: { $gte: startOfDay, $lte: endOfDay }
+    });
+
+    if (existingCount > 0) {
+      const windowOpen = isWithinEditWindow(date, teacherBatch.batch?.startTime, EDIT_WINDOW_MINUTES);
+      if (!windowOpen) {
+        return res.status(403).json({
+          success: false,
+          message: 'Edit window has closed. Please contact admin to request a correction.'
+        });
+      }
+    }
+
     // Get assigned student IDs
     const assignedStudentIds = teacherBatch.assignedStudents
       .filter(s => s.isActive)
@@ -562,7 +587,7 @@ exports.markTeacherAttendance = async (req, res) => {
     }
 
     // Prepare attendance records for Attendance collection
-    const attendanceDate = new Date(date);
+    // (attendanceDate already declared above for the edit-window check)
 const batchDisplayName = teacherBatch.batch?.displayName || '';
 const batchTimeString = `${teacherBatch.batch?.startTime || ''} to ${teacherBatch.batch?.endTime || ''}`;
 const normalize = (s) => (s || '').replace(/\s+/g, ' ').toLowerCase().trim();
@@ -971,6 +996,17 @@ const timeStringToMinutes = (timeStr) => {
     if (ampm === 'AM' && hh === 12) hh = 0;
   }
   return hh * 60 + mm;
+};
+
+const isWithinEditWindow = (dateStr, startTimeStr, windowMinutes) => {
+  const startMin = timeStringToMinutes(startTimeStr);
+  if (startMin === null) return false; // if we can't parse batch start time, fail safe (closed)
+
+  const batchStart = new Date(dateStr);
+  batchStart.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
+
+  const windowEnd = new Date(batchStart.getTime() + windowMinutes * 60000);
+  return Date.now() <= windowEnd.getTime();
 };
 
 // Maps raw Attendance.status + checkInTime-vs-batch-start into: present | absent | late | leave

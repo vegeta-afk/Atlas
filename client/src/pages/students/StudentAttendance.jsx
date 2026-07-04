@@ -24,6 +24,7 @@ import {
   Eye,
   GraduationCap,
   Search,
+  Edit3, Send,
 } from "lucide-react";
 
 const StudentAttendance = () => {
@@ -58,6 +59,7 @@ const StudentAttendance = () => {
 
 
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const [editMode, setEditMode] = useState(false);
 
   
   
@@ -119,6 +121,33 @@ const [qrLoading, setQRLoading] = useState(false);
       fetchBatchStudents(selectedBatch._id);
     }
   }, [view, selectedDate]);
+
+  const parseTimeToMinutes = (timeStr) => {
+  if (!timeStr) return null;
+  const match = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])?$/);
+  if (!match) return null;
+  let [, hh, mm, ampm] = match;
+  hh = parseInt(hh, 10);
+  mm = parseInt(mm, 10);
+  if (ampm) {
+    ampm = ampm.toUpperCase();
+    if (ampm === 'PM' && hh !== 12) hh += 12;
+    if (ampm === 'AM' && hh === 12) hh = 0;
+  }
+  return hh * 60 + mm;
+};
+
+const isEditWindowOpen = () => {
+  if (!selectedBatch?.startTime || !selectedDate) return false;
+  const startMin = parseTimeToMinutes(selectedBatch.startTime);
+  if (startMin === null) return false;
+
+  const batchStart = new Date(`${selectedDate}T00:00:00`);
+  batchStart.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
+
+  const windowEnd = new Date(batchStart.getTime() + 120 * 60000); // 2 hours, mirrors backend EDIT_WINDOW_MINUTES
+  return Date.now() <= windowEnd.getTime();
+};
 
   // Fetch faculty list (for admin view)
   const fetchFacultyList = async () => {
@@ -285,6 +314,7 @@ const fetchBatchStudents = async (batchId) => {
       const alreadyMarkedOnServer = studentsData.length > 0 &&
         studentsData.some((s) => s.todayStatus && s.todayStatus !== 'not_marked');
       setServerMarked(alreadyMarkedOnServer);
+      setEditMode(false); // always start locked; faculty must explicitly click Edit
       
       // DON'T set view here - it's already set in handleBatchSelect
       // if (isAdmin) {
@@ -432,6 +462,7 @@ const handleBatchSelect = (batch) => {
 
   const markSelected = (status) => {
     if (isAdmin) return; // Admin cannot mark attendance
+    if (isAttendanceMarked() && !editMode) return; // locked unless in edit mode
     
     const newAttendance = { ...attendance };
     const newTimes = { ...attendanceTimes };
@@ -451,14 +482,14 @@ const handleBatchSelect = (batch) => {
   };
 
   const saveAttendance = async () => {
-    if (isAdmin) {
-      alert("Admin cannot mark attendance. Please login as faculty.");
-      return;
-    }
-    if (isAttendanceMarked()) {
-      alert("Attendance for this date is already saved and cannot be overwritten.");
-      return;
-    }
+  if (isAdmin) {
+    alert("Admin cannot mark attendance. Please login as faculty.");
+    return;
+  }
+  if (isAttendanceMarked() && !editMode) {
+    alert("Attendance for this date is already saved. Click 'Edit Attendance' to make changes.");
+    return;
+  }
     
     try {
       const attendanceData = {
@@ -499,6 +530,7 @@ const handleBatchSelect = (batch) => {
 
   const markAll = (status) => {
     if (isAdmin) return; // Admin cannot mark attendance
+    if (isAttendanceMarked() && !editMode) return; // locked unless in edit mode
     
     const newAttendance = {};
     const newTimes = {};
@@ -1229,10 +1261,15 @@ const handleBatchSelect = (batch) => {
       <Eye size={16} />
       View Only (Admin Mode)
     </div>
-  ) : isAttendanceMarked() ? (
+  ) : isAttendanceMarked() && !editMode ? (
     <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
       <CheckCircle size={16} />
       Attendance Already Marked
+    </div>
+  ) : editMode ? (
+    <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2">
+      <Edit3 size={16} />
+      Editing Attendance
     </div>
   ) : (
     <button
@@ -1312,14 +1349,24 @@ const handleBatchSelect = (batch) => {
               <div className="flex gap-2">
                 <button
                   onClick={() => markAll("present")}
-                  className="flex-1 px-4 py-3 bg-green-100 text-green-800 rounded-lg hover:bg-green-200 font-medium text-sm flex items-center justify-center gap-2"
+                  disabled={isAttendanceMarked() && !editMode}
+                  className={`flex-1 px-4 py-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 ${
+                    isAttendanceMarked() && !editMode
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-green-100 text-green-800 hover:bg-green-200"
+                  }`}
                 >
                   <CheckCircle size={16} />
                   Mark All Present
                 </button>
                 <button
                   onClick={() => markAll("absent")}
-                  className="flex-1 px-4 py-3 bg-red-100 text-red-800 rounded-lg hover:bg-red-200 font-medium text-sm flex items-center justify-center gap-2"
+                  disabled={isAttendanceMarked() && !editMode}
+                  className={`flex-1 px-4 py-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 ${
+                    isAttendanceMarked() && !editMode
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-red-100 text-red-800 hover:bg-red-200"
+                  }`}
                 >
                   <XCircle size={16} />
                   Mark All Absent
@@ -1328,9 +1375,9 @@ const handleBatchSelect = (batch) => {
               <div className="flex gap-2">
                 <button
                   onClick={() => markSelected("present")}
-                  disabled={selectedStudents.length === 0}
+                  disabled={selectedStudents.length === 0 || (isAttendanceMarked() && !editMode)}
                   className={`flex-1 px-4 py-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 ${
-                    selectedStudents.length === 0
+                    selectedStudents.length === 0 || (isAttendanceMarked() && !editMode)
                       ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                       : "bg-blue-100 text-blue-800 hover:bg-blue-200"
                   }`}
@@ -1540,7 +1587,7 @@ const handleBatchSelect = (batch) => {
                         late: "Late",
                       };
                       
-                      const locked = isAttendanceMarked();
+                      const locked = isAttendanceMarked() && !editMode;
 
                       return (
                         <button
@@ -1579,22 +1626,52 @@ const handleBatchSelect = (batch) => {
         Showing {students.length} students in {selectedBatch?.displayName || selectedBatch?.name}
       </div>
       <div className="flex items-center gap-4">
-        <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-          <Download size={16} />
-          Export to Excel
-        </button>
         {!isAdmin && (
+          isAttendanceMarked() && !editMode ? (
+            isEditWindowOpen() ? (
+              <button
+                onClick={() => setEditMode(true)}
+                className="flex items-center gap-2 px-4 py-2 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50"
+              >
+                <Edit3 size={16} />
+                Edit Attendance
+              </button>
+            ) : (
+              <button
+                onClick={() =>
+                  alert(
+                    "The 2-hour edit window for this date has closed. Please contact the admin office to request a correction."
+                  )
+                }
+                className="flex items-center gap-2 px-4 py-2 border border-orange-300 text-orange-600 rounded-lg hover:bg-orange-50"
+              >
+                <Send size={16} />
+                Request Admin
+              </button>
+            )
+          ) : (
+            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+              <Download size={16} />
+              Export to Excel
+            </button>
+          )
+        )}
+        {isAdmin && (
+          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+            <Download size={16} />
+            Export to Excel
+          </button>
+        )}
+        {!isAdmin && (isEditWindowOpen() || !isAttendanceMarked()) && (editMode || !isAttendanceMarked()) && (
           <button
-            onClick={saveAttendance}
-            disabled={isAttendanceMarked()}
-            className={`px-6 py-2 rounded-lg font-medium flex items-center gap-2 ${
-              isAttendanceMarked()
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-green-600 text-white hover:bg-green-700"
-            }`}
+            onClick={async () => {
+              await saveAttendance();
+              setEditMode(false);
+            }}
+            className="px-6 py-2 rounded-lg font-medium flex items-center gap-2 bg-green-600 text-white hover:bg-green-700"
           >
             <CheckSquare size={16} />
-            {isAttendanceMarked() ? "Attendance Saved" : "Save Attendance"}
+            {editMode ? "Update Attendance" : "Save Attendance"}
           </button>
         )}
       </div>
