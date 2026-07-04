@@ -37,6 +37,7 @@ const StudentAttendance = () => {
   );
   const [attendance, setAttendance] = useState({});
   const [attendanceTimes, setAttendanceTimes] = useState({}); // studentId -> "hh:mm AM/PM" captured at click time
+  const [serverMarked, setServerMarked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [teacherStats, setTeacherStats] = useState({
@@ -57,6 +58,8 @@ const StudentAttendance = () => {
 
 
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  
   
   // Admin-specific states
   const [isAdmin, setIsAdmin] = useState(false);
@@ -278,6 +281,10 @@ const fetchBatchStudents = async (batchId) => {
       setAttendance(initialAttendance);
       setAttendanceTimes(initialTimes);
       updateStats(initialAttendance);
+
+      const alreadyMarkedOnServer = studentsData.length > 0 &&
+        studentsData.some((s) => s.todayStatus && s.todayStatus !== 'not_marked');
+      setServerMarked(alreadyMarkedOnServer);
       
       // DON'T set view here - it's already set in handleBatchSelect
       // if (isAdmin) {
@@ -448,6 +455,10 @@ const handleBatchSelect = (batch) => {
       alert("Admin cannot mark attendance. Please login as faculty.");
       return;
     }
+    if (isAttendanceMarked()) {
+      alert("Attendance for this date is already saved and cannot be overwritten.");
+      return;
+    }
     
     try {
       const attendanceData = {
@@ -503,7 +514,8 @@ const handleBatchSelect = (batch) => {
   };
 
   const isAttendanceMarked = () => {
-    return sessionStorage.getItem(`attendance_${selectedDate}_${selectedBatch?._id}`) === "marked";
+    const sessionFlag = sessionStorage.getItem(`attendance_${selectedDate}_${selectedBatch?._id}`) === "marked";
+    return sessionFlag || serverMarked;
   };
 
   // Get batch color based on index
@@ -1528,14 +1540,21 @@ const handleBatchSelect = (batch) => {
                         late: "Late",
                       };
                       
+                      const locked = isAttendanceMarked();
+
                       return (
                         <button
                           key={status}
-                          onClick={() => updateAttendance(student._id, status)}
-                          className={`px-3 py-2 rounded-lg text-white font-medium text-xs flex items-center gap-1 transition-all hover:scale-105 ${
-                            attendance[student._id] === status
-                              ? colors[status]
-                              : `${colors[status].replace('600', '100')} text-${colors[status].replace('bg-', '').replace('-600', '-800')} hover:${colors[status].replace('600', '200')}`
+                          onClick={() => !locked && updateAttendance(student._id, status)}
+                          disabled={locked}
+                          className={`px-3 py-2 rounded-lg font-medium text-xs flex items-center gap-1 transition-all ${
+                            locked
+                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                              : `text-white hover:scale-105 ${
+                                  attendance[student._id] === status
+                                    ? colors[status]
+                                    : `${colors[status].replace('600', '100')} text-${colors[status].replace('bg-', '').replace('-600', '-800')} hover:${colors[status].replace('600', '200')}`
+                                }`
                           }`}
                         >
                           {icons[status]}
