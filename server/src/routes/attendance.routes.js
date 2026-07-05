@@ -21,4 +21,9 @@ router.get('/monthly-report', authorize('admin'), attendanceController.getMonthl
 router.post('/qr/generate', authorize('teacher', 'admin', 'instructor'), attendanceController.generateQR);
 router.post('/qr/scan', authorize('student'), attendanceController.scanQR);
 
+// Topic completion routes (per-batch, per-course syllabus tracking)
+router.get('/course-topics', authorize('teacher', 'admin', 'instructor'), attendanceController.getCourseTopics);
+router.post('/topics/save', authorize('teacher', 'admin', 'instructor'), attendanceController.saveTopicCompletion);
+router.get('/student/:studentId/topic-progress', authorize('teacher', 'admin', 'instructor', 'student'), attendanceController.getStudentTopicProgress);
+
 module.exports = router;

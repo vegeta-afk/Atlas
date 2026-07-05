@@ -4,6 +4,8 @@ const TeacherBatch = require('../models/TeacherBatch');
 const AttendanceSummary = require('../models/AttendanceSummary');
 const Student = require('../models/Student');
 const { Batch , Holiday } = require('../models/Setup');
+const Course = require('../models/Course');
+const TopicCompletion = require('../models/TopicCompletion');
 const activeQRSessions = new Map();
 
 const LATE_THRESHOLD_MINUTES = 15;
@@ -474,6 +476,30 @@ if (student.additionalCourses?.length > 0) {
     });
 }
 
+      // Determine which course applies to this student IN THIS BATCH
+      // (a batch can host students on their primary course OR an additional course)
+      const normalize = (s) => (s || '').replace(/\s+/g, ' ').toLowerCase().trim();
+      const currentBatchDisplayName = teacherBatch.batch?.displayName || '';
+      const currentBatchTimeString = `${teacherBatch.batch?.startTime || ''} to ${teacherBatch.batch?.endTime || ''}`;
+
+      let applicableCourseId = student.courseCode || null;
+      let applicableCourseName = student.course || studentCourses[0] || 'Course';
+      if (student.additionalCourses?.length > 0) {
+        const ac = student.additionalCourses.find((a) => {
+          if (!a.isActive) return false;
+          if (a.batchId && batchId) {
+            return a.batchId.toString() === batchId.toString();
+          }
+          // fallback: batchId missing/null on this record, match by batch time/name instead
+          return normalize(a.batchTime) === normalize(currentBatchDisplayName) ||
+                 normalize(a.batchTime) === normalize(currentBatchTimeString);
+        });
+        if (ac) {
+          applicableCourseId = ac.courseId;
+          applicableCourseName = ac.courseName;
+        }
+      }
+
       return {
         _id: student._id,
         studentId: student.studentId,
@@ -482,6 +508,8 @@ if (student.additionalCourses?.length > 0) {
         photo: student.photo,
         contact: student.mobileNumber,
         email: student.email,
+        courseId: applicableCourseId,
+        courseName: applicableCourseName,
         courses: studentCourses,
         batchTiming: teacherBatch.batch?.displayName || `${teacherBatch.batch?.startTime} - ${teacherBatch.batch?.endTime}`,
         attendanceHistory: {
@@ -1319,6 +1347,133 @@ exports.getMonthlyAttendanceReport = async (req, res) => {
     });
   } catch (error) {
     console.error('Error in getMonthlyAttendanceReport:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 6. Get topics/subtopics for one or more courses (used to build the topic-completion modal)
+exports.getCourseTopics = async (req, res) => {
+  try {
+    const { courseIds } = req.query; // comma-separated Course _ids
+    if (!courseIds) {
+      return res.status(400).json({ success: false, message: 'courseIds is required' });
+    }
+    const ids = courseIds.split(',').filter(Boolean);
+
+    const courses = await Course.find({ _id: { $in: ids } })
+      .select('courseFullName syllabus')
+      .lean();
+
+    const result = courses.map((course) => {
+      const topics = [];
+      (course.syllabus || []).forEach((sem, sIdx) => {
+        (sem.topics || []).forEach((topic, tIdx) => {
+          topics.push({
+            key: `${sIdx}_${tIdx}`,
+            name: topic.name,
+            semesterName: sem.name,
+            subtopics: (topic.subtopics || []).map((sub, subIdx) => ({
+              key: `${sIdx}_${tIdx}_${subIdx}`,
+              name: sub.name,
+            })),
+          });
+        });
+      });
+      return { courseId: course._id, courseName: course.courseFullName, topics };
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Error in getCourseTopics:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 7. Save which topics/subtopics were covered, per course, for a batch+date
+exports.saveTopicCompletion = async (req, res) => {
+  try {
+    const { batchId, date, courseGroups } = req.body;
+    // courseGroups: [{ courseId, studentIds, completedTopicKeys, completedSubtopicKeys }]
+    const teacherId = req.user.id;
+    const attendanceDate = new Date(date);
+
+    if (!Array.isArray(courseGroups) || courseGroups.length === 0) {
+      return res.status(400).json({ success: false, message: 'courseGroups is required' });
+    }
+
+    const operations = courseGroups.map((group) => ({
+      updateOne: {
+        filter: { batchId, courseId: group.courseId, date: attendanceDate },
+        update: {
+          $set: {
+            batchId,
+            courseId: group.courseId,
+            teacherId,
+            date: attendanceDate,
+            completedTopicKeys: group.completedTopicKeys || [],
+            completedSubtopicKeys: group.completedSubtopicKeys || [],
+            studentIds: group.studentIds || [],
+          },
+        },
+        upsert: true,
+      },
+    }));
+
+    await TopicCompletion.bulkWrite(operations);
+    res.json({ success: true, message: 'Topics saved successfully' });
+  } catch (error) {
+    console.error('Error in saveTopicCompletion:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// 8. Get a student's syllabus completion status for ViewStudent page
+exports.getStudentTopicProgress = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { courseId } = req.query;
+
+    if (!courseId) {
+      return res.status(400).json({ success: false, message: 'courseId is required' });
+    }
+
+    const course = await Course.findById(courseId).select('courseFullName syllabus').lean();
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    const completions = await TopicCompletion.find({
+      courseId,
+      studentIds: studentId,
+    }).select('completedTopicKeys completedSubtopicKeys').lean();
+
+    const completedTopicKeys = new Set();
+    const completedSubtopicKeys = new Set();
+    completions.forEach((c) => {
+      (c.completedTopicKeys || []).forEach((k) => completedTopicKeys.add(k));
+      (c.completedSubtopicKeys || []).forEach((k) => completedSubtopicKeys.add(k));
+    });
+
+    const syllabusStatus = [];
+    (course.syllabus || []).forEach((sem, sIdx) => {
+      (sem.topics || []).forEach((topic, tIdx) => {
+        const topicKey = `${sIdx}_${tIdx}`;
+        syllabusStatus.push({
+          key: topicKey,
+          name: topic.name,
+          semesterName: sem.name,
+          completed: completedTopicKeys.has(topicKey),
+          subtopics: (topic.subtopics || []).map((sub, subIdx) => {
+            const subKey = `${sIdx}_${tIdx}_${subIdx}`;
+            return { key: subKey, name: sub.name, completed: completedSubtopicKeys.has(subKey) };
+          }),
+        });
+      });
+    });
+
+    res.json({ success: true, data: { courseName: course.courseFullName, syllabus: syllabusStatus } });
+  } catch (error) {
+    console.error('Error in getStudentTopicProgress:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

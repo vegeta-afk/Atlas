@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { QRCodeSVG } from 'qrcode.react';
+import TopicCompletionModal from "./TopicCompletionModal";
 import {
   Calendar,
   Users,
@@ -75,6 +76,9 @@ const StudentAttendance = () => {
   const [showQRModal, setShowQRModal] = useState(false);
 const [activeQR, setActiveQR] = useState(null); // { qrData, batchName, timing, expiresAt }
 const [qrLoading, setQRLoading] = useState(false);
+
+const [showTopicModal, setShowTopicModal] = useState(false);
+const [topicModalGroups, setTopicModalGroups] = useState([]);
 
   // Helper function to get current user
   const getCurrentUser = () => {
@@ -481,6 +485,34 @@ const handleBatchSelect = (batch) => {
     updateStats(newAttendance);
   };
 
+ const buildCourseGroups = () => {
+    const groups = {};
+    students.forEach((student) => {
+      const status = attendance[student._id];
+      if (status !== "present" && status !== "late") return; // only students who attended today
+      if (!student.courseId) return; // skip if backend couldn't resolve a course for them
+      const key = student.courseId.toString();
+      if (!groups[key]) {
+        groups[key] = {
+          courseId: key,
+          courseName: student.courseName || "Course",
+          studentIds: [],
+          studentNames: []
+        };
+      }
+      groups[key].studentIds.push(student._id);
+      groups[key].studentNames.push(student.fullName);
+    });
+    return Object.values(groups);
+  };
+
+  const openTopicModal = () => {
+    const groups = buildCourseGroups();
+    if (groups.length === 0) return; // nobody present with a linked course today
+    setTopicModalGroups(groups);
+    setShowTopicModal(true);
+  };
+
   const saveAttendance = async () => {
   if (isAdmin) {
     alert("Admin cannot mark attendance. Please login as faculty.");
@@ -515,10 +547,10 @@ const handleBatchSelect = (batch) => {
 
       const result = await response.json();
       if (result.success) {
-        alert(result.message);
         sessionStorage.setItem(`attendance_${selectedDate}_${selectedBatch._id}`, "marked");
 
         await fetchBatchStudents(selectedBatch._id);
+        openTopicModal();
       } else {
         alert('Error saving attendance: ' + result.message);
       }
@@ -1696,6 +1728,18 @@ const handleBatchSelect = (batch) => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+      {showTopicModal && (
+        <TopicCompletionModal
+          batchId={selectedBatch?._id}
+          date={selectedDate}
+          courseGroups={topicModalGroups}
+          onClose={() => setShowTopicModal(false)}
+          onSaved={() => {
+            setShowTopicModal(false);
+            alert("Attendance and topics saved successfully!");
+          }}
+        />
+      )}
       <div className="max-w-screen-2xl mx-auto">
         {/* Header */}
         {renderHeader()}

@@ -54,6 +54,8 @@ const ViewStudent = () => {
   const [materialIssues, setMaterialIssues] = useState({}); // materialId -> issue record
   const [materialLoading, setMaterialLoading] = useState(false);
   const [togglingMaterial, setTogglingMaterial] = useState(null);
+  const [syllabusProgress, setSyllabusProgress] = useState({}); // courseId -> { courseName, syllabus }
+  const [syllabusLoading, setSyllabusLoading] = useState(false);
 
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -68,6 +70,12 @@ const ViewStudent = () => {
       calculateMonthlyStats();
     }
   }, [attendanceData]);
+
+  useEffect(() => {
+    if (student) {
+      fetchSyllabusProgress();
+    }
+  }, [student]);
 
   useEffect(() => {
   fetchStudentDetails();
@@ -179,6 +187,46 @@ const ViewStudent = () => {
     console.error("Error fetching materials:", error);
   } finally {
     setMaterialLoading(false);
+  }
+};
+
+const fetchSyllabusProgress = async () => {
+  setSyllabusLoading(true);
+  try {
+    const token = localStorage.getItem("token");
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const courseList = [];
+    if (student?.courseCode) {
+      courseList.push({ courseId: student.courseCode, label: student.course || "Primary Course" });
+    }
+    if (student?.additionalCourses?.length > 0) {
+      student.additionalCourses.forEach((ac) => {
+        if (ac.courseId) {
+          courseList.push({ courseId: ac.courseId, label: ac.courseName });
+        }
+      });
+    }
+
+    const results = await Promise.all(
+      courseList.map(async (c) => {
+        const response = await fetch(
+          `${BASE_URL}/api/attendance/student/${id}/topic-progress?courseId=${c.courseId}`,
+          { headers }
+        );
+        const result = await response.json();
+        return { courseId: c.courseId, label: c.label, ...(result.data || {}) };
+      })
+    );
+
+    const map = {};
+    results.forEach((r) => { map[r.courseId] = r; });
+    setSyllabusProgress(map);
+  } catch (error) {
+    console.error("Error fetching syllabus progress:", error);
+  } finally {
+    setSyllabusLoading(false);
   }
 };
 
@@ -389,6 +437,7 @@ const activeBalanceAmount = activeTotalFee - activePaidAmount;
     { id: "fees", label: "Fees", icon: <DollarSign size={18} /> },
     { id: "attendance", label: "Attendance", icon: <Calendar size={18} /> },
     { id: "academic", label: "Academic", icon: <BookOpen size={18} /> },
+    { id: "syllabus", label: "Syllabus Progress", icon: <CheckCircle size={18} /> },
     { id: "documents", label: "Documents", icon: <FileText size={18} /> },
     { id: "material", label: "Material Issue", icon: <Package size={18} /> },
   ];
@@ -835,6 +884,90 @@ const activeBalanceAmount = activeTotalFee - activePaidAmount;
           )}
         </div>
       </div>
+      {activeTab === "syllabus" && (
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <CheckCircle size={20} className="text-green-600" />
+            Syllabus Progress
+          </h3>
+
+          {syllabusLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : Object.keys(syllabusProgress).length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <BookOpen size={40} className="mx-auto mb-3 text-gray-300" />
+              <p>No syllabus progress recorded yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {Object.values(syllabusProgress).map((courseProgress) => {
+                const allTopics = courseProgress.syllabus || [];
+                const totalTopics = allTopics.length;
+                const completedTopics = allTopics.filter((t) => t.completed).length;
+                const percent = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
+
+                return (
+                  <div key={courseProgress.courseId} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-blue-50 px-4 py-3 border-b border-blue-200 flex justify-between items-center">
+                      <div>
+                        <h4 className="font-semibold text-blue-800">
+                          {courseProgress.courseName || courseProgress.label}
+                        </h4>
+                        <p className="text-xs text-blue-600">
+                          {completedTopics} of {totalTopics} topics completed
+                        </p>
+                      </div>
+                      <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                        percent >= 75 ? "bg-green-100 text-green-800" :
+                        percent >= 40 ? "bg-yellow-100 text-yellow-800" :
+                        "bg-red-100 text-red-800"
+                      }`}>
+                        {percent}%
+                      </div>
+                    </div>
+
+                    <div className="p-4 space-y-2">
+                      {allTopics.map((topic) => (
+                        <div key={topic.key}>
+                          <div className="flex items-center gap-2">
+                            {topic.completed ? (
+                              <CheckCircle size={16} className="text-green-600 flex-shrink-0" />
+                            ) : (
+                              <XCircle size={16} className="text-gray-300 flex-shrink-0" />
+                            )}
+                            <span className={`text-sm ${topic.completed ? "text-gray-800 font-medium" : "text-gray-400"}`}>
+                              {topic.name}
+                            </span>
+                          </div>
+                          {topic.subtopics?.length > 0 && (
+                            <div className="pl-6 mt-1 space-y-1">
+                              {topic.subtopics.map((sub) => (
+                                <div key={sub.key} className="flex items-center gap-2">
+                                  {sub.completed ? (
+                                    <CheckCircle size={13} className="text-green-500 flex-shrink-0" />
+                                  ) : (
+                                    <XCircle size={13} className="text-gray-200 flex-shrink-0" />
+                                  )}
+                                  <span className={`text-xs ${sub.completed ? "text-gray-700" : "text-gray-400"}`}>
+                                    {sub.name}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {activeTab === "material" && (
   <div>
     <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
