@@ -1,5 +1,6 @@
 // pages/students/BridgeBatchList.jsx
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   Search,
   ChevronDown,
@@ -16,6 +17,7 @@ import {
   Ban,
   CheckSquare,
   X,
+  Plus,
 } from "lucide-react";
 import useBasePath from "../../hooks/useBasePath";
 
@@ -305,6 +307,24 @@ const BridgeBatchList = () => {
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
             Refresh
           </button>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={fetchBridgeBatches}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
+          <Link
+            to={`${basePath}/students/bridge-batch/add`}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <Plus size={18} />
+            New Bridge Request
+          </Link>
         </div>
       </div>
 
