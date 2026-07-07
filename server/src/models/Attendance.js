@@ -52,9 +52,16 @@ const attendanceSchema = new mongoose.Schema({
 
   courseType: {
     type: String,
-    enum: ['primary', 'additional'],
+    enum: ['primary', 'additional' , 'bridge'],
     default: 'primary'
   },
+
+
+  bridgeBatchId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'BridgeBatch',
+  default: null
+},
   
   // Time Tracking
   checkInTime: {

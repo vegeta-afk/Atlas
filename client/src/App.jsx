@@ -87,6 +87,8 @@ import MaterialIssue from "./pages/students/MaterialIssue";
 import TemplateDesigner from "./pages/admin/TemplateDesigner";
 import TemplateList from "./pages/admin/TemplateList";
 import TemplateEditPage from "./pages/admin/TemplateEditPage";
+import BridgeBatchList from "./pages/students/BridgeBatchList";
+import AddBridgeBatchRequest from "./pages/students/AddBridgeBatchRequest";
 
 
 function App() {
@@ -129,6 +131,8 @@ function App() {
           <Route path="add" element={<AddFaculty />} />
           <Route path="view/:facultyId" element={<ViewFaculty />} />  // ← new
           <Route path="edit/:facultyId" element={<EditFaculty />} />  // ← new
+          <Route path="bridge-batch" element={<BridgeBatchList />} />
+          <Route path="bridge-batch/add" element={<AddBridgeBatchRequest />} />
         </Route>
 
         <Route path="students">
@@ -145,6 +149,8 @@ function App() {
           <Route path="course-extension" element={<CourseExtension />} />
           <Route path="exams" element={<StudentExamResults />} />
           <Route path="material-issue" element={<MaterialIssue />} />
+          <Route path="bridge-batch" element={<BridgeBatchList />} />
+          <Route path="bridge-batch/add" element={<AddBridgeBatchRequest />} />
         </Route>
 
         <Route path="exam">
