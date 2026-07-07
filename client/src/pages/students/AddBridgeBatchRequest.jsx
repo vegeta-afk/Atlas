@@ -11,7 +11,7 @@ import {
   AlertCircle,
   Clock,
 } from "lucide-react";
-import { studentAPI, facultyAPI, bridgeBatchAPI } from "../../services/api";
+import { studentAPI, facultyAPI, bridgeBatchAPI, setupAPI } from "../../services/api";
 import useBasePath from "../../hooks/useBasePath";
 
 const AddBridgeBatchRequest = () => {
@@ -27,6 +27,7 @@ const AddBridgeBatchRequest = () => {
 
   // Dynamic data
   const [facultyMembers, setFacultyMembers] = useState([]);
+  const [batches, setBatches] = useState([]);
   const [pendingTopics, setPendingTopics] = useState([]);
   const [loadingTopics, setLoadingTopics] = useState(false);
 
@@ -44,6 +45,7 @@ const AddBridgeBatchRequest = () => {
     tempFacultyId: "",
     tempFacultyName: "",
     selectedTopicKeys: [],
+    tempBatchId: "",
     startTime: "",
     endTime: "",
     reason: "",
@@ -54,6 +56,7 @@ const AddBridgeBatchRequest = () => {
 
   useEffect(() => {
     fetchFaculty();
+    fetchBatches();
   }, []);
 
   useEffect(() => {
@@ -70,6 +73,18 @@ const AddBridgeBatchRequest = () => {
       }
     } catch (err) {
       console.error("Error fetching faculty:", err);
+    }
+  };
+
+  const fetchBatches = async () => {
+    try {
+      const response = await setupAPI.getAll();
+      if (response.data.success) {
+        const batchesData = response.data.data.batches || [];
+        setBatches(batchesData.sort((a, b) => (a.order || 0) - (b.order || 0)));
+      }
+    } catch (err) {
+      console.error("Error fetching batches:", err);
     }
   };
 
@@ -188,6 +203,17 @@ const AddBridgeBatchRequest = () => {
       return;
     }
 
+    if (name === "tempBatchId") {
+      const selected = batches.find((b) => b._id === value);
+      setFormData((prev) => ({
+        ...prev,
+        tempBatchId: value,
+        startTime: selected?.startTime || "",
+        endTime: selected?.endTime || "",
+      }));
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -207,7 +233,7 @@ const AddBridgeBatchRequest = () => {
     const newErrors = {};
     if (!formData.tempFacultyId) newErrors.tempFacultyId = "Please select a temp faculty";
     if (formData.selectedTopicKeys.length === 0) newErrors.selectedTopicKeys = "Select at least one pending topic";
-    if (!formData.startTime || !formData.endTime) newErrors.timeSlot = "Please set a time slot for bridge sessions";
+    if (!formData.tempBatchId) newErrors.tempBatchId = "Please select a batch slot for the bridge sessions";
     if (!formData.reason) newErrors.reason = "Please provide a reason for this bridge request";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -234,6 +260,7 @@ const AddBridgeBatchRequest = () => {
           courseId: formData.courseId,
           studentIds: [formData.studentId],
           tempFacultyId: formData.tempFacultyId,
+          tempBatchId: formData.tempBatchId,
           selectedTopics,
           timeSlot: { startTime: formData.startTime, endTime: formData.endTime },
           reason: formData.reason,
@@ -456,29 +483,27 @@ const AddBridgeBatchRequest = () => {
                     {errors.tempFacultyId && <p className="mt-1 text-xs text-red-500">{errors.tempFacultyId}</p>}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Start Time *</label>
-                      <input
-                        type="time"
-                        name="startTime"
-                        value={formData.startTime}
-                        onChange={handleChange}
-                        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.timeSlot ? "border-red-500" : "border-gray-200"}`}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">End Time *</label>
-                      <input
-                        type="time"
-                        name="endTime"
-                        value={formData.endTime}
-                        onChange={handleChange}
-                        className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.timeSlot ? "border-red-500" : "border-gray-200"}`}
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Temp Batch Slot *</label>
+                    <select
+                      name="tempBatchId"
+                      value={formData.tempBatchId}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.tempBatchId ? "border-red-500" : "border-gray-200"}`}
+                    >
+                      <option value="">Select Batch Slot</option>
+                      {batches.map((batch) => {
+                        const displayName = batch.displayName ||
+                          `${batch.startTime || ""} to ${batch.endTime || ""}`.trim();
+                        return (
+                          <option key={batch._id} value={batch._id}>
+                            {batch.batchName} {displayName ? `(${displayName})` : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    {errors.tempBatchId && <p className="mt-1 text-xs text-red-500">{errors.tempBatchId}</p>}
                   </div>
-                  {errors.timeSlot && <p className="-mt-4 md:col-span-2 text-xs text-red-500">{errors.timeSlot}</p>}
                 </div>
 
                 <div className="mb-6">
@@ -571,7 +596,11 @@ const AddBridgeBatchRequest = () => {
                     <h3 className="font-medium text-gray-700 mb-3">Bridge Session</h3>
                     <div className="space-y-2 text-sm">
                       <p><span className="text-gray-500">Temp Faculty:</span> <span className="font-medium text-green-600">{formData.tempFacultyName}</span></p>
-                      <p><span className="text-gray-500">Time:</span> <span className="font-medium text-green-600">{formData.startTime} - {formData.endTime}</span></p>
+                      <p><span className="text-gray-500">Time:</span> <span className="font-medium text-green-600">
+                        {batches.find((b) => b._id === formData.tempBatchId)?.displayName ||
+                          batches.find((b) => b._id === formData.tempBatchId)?.batchName ||
+                          `${formData.startTime} - ${formData.endTime}`}
+                      </span></p>
                     </div>
                   </div>
                 </div>
