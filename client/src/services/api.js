@@ -505,6 +505,7 @@ export const bridgeBatchAPI = {
   getById: (id) => api.get(`/bridge-batch/${id}`),
   approve: (id) => api.put(`/bridge-batch/${id}/approve`),
   reject: (id, reason) => api.put(`/bridge-batch/${id}/reject`, { reason }),
+  getStudentBatchInfo: (params) => api.get('/bridge-batch/student-batch-info', { params }),
   cancel: (id) => api.put(`/bridge-batch/${id}/cancel`),
 };
 

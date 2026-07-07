@@ -8,6 +8,7 @@ const bridgeBatchController = require('../controllers/bridgeBatchController');
 router.post('/request', protect, bridgeBatchController.requestBridgeBatch);
 router.get('/', protect, authorize('admin'), bridgeBatchController.getAllBridgeBatches);
 router.get('/pending-topics', protect, bridgeBatchController.getPendingTopicsForStudent);
+router.get('/student-batch-info', protect, bridgeBatchController.getStudentBatchInfo);
 router.put('/:id/approve', protect, authorize('admin'), bridgeBatchController.approveBridgeBatch);
 router.put('/:id/reject', protect, authorize('admin'), bridgeBatchController.rejectBridgeBatch);
 router.put('/:id/merge', protect, authorize('admin'), bridgeBatchController.mergeBridgeBatch);

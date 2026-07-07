@@ -6,6 +6,7 @@ const Notification = require('../models/Notification');
 const Student = require('../models/Student');
 const Course = require('../models/Course');
 const User = require('../models/user');
+const TeacherBatch = require('../models/TeacherBatch');
 
 // 1. Faculty requests a bridge batch for their student
 // body: { parentBatchId, courseId, studentIds: [], tempFacultyId, selectedTopics: [{topicKey, topicName}], timeSlot }
@@ -429,6 +430,36 @@ exports.rejectBridgeBatch = async (req, res) => {
     res.status(200).json({ success: true, message: 'Bridge batch rejected', data: bridgeBatch });
   } catch (error) {
     console.error('Error in rejectBridgeBatch:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// NEW: resolve a student's actual courseId + batchId (Student has no direct batchId field)
+// query: ?studentId=
+exports.getStudentBatchInfo = async (req, res) => {
+  try {
+    const { studentId } = req.query;
+    if (!studentId) {
+      return res.status(400).json({ success: false, message: 'studentId is required' });
+    }
+
+    const student = await Student.findById(studentId).select('courseCode').lean();
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
+
+    const teacherBatch = await TeacherBatch.findOne({
+      'assignedStudents.student': studentId,
+      isActive: true,
+    }).select('batch').lean();
+
+    res.json({
+      success: true,
+      data: {
+        courseId: student.courseCode || null,
+        batchId: teacherBatch?.batch || null,
+      },
+    });
+  } catch (error) {
+    console.error('Error in getStudentBatchInfo:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

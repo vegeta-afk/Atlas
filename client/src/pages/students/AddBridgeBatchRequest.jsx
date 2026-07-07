@@ -150,21 +150,33 @@ const AddBridgeBatchRequest = () => {
       studentId: student._id,
       rollNo: student.studentId || student.admissionNo || student.rollNo || "",
       studentName: student.fullName || "",
-      parentBatchId: student.batchId || "",
-      courseId: student.courseId || "",
       currentBatchTime: student.batchTime || student.batch || "",
       currentTeacher: student.facultyAllot || "",
       selectedTopicKeys: [],
     }));
     setStep(2);
 
-    if (student.courseId) {
-      fetchPendingTopics(student._id, student.courseId);
-    } else {
-      console.warn("Student is missing courseId — cannot fetch topic list automatically.");
-    }
-    if (!student.batchId) {
-      console.warn("Student is missing batchId — parentBatchId will be blank on submit, fix before saving.");
+    try {
+      const response = await bridgeBatchAPI.getStudentBatchInfo({ studentId: student._id });
+      if (response.data.success) {
+        const { courseId, batchId } = response.data.data;
+        setFormData((prev) => ({
+          ...prev,
+          courseId: courseId || "",
+          parentBatchId: batchId || "",
+        }));
+
+        if (courseId) {
+          fetchPendingTopics(student._id, courseId);
+        } else {
+          console.warn("Student has no linked course (courseCode) — cannot fetch topic list.");
+        }
+        if (!batchId) {
+          console.warn("Student has no active TeacherBatch assignment — parentBatchId will be blank on submit.");
+        }
+      }
+    } catch (err) {
+      console.error("Error resolving student's course/batch info:", err);
     }
   };
 
