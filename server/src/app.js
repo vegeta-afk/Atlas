@@ -64,7 +64,7 @@ const materialRoutes = require("./routes/materialRoutes");
 const birthdayRoutes = require("./routes/birthdayRoutes");
 const batchReportRoutes = require("./routes/batchReportRoutes");
 const templateRoutes = require("./routes/templateRoutes");
-const bridgeBatchRoutes = require('./routes/bridgeBatch.routes');
+const bridgeBatchRoutes = require('./routes/bridgeBatchRoutes');
 
 // Use routes
 app.use("/api/auth", authRoutes);
