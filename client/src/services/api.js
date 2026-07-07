@@ -497,4 +497,15 @@ export const templateAPI = {
     delete: (id) => api.delete(`/templates/${id}`),
   };
 
+  
+export const bridgeBatchAPI = {
+  getPendingTopics: (params) => api.get('/bridge-batch/pending-topics', { params }),
+  requestBridge: (data) => api.post('/bridge-batch/request', data),
+  getAll: (params) => api.get('/bridge-batch', { params }),
+  getById: (id) => api.get(`/bridge-batch/${id}`),
+  approve: (id) => api.put(`/bridge-batch/${id}/approve`),
+  reject: (id, reason) => api.put(`/bridge-batch/${id}/reject`, { reason }),
+  cancel: (id) => api.put(`/bridge-batch/${id}/cancel`),
+};
+
 export default api;
