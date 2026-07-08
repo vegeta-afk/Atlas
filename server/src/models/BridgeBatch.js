@@ -12,7 +12,7 @@ const bridgeBatchSchema = new mongoose.Schema(
       ref: "Course",
       required: true,
     },
-    courseName: String, // denormalized for quick display in lists/notifications
+    courseName: String,
 
     studentIds: [
       {
@@ -25,24 +25,21 @@ const bridgeBatchSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["pending", "active", "ready_to_merge", "merged", "cancelled", "rejected"],
-      default: "pending", // was "active" — now starts as a request
+      default: "pending",
     },
 
-    // NEW: who requested it (the faculty, not admin)
     requestedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
-
-    // NEW: approval trail
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
     approvedDate: Date,
     rejectedReason: String,
+    reason: String, // ADDED BACK — why the request was raised
 
-    // Temp faculty is a User (matches Attendance.teacher / TopicCompletion.teacherId, both ref 'User')
     tempFacultyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -50,7 +47,16 @@ const bridgeBatchSchema = new mongoose.Schema(
     },
     tempFacultyName: String,
 
-    // Admin manually picks these at creation time
+    // ADDED BACK — this was missing entirely
+    selectedTopics: [
+      {
+        topicKey: { type: String, required: true },
+        topicName: { type: String, required: true },
+        completed: { type: Boolean, default: false },
+        completedDate: Date,
+      },
+    ],
+
     selectedSubtopics: [
       {
         subtopicKey: { type: String, required: true },
@@ -61,14 +67,8 @@ const bridgeBatchSchema = new mongoose.Schema(
     ],
 
     timeSlot: {
-      startTime: String, // "HH:MM"
+      startTime: String,
       endTime: String,
-    },
-
-    status: {
-      type: String,
-      enum: ["active", "ready_to_merge", "merged", "cancelled"],
-      default: "active",
     },
 
     createdBy: {
