@@ -25,13 +25,13 @@ exports.requestBridgeBatch = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Select at least one pending topic' });
     }
 
-    const [course, tempFaculty] = await Promise.all([
-      Course.findById(courseId).select('courseFullName').lean(),
-      User.findById(tempFacultyId).select('name').lean(),
-    ]);
+    const [course, tempFacultyUser] = await Promise.all([
+  Course.findById(courseId).select('courseFullName').lean(),
+  User.findOne({ facultyId: tempFacultyId }).select('name').lean(),
+]);
 
-    if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
-    if (!tempFaculty) return res.status(404).json({ success: false, message: 'Temp faculty not found' });
+if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
+if (!tempFacultyUser) return res.status(404).json({ success: false, message: 'Temp faculty (linked user account) not found' });
 
     const bridgeBatch = await BridgeBatch.create({
       parentBatchId,
@@ -39,7 +39,7 @@ exports.requestBridgeBatch = async (req, res) => {
       courseName: course.courseFullName,
       studentIds,
       tempFacultyId,
-      tempFacultyName: tempFaculty.name,
+      tempFacultyName: tempFacultyUser.name,
       selectedTopics: selectedTopics.map((t) => ({
         topicKey: t.topicKey,
         topicName: t.topicName,
