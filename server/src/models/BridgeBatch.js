@@ -84,8 +84,7 @@ const bridgeBatchSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-Then use the combined version — go with this:
-javascript// Auto-flip status only when every selected topic AND every selected subtopic are done
+// Auto-flip status only when every selected topic AND every selected subtopic are done
 bridgeBatchSchema.pre("save", function (next) {
   if (this.status === "active") {
     const topicsDone = this.selectedTopics.length === 0 || this.selectedTopics.every((t) => t.completed);
