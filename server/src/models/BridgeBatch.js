@@ -51,10 +51,10 @@ const bridgeBatchSchema = new mongoose.Schema(
     tempFacultyName: String,
 
     // Admin manually picks these at creation time
-    selectedTopics: [
+    selectedSubtopics: [
       {
-        topicKey: { type: String, required: true },
-        topicName: { type: String, required: true },
+        subtopicKey: { type: String, required: true },
+        subtopicName: { type: String, required: true },
         completed: { type: Boolean, default: false },
         completedDate: Date,
       },
@@ -84,11 +84,15 @@ const bridgeBatchSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Auto-flip status when every selected topic is marked done
+Then use the combined version — go with this:
+javascript// Auto-flip status only when every selected topic AND every selected subtopic are done
 bridgeBatchSchema.pre("save", function (next) {
-  if (this.status === "active" && this.selectedTopics.length > 0) {
-    const allDone = this.selectedTopics.every((t) => t.completed);
-    if (allDone) {
+  if (this.status === "active") {
+    const topicsDone = this.selectedTopics.length === 0 || this.selectedTopics.every((t) => t.completed);
+    const subtopicsDone = this.selectedSubtopics.length === 0 || this.selectedSubtopics.every((s) => s.completed);
+    const hasAnySelection = this.selectedTopics.length > 0 || this.selectedSubtopics.length > 0;
+
+    if (hasAnySelection && topicsDone && subtopicsDone) {
       this.status = "ready_to_merge";
     }
   }

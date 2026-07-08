@@ -12,7 +12,7 @@ const TeacherBatch = require('../models/TeacherBatch');
 // body: { parentBatchId, courseId, studentIds: [], tempFacultyId, selectedTopics: [{topicKey, topicName}], timeSlot }
 exports.requestBridgeBatch = async (req, res) => {
   try {
-    const { parentBatchId, courseId, studentIds, tempFacultyId, selectedTopics, timeSlot } = req.body;
+    const { parentBatchId, courseId, studentIds, tempFacultyId, selectedTopics, selectedSubtopics, timeSlot, reason } = req.body;
     const requestingFacultyId = req.user.id;
 
     if (!parentBatchId || !courseId || !Array.isArray(studentIds) || studentIds.length === 0) {
@@ -34,22 +34,28 @@ if (!course) return res.status(404).json({ success: false, message: 'Course not 
 if (!tempFacultyUser) return res.status(404).json({ success: false, message: 'Temp faculty (linked user account) not found' });
 
     const bridgeBatch = await BridgeBatch.create({
-      parentBatchId,
-      courseId,
-      courseName: course.courseFullName,
-      studentIds,
-      tempFacultyId,
-      tempFacultyName: tempFacultyUser.name,
-      selectedTopics: selectedTopics.map((t) => ({
-        topicKey: t.topicKey,
-        topicName: t.topicName,
-        completed: false,
-      })),
-      timeSlot: timeSlot || {},
-      status: 'pending',
-      requestedBy: requestingFacultyId,
-      createdBy: requestingFacultyId,
-    });
+  parentBatchId,
+  courseId,
+  courseName: course.courseFullName,
+  studentIds,
+  tempFacultyId: tempFacultyUser._id,   // FIX: was raw tempFacultyId (Faculty._id) — must be the User._id
+  tempFacultyName: tempFacultyUser.name,
+  selectedTopics: selectedTopics.map((t) => ({
+    topicKey: t.topicKey,
+    topicName: t.topicName,
+    completed: false,
+  })),
+  selectedSubtopics: (selectedSubtopics || []).map((s) => ({   // NEW: was missing entirely
+    subtopicKey: s.subtopicKey,
+    subtopicName: s.subtopicName,
+    completed: false,
+  })),
+  timeSlot: timeSlot || {},
+  reason,   // NEW: was missing — this is why your admin view modal showed "No reason provided"
+  status: 'pending',
+  requestedBy: requestingFacultyId,
+  createdBy: requestingFacultyId,
+});
 
     res.status(201).json({ success: true, message: 'Bridge batch request submitted for admin approval', data: bridgeBatch });
   } catch (error) {
@@ -348,8 +354,6 @@ exports.getNotifications = async (req, res) => {
   }
 };
 
-// Get a student's full topic list for a course, each flagged completed/pending
-// query: ?studentId=&courseId=
 exports.getPendingTopicsForStudent = async (req, res) => {
   try {
     const { studentId, courseId } = req.query;
@@ -361,11 +365,15 @@ exports.getPendingTopicsForStudent = async (req, res) => {
     if (!course) return res.status(404).json({ success: false, message: 'Course not found' });
 
     const completions = await TopicCompletion.find({ courseId, studentIds: studentId })
-      .select('completedTopicKeys')
+      .select('completedTopicKeys completedSubtopicKeys')
       .lean();
 
     const completedTopicKeys = new Set();
-    completions.forEach((c) => (c.completedTopicKeys || []).forEach((k) => completedTopicKeys.add(k)));
+    const completedSubtopicKeys = new Set();
+    completions.forEach((c) => {
+      (c.completedTopicKeys || []).forEach((k) => completedTopicKeys.add(k));
+      (c.completedSubtopicKeys || []).forEach((k) => completedSubtopicKeys.add(k));
+    });
 
     const topics = [];
     (course.syllabus || []).forEach((sem, sIdx) => {
@@ -376,6 +384,14 @@ exports.getPendingTopicsForStudent = async (req, res) => {
           topicName: topic.name,
           semesterName: sem.name,
           completed: completedTopicKeys.has(topicKey),
+          subtopics: (topic.subtopics || []).map((sub, subIdx) => {
+            const subtopicKey = `${sIdx}_${tIdx}_${subIdx}`;
+            return {
+              subtopicKey,
+              subtopicName: sub.name,
+              completed: completedSubtopicKeys.has(subtopicKey),
+            };
+          }),
         });
       });
     });

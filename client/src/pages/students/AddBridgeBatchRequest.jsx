@@ -10,6 +10,8 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { studentAPI, facultyAPI, bridgeBatchAPI, setupAPI } from "../../services/api";
 import useBasePath from "../../hooks/useBasePath";
@@ -45,6 +47,7 @@ const AddBridgeBatchRequest = () => {
     tempFacultyId: "",
     tempFacultyName: "",
     selectedTopicKeys: [],
+    selectedSubtopicKeys: [],
     tempBatchId: "",
     startTime: "",
     endTime: "",
@@ -53,6 +56,7 @@ const AddBridgeBatchRequest = () => {
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [expandedTopics, setExpandedTopics] = useState(new Set());
 
   useEffect(() => {
     fetchFaculty();
@@ -187,11 +191,25 @@ const AddBridgeBatchRequest = () => {
       if (response.data.success) {
         const topics = response.data.data?.topics || [];
         setPendingTopics(topics);
-        // Pre-check topics the student hasn't covered yet
+
+        const pendingTopicKeys = topics.filter((t) => !t.completed).map((t) => t.topicKey);
+        const pendingSubtopicKeys = [];
+        const autoExpand = new Set();
+        topics.forEach((t) => {
+          (t.subtopics || []).forEach((s) => {
+            if (!s.completed) {
+              pendingSubtopicKeys.push(s.subtopicKey);
+              autoExpand.add(t.topicKey);
+            }
+          });
+        });
+
         setFormData((prev) => ({
           ...prev,
-          selectedTopicKeys: topics.filter((t) => !t.completed).map((t) => t.topicKey),
+          selectedTopicKeys: pendingTopicKeys,
+          selectedSubtopicKeys: pendingSubtopicKeys,
         }));
+        setExpandedTopics(autoExpand);
       }
     } catch (err) {
       console.error("Error fetching pending topics:", err);
@@ -241,6 +259,27 @@ const AddBridgeBatchRequest = () => {
     });
   };
 
+  const toggleSubtopic = (subtopicKey) => {
+    setFormData((prev) => {
+      const exists = prev.selectedSubtopicKeys.includes(subtopicKey);
+      return {
+        ...prev,
+        selectedSubtopicKeys: exists
+          ? prev.selectedSubtopicKeys.filter((k) => k !== subtopicKey)
+          : [...prev.selectedSubtopicKeys, subtopicKey],
+      };
+    });
+  };
+
+  const toggleExpand = (topicKey) => {
+    setExpandedTopics((prev) => {
+      const next = new Set(prev);
+      if (next.has(topicKey)) next.delete(topicKey);
+      else next.add(topicKey);
+      return next;
+    });
+  };
+
   const validateForm = () => {
     const newErrors = {};
     if (!formData.tempFacultyId) newErrors.tempFacultyId = "Please select a temp faculty";
@@ -267,6 +306,11 @@ const AddBridgeBatchRequest = () => {
           .filter((t) => formData.selectedTopicKeys.includes(t.topicKey))
           .map((t) => ({ topicKey: t.topicKey, topicName: t.topicName }));
 
+        const allSubtopics = pendingTopics.flatMap((t) => t.subtopics || []);
+        const selectedSubtopics = allSubtopics
+          .filter((s) => formData.selectedSubtopicKeys.includes(s.subtopicKey))
+          .map((s) => ({ subtopicKey: s.subtopicKey, subtopicName: s.subtopicName }));
+
         const payload = {
           parentBatchId: formData.parentBatchId,
           courseId: formData.courseId,
@@ -274,6 +318,7 @@ const AddBridgeBatchRequest = () => {
           tempFacultyId: formData.tempFacultyId,
           tempBatchId: formData.tempBatchId,
           selectedTopics,
+          selectedSubtopics,
           timeSlot: { startTime: formData.startTime, endTime: formData.endTime },
           reason: formData.reason,
         };
@@ -545,23 +590,63 @@ const AddBridgeBatchRequest = () => {
                           {semesterName}
                         </div>
                         {topics.map((topic) => (
-                          <label
-                            key={topic.topicKey}
-                            className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={formData.selectedTopicKeys.includes(topic.topicKey)}
-                              onChange={() => toggleTopic(topic.topicKey)}
-                              className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                            />
-                            <span className="text-sm text-gray-700 flex-1">{topic.topicName}</span>
-                            {topic.completed && (
-                              <span className="text-[10px] px-2 py-0.5 bg-green-50 text-green-600 rounded-full">
-                                already covered
-                              </span>
+                          <div key={topic.topicKey}>
+                            <div className="flex items-center gap-2 p-3 hover:bg-gray-50">
+                              {topic.subtopics && topic.subtopics.length > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleExpand(topic.topicKey)}
+                                  className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                                >
+                                  {expandedTopics.has(topic.topicKey) ? (
+                                    <ChevronDown size={16} />
+                                  ) : (
+                                    <ChevronRight size={16} />
+                                  )}
+                                </button>
+                              ) : (
+                                <span className="w-4 flex-shrink-0" />
+                              )}
+                              <label className="flex items-center gap-3 flex-1 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.selectedTopicKeys.includes(topic.topicKey)}
+                                  onChange={() => toggleTopic(topic.topicKey)}
+                                  className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                                />
+                                <span className="text-sm text-gray-700 flex-1">{topic.topicName}</span>
+                                {topic.completed && (
+                                  <span className="text-[10px] px-2 py-0.5 bg-green-50 text-green-600 rounded-full">
+                                    already covered
+                                  </span>
+                                )}
+                              </label>
+                            </div>
+
+                            {expandedTopics.has(topic.topicKey) && topic.subtopics?.length > 0 && (
+                              <div className="pl-11 pb-2 bg-gray-50/50">
+                                {topic.subtopics.map((sub) => (
+                                  <label
+                                    key={sub.subtopicKey}
+                                    className="flex items-center gap-3 py-1.5 cursor-pointer"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={formData.selectedSubtopicKeys.includes(sub.subtopicKey)}
+                                      onChange={() => toggleSubtopic(sub.subtopicKey)}
+                                      className="w-3.5 h-3.5 text-indigo-600 rounded focus:ring-indigo-500"
+                                    />
+                                    <span className="text-xs text-gray-600 flex-1">{sub.subtopicName}</span>
+                                    {sub.completed && (
+                                      <span className="text-[9px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded-full">
+                                        covered
+                                      </span>
+                                    )}
+                                  </label>
+                                ))}
+                              </div>
                             )}
-                          </label>
+                          </div>
                         ))}
                       </div>
                     ))}
