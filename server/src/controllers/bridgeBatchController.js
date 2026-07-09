@@ -479,3 +479,83 @@ exports.getStudentBatchInfo = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// NEW: Get a bridge batch's students in the same response shape as a regular batch
+// (so the frontend's existing student-attendance table can render it unchanged)
+// GET /api/bridge-batch/:id/students?date=
+exports.getBridgeBatchStudents = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { date } = req.query;
+
+    const bridgeBatch = await BridgeBatch.findById(id)
+      .populate('studentIds', 'studentId fullName fatherName photo mobileNumber email')
+      .populate('tempFacultyId', 'name')
+      .lean();
+
+    if (!bridgeBatch) {
+      return res.status(404).json({ success: false, message: 'Bridge batch not found' });
+    }
+
+    if (req.user.role !== 'admin' && bridgeBatch.tempFacultyId._id.toString() !== req.user.id.toString()) {
+      return res.status(403).json({ success: false, message: 'You are not assigned to this bridge batch' });
+    }
+
+    let attendanceMap = {};
+    if (date) {
+      const attendanceDate = new Date(date);
+      const startOfDay = new Date(attendanceDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(attendanceDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const attendance = await Attendance.find({
+        bridgeBatchId: id,
+        date: { $gte: startOfDay, $lte: endOfDay },
+      }).lean();
+
+      attendance.forEach((a) => {
+        attendanceMap[a.student.toString()] = { status: a.status, checkInTime: a.checkInTime };
+      });
+    }
+
+    const students = (bridgeBatch.studentIds || []).map((s) => ({
+      _id: s._id,
+      studentId: s.studentId,
+      fullName: s.fullName,
+      fatherName: s.fatherName || 'N/A',
+      photo: s.photo,
+      contact: s.mobileNumber,
+      email: s.email,
+      courses: [bridgeBatch.courseName],
+      batchTiming: bridgeBatch.timeSlot?.startTime && bridgeBatch.timeSlot?.endTime
+        ? `${bridgeBatch.timeSlot.startTime} - ${bridgeBatch.timeSlot.endTime}`
+        : 'N/A',
+      todayStatus: attendanceMap[s._id.toString()]?.status || 'not_marked',
+      todayCheckInTime: attendanceMap[s._id.toString()]?.checkInTime || '',
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        faculty: { _id: bridgeBatch.tempFacultyId._id, name: bridgeBatch.tempFacultyId.name },
+        batch: {
+          _id: bridgeBatch._id,
+          name: bridgeBatch.courseName,
+          displayName: bridgeBatch.courseName,
+          timing: bridgeBatch.timeSlot?.startTime && bridgeBatch.timeSlot?.endTime
+            ? `${bridgeBatch.timeSlot.startTime} - ${bridgeBatch.timeSlot.endTime}`
+            : 'N/A',
+          roomNumber: 'Bridge Batch',
+          subject: bridgeBatch.courseName,
+          isTemporary: true,
+        },
+        students,
+        totalStudents: students.length,
+      },
+    });
+  } catch (error) {
+    console.error('Error in getBridgeBatchStudents:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

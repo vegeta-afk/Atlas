@@ -885,13 +885,55 @@ exports.getFacultyBatches = async (req, res) => {
         subject: tb.subject || "General"
       };
     }));
+
+    // ── Merge in bridge (temporary) batch assignments for this faculty ──
+    const BridgeBatch = require("../models/BridgeBatch");
+    const bridgeBatches = await BridgeBatch.find({
+      tempFacultyId: facultyUser._id,
+      status: { $in: ["active", "ready_to_merge"] },
+    }).lean();
+
+    const bridgeAttendanceCounts = await Promise.all(
+      bridgeBatches.map((bb) =>
+        Attendance.find({
+          teacher: facultyUser._id,
+          bridgeBatchId: bb._id,
+          date: { $gte: todayStart, $lte: todayEnd },
+        }).lean()
+      )
+    );
+
+    const bridgeCards = bridgeBatches.map((bb, idx) => {
+      const todayAtt = bridgeAttendanceCounts[idx];
+      return {
+        _id: bb._id,
+        batchId: bb._id,
+        name: bb.courseName || "Bridge Session",
+        displayName: bb.courseName,
+        startTime: bb.timeSlot?.startTime || "",
+        endTime: bb.timeSlot?.endTime || "",
+        timing: bb.timeSlot?.startTime && bb.timeSlot?.endTime
+          ? `${bb.timeSlot.startTime} - ${bb.timeSlot.endTime}`
+          : "N/A",
+        totalStudents: (bb.studentIds || []).length,
+        attendanceRate: 0,
+        todayPresent: todayAtt.filter((a) => a.status === "present").length,
+        todayAbsent: todayAtt.filter((a) => a.status === "absent").length,
+        teacherBatchId: bb._id,
+        roomNumber: "Bridge Batch",
+        subject: bb.courseName || "General",
+        isTemporary: true, // NEW — flags this card as a bridge batch on the frontend
+      };
+    });
     
     // Sort by start time
     const { includeEmpty } = req.query;
-    const filteredBatches = includeEmpty === 'true'
+    const regularBatches = includeEmpty === 'true'
       ? batchesWithStats
       : batchesWithStats.filter(b => b.totalStudents > 0);
-    filteredBatches.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    regularBatches.sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    const filteredBatches = [...regularBatches, ...bridgeCards]; // regular batches first, bridge ones appended
     
     console.log(`✅ Returning ${filteredBatches.length} batches`);
     

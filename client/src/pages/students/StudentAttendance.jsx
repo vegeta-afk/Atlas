@@ -58,6 +58,8 @@ const StudentAttendance = () => {
     attendancePercentage: 0,
   });
 
+  const [topicsMarkedForToday, setTopicsMarkedForToday] = useState(false);
+
 
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
   const [editMode, setEditMode] = useState(false);
@@ -121,10 +123,11 @@ const [topicModalGroups, setTopicModalGroups] = useState([]);
   }, []);
 
   useEffect(() => {
-    if (selectedBatch && view === "students") {
-      fetchBatchStudents(selectedBatch._id);
-    }
-  }, [view, selectedDate]);
+  if (selectedBatch && view === "students") {
+    setTopicsMarkedForToday(false);
+    fetchBatchStudents(selectedBatch._id);
+  }
+}, [view, selectedDate]);
 
   const parseTimeToMinutes = (timeStr) => {
   if (!timeStr) return null;
@@ -259,13 +262,16 @@ const fetchBatchStudents = async (batchId) => {
   setLoading(true);
   try {
     let apiUrl;
-    
-    if (isAdmin && selectedFaculty?._id) {
+    const isBridge = selectedBatch?.isTemporary;
+
+    if (isBridge) {
+      apiUrl = `${BASE_URL}/api/bridge-batch/${batchId}/students`;
+    } else if (isAdmin && selectedFaculty?._id) {
       apiUrl = `${BASE_URL}/api/faculty/${selectedFaculty._id}/batches/${batchId}/students`;
     } else {
       apiUrl = `${BASE_URL}/api/faculty/me/batches/${batchId}/students`;
     }
-    
+
     if (selectedDate) {
       apiUrl += `?date=${selectedDate}`;
     }
@@ -365,9 +371,10 @@ const fetchBatchStudents = async (batchId) => {
   // Handle batch selection
 const handleBatchSelect = (batch) => {
   setSelectedBatch(batch);
-  setStudents([]);  // Clear previous students
-  setAttendance({});  // Clear previous attendance
-  setAttendanceTimes({});  // Clear previous check-in times
+  setStudents([]);
+  setAttendance({});
+  setAttendanceTimes({});
+  setTopicsMarkedForToday(false);
   
   if (isAdmin) {
     setAdminView("batch-students");
@@ -508,7 +515,10 @@ const handleBatchSelect = (batch) => {
 
   const openTopicModal = () => {
     const groups = buildCourseGroups();
-    if (groups.length === 0) return; // nobody present with a linked course today
+    if (groups.length === 0) {
+      alert("Mark at least one student present or late before marking topics.");
+      return;
+    }
     setTopicModalGroups(groups);
     setShowTopicModal(true);
   };
@@ -522,43 +532,47 @@ const handleBatchSelect = (batch) => {
     alert("Attendance for this date is already saved. Click 'Edit Attendance' to make changes.");
     return;
   }
-    
-    try {
-      const attendanceData = {
-        batchId: selectedBatch._id,
-        date: selectedDate,
-        attendance: Object.entries(attendance).map(([studentId, status]) => ({
-          studentId,
-          status,
-          checkInTime: attendanceTimes[studentId] || "",
-          remarks: ""
-        }))
-      };
 
-      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-      const response = await fetch(`${BASE_URL}/api/attendance/teacher/mark`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(attendanceData)
-      });
+  try {
+    const isBridge = selectedBatch?.isTemporary;
+    const attendanceList = Object.entries(attendance).map(([studentId, status]) => ({
+      studentId,
+      status,
+      checkInTime: attendanceTimes[studentId] || "",
+      remarks: ""
+    }));
 
-      const result = await response.json();
+    const url = isBridge
+      ? `${BASE_URL}/api/bridge-batch/attendance/mark`
+      : `${BASE_URL}/api/attendance/teacher/mark`;
+
+    const body = isBridge
+      ? { bridgeBatchId: selectedBatch._id, date: selectedDate, attendance: attendanceList }
+      : { batchId: selectedBatch._id, date: selectedDate, attendance: attendanceList };
+
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    });
+
+    const result = await response.json();
       if (result.success) {
         sessionStorage.setItem(`attendance_${selectedDate}_${selectedBatch._id}`, "marked");
-
         await fetchBatchStudents(selectedBatch._id);
-        openTopicModal();
+        alert("Attendance saved successfully!");
       } else {
         alert('Error saving attendance: ' + result.message);
       }
-    } catch (error) {
-      alert("Error saving attendance: " + error.message);
-      console.error(error);
-    }
-  };
+  } catch (error) {
+    alert("Error saving attendance: " + error.message);
+    console.error(error);
+  }
+};
 
   const markAll = (status) => {
     if (isAdmin) return; // Admin cannot mark attendance
@@ -874,9 +888,14 @@ const handleBatchSelect = (batch) => {
                       {getBatchIcon(index)}
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600">
-                        {batch.name || batch.displayName}
-                      </h3>
+                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 flex items-center gap-2">
+  {batch.name || batch.displayName}
+  {batch.isTemporary && (
+    <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-semibold">
+      Temporary
+    </span>
+  )}
+</h3>
                       <p className="text-sm text-gray-500">{batch.subject || 'General'}</p>
                     </div>
                   </div>
@@ -1095,9 +1114,14 @@ const handleBatchSelect = (batch) => {
                       {getBatchIcon(index)}
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600">
-                        {batch.name || batch.displayName}
-                      </h3>
+                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 flex items-center gap-2">
+  {batch.name || batch.displayName}
+  {batch.isTemporary && (
+    <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-semibold">
+      Temporary
+    </span>
+  )}
+</h3>
                       <p className="text-sm text-gray-500">{batch.subject || 'General'}</p>
                     </div>
                   </div>
@@ -1304,13 +1328,32 @@ const handleBatchSelect = (batch) => {
       Editing Attendance
     </div>
   ) : (
-    <button
-      onClick={saveAttendance}
-      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-sm flex items-center gap-2"
-    >
-      <CheckSquare size={16} />
-      Save Attendance
-    </button>
+    <>
+      <button
+        onClick={openTopicModal}
+        className={`px-5 py-3 rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors ${
+          topicsMarkedForToday
+            ? "bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100"
+            : "bg-indigo-600 text-white hover:bg-indigo-700"
+        }`}
+      >
+        <BookOpen size={16} />
+        {topicsMarkedForToday ? "Edit Topics" : "Mark Topics Taught Today"}
+      </button>
+      <button
+        onClick={saveAttendance}
+        disabled={!topicsMarkedForToday}
+        title={!topicsMarkedForToday ? "Mark today's topics first" : ""}
+        className={`px-6 py-3 rounded-lg font-semibold text-sm flex items-center gap-2 ${
+          topicsMarkedForToday
+            ? "bg-green-600 text-white hover:bg-green-700"
+            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+        }`}
+      >
+        <CheckSquare size={16} />
+        Save Attendance
+      </button>
+    </>
   )}
 </div>
         </div>
@@ -1700,7 +1743,13 @@ const handleBatchSelect = (batch) => {
               await saveAttendance();
               setEditMode(false);
             }}
-            className="px-6 py-2 rounded-lg font-medium flex items-center gap-2 bg-green-600 text-white hover:bg-green-700"
+            disabled={!editMode && !topicsMarkedForToday}
+            title={!editMode && !topicsMarkedForToday ? "Mark today's topics first" : ""}
+            className={`px-6 py-2 rounded-lg font-medium flex items-center gap-2 ${
+              !editMode && !topicsMarkedForToday
+                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-green-600 text-white hover:bg-green-700"
+            }`}
           >
             <CheckSquare size={16} />
             {editMode ? "Update Attendance" : "Save Attendance"}
@@ -1736,7 +1785,8 @@ const handleBatchSelect = (batch) => {
           onClose={() => setShowTopicModal(false)}
           onSaved={() => {
             setShowTopicModal(false);
-            alert("Attendance and topics saved successfully!");
+            setTopicsMarkedForToday(true);
+            alert("Topics saved! You can now save attendance.");
           }}
         />
       )}

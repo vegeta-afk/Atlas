@@ -298,16 +298,7 @@ const BridgeBatchList = () => {
           <h1 className="text-2xl font-bold text-gray-800 mb-1">Bridge Batch Requests</h1>
           <p className="text-sm text-gray-500">Review and manage catch-up batch requests from faculty</p>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={fetchBridgeBatches}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-            Refresh
-          </button>
-        </div>
+        
 
         <div className="flex gap-3">
           <button
