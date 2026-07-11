@@ -719,7 +719,7 @@ const AddBridgeBatchRequest = () => {
 
                 <div>
                   <h3 className="font-medium text-gray-700 mb-3">
-  Topics to Cover ({(viewBatch.selectedTopics?.length || 0) + (viewBatch.selectedSubtopics?.length || 0)})
+  Topics to Cover ({(formData.selectedTopicKeys?.length || 0) + (formData.selectedSubtopicKeys?.length || 0)})
 </h3>
                   <div className="flex flex-wrap gap-2">
                     {pendingTopics
