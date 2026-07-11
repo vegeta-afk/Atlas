@@ -197,18 +197,28 @@ const fetchSyllabusProgress = async () => {
     const headers = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
+    // courseCode/courseId may come back as a populated Course object (has ._id)
+    // or as a plain ObjectId string, depending on the backend route — normalize either way.
+    const resolveCourseId = (field) => {
+      if (!field) return null;
+      if (typeof field === "object") return field._id || field.id || null;
+      return field;
+    };
+
     const courseList = [];
-    if (student?.courseCode) {
-      courseList.push({ courseId: student.courseCode, label: student.course || "Primary Course" });
+    const primaryCourseId = resolveCourseId(student?.courseCode);
+    if (primaryCourseId) {
+      courseList.push({ courseId: primaryCourseId, label: student.course || "Primary Course" });
     }
     if (student?.additionalCourses?.length > 0) {
       student.additionalCourses.forEach((ac) => {
-        if (ac.courseId) {
-          courseList.push({ courseId: ac.courseId, label: ac.courseName });
+        const acCourseId = resolveCourseId(ac.courseId);
+        if (acCourseId) {
+          courseList.push({ courseId: acCourseId, label: ac.courseName });
         }
       });
     }
-
+    
     const results = await Promise.all(
       courseList.map(async (c) => {
         const response = await fetch(
