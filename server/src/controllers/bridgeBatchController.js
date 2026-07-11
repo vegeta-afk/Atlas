@@ -38,16 +38,21 @@ if (!tempFacultyUser) return res.status(404).json({ success: false, message: 'Te
   courseId,
   courseName: course.courseFullName,
   studentIds,
-  tempBatchId,   // NEW — was missing entirely, this is why the populate() call 500'd
+  tempBatchId,
   tempFacultyId: tempFacultyUser._id,
   tempFacultyName: tempFacultyUser.name,
-  selectedSubtopics: (selectedSubtopics || []).map((s) => ({   // NEW: was missing entirely
+  selectedTopics: (selectedTopics || []).map((t) => ({
+    topicKey: t.topicKey,
+    topicName: t.topicName,
+    completed: false,
+  })),
+  selectedSubtopics: (selectedSubtopics || []).map((s) => ({
     subtopicKey: s.subtopicKey,
     subtopicName: s.subtopicName,
     completed: false,
   })),
   timeSlot: timeSlot || {},
-  reason,   // NEW: was missing — this is why your admin view modal showed "No reason provided"
+  reason,
   status: 'pending',
   requestedBy: requestingFacultyId,
   createdBy: requestingFacultyId,
