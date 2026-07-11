@@ -141,14 +141,19 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
                           <div key={topic.key} className="border border-gray-100 rounded-lg px-3 py-2">
                             <div className="flex items-center justify-between">
                               <label className="flex items-center gap-2 cursor-pointer flex-1">
-                                <input
-                                  type="checkbox"
-                                  checked={topicChecked}
-                                  onChange={() => toggleTopic(group.courseId, topic.key)}
-                                  className="w-5 h-5 rounded-full accent-blue-600"
-                                />
-                                <span className="text-sm font-medium text-gray-800">{topic.name}</span>
-                              </label>
+  <input
+    type="checkbox"
+    checked={topicChecked}
+    onChange={() => toggleTopic(group.courseId, topic.key)}
+    className="w-5 h-5 rounded-full accent-blue-600"
+  />
+  <span className="text-sm font-medium text-gray-800">{topic.name}</span>
+  {topic.completed && (
+    <span className="text-[10px] px-2 py-0.5 bg-green-50 text-green-600 rounded-full">
+      already covered
+    </span>
+  )}
+</label>
                               {topic.subtopics.length > 0 && (
                                 <button
                                   type="button"
@@ -166,14 +171,19 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
                                   const subChecked = !!checkedSubtopics[`${group.courseId}_${sub.key}`];
                                   return (
                                     <label key={sub.key} className="flex items-center gap-2 cursor-pointer">
-                                      <input
-                                        type="checkbox"
-                                        checked={subChecked}
-                                        onChange={() => toggleSubtopic(group.courseId, sub.key)}
-                                        className="w-4 h-4 rounded-full accent-blue-500"
-                                      />
-                                      <span className="text-sm text-gray-600">{sub.name}</span>
-                                    </label>
+  <input
+    type="checkbox"
+    checked={subChecked}
+    onChange={() => toggleSubtopic(group.courseId, sub.key)}
+    className="w-4 h-4 rounded-full accent-blue-500"
+  />
+  <span className="text-sm text-gray-600">{sub.name}</span>
+  {sub.completed && (
+    <span className="text-[9px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded-full">
+      covered
+    </span>
+  )}
+</label>
                                   );
                                 })}
                               </div>
