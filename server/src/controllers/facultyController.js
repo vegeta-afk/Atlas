@@ -891,7 +891,9 @@ exports.getFacultyBatches = async (req, res) => {
     const bridgeBatches = await BridgeBatch.find({
       tempFacultyId: facultyUser._id,
       status: { $in: ["active", "ready_to_merge"] },
-    }).lean();
+    })
+      .populate('tempBatchId', 'batchName displayName')
+      .lean();
 
     const bridgeAttendanceCounts = await Promise.all(
       bridgeBatches.map((bb) =>
@@ -908,8 +910,8 @@ exports.getFacultyBatches = async (req, res) => {
       return {
         _id: bb._id,
         batchId: bb._id,
-        name: bb.courseName || "Bridge Session",
-        displayName: bb.courseName,
+        name: bb.tempBatchId?.batchName || bb.tempBatchId?.displayName || "Bridge Batch",
+        displayName: bb.tempBatchId?.displayName || bb.tempBatchId?.batchName || "Bridge Batch",
         startTime: bb.timeSlot?.startTime || "",
         endTime: bb.timeSlot?.endTime || "",
         timing: bb.timeSlot?.startTime && bb.timeSlot?.endTime
@@ -1333,8 +1335,53 @@ exports.getMyBatches = async (req, res) => {
     }));
     
     // Sort by start time
-    const filteredBatches = batchesWithStats.filter(b => b.totalStudents > 0);
-    filteredBatches.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    // ── Merge in bridge (temporary) batch assignments for this faculty ──
+    const BridgeBatch = require("../models/BridgeBatch");
+    const bridgeBatches = await BridgeBatch.find({
+      tempFacultyId: user._id,
+      status: { $in: ["active", "ready_to_merge"] },
+    })
+      .populate('tempBatchId', 'batchName displayName')
+      .lean();
+
+    const bridgeAttendanceCounts = await Promise.all(
+      bridgeBatches.map((bb) =>
+        Attendance.find({
+          teacher: user._id,
+          bridgeBatchId: bb._id,
+          date: { $gte: todayStart, $lte: todayEnd },
+        }).lean()
+      )
+    );
+
+    const bridgeCards = bridgeBatches.map((bb, idx) => {
+      const todayAtt = bridgeAttendanceCounts[idx];
+      return {
+        _id: bb._id,
+        batchId: bb._id,
+        name: bb.tempBatchId?.batchName || bb.tempBatchId?.displayName || "Bridge Batch",
+        displayName: bb.tempBatchId?.displayName || bb.tempBatchId?.batchName || "Bridge Batch",
+        startTime: bb.timeSlot?.startTime || "",
+        endTime: bb.timeSlot?.endTime || "",
+        timing: bb.timeSlot?.startTime && bb.timeSlot?.endTime
+          ? `${bb.timeSlot.startTime} - ${bb.timeSlot.endTime}`
+          : "N/A",
+        totalStudents: (bb.studentIds || []).length,
+        attendanceRate: 0,
+        todayPresent: todayAtt.filter((a) => a.status === "present").length,
+        todayAbsent: todayAtt.filter((a) => a.status === "absent").length,
+        teacherBatchId: bb._id,
+        roomNumber: "Bridge Batch",
+        subject: bb.courseName || "General",
+        isTemporary: true,
+      };
+    });
+
+    // Sort by start time
+    const regularBatches = batchesWithStats.filter(b => b.totalStudents > 0);
+    regularBatches.sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    const filteredBatches = [...regularBatches, ...bridgeCards];
     
     res.json({
   success: true,

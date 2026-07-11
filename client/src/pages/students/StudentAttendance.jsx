@@ -258,11 +258,13 @@ const isEditWindowOpen = () => {
 
  // Fetch batch students (BOTH faculty and admin views use this)
 // Fetch batch students (BOTH faculty and admin views use this)
-const fetchBatchStudents = async (batchId) => {
+const fetchBatchStudents = async (batchId, isBridgeParam) => {
   setLoading(true);
   try {
     let apiUrl;
-    const isBridge = selectedBatch?.isTemporary;
+    // Prefer the explicitly passed flag (fresh click) — fall back to state
+    // for calls triggered later by the date-change effect, where state has settled.
+    const isBridge = isBridgeParam !== undefined ? isBridgeParam : selectedBatch?.isTemporary;
 
     if (isBridge) {
       apiUrl = `${BASE_URL}/api/bridge-batch/${batchId}/students`;
@@ -375,15 +377,14 @@ const handleBatchSelect = (batch) => {
   setAttendance({});
   setAttendanceTimes({});
   setTopicsMarkedForToday(false);
-  
+
   if (isAdmin) {
     setAdminView("batch-students");
   } else {
     setView("students");
   }
-  
-  // Fetch students
-  fetchBatchStudents(batch._id);
+
+  fetchBatchStudents(batch._id, batch.isTemporary); // pass directly, don't rely on state
 };
 
   // Handle back navigation
