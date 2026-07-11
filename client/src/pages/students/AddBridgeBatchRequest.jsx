@@ -260,16 +260,29 @@ const AddBridgeBatchRequest = () => {
   };
 
   const toggleSubtopic = (subtopicKey) => {
-    setFormData((prev) => {
-      const exists = prev.selectedSubtopicKeys.includes(subtopicKey);
-      return {
-        ...prev,
-        selectedSubtopicKeys: exists
-          ? prev.selectedSubtopicKeys.filter((k) => k !== subtopicKey)
-          : [...prev.selectedSubtopicKeys, subtopicKey],
-      };
-    });
-  };
+  // A subtopic key is "sIdx_tIdx_subIdx" — its parent topic key is "sIdx_tIdx"
+  const parentTopicKey = subtopicKey.split("_").slice(0, 2).join("_");
+
+  setFormData((prev) => {
+    const exists = prev.selectedSubtopicKeys.includes(subtopicKey);
+    const newSubtopicKeys = exists
+      ? prev.selectedSubtopicKeys.filter((k) => k !== subtopicKey)
+      : [...prev.selectedSubtopicKeys, subtopicKey];
+
+    // Auto-check the parent topic whenever any of its subtopics get selected —
+    // selecting a subtopic without its topic is what caused "0 topics" to show
+    // even when real content was picked.
+    const newTopicKeys = !exists && !prev.selectedTopicKeys.includes(parentTopicKey)
+      ? [...prev.selectedTopicKeys, parentTopicKey]
+      : prev.selectedTopicKeys;
+
+    return {
+      ...prev,
+      selectedSubtopicKeys: newSubtopicKeys,
+      selectedTopicKeys: newTopicKeys,
+    };
+  });
+};
 
   const toggleExpand = (topicKey) => {
     setExpandedTopics((prev) => {
@@ -705,7 +718,9 @@ const AddBridgeBatchRequest = () => {
                 <div className="border-t border-gray-200 my-4"></div>
 
                 <div>
-                  <h3 className="font-medium text-gray-700 mb-3">Topics to Cover ({formData.selectedTopicKeys.length})</h3>
+                  <h3 className="font-medium text-gray-700 mb-3">
+  Topics to Cover ({(viewBatch.selectedTopics?.length || 0) + (viewBatch.selectedSubtopics?.length || 0)})
+</h3>
                   <div className="flex flex-wrap gap-2">
                     {pendingTopics
                       .filter((t) => formData.selectedTopicKeys.includes(t.topicKey))

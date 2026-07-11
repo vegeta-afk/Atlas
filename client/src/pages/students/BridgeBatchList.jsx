@@ -500,8 +500,11 @@ const BridgeBatchList = () => {
                       </td>
                       <td className="px-4 py-4 text-center">
                         <span className="text-sm font-medium text-indigo-600">
-                          {batch.selectedTopics?.length || 0} topic{batch.selectedTopics?.length === 1 ? "" : "s"}
-                        </span>
+  {(() => {
+    const total = (batch.selectedTopics?.length || 0) + (batch.selectedSubtopics?.length || 0);
+    return `${total} item${total === 1 ? "" : "s"}`;
+  })()}
+</span>
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex justify-center">{getStatusBadge(batch.status)}</div>
