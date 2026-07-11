@@ -16,25 +16,27 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
   }, []);
 
   const fetchTopics = async () => {
-    setLoading(true);
-    try {
-      const courseIds = courseGroups.map(g => g.courseId).filter(Boolean).join(',');
-      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-      const response = await fetch(`${BASE_URL}/api/attendance/course-topics?courseIds=${courseIds}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await response.json();
-      if (result.success) {
-        const map = {};
-        result.data.forEach(c => { map[c.courseId] = c.topics; });
-        setTopicsByCourse(map);
-      }
-    } catch (error) {
-      console.error("Error fetching topics:", error);
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    const groupsParam = encodeURIComponent(
+      JSON.stringify(courseGroups.map(g => ({ courseId: g.courseId, studentIds: g.studentIds })))
+    );
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+    const response = await fetch(`${BASE_URL}/api/attendance/course-topics?groups=${groupsParam}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const result = await response.json();
+    if (result.success) {
+      const map = {};
+      result.data.forEach(c => { map[c.courseId] = c.topics; });
+      setTopicsByCourse(map);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching topics:", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const toggleExpand = (id) => {
     setExpandedTopics(prev => ({ ...prev, [id]: !prev[id] }));

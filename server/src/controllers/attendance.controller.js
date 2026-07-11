@@ -1354,35 +1354,75 @@ exports.getMonthlyAttendanceReport = async (req, res) => {
 // 6. Get topics/subtopics for one or more courses (used to build the topic-completion modal)
 exports.getCourseTopics = async (req, res) => {
   try {
-    const { courseIds } = req.query; // comma-separated Course _ids
-    if (!courseIds) {
-      return res.status(400).json({ success: false, message: 'courseIds is required' });
+    const { groups } = req.query; // JSON string: [{courseId, studentIds}]
+    if (!groups) {
+      return res.status(400).json({ success: false, message: 'groups is required' });
     }
-    const ids = courseIds.split(',').filter(Boolean);
 
-    const courses = await Course.find({ _id: { $in: ids } })
+    let parsedGroups;
+    try {
+      parsedGroups = JSON.parse(groups);
+    } catch {
+      return res.status(400).json({ success: false, message: 'Invalid groups format' });
+    }
+
+    const courseIds = parsedGroups.map((g) => g.courseId).filter(Boolean);
+    const courses = await Course.find({ _id: { $in: courseIds } })
       .select('courseFullName syllabus')
       .lean();
+    const courseMap = {};
+    courses.forEach((c) => { courseMap[c._id.toString()] = c; });
 
-    const result = courses.map((course) => {
+    const result = await Promise.all(parsedGroups.map(async (group) => {
+      const course = courseMap[group.courseId];
+      if (!course) return null;
+
+      const studentIds = (group.studentIds || []).map(String);
+
+      // Pull every completion record (bridge or main-batch) touching these students+course
+      const completions = await TopicCompletion.find({
+        courseId: group.courseId,
+        studentIds: { $in: studentIds },
+      }).select('completedTopicKeys completedSubtopicKeys studentIds').lean();
+
+      // Track completion per student so we know if the WHOLE group covered a topic
+      const topicDone = {};
+      const subtopicDone = {};
+      studentIds.forEach((sid) => { topicDone[sid] = new Set(); subtopicDone[sid] = new Set(); });
+
+      completions.forEach((c) => {
+        (c.studentIds || []).forEach((sid) => {
+          const sidStr = sid.toString();
+          if (!topicDone[sidStr]) return;
+          (c.completedTopicKeys || []).forEach((k) => topicDone[sidStr].add(k));
+          (c.completedSubtopicKeys || []).forEach((k) => subtopicDone[sidStr].add(k));
+        });
+      });
+
       const topics = [];
       (course.syllabus || []).forEach((sem, sIdx) => {
         (sem.topics || []).forEach((topic, tIdx) => {
+          const topicKey = `${sIdx}_${tIdx}`;
+          const topicCompleted = studentIds.length > 0 && studentIds.every((sid) => topicDone[sid]?.has(topicKey));
+
           topics.push({
-            key: `${sIdx}_${tIdx}`,
+            key: topicKey,
             name: topic.name,
             semesterName: sem.name,
-            subtopics: (topic.subtopics || []).map((sub, subIdx) => ({
-              key: `${sIdx}_${tIdx}_${subIdx}`,
-              name: sub.name,
-            })),
+            completed: topicCompleted,
+            subtopics: (topic.subtopics || []).map((sub, subIdx) => {
+              const subKey = `${sIdx}_${tIdx}_${subIdx}`;
+              const subCompleted = studentIds.length > 0 && studentIds.every((sid) => subtopicDone[sid]?.has(subKey));
+              return { key: subKey, name: sub.name, completed: subCompleted };
+            }),
           });
         });
       });
-      return { courseId: course._id, courseName: course.courseFullName, topics };
-    });
 
-    res.json({ success: true, data: result });
+      return { courseId: course._id, courseName: course.courseFullName, topics };
+    }));
+
+    res.json({ success: true, data: result.filter(Boolean) });
   } catch (error) {
     console.error('Error in getCourseTopics:', error);
     res.status(500).json({ success: false, message: error.message });
