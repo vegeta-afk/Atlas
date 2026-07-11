@@ -7,6 +7,10 @@ const bridgeBatchSchema = new mongoose.Schema(
       ref: "Batch",
       required: true,
     },
+    tempBatchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+    },
     courseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",

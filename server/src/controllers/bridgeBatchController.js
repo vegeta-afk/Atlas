@@ -12,7 +12,7 @@ const TeacherBatch = require('../models/TeacherBatch');
 // body: { parentBatchId, courseId, studentIds: [], tempFacultyId, selectedTopics: [{topicKey, topicName}], timeSlot }
 exports.requestBridgeBatch = async (req, res) => {
   try {
-    const { parentBatchId, courseId, studentIds, tempFacultyId, selectedTopics, selectedSubtopics, timeSlot, reason } = req.body;
+    const { parentBatchId, courseId, studentIds, tempFacultyId, tempBatchId, selectedTopics, selectedSubtopics, timeSlot, reason } = req.body;
     const requestingFacultyId = req.user.id;
 
     if (!parentBatchId || !courseId || !Array.isArray(studentIds) || studentIds.length === 0) {
@@ -38,13 +38,9 @@ if (!tempFacultyUser) return res.status(404).json({ success: false, message: 'Te
   courseId,
   courseName: course.courseFullName,
   studentIds,
-  tempFacultyId: tempFacultyUser._id,   // FIX: was raw tempFacultyId (Faculty._id) — must be the User._id
+  tempBatchId,   // NEW — was missing entirely, this is why the populate() call 500'd
+  tempFacultyId: tempFacultyUser._id,
   tempFacultyName: tempFacultyUser.name,
-  selectedTopics: selectedTopics.map((t) => ({
-    topicKey: t.topicKey,
-    topicName: t.topicName,
-    completed: false,
-  })),
   selectedSubtopics: (selectedSubtopics || []).map((s) => ({   // NEW: was missing entirely
     subtopicKey: s.subtopicKey,
     subtopicName: s.subtopicName,
@@ -182,17 +178,18 @@ exports.markBridgeAttendance = async (req, res) => {
   }
 };
 
-// 5. Save which of the selected topics were covered today (temp faculty action)
-// body: { bridgeBatchId, date, completedTopicKeys: [] }
-// Writes a normal TopicCompletion record too, so ViewStudent's Syllabus Progress
-// tab picks it up automatically (getStudentTopicProgress matches by courseId + studentIds only).
+// 5. Save which topics/subtopics were covered today (temp faculty action)
+// body: { bridgeBatchId, date, completedTopicKeys: [], completedSubtopicKeys: [] }
 exports.saveBridgeTopicCompletion = async (req, res) => {
   try {
-    const { bridgeBatchId, date, completedTopicKeys } = req.body;
+    const { bridgeBatchId, date, completedTopicKeys, completedSubtopicKeys } = req.body;
     const tempFacultyId = req.user.id;
 
-    if (!Array.isArray(completedTopicKeys) || completedTopicKeys.length === 0) {
-      return res.status(400).json({ success: false, message: 'Select at least one topic covered today' });
+    const topicKeys = completedTopicKeys || [];
+    const subtopicKeys = completedSubtopicKeys || [];
+
+    if (topicKeys.length === 0 && subtopicKeys.length === 0) {
+      return res.status(400).json({ success: false, message: 'Select at least one topic or subtopic covered today' });
     }
 
     const bridgeBatch = await BridgeBatch.findById(bridgeBatchId);
@@ -203,39 +200,47 @@ exports.saveBridgeTopicCompletion = async (req, res) => {
       return res.status(403).json({ success: false, message: 'You are not assigned to this bridge batch' });
     }
 
-    // Only allow marking topics that were actually assigned to this bridge batch
-    const validKeys = new Set(bridgeBatch.selectedTopics.map((t) => t.topicKey));
-    const invalidKeys = completedTopicKeys.filter((k) => !validKeys.has(k));
-    if (invalidKeys.length > 0) {
+    const validTopicKeys = new Set(bridgeBatch.selectedTopics.map((t) => t.topicKey));
+    const invalidTopicKeys = topicKeys.filter((k) => !validTopicKeys.has(k));
+    if (invalidTopicKeys.length > 0) {
       return res.status(400).json({ success: false, message: 'Some topics are not part of this bridge batch' });
     }
 
-    // Flip completed flags on the bridge batch
+    const validSubtopicKeys = new Set(bridgeBatch.selectedSubtopics.map((s) => s.subtopicKey));
+    const invalidSubtopicKeys = subtopicKeys.filter((k) => !validSubtopicKeys.has(k));
+    if (invalidSubtopicKeys.length > 0) {
+      return res.status(400).json({ success: false, message: 'Some subtopics are not part of this bridge batch' });
+    }
+
     bridgeBatch.selectedTopics.forEach((t) => {
-      if (completedTopicKeys.includes(t.topicKey)) {
+      if (topicKeys.includes(t.topicKey)) {
         t.completed = true;
         t.completedDate = new Date();
       }
     });
+    bridgeBatch.selectedSubtopics.forEach((s) => {
+      if (subtopicKeys.includes(s.subtopicKey)) {
+        s.completed = true;
+        s.completedDate = new Date();
+      }
+    });
 
     const wasActive = bridgeBatch.status === 'active';
-    await bridgeBatch.save(); // pre-save hook flips status -> ready_to_merge if all done
+    await bridgeBatch.save();
 
-    // Write the normal TopicCompletion record — this is what makes progress show
-    // up correctly in ViewStudent without any extra "sync" step.
     await TopicCompletion.findOneAndUpdate(
       { batchId: bridgeBatch.parentBatchId, courseId: bridgeBatch.courseId, date: new Date(date) },
       {
         $set: { teacherId: tempFacultyId },
         $addToSet: {
-          completedTopicKeys: { $each: completedTopicKeys },
+          completedTopicKeys: { $each: topicKeys },
+          completedSubtopicKeys: { $each: subtopicKeys },
           studentIds: { $each: bridgeBatch.studentIds },
         },
       },
       { upsert: true, new: true }
     );
 
-    // If this save just completed every topic, notify admin (once)
     if (wasActive && bridgeBatch.status === 'ready_to_merge') {
       const students = await Student.find({ _id: { $in: bridgeBatch.studentIds } })
         .select('fullName')
@@ -272,6 +277,7 @@ exports.getAllBridgeBatches = async (req, res) => {
     const bridgeBatches = await BridgeBatch.find(filter)
       .populate('studentIds', 'studentId fullName')
       .populate('parentBatchId', 'batchName displayName')
+      .populate('tempBatchId', 'batchName displayName')
       .populate('requestedBy', 'name')      // NEW
       .populate('tempFacultyId', 'name')    // NEW — in case tempFacultyName wasn't denormalized correctly
       .sort({ createdAt: -1 })
