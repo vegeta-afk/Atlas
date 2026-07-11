@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { QRCodeSVG } from 'qrcode.react';
 import TopicCompletionModal from "./TopicCompletionModal";
+import BridgeTopicCompletionModal from "./BridgeTopicCompletionModal";
 import {
   Calendar,
   Users,
@@ -59,6 +60,8 @@ const StudentAttendance = () => {
   });
 
   const [topicsMarkedForToday, setTopicsMarkedForToday] = useState(false);
+
+  const [showBridgeTopicModal, setShowBridgeTopicModal] = useState(false);
 
 
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -515,14 +518,26 @@ const handleBatchSelect = (batch) => {
   };
 
   const openTopicModal = () => {
-    const groups = buildCourseGroups();
-    if (groups.length === 0) {
+  // Bridge batches skip the course-syllabus grouping entirely — they're scoped
+  // to that bridge batch's own selectedTopics/selectedSubtopics, not a full course.
+  if (selectedBatch?.isTemporary) {
+    const anyMarked = Object.values(attendance).some((s) => s === "present" || s === "late");
+    if (!anyMarked) {
       alert("Mark at least one student present or late before marking topics.");
       return;
     }
-    setTopicModalGroups(groups);
-    setShowTopicModal(true);
-  };
+    setShowBridgeTopicModal(true);
+    return;
+  }
+
+  const groups = buildCourseGroups();
+  if (groups.length === 0) {
+    alert("Mark at least one student present or late before marking topics.");
+    return;
+  }
+  setTopicModalGroups(groups);
+  setShowTopicModal(true);
+};
 
   const saveAttendance = async () => {
   if (isAdmin) {
@@ -1779,6 +1794,19 @@ const handleBatchSelect = (batch) => {
           }}
         />
       )}
+
+      {showBridgeTopicModal && (
+  <BridgeTopicCompletionModal
+    bridgeBatchId={selectedBatch?._id}
+    date={selectedDate}
+    onClose={() => setShowBridgeTopicModal(false)}
+    onSaved={() => {
+      setShowBridgeTopicModal(false);
+      setTopicsMarkedForToday(true);
+      alert("Bridge topics saved! You can now save attendance.");
+    }}
+  />
+)}
       <div className="max-w-screen-2xl mx-auto">
         {/* Header */}
         {renderHeader()}

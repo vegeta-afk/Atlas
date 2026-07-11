@@ -526,20 +526,22 @@ exports.getBridgeBatchStudents = async (req, res) => {
     }
 
     const students = (bridgeBatch.studentIds || []).map((s) => ({
-      _id: s._id,
-      studentId: s.studentId,
-      fullName: s.fullName,
-      fatherName: s.fatherName || 'N/A',
-      photo: s.photo,
-      contact: s.mobileNumber,
-      email: s.email,
-      courses: [bridgeBatch.courseName],
-      batchTiming: bridgeBatch.timeSlot?.startTime && bridgeBatch.timeSlot?.endTime
-        ? `${bridgeBatch.timeSlot.startTime} - ${bridgeBatch.timeSlot.endTime}`
-        : 'N/A',
-      todayStatus: attendanceMap[s._id.toString()]?.status || 'not_marked',
-      todayCheckInTime: attendanceMap[s._id.toString()]?.checkInTime || '',
-    }));
+  _id: s._id,
+  studentId: s.studentId,
+  fullName: s.fullName,
+  fatherName: s.fatherName || 'N/A',
+  photo: s.photo,
+  contact: s.mobileNumber,
+  email: s.email,
+  courseId: bridgeBatch.courseId,       // NEW
+  courseName: bridgeBatch.courseName,   // NEW
+  courses: [bridgeBatch.courseName],
+  batchTiming: bridgeBatch.timeSlot?.startTime && bridgeBatch.timeSlot?.endTime
+    ? `${bridgeBatch.timeSlot.startTime} - ${bridgeBatch.timeSlot.endTime}`
+    : 'N/A',
+  todayStatus: attendanceMap[s._id.toString()]?.status || 'not_marked',
+  todayCheckInTime: attendanceMap[s._id.toString()]?.checkInTime || '',
+}));
 
     res.json({
       success: true,
