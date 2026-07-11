@@ -1328,34 +1328,7 @@ const handleBatchSelect = (batch) => {
       <Edit3 size={16} />
       Editing Attendance
     </div>
-  ) : (
-    <>
-      <button
-        onClick={openTopicModal}
-        className={`px-5 py-3 rounded-lg font-semibold text-sm flex items-center gap-2 transition-colors ${
-          topicsMarkedForToday
-            ? "bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100"
-            : "bg-indigo-600 text-white hover:bg-indigo-700"
-        }`}
-      >
-        <BookOpen size={16} />
-        {topicsMarkedForToday ? "Edit Topics" : "Mark Topics Taught Today"}
-      </button>
-      <button
-        onClick={saveAttendance}
-        disabled={!topicsMarkedForToday}
-        title={!topicsMarkedForToday ? "Mark today's topics first" : ""}
-        className={`px-6 py-3 rounded-lg font-semibold text-sm flex items-center gap-2 ${
-          topicsMarkedForToday
-            ? "bg-green-600 text-white hover:bg-green-700"
-            : "bg-gray-200 text-gray-400 cursor-not-allowed"
-        }`}
-      >
-        <CheckSquare size={16} />
-        Save Attendance
-      </button>
-    </>
-  )}
+  ) : null}
 </div>
         </div>
       </div>
@@ -1739,22 +1712,37 @@ const handleBatchSelect = (batch) => {
           </button>
         )}
         {!isAdmin && (isEditWindowOpen() || !isAttendanceMarked()) && (editMode || !isAttendanceMarked()) && (
-          <button
-            onClick={async () => {
-              await saveAttendance();
-              setEditMode(false);
-            }}
-            disabled={!editMode && !topicsMarkedForToday}
-            title={!editMode && !topicsMarkedForToday ? "Mark today's topics first" : ""}
-            className={`px-6 py-2 rounded-lg font-medium flex items-center gap-2 ${
-              !editMode && !topicsMarkedForToday
-                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                : "bg-green-600 text-white hover:bg-green-700"
-            }`}
-          >
-            <CheckSquare size={16} />
-            {editMode ? "Update Attendance" : "Save Attendance"}
-          </button>
+          <>
+            {!editMode && (
+              <button
+                onClick={openTopicModal}
+                className={`px-5 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors ${
+                  topicsMarkedForToday
+                    ? "bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100"
+                    : "bg-indigo-600 text-white hover:bg-indigo-700"
+                }`}
+              >
+                <BookOpen size={16} />
+                {topicsMarkedForToday ? "Edit Topics" : "Mark Topics Taught Today"}
+              </button>
+            )}
+            <button
+              onClick={async () => {
+                await saveAttendance();
+                setEditMode(false);
+              }}
+              disabled={!editMode && !topicsMarkedForToday}
+              title={!editMode && !topicsMarkedForToday ? "Mark today's topics first" : ""}
+              className={`px-6 py-2 rounded-lg font-medium flex items-center gap-2 ${
+                !editMode && !topicsMarkedForToday
+                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  : "bg-green-600 text-white hover:bg-green-700"
+              }`}
+            >
+              <CheckSquare size={16} />
+              {editMode ? "Update Attendance" : "Save Attendance"}
+            </button>
+          </>
         )}
       </div>
     </div>

@@ -1476,7 +1476,7 @@ exports.getMyBatchStudents = async (req, res) => {
     // Get student details
     const Student = require("../models/Student");
     const students = await Student.find({ _id: { $in: studentIds } })
-      .select("studentId fullName photo mobileNumber email enrolledBatches")
+      .select("studentId fullName photo mobileNumber email enrolledBatches courseCode additionalCourses")
       .lean();
     
     console.log(`✅ Found ${students.length} student details`);
@@ -1504,6 +1504,11 @@ exports.getMyBatchStudents = async (req, res) => {
     }
     
     // Prepare response
+    // Prepare response
+    const currentBatchDisplayName = teacherBatch.batch?.displayName || '';
+    const currentBatchTimeString = `${teacherBatch.batch?.startTime || ''} to ${teacherBatch.batch?.endTime || ''}`;
+    const normalize = (s) => (s || '').replace(/\s+/g, ' ').toLowerCase().trim();
+
     const studentsWithInfo = students.map(student => {
       const enrolledBatches = student.enrolledBatches || [];
       const studentCourses = enrolledBatches
@@ -1513,6 +1518,26 @@ exports.getMyBatchStudents = async (req, res) => {
         })
         .map(eb => eb.courseName)
         .filter((name, index, array) => name && array.indexOf(name) === index);
+
+      // Resolve which course applies to this student IN THIS BATCH — same logic
+      // as attendance.controller.js's getTeacherBatchStudents, so topic-marking
+      // can group students by courseId.
+      let applicableCourseId = student.courseCode || null;
+      let applicableCourseName = student.course || studentCourses[0] || 'Course';
+      if (student.additionalCourses?.length > 0) {
+        const ac = student.additionalCourses.find((a) => {
+          if (!a.isActive) return false;
+          if (a.batchId && batchId) {
+            return a.batchId.toString() === batchId.toString();
+          }
+          return normalize(a.batchTime) === normalize(currentBatchDisplayName) ||
+                 normalize(a.batchTime) === normalize(currentBatchTimeString);
+        });
+        if (ac) {
+          applicableCourseId = ac.courseId;
+          applicableCourseName = ac.courseName;
+        }
+      }
       
       return {
         _id: student._id,
@@ -1522,6 +1547,8 @@ exports.getMyBatchStudents = async (req, res) => {
         photo: student.photo,
         contact: student.mobileNumber,
         email: student.email,
+        courseId: applicableCourseId,       // NEW — this is what buildCourseGroups() needs
+        courseName: applicableCourseName,   // NEW
         courses: studentCourses,
         batchTiming: teacherBatch.batch?.displayName || 
                     `${teacherBatch.batch?.startTime || ''} - ${teacherBatch.batch?.endTime || ''}`,
