@@ -36,7 +36,6 @@ import {
    LayoutTemplate,
    ClipboardCheck,
    GitBranch,
-   BookOpen,
 } from "lucide-react";
 import "./Sidebar.css";
 
