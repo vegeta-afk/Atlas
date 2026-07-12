@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { attendanceReportAPI } from "../services/api";
-import { RefreshCw, AlertCircle, BookOpen, Users, ChevronDown, Clock } from "lucide-react";
+import { RefreshCw, AlertCircle, BookOpen, Users, ChevronDown, Clock, Calendar, CheckCircle2 } from "lucide-react";
 
 const formatTime = (time) => {
   if (!time) return "";
@@ -12,8 +12,8 @@ const formatTime = (time) => {
 };
 
 const formatDate = (dateStr) => {
-  if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 };
 
 const BatchCourseProgressReport = () => {
@@ -21,10 +21,9 @@ const BatchCourseProgressReport = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedBatches, setExpandedBatches] = useState({});
+  const [expandedSubtopics, setExpandedSubtopics] = useState({});
 
-  const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-
- const fetchProgress = async () => {
+  const fetchProgress = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -47,6 +46,7 @@ const BatchCourseProgressReport = () => {
   }, []);
 
   const toggleBatch = (id) => setExpandedBatches((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleSubtopic = (id) => setExpandedSubtopics((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -145,21 +145,63 @@ const BatchCourseProgressReport = () => {
                             />
                           </div>
 
-                          {c.currentTopics.length === 0 ? (
-                            <p className="text-xs text-gray-400 italic">Nothing currently in progress</p>
+                          {c.subtopicDetails.length === 0 ? (
+                            <p className="text-xs text-gray-400 italic">Nothing taught yet</p>
                           ) : (
-                            <div className="flex flex-wrap gap-2">
-                              {c.currentTopics.map((t, idx) => (
-                                <span
-                                  key={idx}
-                                  className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full border border-amber-100"
-                                >
-                                  {t.subtopicName}
-                                  {t.lastTaughtDate && (
-                                    <span className="text-amber-400">· {formatDate(t.lastTaughtDate)}</span>
-                                  )}
-                                </span>
-                              ))}
+                            <div className="space-y-1.5">
+                              {c.subtopicDetails.map((sub) => {
+                                const rowId = `${c.courseId}_${sub.subtopicKey}`;
+                                const isOpen = !!expandedSubtopics[rowId];
+                                const isCompleted = sub.status === "completed";
+                                return (
+                                  <div key={rowId} className="border border-gray-100 rounded-lg overflow-hidden">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleSubtopic(rowId)}
+                                      className={`w-full flex items-center justify-between gap-2 text-xs px-3 py-2 transition ${
+                                        isCompleted ? "bg-green-50 hover:bg-green-100" : "bg-amber-50 hover:bg-amber-100"
+                                      }`}
+                                    >
+                                      <span className="flex items-center gap-1.5">
+                                        {isCompleted ? (
+                                          <CheckCircle2 size={12} className="text-green-600" />
+                                        ) : (
+                                          <Clock size={12} className="text-amber-600" />
+                                        )}
+                                        <span className={isCompleted ? "text-green-700" : "text-amber-700"}>
+                                          {sub.topicName} → {sub.subtopicName}
+                                        </span>
+                                      </span>
+                                      <ChevronDown
+                                        size={13}
+                                        className={`transition-transform ${isCompleted ? "text-green-500" : "text-amber-500"} ${isOpen ? "rotate-180" : ""}`}
+                                      />
+                                    </button>
+
+                                    {isOpen && (
+                                      <div className="px-3 py-2 bg-white text-xs text-gray-600 flex flex-wrap gap-x-5 gap-y-1">
+                                        <span className="flex items-center gap-1">
+                                          <Calendar size={11} className="text-gray-400" />
+                                          Started: <strong>{formatDate(sub.startedDate)}</strong>
+                                        </span>
+                                        <span>
+                                          Taught on: <strong>{sub.taughtDaysCount} day{sub.taughtDaysCount !== 1 ? "s" : ""}</strong>
+                                        </span>
+                                        {isCompleted ? (
+                                          <span className="flex items-center gap-1 text-green-700">
+                                            <CheckCircle2 size={11} />
+                                            Ended: <strong>{formatDate(sub.completedDate)}</strong>
+                                          </span>
+                                        ) : (
+                                          <span className="text-amber-700">
+                                            Last taught: <strong>{formatDate(sub.lastTaughtDate)}</strong> (still in progress)
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </div>

@@ -1506,6 +1506,11 @@ exports.completeSubtopic = async (req, res) => {
       return res.status(400).json({ success: false, message: 'batchId, courseId, studentIds and subtopicKey are required' });
     }
 
+    const existing = await TopicCompletion.findOne({ batchId, courseId, date: SENTINEL_COMPLETION_DATE }).lean();
+    if (existing?.completedSubtopicKeys?.includes(subtopicKey)) {
+      return res.status(400).json({ success: false, message: 'This subtopic is already marked completed' });
+    }
+
     await TopicCompletion.findOneAndUpdate(
       { batchId, courseId, date: SENTINEL_COMPLETION_DATE },
       {
@@ -1513,6 +1518,9 @@ exports.completeSubtopic = async (req, res) => {
         $addToSet: {
           completedSubtopicKeys: subtopicKey,
           studentIds: { $each: studentIds },
+        },
+        $push: {
+          subtopicCompletions: { subtopicKey, completedDate: new Date() },
         },
       },
       { upsert: true, new: true }
@@ -1578,7 +1586,7 @@ exports.getStudentTopicProgress = async (req, res) => {
 
 exports.getBatchCourseProgress = async (req, res) => {
   try {
-    const { batchId } = req.query; // optional — filter to one time-slot batch
+    const { batchId } = req.query;
     const tbQuery = { isActive: true };
     if (batchId) tbQuery.batch = batchId;
 
@@ -1588,7 +1596,7 @@ exports.getBatchCourseProgress = async (req, res) => {
       .populate('assignedStudents.student', 'studentId fullName courseCode course additionalCourses')
       .lean();
 
-    const batchCourseMap = {}; // batchId -> { batchInfo, teachers:Set, courses: { courseId: {studentIds:Set} } }
+    const batchCourseMap = {};
 
     teacherBatches.forEach((tb) => {
       if (!tb.batch) return;
@@ -1645,9 +1653,12 @@ exports.getBatchCourseProgress = async (req, res) => {
 
         const completions = await TopicCompletion.find({
           batchId: bId, courseId: cid, studentIds: { $in: studentIds },
-        }).select('completedSubtopicKeys studentIds date').lean();
+        }).select('completedSubtopicKeys subtopicCompletions studentIds date').lean();
 
-        const subtopicTaught = {}, subtopicCompleted = {}, subtopicLastDate = {};
+        const subtopicTaught = {}, subtopicCompleted = {};
+        const subtopicDatesSet = {}; // subKey -> Set of ISO date strings (taught days)
+        const subtopicCompletedDate = {}; // subKey -> Date
+
         studentIds.forEach((sid) => { subtopicTaught[sid] = new Set(); subtopicCompleted[sid] = new Set(); });
 
         completions.forEach((c) => {
@@ -1656,19 +1667,23 @@ exports.getBatchCourseProgress = async (req, res) => {
             const sidStr = sid.toString();
             if (!subtopicTaught[sidStr]) return;
             (c.completedSubtopicKeys || []).forEach((k) => {
-              if (isSentinel) {
-                subtopicCompleted[sidStr].add(k);
-              } else {
+              if (isSentinel) subtopicCompleted[sidStr].add(k);
+              else {
                 subtopicTaught[sidStr].add(k);
-                const cDate = new Date(c.date);
-                if (!subtopicLastDate[k] || cDate > subtopicLastDate[k]) subtopicLastDate[k] = cDate;
+                if (!subtopicDatesSet[k]) subtopicDatesSet[k] = new Set();
+                subtopicDatesSet[k].add(new Date(c.date).toISOString().split('T')[0]);
               }
             });
           });
+          if (isSentinel) {
+            (c.subtopicCompletions || []).forEach((sc) => {
+              subtopicCompletedDate[sc.subtopicKey] = sc.completedDate;
+            });
+          }
         });
 
         let totalSubtopics = 0, completedSubtopics = 0;
-        const inProgressList = [];
+        const subtopicDetails = [];
 
         (course.syllabus || []).forEach((sem, sIdx) => {
           (sem.topics || []).forEach((topic, tIdx) => {
@@ -1678,18 +1693,28 @@ exports.getBatchCourseProgress = async (req, res) => {
               const sCompleted = studentIds.length > 0 && studentIds.every((sid) => subtopicCompleted[sid]?.has(subKey));
               const sTaught = studentIds.some((sid) => subtopicTaught[sid]?.has(subKey));
               if (sCompleted) completedSubtopics++;
-              else if (sTaught) {
-                inProgressList.push({
+
+              if (sCompleted || sTaught) {
+                const dates = subtopicDatesSet[subKey] ? [...subtopicDatesSet[subKey]].sort() : [];
+                subtopicDetails.push({
+                  subtopicKey: subKey,
                   topicName: topic.name,
                   subtopicName: sub.name,
-                  lastTaughtDate: subtopicLastDate[subKey] || null,
+                  status: sCompleted ? 'completed' : 'in_progress',
+                  taughtDaysCount: dates.length,
+                  startedDate: dates[0] || null,
+                  lastTaughtDate: dates[dates.length - 1] || null,
+                  completedDate: sCompleted ? (subtopicCompletedDate[subKey] || null) : null,
                 });
               }
             });
           });
         });
 
-        inProgressList.sort((a, b) => new Date(b.lastTaughtDate || 0) - new Date(a.lastTaughtDate || 0));
+        subtopicDetails.sort((a, b) => {
+          if (a.status !== b.status) return a.status === 'in_progress' ? -1 : 1;
+          return new Date(b.lastTaughtDate || 0) - new Date(a.lastTaughtDate || 0);
+        });
 
         courseResults.push({
           courseId: cid,
@@ -1697,7 +1722,7 @@ exports.getBatchCourseProgress = async (req, res) => {
           totalSubtopics,
           completedSubtopics,
           progressPercent: totalSubtopics > 0 ? Math.round((completedSubtopics / totalSubtopics) * 100) : 0,
-          currentTopics: inProgressList.slice(0, 5),
+          subtopicDetails,
           studentCount: studentIds.length,
         });
       }

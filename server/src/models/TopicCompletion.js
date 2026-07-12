@@ -8,6 +8,12 @@ const topicCompletionSchema = new mongoose.Schema(
     date: { type: Date, required: true },
     completedTopicKeys: [{ type: String }],
     completedSubtopicKeys: [{ type: String }],
+    subtopicCompletions: [
+      {
+        subtopicKey: { type: String },
+        completedDate: { type: Date },
+      },
+    ],
     studentIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Student" }],
   },
   { timestamps: true }
