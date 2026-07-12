@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, X, CheckSquare } from "lucide-react";
+import { ChevronDown, ChevronUp, X, CheckSquare, CheckCircle2 } from "lucide-react";
 
 const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved }) => {
   const [topicsByCourse, setTopicsByCourse] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [completingKey, setCompletingKey] = useState(null);
   const [expandedTopics, setExpandedTopics] = useState({});
   const [checkedTopics, setCheckedTopics] = useState({});
   const [checkedSubtopics, setCheckedSubtopics] = useState({});
@@ -16,27 +17,27 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
   }, []);
 
   const fetchTopics = async () => {
-  setLoading(true);
-  try {
-    const groupsParam = encodeURIComponent(
-      JSON.stringify(courseGroups.map(g => ({ courseId: g.courseId, studentIds: g.studentIds })))
-    );
-    const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-    const response = await fetch(`${BASE_URL}/api/attendance/course-topics?groups=${groupsParam}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const result = await response.json();
-    if (result.success) {
-      const map = {};
-      result.data.forEach(c => { map[c.courseId] = c.topics; });
-      setTopicsByCourse(map);
+    setLoading(true);
+    try {
+      const groupsParam = encodeURIComponent(
+        JSON.stringify(courseGroups.map(g => ({ courseId: g.courseId, studentIds: g.studentIds })))
+      );
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+      const response = await fetch(`${BASE_URL}/api/attendance/course-topics?groups=${groupsParam}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const result = await response.json();
+      if (result.success) {
+        const map = {};
+        result.data.forEach(c => { map[c.courseId] = c.topics; });
+        setTopicsByCourse(map);
+      }
+    } catch (error) {
+      console.error("Error fetching topics:", error);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Error fetching topics:", error);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const toggleExpand = (id) => {
     setExpandedTopics(prev => ({ ...prev, [id]: !prev[id] }));
@@ -56,8 +57,39 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
     return Object.values(checkedTopics).some(Boolean) || Object.values(checkedSubtopics).some(Boolean);
   };
 
+  const handleMarkComplete = async (group, subKey) => {
+    setCompletingKey(subKey);
+    try {
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+      const response = await fetch(`${BASE_URL}/api/attendance/topics/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          batchId,
+          courseId: group.courseId,
+          studentIds: group.studentIds,
+          subtopicKey: subKey,
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        await fetchTopics();
+      } else {
+        alert('Error marking complete: ' + result.message);
+      }
+    } catch (error) {
+      alert('Error marking complete: ' + error.message);
+      console.error(error);
+    } finally {
+      setCompletingKey(null);
+    }
+  };
+
   const handleSave = async () => {
-    if (!hasAnySelection()) return; // guard, in case button is ever reachable while disabled
+    if (!hasAnySelection()) return;
     setSaving(true);
     try {
       const payloadGroups = courseGroups.map(group => {
@@ -141,19 +173,24 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
                           <div key={topic.key} className="border border-gray-100 rounded-lg px-3 py-2">
                             <div className="flex items-center justify-between">
                               <label className="flex items-center gap-2 cursor-pointer flex-1">
-  <input
-    type="checkbox"
-    checked={topicChecked}
-    onChange={() => toggleTopic(group.courseId, topic.key)}
-    className="w-5 h-5 rounded-full accent-blue-600"
-  />
-  <span className="text-sm font-medium text-gray-800">{topic.name}</span>
-  {topic.completed && (
-    <span className="text-[10px] px-2 py-0.5 bg-green-50 text-green-600 rounded-full">
-      already covered
-    </span>
-  )}
-</label>
+                                <input
+                                  type="checkbox"
+                                  checked={topicChecked}
+                                  onChange={() => toggleTopic(group.courseId, topic.key)}
+                                  className="w-5 h-5 rounded-full accent-blue-600"
+                                />
+                                <span className="text-sm font-medium text-gray-800">{topic.name}</span>
+                                {topic.completed && (
+                                  <span className="text-[10px] px-2 py-0.5 bg-green-50 text-green-600 rounded-full">
+                                    ✓ Completed
+                                  </span>
+                                )}
+                                {topic.inProgress && (
+                                  <span className="text-[10px] px-2 py-0.5 bg-amber-50 text-amber-600 rounded-full">
+                                    In Progress
+                                  </span>
+                                )}
+                              </label>
                               {topic.subtopics.length > 0 && (
                                 <button
                                   type="button"
@@ -170,20 +207,41 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
                                 {topic.subtopics.map((sub) => {
                                   const subChecked = !!checkedSubtopics[`${group.courseId}_${sub.key}`];
                                   return (
-                                    <label key={sub.key} className="flex items-center gap-2 cursor-pointer">
-  <input
-    type="checkbox"
-    checked={subChecked}
-    onChange={() => toggleSubtopic(group.courseId, sub.key)}
-    className="w-4 h-4 rounded-full accent-blue-500"
-  />
-  <span className="text-sm text-gray-600">{sub.name}</span>
-  {sub.completed && (
-    <span className="text-[9px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded-full">
-      covered
-    </span>
-  )}
-</label>
+                                    <div key={sub.key} className="flex items-center gap-2">
+                                      <label className="flex items-center gap-2 cursor-pointer flex-1">
+                                        <input
+                                          type="checkbox"
+                                          checked={subChecked}
+                                          onChange={() => toggleSubtopic(group.courseId, sub.key)}
+                                          disabled={sub.completed}
+                                          className="w-4 h-4 rounded-full accent-blue-500 disabled:opacity-40"
+                                        />
+                                        <span className={`text-sm ${sub.completed ? "text-gray-400" : "text-gray-600"}`}>
+                                          {sub.name}
+                                        </span>
+                                        {sub.completed && (
+                                          <span className="text-[9px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded-full">
+                                            ✓ Completed
+                                          </span>
+                                        )}
+                                        {sub.inProgress && (
+                                          <span className="text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded-full">
+                                            In Progress · {sub.taughtDaysCount} day{sub.taughtDaysCount !== 1 ? "s" : ""}
+                                          </span>
+                                        )}
+                                      </label>
+                                      {!sub.completed && sub.inProgress && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleMarkComplete(group, sub.key)}
+                                          disabled={completingKey === sub.key}
+                                          className="flex items-center gap-1 text-[10px] px-2 py-1 bg-green-600 text-white rounded-full hover:bg-green-700 disabled:opacity-50"
+                                        >
+                                          <CheckCircle2 size={10} />
+                                          {completingKey === sub.key ? "..." : "Mark Done"}
+                                        </button>
+                                      )}
+                                    </div>
                                   );
                                 })}
                               </div>

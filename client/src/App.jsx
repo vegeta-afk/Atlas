@@ -15,6 +15,7 @@ import BirthdayReport from "./reports/BirthdayReport";
 import BatchReportList from "./reports/BatchReportList";
 import AttendanceReportList from "./reports/AttendanceReportList";
 import MonthlyAttendanceReport from "./reports/MonthlyAttendanceReport";
+import BatchCourseProgressReport from "./reports/BatchCourseProgressReport";
 
 
 
@@ -173,6 +174,7 @@ function App() {
           <Route path="batch-report" element={<BatchReportList />} />
           <Route path="attendance" element={<AttendanceReportList />} />
           <Route path="attendance-monthly" element={<MonthlyAttendanceReport />} />
+          <Route path="batch-course-progress" element={<BatchCourseProgressReport />} />
         </Route>
       </Route>
 

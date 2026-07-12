@@ -36,6 +36,7 @@ import {
    LayoutTemplate,
    ClipboardCheck,
    GitBranch,
+   BookOpen,
 } from "lucide-react";
 import "./Sidebar.css";
 
@@ -138,6 +139,8 @@ const Sidebar = ({ isOpen, onClose }) => {
         { path: "/admin/reports/batch-report",   label: "Batch Report",     icon: <Users size={15} /> },
         { path: "/admin/reports/attendance",     label: "Attendance Report", icon: <ClipboardCheck size={15} /> },
         { path: "/admin/reports/attendance-monthly",     label: "Monthly Attendance Report", icon: <ClipboardCheck size={15} /> },
+        { path: "/admin/reports/batch-course-progress",  label: "Batch Course Progress",     icon: <BookOpen size={15} /> },
+
       ],
     },
     {

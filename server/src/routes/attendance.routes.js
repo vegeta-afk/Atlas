@@ -24,6 +24,8 @@ router.post('/qr/scan', authorize('student'), attendanceController.scanQR);
 // Topic completion routes (per-batch, per-course syllabus tracking)
 router.get('/course-topics', authorize('teacher', 'admin', 'instructor'), attendanceController.getCourseTopics);
 router.post('/topics/save', authorize('teacher', 'admin', 'instructor'), attendanceController.saveTopicCompletion);
+router.post('/topics/complete', protect, attendanceController.completeSubtopic);
+router.get('/batch-course-progress', protect, attendanceController.getBatchCourseProgress);
 router.get('/student/:studentId/topic-progress', authorize('teacher', 'admin', 'instructor', 'student'), attendanceController.getStudentTopicProgress);
 
 module.exports = router;

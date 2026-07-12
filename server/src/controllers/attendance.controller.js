@@ -14,6 +14,8 @@ const LEAVE_STATUSES = ['sick_leave', 'casual_leave', 'official_leave'];
 
 const User = require('../models/user');
 
+const SENTINEL_COMPLETION_DATE = new Date(0);
+
 
 setInterval(() => {
   const now = Date.now();
@@ -1354,7 +1356,7 @@ exports.getMonthlyAttendanceReport = async (req, res) => {
 // 6. Get topics/subtopics for one or more courses (used to build the topic-completion modal)
 exports.getCourseTopics = async (req, res) => {
   try {
-    const { groups } = req.query; // JSON string: [{courseId, studentIds}]
+    const { groups } = req.query;
     if (!groups) {
       return res.status(400).json({ success: false, message: 'groups is required' });
     }
@@ -1379,23 +1381,40 @@ exports.getCourseTopics = async (req, res) => {
 
       const studentIds = (group.studentIds || []).map(String);
 
-      // Pull every completion record (bridge or main-batch) touching these students+course
       const completions = await TopicCompletion.find({
         courseId: group.courseId,
         studentIds: { $in: studentIds },
-      }).select('completedTopicKeys completedSubtopicKeys studentIds').lean();
+      }).select('completedTopicKeys completedSubtopicKeys studentIds date').lean();
 
-      // Track completion per student so we know if the WHOLE group covered a topic
-      const topicDone = {};
-      const subtopicDone = {};
-      studentIds.forEach((sid) => { topicDone[sid] = new Set(); subtopicDone[sid] = new Set(); });
+      const topicTaught = {}, topicCompleted = {};
+      const subtopicTaught = {}, subtopicCompleted = {};
+      const subtopicTaughtDates = {}; // subKey -> Set of ISO date strings
+
+      studentIds.forEach((sid) => {
+        topicTaught[sid] = new Set(); topicCompleted[sid] = new Set();
+        subtopicTaught[sid] = new Set(); subtopicCompleted[sid] = new Set();
+      });
 
       completions.forEach((c) => {
+        const isSentinel = new Date(c.date).getTime() === SENTINEL_COMPLETION_DATE.getTime();
         (c.studentIds || []).forEach((sid) => {
           const sidStr = sid.toString();
-          if (!topicDone[sidStr]) return;
-          (c.completedTopicKeys || []).forEach((k) => topicDone[sidStr].add(k));
-          (c.completedSubtopicKeys || []).forEach((k) => subtopicDone[sidStr].add(k));
+          if (!topicTaught[sidStr]) return;
+
+          (c.completedTopicKeys || []).forEach((k) => {
+            if (isSentinel) topicCompleted[sidStr].add(k);
+            else topicTaught[sidStr].add(k);
+          });
+
+          (c.completedSubtopicKeys || []).forEach((k) => {
+            if (isSentinel) {
+              subtopicCompleted[sidStr].add(k);
+            } else {
+              subtopicTaught[sidStr].add(k);
+              if (!subtopicTaughtDates[k]) subtopicTaughtDates[k] = new Set();
+              subtopicTaughtDates[k].add(new Date(c.date).toISOString().split('T')[0]);
+            }
+          });
         });
       });
 
@@ -1403,17 +1422,26 @@ exports.getCourseTopics = async (req, res) => {
       (course.syllabus || []).forEach((sem, sIdx) => {
         (sem.topics || []).forEach((topic, tIdx) => {
           const topicKey = `${sIdx}_${tIdx}`;
-          const topicCompleted = studentIds.length > 0 && studentIds.every((sid) => topicDone[sid]?.has(topicKey));
+          const tCompleted = studentIds.length > 0 && studentIds.every((sid) => topicCompleted[sid]?.has(topicKey));
+          const tTaught = studentIds.some((sid) => topicTaught[sid]?.has(topicKey));
 
           topics.push({
             key: topicKey,
             name: topic.name,
             semesterName: sem.name,
-            completed: topicCompleted,
+            completed: tCompleted,
+            inProgress: !tCompleted && tTaught,
             subtopics: (topic.subtopics || []).map((sub, subIdx) => {
               const subKey = `${sIdx}_${tIdx}_${subIdx}`;
-              const subCompleted = studentIds.length > 0 && studentIds.every((sid) => subtopicDone[sid]?.has(subKey));
-              return { key: subKey, name: sub.name, completed: subCompleted };
+              const sCompleted = studentIds.length > 0 && studentIds.every((sid) => subtopicCompleted[sid]?.has(subKey));
+              const sTaught = studentIds.some((sid) => subtopicTaught[sid]?.has(subKey));
+              return {
+                key: subKey,
+                name: sub.name,
+                completed: sCompleted,
+                inProgress: !sCompleted && sTaught,
+                taughtDaysCount: subtopicTaughtDates[subKey]?.size || 0,
+              };
             }),
           });
         });
@@ -1467,6 +1495,36 @@ exports.saveTopicCompletion = async (req, res) => {
   }
 };
 
+// Faculty explicitly marks a subtopic as fully, permanently completed —
+// separate from the daily "taught today" log, using a sentinel date doc
+exports.completeSubtopic = async (req, res) => {
+  try {
+    const { batchId, courseId, studentIds, subtopicKey } = req.body;
+    const teacherId = req.user.id;
+
+    if (!batchId || !courseId || !subtopicKey || !Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'batchId, courseId, studentIds and subtopicKey are required' });
+    }
+
+    await TopicCompletion.findOneAndUpdate(
+      { batchId, courseId, date: SENTINEL_COMPLETION_DATE },
+      {
+        $set: { teacherId },
+        $addToSet: {
+          completedSubtopicKeys: subtopicKey,
+          studentIds: { $each: studentIds },
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    res.json({ success: true, message: 'Subtopic marked as fully completed' });
+  } catch (error) {
+    console.error('Error in completeSubtopic:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // 8. Get a student's syllabus completion status for ViewStudent page
 exports.getStudentTopicProgress = async (req, res) => {
   try {
@@ -1514,6 +1572,148 @@ exports.getStudentTopicProgress = async (req, res) => {
     res.json({ success: true, data: { courseName: course.courseFullName, syllabus: syllabusStatus } });
   } catch (error) {
     console.error('Error in getStudentTopicProgress:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getBatchCourseProgress = async (req, res) => {
+  try {
+    const { batchId } = req.query; // optional — filter to one time-slot batch
+    const tbQuery = { isActive: true };
+    if (batchId) tbQuery.batch = batchId;
+
+    const teacherBatches = await TeacherBatch.find(tbQuery)
+      .populate('batch', 'batchName displayName startTime endTime')
+      .populate('teacher', 'name')
+      .populate('assignedStudents.student', 'studentId fullName courseCode course additionalCourses')
+      .lean();
+
+    const batchCourseMap = {}; // batchId -> { batchInfo, teachers:Set, courses: { courseId: {studentIds:Set} } }
+
+    teacherBatches.forEach((tb) => {
+      if (!tb.batch) return;
+      const bId = tb.batch._id.toString();
+      if (!batchCourseMap[bId]) {
+        batchCourseMap[bId] = {
+          batchInfo: {
+            _id: tb.batch._id,
+            batchName: tb.batch.batchName,
+            displayName: tb.batch.displayName,
+            startTime: tb.batch.startTime,
+            endTime: tb.batch.endTime,
+          },
+          teachers: new Set(),
+          courses: {},
+        };
+      }
+      if (tb.teacher?.name) batchCourseMap[bId].teachers.add(tb.teacher.name);
+
+      const activeStudents = (tb.assignedStudents || []).filter((s) => s.isActive && s.student);
+      activeStudents.forEach((as) => {
+        const student = as.student;
+        if (student.courseCode) {
+          const cid = student.courseCode.toString();
+          if (!batchCourseMap[bId].courses[cid]) batchCourseMap[bId].courses[cid] = { studentIds: new Set() };
+          batchCourseMap[bId].courses[cid].studentIds.add(student._id.toString());
+        }
+        (student.additionalCourses || []).forEach((ac) => {
+          if (!ac.isActive || !ac.courseId) return;
+          if (ac.batchId && ac.batchId.toString() === bId) {
+            const cid = ac.courseId.toString();
+            if (!batchCourseMap[bId].courses[cid]) batchCourseMap[bId].courses[cid] = { studentIds: new Set() };
+            batchCourseMap[bId].courses[cid].studentIds.add(student._id.toString());
+          }
+        });
+      });
+    });
+
+    const allCourseIds = new Set();
+    Object.values(batchCourseMap).forEach((b) => Object.keys(b.courses).forEach((cid) => allCourseIds.add(cid)));
+    const courses = await Course.find({ _id: { $in: [...allCourseIds] } }).select('courseFullName syllabus').lean();
+    const courseMap = {};
+    courses.forEach((c) => { courseMap[c._id.toString()] = c; });
+
+    const result = [];
+
+    for (const [bId, bData] of Object.entries(batchCourseMap)) {
+      const courseResults = [];
+
+      for (const [cid, cData] of Object.entries(bData.courses)) {
+        const course = courseMap[cid];
+        if (!course) continue;
+        const studentIds = [...cData.studentIds];
+
+        const completions = await TopicCompletion.find({
+          batchId: bId, courseId: cid, studentIds: { $in: studentIds },
+        }).select('completedSubtopicKeys studentIds date').lean();
+
+        const subtopicTaught = {}, subtopicCompleted = {}, subtopicLastDate = {};
+        studentIds.forEach((sid) => { subtopicTaught[sid] = new Set(); subtopicCompleted[sid] = new Set(); });
+
+        completions.forEach((c) => {
+          const isSentinel = new Date(c.date).getTime() === SENTINEL_COMPLETION_DATE.getTime();
+          (c.studentIds || []).forEach((sid) => {
+            const sidStr = sid.toString();
+            if (!subtopicTaught[sidStr]) return;
+            (c.completedSubtopicKeys || []).forEach((k) => {
+              if (isSentinel) {
+                subtopicCompleted[sidStr].add(k);
+              } else {
+                subtopicTaught[sidStr].add(k);
+                const cDate = new Date(c.date);
+                if (!subtopicLastDate[k] || cDate > subtopicLastDate[k]) subtopicLastDate[k] = cDate;
+              }
+            });
+          });
+        });
+
+        let totalSubtopics = 0, completedSubtopics = 0;
+        const inProgressList = [];
+
+        (course.syllabus || []).forEach((sem, sIdx) => {
+          (sem.topics || []).forEach((topic, tIdx) => {
+            (topic.subtopics || []).forEach((sub, subIdx) => {
+              totalSubtopics++;
+              const subKey = `${sIdx}_${tIdx}_${subIdx}`;
+              const sCompleted = studentIds.length > 0 && studentIds.every((sid) => subtopicCompleted[sid]?.has(subKey));
+              const sTaught = studentIds.some((sid) => subtopicTaught[sid]?.has(subKey));
+              if (sCompleted) completedSubtopics++;
+              else if (sTaught) {
+                inProgressList.push({
+                  topicName: topic.name,
+                  subtopicName: sub.name,
+                  lastTaughtDate: subtopicLastDate[subKey] || null,
+                });
+              }
+            });
+          });
+        });
+
+        inProgressList.sort((a, b) => new Date(b.lastTaughtDate || 0) - new Date(a.lastTaughtDate || 0));
+
+        courseResults.push({
+          courseId: cid,
+          courseName: course.courseFullName,
+          totalSubtopics,
+          completedSubtopics,
+          progressPercent: totalSubtopics > 0 ? Math.round((completedSubtopics / totalSubtopics) * 100) : 0,
+          currentTopics: inProgressList.slice(0, 5),
+          studentCount: studentIds.length,
+        });
+      }
+
+      result.push({
+        batchId: bId,
+        ...bData.batchInfo,
+        teachers: [...bData.teachers],
+        courses: courseResults,
+      });
+    }
+
+    result.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Error in getBatchCourseProgress:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
