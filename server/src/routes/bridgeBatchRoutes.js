@@ -16,6 +16,7 @@ router.put('/:id/merge', protect, authorize('admin'), bridgeBatchController.merg
 router.delete('/:id', protect, authorize('admin'), bridgeBatchController.deleteBridgeBatch);
 router.put('/:id/revert-approval', protect, authorize('admin'), bridgeBatchController.revertApproval);
 router.put('/:id/revert-merge', protect, authorize('admin'), bridgeBatchController.revertMerge);
+router.get('/by-faculty', protect, authorize('admin'), bridgeBatchController.getBridgeBatchesForFacultyTab);
 router.put('/:id/cancel', protect, authorize('admin'), bridgeBatchController.cancelBridgeBatch);
 
 // Admin: notifications

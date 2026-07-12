@@ -61,6 +61,10 @@ const FacultyList = () => {
   const [totalBatches, setTotalBatches] = useState(0);
   const [totalStudentsCount, setTotalStudentsCount] = useState(0);
 
+  const [bridgeBatchesData, setBridgeBatchesData] = useState([]);
+  const [bridgeFetched, setBridgeFetched] = useState(false);
+  const [batchTypeFilter, setBatchTypeFilter] = useState("all"); // "all" | "regular" | "bridge"
+
   const [freeBatchesData, setFreeBatchesData] = useState([]);
   const [freeBatchesLoading, setFreeBatchesLoading] = useState(false);
   const [freeBatchesFetched, setFreeBatchesFetched] = useState(false);
@@ -173,6 +177,36 @@ const FacultyList = () => {
       setLoading(false);
     }
   };
+
+  const fetchBridgeBatches = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+      const res = await fetch(`${API_BASE}/api/bridge-batch/by-faculty`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBridgeBatchesData(data.data || []);
+      }
+      setBridgeFetched(true);
+    } catch (err) {
+      console.error("Error fetching bridge batches:", err);
+      setBridgeFetched(true);
+    }
+  };
+
+  const handleTabChange = (tab) => {
+  setActiveTab(tab);
+  if (tab === "batches" && !batchesFetched && faculty.length > 0) {
+    fetchAllBatches(faculty);
+    fetchSetupBatches();
+    fetchBridgeBatches();
+  }
+  if (tab === "free" && !freeBatchesFetched && faculty.length > 0) {
+    fetchFreeBatches(faculty);
+  }
+};
 
   const fetchAllBatches = async (facultyList) => {
     setBatchesLoading(true);
@@ -485,8 +519,28 @@ const fetchFreeBatches = async (facultyList) => {
 
   // ── batchesByFaculty — now carries facultyPhoto too ─────────────────────
   const batchesByFaculty = faculty.map((f) => {
-    const batches = allBatchesData.filter((b) => b.facultyId === f._id);
-    const totalStudents = batches.reduce(
+    const regularBatches = allBatchesData
+      .filter((b) => b.facultyId === f._id)
+      .map((b) => ({ ...b, batchType: "regular" }));
+
+    const bridgeBatchesForFac = bridgeBatchesData
+      .filter((b) => b.facultyObjectId === f._id)
+      .map((b) => ({
+        _id: b._id,
+        batchName: b.courseName,
+        startTime: b.timeSlot?.startTime,
+        endTime: b.timeSlot?.endTime,
+        courseAssigned: b.courseName,
+        students: b.studentIds || [],
+        studentCount: (b.studentIds || []).length,
+        batchType: "bridge",
+      }));
+
+    let combinedBatches = [...regularBatches, ...bridgeBatchesForFac];
+    if (batchTypeFilter === "regular") combinedBatches = regularBatches;
+    if (batchTypeFilter === "bridge") combinedBatches = bridgeBatchesForFac;
+
+    const totalStudents = combinedBatches.reduce(
       (sum, b) => sum + (b.studentCount ?? b.students?.length ?? 0),
       0
     );
@@ -497,10 +551,10 @@ const fetchFreeBatches = async (facultyList) => {
       facultyStatus:  f.status,
       facultyEmail:   f.email,
       facultyMobile:  f.mobileNo,
-      facultyPhoto:   f.photo || null,   // ← NEW
+      facultyPhoto:   f.photo || null,
       courseAssigned: f.courseAssigned,
-      batches,
-      totalBatchCount: batches.length,
+      batches: combinedBatches,
+      totalBatchCount: combinedBatches.length,
       totalStudents,
     };
   }).filter((f) => {
@@ -967,6 +1021,26 @@ const handleBulkTransferSubmit = async () => {
       ═══════════════════════════════════════ */}
       {!loading && !error && activeTab === "batches" && (
         <div className="table-container">
+          <div style={{ display: "flex", gap: 8, padding: "12px 16px", borderBottom: "1px solid #e5e7eb" }}>
+            {["all", "regular", "bridge"].map((type) => (
+              <button
+                key={type}
+                onClick={() => setBatchTypeFilter(type)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 20,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  border: batchTypeFilter === type ? "1px solid #4f46e5" : "1px solid #e5e7eb",
+                  background: batchTypeFilter === type ? "#eef2ff" : "#fff",
+                  color: batchTypeFilter === type ? "#4f46e5" : "#6b7280",
+                  cursor: "pointer",
+                }}
+              >
+                {type === "all" ? "All Batches" : type === "regular" ? "Regular Only" : "Bridge Only"}
+              </button>
+            ))}
+          </div>
           {batchesLoading ? (
             <div className="loading-overlay">
               <div className="loading-spinner"></div>
@@ -1095,6 +1169,11 @@ const handleBulkTransferSubmit = async () => {
   {batch.startTime && batch.endTime
     ? `${formatTimeRange(batch.startTime)} to ${formatTimeRange(batch.endTime)}`
     : batch.batchName || batch.name || `Batch ${idx + 1}`}
+  {batch.batchType === "bridge" && (
+    <span style={{ marginLeft: 6, fontSize: 10, padding: "2px 6px", borderRadius: 8, background: "#f3e8ff", color: "#7e22ce", fontWeight: 700 }}>
+      BRIDGE
+    </span>
+  )}
 </span>
           <span className="fba-batch-course">
             {batch.courseAssigned || f.courseAssigned || "N/A"}

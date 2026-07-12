@@ -656,3 +656,24 @@ exports.revertMerge = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Admin: get active/ready bridge batches tagged with their Faculty._id (not User._id)
+// so the Faculty tab can group them alongside regular batches
+exports.getBridgeBatchesForFacultyTab = async (req, res) => {
+  try {
+    const bridgeBatches = await BridgeBatch.find({ status: { $in: ['active', 'ready_to_merge'] } })
+      .populate('studentIds', 'studentId fullName')
+      .populate({ path: 'tempFacultyId', select: 'facultyId name' })
+      .lean();
+
+    const mapped = bridgeBatches.map((b) => ({
+      ...b,
+      facultyObjectId: b.tempFacultyId?.facultyId ? b.tempFacultyId.facultyId.toString() : null,
+    }));
+
+    res.status(200).json({ success: true, count: mapped.length, data: mapped });
+  } catch (error) {
+    console.error('Error in getBridgeBatchesForFacultyTab:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
