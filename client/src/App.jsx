@@ -16,6 +16,7 @@ import BatchReportList from "./reports/BatchReportList";
 import AttendanceReportList from "./reports/AttendanceReportList";
 import MonthlyAttendanceReport from "./reports/MonthlyAttendanceReport";
 import BatchCourseProgressReport from "./reports/BatchCourseProgressReport";
+import BatchCourseProgressDetail from "./reports/BatchCourseProgressDetail";
 
 
 
@@ -175,6 +176,7 @@ function App() {
           <Route path="attendance" element={<AttendanceReportList />} />
           <Route path="attendance-monthly" element={<MonthlyAttendanceReport />} />
           <Route path="batch-course-progress" element={<BatchCourseProgressReport />} />
+          <Route path="batch-course-progress/:batchTime" element={<BatchCourseProgressDetail />} />
         </Route>
       </Route>
 

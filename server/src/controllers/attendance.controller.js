@@ -1520,7 +1520,7 @@ exports.completeSubtopic = async (req, res) => {
           studentIds: { $each: studentIds },
         },
         $push: {
-          subtopicCompletions: { subtopicKey, completedDate: new Date() },
+          subtopicCompletions: { subtopicKey, completedDate: new Date(), teacherId },
         },
       },
       { upsert: true, new: true }
@@ -1653,11 +1653,15 @@ exports.getBatchCourseProgress = async (req, res) => {
 
         const completions = await TopicCompletion.find({
           batchId: bId, courseId: cid, studentIds: { $in: studentIds },
-        }).select('completedSubtopicKeys subtopicCompletions studentIds date').lean();
+        }).select('completedSubtopicKeys subtopicCompletions studentIds date teacherId').lean();
+
+        // Collect every teacherId we'll need to resolve to a name
+        const teacherIdsNeeded = new Set();
 
         const subtopicTaught = {}, subtopicCompleted = {};
-        const subtopicDatesSet = {}; // subKey -> Set of ISO date strings (taught days)
-        const subtopicCompletedDate = {}; // subKey -> Date
+        const subtopicDatesSet = {};
+        const subtopicLastTeacher = {}; // subKey -> teacherId (from most recent daily doc)
+        const subtopicCompletionInfo = {}; // subKey -> { completedDate, teacherId }
 
         studentIds.forEach((sid) => { subtopicTaught[sid] = new Set(); subtopicCompleted[sid] = new Set(); });
 
@@ -1667,20 +1671,35 @@ exports.getBatchCourseProgress = async (req, res) => {
             const sidStr = sid.toString();
             if (!subtopicTaught[sidStr]) return;
             (c.completedSubtopicKeys || []).forEach((k) => {
-              if (isSentinel) subtopicCompleted[sidStr].add(k);
-              else {
+              if (isSentinel) {
+                subtopicCompleted[sidStr].add(k);
+              } else {
                 subtopicTaught[sidStr].add(k);
                 if (!subtopicDatesSet[k]) subtopicDatesSet[k] = new Set();
                 subtopicDatesSet[k].add(new Date(c.date).toISOString().split('T')[0]);
+                if (c.teacherId) {
+                  subtopicLastTeacher[k] = c.teacherId.toString();
+                  teacherIdsNeeded.add(c.teacherId.toString());
+                }
               }
             });
           });
           if (isSentinel) {
             (c.subtopicCompletions || []).forEach((sc) => {
-              subtopicCompletedDate[sc.subtopicKey] = sc.completedDate;
+              subtopicCompletionInfo[sc.subtopicKey] = {
+                completedDate: sc.completedDate,
+                teacherId: sc.teacherId ? sc.teacherId.toString() : null,
+              };
+              if (sc.teacherId) teacherIdsNeeded.add(sc.teacherId.toString());
             });
           }
         });
+
+        const teacherDocs = teacherIdsNeeded.size > 0
+          ? await User.find({ _id: { $in: [...teacherIdsNeeded] } }).select('name').lean()
+          : [];
+        const teacherNameMap = {};
+        teacherDocs.forEach((t) => { teacherNameMap[t._id.toString()] = t.name; });
 
         let totalSubtopics = 0, completedSubtopics = 0;
         const subtopicDetails = [];
@@ -1696,6 +1715,7 @@ exports.getBatchCourseProgress = async (req, res) => {
 
               if (sCompleted || sTaught) {
                 const dates = subtopicDatesSet[subKey] ? [...subtopicDatesSet[subKey]].sort() : [];
+                const completionInfo = subtopicCompletionInfo[subKey];
                 subtopicDetails.push({
                   subtopicKey: subKey,
                   topicName: topic.name,
@@ -1704,7 +1724,10 @@ exports.getBatchCourseProgress = async (req, res) => {
                   taughtDaysCount: dates.length,
                   startedDate: dates[0] || null,
                   lastTaughtDate: dates[dates.length - 1] || null,
-                  completedDate: sCompleted ? (subtopicCompletedDate[subKey] || null) : null,
+                  completedDate: sCompleted ? (completionInfo?.completedDate || null) : null,
+                  facultyName: sCompleted
+                    ? (completionInfo?.teacherId ? teacherNameMap[completionInfo.teacherId] || 'Unknown' : 'Unknown')
+                    : (subtopicLastTeacher[subKey] ? teacherNameMap[subtopicLastTeacher[subKey]] || 'Unknown' : 'Unknown'),
                 });
               }
             });
