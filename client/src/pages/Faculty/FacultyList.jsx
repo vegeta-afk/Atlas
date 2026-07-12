@@ -321,16 +321,7 @@ const fetchFreeBatches = async (facultyList) => {
   }
 };
   
-  const handleTabChange = (tab) => {
-  setActiveTab(tab);
-  if (tab === "batches" && !batchesFetched && faculty.length > 0) {
-    fetchAllBatches(faculty);
-    fetchSetupBatches();
-  }
-  if (tab === "free" && !freeBatchesFetched && faculty.length > 0) {  // ← add
-    fetchFreeBatches(faculty);
-  }
-};
+  
 
 
 
