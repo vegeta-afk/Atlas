@@ -13,6 +13,9 @@ router.get('/:id/students', protect, bridgeBatchController.getBridgeBatchStudent
 router.put('/:id/approve', protect, authorize('admin'), bridgeBatchController.approveBridgeBatch);
 router.put('/:id/reject', protect, authorize('admin'), bridgeBatchController.rejectBridgeBatch);
 router.put('/:id/merge', protect, authorize('admin'), bridgeBatchController.mergeBridgeBatch);
+router.delete('/:id', protect, authorize('admin'), bridgeBatchController.deleteBridgeBatch);
+router.put('/:id/revert-approval', protect, authorize('admin'), bridgeBatchController.revertApproval);
+router.put('/:id/revert-merge', protect, authorize('admin'), bridgeBatchController.revertMerge);
 router.put('/:id/cancel', protect, authorize('admin'), bridgeBatchController.cancelBridgeBatch);
 
 // Admin: notifications

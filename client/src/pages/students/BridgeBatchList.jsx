@@ -157,6 +157,81 @@ const BridgeBatchList = () => {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm("Permanently delete this request? This cannot be undone.")) return;
+    try {
+      setLoading(true);
+      const token = getToken();
+      const response = await fetch(`${API_BASE}/api/bridge-batch/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert("Bridge batch request deleted.");
+        fetchBridgeBatches();
+      } else {
+        alert(data.message || "Failed to delete");
+      }
+    } catch (err) {
+      console.error("Error deleting bridge batch:", err);
+      alert(err.message || "Failed to delete");
+    } finally {
+      setLoading(false);
+      setOpenDropdown(null);
+    }
+  };
+
+  const handleRevertApproval = async (id) => {
+    if (!window.confirm("Revert this approval back to pending?")) return;
+    try {
+      setLoading(true);
+      const token = getToken();
+      const response = await fetch(`${API_BASE}/api/bridge-batch/${id}/revert-approval`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert("Reverted to pending.");
+        fetchBridgeBatches();
+      } else {
+        alert(data.message || "Failed to revert");
+      }
+    } catch (err) {
+      console.error("Error reverting approval:", err);
+      alert(err.message || "Failed to revert");
+    } finally {
+      setLoading(false);
+      setOpenDropdown(null);
+    }
+  };
+
+  const handleRevertMerge = async (id) => {
+    if (!window.confirm("Revert this merge? Student will move back to bridge batch status.")) return;
+    try {
+      setLoading(true);
+      const token = getToken();
+      const response = await fetch(`${API_BASE}/api/bridge-batch/${id}/revert-merge`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert("Merge reverted.");
+        fetchBridgeBatches();
+      } else {
+        alert(data.message || "Failed to revert merge");
+      }
+    } catch (err) {
+      console.error("Error reverting merge:", err);
+      alert(err.message || "Failed to revert merge");
+    } finally {
+      setLoading(false);
+      setOpenDropdown(null);
+    }
+  };
+
   const handleMerge = async (id) => {
     if (!window.confirm("Merge this student back into the main batch? This finalizes the bridge batch.")) return;
     try {
@@ -574,6 +649,24 @@ const BridgeBatchList = () => {
                                       Merge into Main Batch
                                     </button>
                                   )}
+                                  {batch.status === "active" && (
+                                    <button
+                                      onClick={() => handleRevertApproval(batch._id)}
+                                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-orange-600 hover:bg-orange-50 transition-colors"
+                                    >
+                                      <RefreshCw size={14} />
+                                      Revert to Pending
+                                    </button>
+                                  )}
+                                  {batch.status === "merged" && (
+                                    <button
+                                      onClick={() => handleRevertMerge(batch._id)}
+                                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-orange-600 hover:bg-orange-50 transition-colors"
+                                    >
+                                      <RefreshCw size={14} />
+                                      Revert Merge
+                                    </button>
+                                  )}
                                   {batch.status !== "merged" && batch.status !== "cancelled" && (
                                     <button
                                       onClick={() => handleCancel(batch._id)}
@@ -581,6 +674,15 @@ const BridgeBatchList = () => {
                                     >
                                       <Ban size={14} />
                                       Cancel Bridge Batch
+                                    </button>
+                                  )}
+                                  {(batch.status === "rejected" || batch.status === "cancelled") && (
+                                    <button
+                                      onClick={() => handleDelete(batch._id)}
+                                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-700 hover:bg-red-50 transition-colors"
+                                    >
+                                      <X size={14} />
+                                      Delete Permanently
                                     </button>
                                   )}
                                 </div>

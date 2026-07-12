@@ -572,3 +572,87 @@ exports.getBridgeBatchStudents = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Admin: delete a rejected/cancelled bridge batch request permanently
+exports.deleteBridgeBatch = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const bridgeBatch = await BridgeBatch.findById(id);
+    if (!bridgeBatch) {
+      return res.status(404).json({ success: false, message: 'Bridge batch not found' });
+    }
+    if (!['rejected', 'cancelled'].includes(bridgeBatch.status)) {
+      return res.status(400).json({ success: false, message: 'Only rejected or cancelled requests can be deleted' });
+    }
+
+    await BridgeBatch.findByIdAndDelete(id);
+    res.status(200).json({ success: true, message: 'Bridge batch request deleted' });
+  } catch (error) {
+    console.error('Error in deleteBridgeBatch:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Admin: revert an approved (active) request back to pending — e.g. approved by mistake
+exports.revertApproval = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const bridgeBatch = await BridgeBatch.findById(id);
+    if (!bridgeBatch) {
+      return res.status(404).json({ success: false, message: 'Bridge batch not found' });
+    }
+    if (bridgeBatch.status !== 'active') {
+      return res.status(400).json({ success: false, message: 'Only active (approved) requests can be reverted to pending' });
+    }
+
+    // Safety check — don't revert if the temp faculty has already started work on it
+    const anyTopicDone = bridgeBatch.selectedTopics.some((t) => t.completed) ||
+      bridgeBatch.selectedSubtopics.some((s) => s.completed);
+    const attendanceCount = await Attendance.countDocuments({ bridgeBatchId: id });
+
+    if (anyTopicDone || attendanceCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot revert — attendance or topics have already been recorded for this bridge batch',
+      });
+    }
+
+    bridgeBatch.status = 'pending';
+    bridgeBatch.approvedBy = undefined;
+    bridgeBatch.approvedDate = undefined;
+    await bridgeBatch.save();
+
+    res.status(200).json({ success: true, message: 'Bridge batch reverted to pending', data: bridgeBatch });
+  } catch (error) {
+    console.error('Error in revertApproval:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Admin: revert a merged batch back to active/ready_to_merge — e.g. merged by mistake
+exports.revertMerge = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const bridgeBatch = await BridgeBatch.findById(id);
+    if (!bridgeBatch) {
+      return res.status(404).json({ success: false, message: 'Bridge batch not found' });
+    }
+    if (bridgeBatch.status !== 'merged') {
+      return res.status(400).json({ success: false, message: 'Only merged batches can be reverted' });
+    }
+
+    const topicsDone = bridgeBatch.selectedTopics.length === 0 || bridgeBatch.selectedTopics.every((t) => t.completed);
+    const subtopicsDone = bridgeBatch.selectedSubtopics.length === 0 || bridgeBatch.selectedSubtopics.every((s) => s.completed);
+
+    // Restore to whichever state the pre-save hook would have put it in
+    bridgeBatch.status = (topicsDone && subtopicsDone) ? 'ready_to_merge' : 'active';
+    bridgeBatch.mergedBy = undefined;
+    bridgeBatch.mergedDate = undefined;
+    await bridgeBatch.save();
+
+    res.status(200).json({ success: true, message: 'Merge reverted', data: bridgeBatch });
+  } catch (error) {
+    console.error('Error in revertMerge:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
