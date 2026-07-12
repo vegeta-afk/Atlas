@@ -98,6 +98,15 @@ const BridgeBatchList = () => {
     }
   };
 
+  const formatTime12hr = (time24) => {
+  if (!time24) return "";
+  const [hourStr, minStr] = time24.split(":");
+  let hour = parseInt(hourStr, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12 || 12;
+  return `${hour}:${minStr} ${ampm}`;
+};
+
   const handleApprove = async (id) => {
     if (!window.confirm("Approve this bridge batch request?")) return;
     try {
@@ -494,8 +503,8 @@ const BridgeBatchList = () => {
                       <td className="px-4 py-4 text-center">
                         <span className="text-sm text-gray-700">
                           {batch.timeSlot?.startTime && batch.timeSlot?.endTime
-                            ? `${batch.timeSlot.startTime} - ${batch.timeSlot.endTime}`
-                            : "N/A"}
+  ? `${formatTime12hr(batch.timeSlot.startTime)} - ${formatTime12hr(batch.timeSlot.endTime)}`
+  : "N/A"}
                         </span>
                       </td>
                       <td className="px-4 py-4 text-center">
@@ -643,8 +652,8 @@ const BridgeBatchList = () => {
                 <span className="text-gray-500">Time Slot</span>
                 <span className="font-medium text-gray-800">
                   {viewBatch.timeSlot?.startTime && viewBatch.timeSlot?.endTime
-                    ? `${viewBatch.timeSlot.startTime} - ${viewBatch.timeSlot.endTime}`
-                    : "N/A"}
+  ? `${formatTime12hr(viewBatch.timeSlot.startTime)} - ${formatTime12hr(viewBatch.timeSlot.endTime)}`
+  : "N/A"}
                 </span>
               </div>
 
@@ -680,6 +689,26 @@ const BridgeBatchList = () => {
                   ))}
                 </div>
               </div>
+
+              {(viewBatch.selectedSubtopics?.length || 0) > 0 && (
+                <div>
+                  <span className="text-gray-500 block mb-1">
+                    Subtopics Requested ({viewBatch.selectedSubtopics.length})
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {viewBatch.selectedSubtopics.map((s) => (
+                      <span
+                        key={s.subtopicKey}
+                        className={`px-3 py-1 rounded-full text-xs ${
+                          s.completed ? "bg-green-50 text-green-700" : "bg-purple-50 text-purple-700"
+                        }`}
+                      >
+                        {s.subtopicName} {s.completed && "✓"}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <hr className="my-2 border-gray-100" />
 
