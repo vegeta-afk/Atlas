@@ -732,6 +732,27 @@ const AddBridgeBatchRequest = () => {
                   </div>
                 </div>
 
+                {formData.selectedSubtopicKeys?.length > 0 && (
+                  <>
+                    <div className="border-t border-gray-200 my-4"></div>
+                    <div>
+                      <h3 className="font-medium text-gray-700 mb-3">
+                        Subtopics to Cover ({formData.selectedSubtopicKeys.length})
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {pendingTopics
+                          .flatMap((t) => t.subtopics || [])
+                          .filter((s) => formData.selectedSubtopicKeys.includes(s.subtopicKey))
+                          .map((s) => (
+                            <span key={s.subtopicKey} className="px-3 py-1 bg-purple-50 text-purple-700 text-xs rounded-full">
+                              {s.subtopicName}
+                            </span>
+                          ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
                 <div className="border-t border-gray-200 my-4"></div>
 
                 <div>
