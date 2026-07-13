@@ -484,6 +484,7 @@ export const attendanceReportAPI = {
   getReport: (params) => api.get("/attendance/report", { params }),
   getMonthlyReport: (params) => api.get("/attendance/monthly-report", { params }),
   getBatchCourseProgress: (params) => api.get("/attendance/batch-course-progress", { params }),
+  getBatchTopicBoard: () => api.get("/attendance/batch-topic-board"),
 };
 
 export const templateAPI = {

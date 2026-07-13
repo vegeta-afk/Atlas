@@ -16,6 +16,8 @@ const User = require('../models/user');
 
 const SENTINEL_COMPLETION_DATE = new Date(0);
 
+const BridgeBatch = require('../models/BridgeBatch');
+
 
 setInterval(() => {
   const now = Date.now();
@@ -1762,6 +1764,142 @@ exports.getBatchCourseProgress = async (req, res) => {
     res.json({ success: true, data: result });
   } catch (error) {
     console.error('Error in getBatchCourseProgress:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Helper: for a given batch+course+studentIds, find the current in-progress topic + its start date
+const getCurrentTopicForCourse = async (batchId, courseId, studentIds, course) => {
+  if (!course || studentIds.length === 0) return { topicName: null, startDate: null };
+
+  const completions = await TopicCompletion.find({
+    batchId, courseId, studentIds: { $in: studentIds },
+  }).select('completedSubtopicKeys studentIds date').lean();
+
+  const subtopicTaught = {}, subtopicCompleted = {}, subtopicFirstDate = {};
+  studentIds.forEach((sid) => { subtopicTaught[sid] = new Set(); subtopicCompleted[sid] = new Set(); });
+
+  completions.forEach((c) => {
+    const isSentinel = new Date(c.date).getTime() === SENTINEL_COMPLETION_DATE.getTime();
+    (c.studentIds || []).forEach((sid) => {
+      const sidStr = sid.toString();
+      if (!subtopicTaught[sidStr]) return;
+      (c.completedSubtopicKeys || []).forEach((k) => {
+        if (isSentinel) subtopicCompleted[sidStr].add(k);
+        else {
+          subtopicTaught[sidStr].add(k);
+          const cDate = new Date(c.date);
+          if (!subtopicFirstDate[k] || cDate < subtopicFirstDate[k]) subtopicFirstDate[k] = cDate;
+        }
+      });
+    });
+  });
+
+  let currentTopic = null;
+  (course.syllabus || []).forEach((sem, sIdx) => {
+    (sem.topics || []).forEach((topic, tIdx) => {
+      const subKeys = (topic.subtopics || []).map((_, subIdx) => `${sIdx}_${tIdx}_${subIdx}`);
+      if (subKeys.length === 0) return;
+
+      const allCompleted = studentIds.every((sid) =>
+        subKeys.every((k) => subtopicCompleted[sid]?.has(k))
+      );
+      const anyTaught = studentIds.some((sid) =>
+        subKeys.some((k) => subtopicTaught[sid]?.has(k))
+      );
+
+      if (anyTaught && !allCompleted) {
+        const dates = subKeys.map((k) => subtopicFirstDate[k]).filter(Boolean);
+        const earliest = dates.length > 0 ? new Date(Math.min(...dates.map((d) => d.getTime()))) : null;
+        if (!currentTopic || (earliest && (!currentTopic.startDate || earliest > currentTopic.startDate))) {
+          currentTopic = { topicName: topic.name, startDate: earliest };
+        }
+      }
+    });
+  });
+
+  return currentTopic || { topicName: null, startDate: null };
+};
+
+exports.getBatchTopicBoard = async (req, res) => {
+  try {
+    const teacherBatches = await TeacherBatch.find({ isActive: true })
+      .populate('batch', 'batchName displayName startTime endTime')
+      .populate('teacher', 'name')
+      .populate('assignedStudents.student', 'studentId fullName courseCode additionalCourses')
+      .lean();
+
+    const allCourseIds = new Set();
+    teacherBatches.forEach((tb) => {
+      (tb.assignedStudents || []).filter((s) => s.isActive && s.student).forEach((as) => {
+        if (as.student.courseCode) allCourseIds.add(as.student.courseCode.toString());
+      });
+    });
+
+    const bridgeBatches = await BridgeBatch.find({ status: { $in: ['active', 'ready_to_merge'] } }).lean();
+    bridgeBatches.forEach((b) => allCourseIds.add(b.courseId.toString()));
+
+    const courses = await Course.find({ _id: { $in: [...allCourseIds] } }).select('courseFullName courseShortName syllabus').lean();
+    const courseMap = {};
+    courses.forEach((c) => { courseMap[c._id.toString()] = c; });
+
+    const rows = [];
+
+    for (const tb of teacherBatches) {
+      if (!tb.batch || !tb.teacher) continue;
+      const activeStudents = (tb.assignedStudents || []).filter((s) => s.isActive && s.student);
+
+      // Count students per course to find the dominant one for this row
+      const courseCounts = {};
+      activeStudents.forEach((as) => {
+        const cid = as.student.courseCode?.toString();
+        if (cid) courseCounts[cid] = (courseCounts[cid] || 0) + 1;
+      });
+      const dominantCourseId = Object.entries(courseCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+      const dominantStudentIds = activeStudents
+        .filter((as) => as.student.courseCode?.toString() === dominantCourseId)
+        .map((as) => as.student._id.toString());
+
+      let regularTopic = { topicName: null, startDate: null };
+      if (dominantCourseId && dominantStudentIds.length > 0) {
+        regularTopic = await getCurrentTopicForCourse(
+          tb.batch._id, dominantCourseId, dominantStudentIds, courseMap[dominantCourseId]
+        );
+      }
+
+      // Bridge students where this same person is the temp faculty, tied to this batch
+      const relevantBridges = bridgeBatches.filter(
+        (b) => b.tempFacultyId.toString() === tb.teacher._id.toString() && b.parentBatchId.toString() === tb.batch._id.toString()
+      );
+      let doubleExtra = 0, bridgeTopic = { topicName: null, startDate: null };
+      if (relevantBridges.length > 0) {
+        doubleExtra = relevantBridges.reduce((sum, b) => sum + (b.studentIds?.length || 0), 0);
+        const b = relevantBridges[0];
+        const bStudentIds = (b.studentIds || []).map((s) => s.toString());
+        bridgeTopic = await getCurrentTopicForCourse(
+          b.parentBatchId, b.courseId, bStudentIds, courseMap[b.courseId.toString()]
+        );
+      }
+
+      rows.push({
+        batchId: tb.batch._id.toString(),
+        batchTime: tb.batch.displayName || `${tb.batch.startTime} to ${tb.batch.endTime}`,
+        batchStartTime: tb.batch.startTime,
+        facultyName: tb.teacher.name,
+        bsCount: activeStudents.length,
+        courseStartDate: regularTopic.startDate,
+        runningCourse: regularTopic.topicName,
+        doubleExtra,
+        bridgeStartDate: bridgeTopic.startDate,
+        bridgeRunningCourse: bridgeTopic.topicName,
+        total: activeStudents.length + doubleExtra,
+      });
+    }
+
+    rows.sort((a, b) => (a.batchStartTime || '').localeCompare(b.batchStartTime || ''));
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Error in getBatchTopicBoard:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

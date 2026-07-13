@@ -91,6 +91,7 @@ import TemplateList from "./pages/admin/TemplateList";
 import TemplateEditPage from "./pages/admin/TemplateEditPage";
 import BridgeBatchList from "./pages/students/BridgeBatchList";
 import AddBridgeBatchRequest from "./pages/students/AddBridgeBatchRequest";
+import BatchTopicBoard from "./reports/BatchTopicBoard";
 
 
 function App() {
@@ -177,6 +178,7 @@ function App() {
           <Route path="attendance-monthly" element={<MonthlyAttendanceReport />} />
           <Route path="batch-course-progress" element={<BatchCourseProgressReport />} />
           <Route path="batch-course-progress/:batchTime" element={<BatchCourseProgressDetail />} />
+          <Route path="batch-topic-board" element={<BatchTopicBoard />} />
         </Route>
       </Route>
 
