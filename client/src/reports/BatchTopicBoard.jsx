@@ -95,9 +95,11 @@ const BatchTopicBoard = () => {
                 <th className="px-3 py-2 text-center font-semibold text-gray-700 border">BS</th>
                 <th className="px-3 py-2 text-center font-semibold text-gray-700 border">Course Start Date</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-700 border">Running Course</th>
+                <th className="px-3 py-2 text-left font-semibold text-gray-700 border">Subtopic</th>
                 <th className="px-3 py-2 text-center font-semibold text-blue-700 border bg-blue-50">Double Extra</th>
                 <th className="px-3 py-2 text-center font-semibold text-blue-700 border bg-blue-50">Course Start Date</th>
                 <th className="px-3 py-2 text-left font-semibold text-blue-700 border bg-blue-50">Running Course (Bridge)</th>
+                <th className="px-3 py-2 text-left font-semibold text-blue-700 border bg-blue-50">Subtopic (Bridge)</th>
               </tr>
             </thead>
             <tbody>
@@ -120,9 +122,11 @@ const BatchTopicBoard = () => {
                         <td className="px-3 py-1.5 border text-center">{r.bsCount || ""}</td>
                         <td className="px-3 py-1.5 border text-center text-red-600 font-medium">{formatDate(r.courseStartDate)}</td>
                         <td className="px-3 py-1.5 border">{r.runningCourse || ""}</td>
+                        <td className="px-3 py-1.5 border text-gray-600">{r.runningSubtopic || ""}</td>
                         <td className="px-3 py-1.5 border text-center bg-gray-50">{r.doubleExtra || ""}</td>
                         <td className="px-3 py-1.5 border text-center text-red-600 font-medium bg-gray-50">{formatDate(r.bridgeStartDate)}</td>
                         <td className="px-3 py-1.5 border bg-gray-50">{r.bridgeRunningCourse || ""}</td>
+                        <td className="px-3 py-1.5 border text-gray-600 bg-gray-50">{r.bridgeRunningSubtopic || ""}</td>
                       </tr>
                     ))}
                     <tr className="font-bold" style={{ background: color }}>
@@ -132,7 +136,9 @@ const BatchTopicBoard = () => {
                       <td className="px-3 py-1.5 border text-center">{totalRow.bs}</td>
                       <td className="px-3 py-1.5 border"></td>
                       <td className="px-3 py-1.5 border"></td>
+                      <td className="px-3 py-1.5 border"></td>
                       <td className="px-3 py-1.5 border text-center">{totalRow.doubleExtra}</td>
+                      <td className="px-3 py-1.5 border"></td>
                       <td className="px-3 py-1.5 border"></td>
                       <td className="px-3 py-1.5 border"></td>
                     </tr>

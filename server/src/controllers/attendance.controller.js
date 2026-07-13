@@ -1770,13 +1770,13 @@ exports.getBatchCourseProgress = async (req, res) => {
 
 // Helper: for a given batch+course+studentIds, find the current in-progress topic + its start date
 const getCurrentTopicForCourse = async (batchId, courseId, studentIds, course) => {
-  if (!course || studentIds.length === 0) return { topicName: null, startDate: null };
+  if (!course || studentIds.length === 0) return { topicName: null, startDate: null, subtopicName: null };
 
   const completions = await TopicCompletion.find({
     batchId, courseId, studentIds: { $in: studentIds },
   }).select('completedSubtopicKeys studentIds date').lean();
 
-  const subtopicTaught = {}, subtopicCompleted = {}, subtopicFirstDate = {};
+  const subtopicTaught = {}, subtopicCompleted = {}, subtopicFirstDate = {}, subtopicLastDate = {};
   studentIds.forEach((sid) => { subtopicTaught[sid] = new Set(); subtopicCompleted[sid] = new Set(); });
 
   completions.forEach((c) => {
@@ -1790,12 +1790,15 @@ const getCurrentTopicForCourse = async (batchId, courseId, studentIds, course) =
           subtopicTaught[sidStr].add(k);
           const cDate = new Date(c.date);
           if (!subtopicFirstDate[k] || cDate < subtopicFirstDate[k]) subtopicFirstDate[k] = cDate;
+          if (!subtopicLastDate[k] || cDate > subtopicLastDate[k]) subtopicLastDate[k] = cDate;
         }
       });
     });
   });
 
   let currentTopic = null;
+  let currentSubtopic = null;
+
   (course.syllabus || []).forEach((sem, sIdx) => {
     (sem.topics || []).forEach((topic, tIdx) => {
       const subKeys = (topic.subtopics || []).map((_, subIdx) => `${sIdx}_${tIdx}_${subIdx}`);
@@ -1813,12 +1816,32 @@ const getCurrentTopicForCourse = async (batchId, courseId, studentIds, course) =
         const earliest = dates.length > 0 ? new Date(Math.min(...dates.map((d) => d.getTime()))) : null;
         if (!currentTopic || (earliest && (!currentTopic.startDate || earliest > currentTopic.startDate))) {
           currentTopic = { topicName: topic.name, startDate: earliest };
+
+          // Within this topic, find the specific subtopic currently in progress (not yet completed by everyone),
+          // preferring the most recently touched one
+          let bestSub = null;
+          (topic.subtopics || []).forEach((sub, subIdx) => {
+            const subKey = `${sIdx}_${tIdx}_${subIdx}`;
+            const subCompleted = studentIds.every((sid) => subtopicCompleted[sid]?.has(subKey));
+            const subTaught = studentIds.some((sid) => subtopicTaught[sid]?.has(subKey));
+            if (subTaught && !subCompleted) {
+              const lastDate = subtopicLastDate[subKey];
+              if (!bestSub || (lastDate && (!bestSub.lastDate || lastDate > bestSub.lastDate))) {
+                bestSub = { name: sub.name, lastDate };
+              }
+            }
+          });
+          currentSubtopic = bestSub ? bestSub.name : null;
         }
       }
     });
   });
 
-  return currentTopic || { topicName: null, startDate: null };
+  return {
+    topicName: currentTopic?.topicName || null,
+    startDate: currentTopic?.startDate || null,
+    subtopicName: currentSubtopic,
+  };
 };
 
 exports.getBatchTopicBoard = async (req, res) => {
@@ -1860,7 +1883,7 @@ exports.getBatchTopicBoard = async (req, res) => {
         .filter((as) => as.student.courseCode?.toString() === dominantCourseId)
         .map((as) => as.student._id.toString());
 
-      let regularTopic = { topicName: null, startDate: null };
+      let regularTopic = { topicName: null, startDate: null, subtopicName: null };
       if (dominantCourseId && dominantStudentIds.length > 0) {
         regularTopic = await getCurrentTopicForCourse(
           tb.batch._id, dominantCourseId, dominantStudentIds, courseMap[dominantCourseId]
@@ -1871,7 +1894,7 @@ exports.getBatchTopicBoard = async (req, res) => {
       const relevantBridges = bridgeBatches.filter(
         (b) => b.tempFacultyId.toString() === tb.teacher._id.toString() && b.parentBatchId.toString() === tb.batch._id.toString()
       );
-      let doubleExtra = 0, bridgeTopic = { topicName: null, startDate: null };
+      let doubleExtra = 0, bridgeTopic = { topicName: null, startDate: null, subtopicName: null };
       if (relevantBridges.length > 0) {
         doubleExtra = relevantBridges.reduce((sum, b) => sum + (b.studentIds?.length || 0), 0);
         const b = relevantBridges[0];
@@ -1889,9 +1912,11 @@ exports.getBatchTopicBoard = async (req, res) => {
         bsCount: activeStudents.length,
         courseStartDate: regularTopic.startDate,
         runningCourse: regularTopic.topicName,
+        runningSubtopic: regularTopic.subtopicName,
         doubleExtra,
         bridgeStartDate: bridgeTopic.startDate,
         bridgeRunningCourse: bridgeTopic.topicName,
+        bridgeRunningSubtopic: bridgeTopic.subtopicName,
         total: activeStudents.length + doubleExtra,
       });
     }
