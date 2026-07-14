@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { attendanceReportAPI } from "../services/api";
-import { RefreshCw, AlertCircle } from "lucide-react";
+import { attendanceReportAPI, setupAPI, facultyAPI } from "../services/api";
+import { RefreshCw, AlertCircle, Filter } from "lucide-react";
 
 const formatDate = (d) => {
   if (!d) return "";
   return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).replace(/\//g, "-");
+};
+
+const formatTime = (time) => {
+  if (!time) return "";
+  const [hours, minutes] = time.split(":");
+  const h = parseInt(hours);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${minutes} ${ampm}`;
 };
 
 const BATCH_COLORS = ["#fff9c4", "#bbdefb", "#ffcdd2", "#c8e6c9", "#e1bee7", "#ffe0b2"];
@@ -14,11 +23,32 @@ const BatchTopicBoard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [batches, setBatches] = useState([]);
+  const [faculty, setFaculty] = useState([]);
+  const [batchId, setBatchId] = useState("");
+  const [facultyId, setFacultyId] = useState("");
+
+  useEffect(() => {
+    setupAPI.getAll().then((res) => {
+      if (res.data.success) {
+        setBatches((res.data.data.batches || []).filter((b) => b.isActive !== false));
+      }
+    }).catch(() => {});
+
+    facultyAPI.getFaculty({ limit: 1000 }).then((res) => {
+      if (res.data.success) setFaculty(res.data.data || []);
+    }).catch(() => {});
+  }, []);
+
   const fetchBoard = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await attendanceReportAPI.getBatchTopicBoard();
+      const params = {};
+      if (batchId) params.batchId = batchId;
+      if (facultyId) params.facultyId = facultyId;
+
+      const res = await attendanceReportAPI.getBatchTopicBoard(params);
       if (res.data.success) {
         setRows(res.data.data || []);
       } else {
@@ -34,7 +64,9 @@ const BatchTopicBoard = () => {
 
   useEffect(() => {
     fetchBoard();
-  }, []);
+  }, [batchId, facultyId]);
+
+  const clearFilters = () => { setBatchId(""); setFacultyId(""); };
 
   // Group rows by batchId, in the order they appear
   const grouped = [];
@@ -62,6 +94,48 @@ const BatchTopicBoard = () => {
           <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
           Refresh
         </button>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6 flex flex-wrap items-end gap-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Batch Time</label>
+          <select
+            value={batchId}
+            onChange={(e) => setBatchId(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[180px]"
+          >
+            <option value="">All Batch Times</option>
+            {batches.map((b) => (
+              <option key={b._id} value={b._id}>
+                {b.batchName} ({formatTime(b.startTime)} - {formatTime(b.endTime)})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Faculty</label>
+          <select
+            value={facultyId}
+            onChange={(e) => setFacultyId(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[180px]"
+          >
+            <option value="">All Faculty</option>
+            {faculty.map((f) => (
+              <option key={f._id} value={f._id}>{f.facultyName}</option>
+            ))}
+          </select>
+        </div>
+
+        {(batchId || facultyId) && (
+          <button
+            onClick={clearFilters}
+            className="flex items-center gap-1 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
+          >
+            <Filter size={14} /> Clear Filters
+          </button>
+        )}
       </div>
 
       {loading && (
@@ -103,48 +177,56 @@ const BatchTopicBoard = () => {
               </tr>
             </thead>
             <tbody>
-              {grouped.map((group, gi) => {
-                const color = BATCH_COLORS[gi % BATCH_COLORS.length];
-                const totalRow = {
-                  total: group.rows.reduce((s, r) => s + r.total, 0),
-                  bs: group.rows.reduce((s, r) => s + r.bsCount, 0),
-                  doubleExtra: group.rows.reduce((s, r) => s + r.doubleExtra, 0),
-                };
-                return (
-                  <React.Fragment key={group.batchId}>
-                    {group.rows.map((r, idx) => (
-                      <tr key={`${group.batchId}_${idx}`}>
-                        <td className="px-3 py-1.5 border font-semibold" style={{ background: color }}>
-                          {idx === 0 ? group.batchTime : ""}
-                        </td>
-                        <td className="px-3 py-1.5 border">{r.facultyName}</td>
-                        <td className="px-3 py-1.5 border text-center font-bold text-red-600">{r.total || ""}</td>
-                        <td className="px-3 py-1.5 border text-center">{r.bsCount || ""}</td>
-                        <td className="px-3 py-1.5 border text-center text-red-600 font-medium">{formatDate(r.courseStartDate)}</td>
-                        <td className="px-3 py-1.5 border">{r.runningCourse || ""}</td>
-                        <td className="px-3 py-1.5 border text-gray-600">{r.runningSubtopic || ""}</td>
-                        <td className="px-3 py-1.5 border text-center bg-gray-50">{r.doubleExtra || ""}</td>
-                        <td className="px-3 py-1.5 border text-center text-red-600 font-medium bg-gray-50">{formatDate(r.bridgeStartDate)}</td>
-                        <td className="px-3 py-1.5 border bg-gray-50">{r.bridgeRunningCourse || ""}</td>
-                        <td className="px-3 py-1.5 border text-gray-600 bg-gray-50">{r.bridgeRunningSubtopic || ""}</td>
+              {grouped.length === 0 ? (
+                <tr>
+                  <td colSpan={11} className="px-4 py-12 text-center text-gray-400">
+                    No batches match the selected filters.
+                  </td>
+                </tr>
+              ) : (
+                grouped.map((group, gi) => {
+                  const color = BATCH_COLORS[gi % BATCH_COLORS.length];
+                  const totalRow = {
+                    total: group.rows.reduce((s, r) => s + r.total, 0),
+                    bs: group.rows.reduce((s, r) => s + r.bsCount, 0),
+                    doubleExtra: group.rows.reduce((s, r) => s + r.doubleExtra, 0),
+                  };
+                  return (
+                    <React.Fragment key={group.batchId}>
+                      {group.rows.map((r, idx) => (
+                        <tr key={`${group.batchId}_${idx}`}>
+                          <td className="px-3 py-1.5 border font-semibold" style={{ background: color }}>
+                            {idx === 0 ? group.batchTime : ""}
+                          </td>
+                          <td className="px-3 py-1.5 border">{r.facultyName}</td>
+                          <td className="px-3 py-1.5 border text-center font-bold text-red-600">{r.total || ""}</td>
+                          <td className="px-3 py-1.5 border text-center">{r.bsCount || ""}</td>
+                          <td className="px-3 py-1.5 border text-center text-red-600 font-medium">{formatDate(r.courseStartDate)}</td>
+                          <td className="px-3 py-1.5 border">{r.runningCourse || ""}</td>
+                          <td className="px-3 py-1.5 border text-gray-600">{r.runningSubtopic || ""}</td>
+                          <td className="px-3 py-1.5 border text-center bg-gray-50">{r.doubleExtra || ""}</td>
+                          <td className="px-3 py-1.5 border text-center text-red-600 font-medium bg-gray-50">{formatDate(r.bridgeStartDate)}</td>
+                          <td className="px-3 py-1.5 border bg-gray-50">{r.bridgeRunningCourse || ""}</td>
+                          <td className="px-3 py-1.5 border text-gray-600 bg-gray-50">{r.bridgeRunningSubtopic || ""}</td>
+                        </tr>
+                      ))}
+                      <tr className="font-bold" style={{ background: color }}>
+                        <td className="px-3 py-1.5 border">{group.batchTime}</td>
+                        <td className="px-3 py-1.5 border">Total</td>
+                        <td className="px-3 py-1.5 border text-center text-red-600">{totalRow.total}</td>
+                        <td className="px-3 py-1.5 border text-center">{totalRow.bs}</td>
+                        <td className="px-3 py-1.5 border"></td>
+                        <td className="px-3 py-1.5 border"></td>
+                        <td className="px-3 py-1.5 border"></td>
+                        <td className="px-3 py-1.5 border text-center">{totalRow.doubleExtra}</td>
+                        <td className="px-3 py-1.5 border"></td>
+                        <td className="px-3 py-1.5 border"></td>
+                        <td className="px-3 py-1.5 border"></td>
                       </tr>
-                    ))}
-                    <tr className="font-bold" style={{ background: color }}>
-                      <td className="px-3 py-1.5 border">{group.batchTime}</td>
-                      <td className="px-3 py-1.5 border">Total</td>
-                      <td className="px-3 py-1.5 border text-center text-red-600">{totalRow.total}</td>
-                      <td className="px-3 py-1.5 border text-center">{totalRow.bs}</td>
-                      <td className="px-3 py-1.5 border"></td>
-                      <td className="px-3 py-1.5 border"></td>
-                      <td className="px-3 py-1.5 border"></td>
-                      <td className="px-3 py-1.5 border text-center">{totalRow.doubleExtra}</td>
-                      <td className="px-3 py-1.5 border"></td>
-                      <td className="px-3 py-1.5 border"></td>
-                      <td className="px-3 py-1.5 border"></td>
-                    </tr>
-                  </React.Fragment>
-                );
-              })}
+                    </React.Fragment>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

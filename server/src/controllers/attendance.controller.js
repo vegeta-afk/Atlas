@@ -1846,7 +1846,19 @@ const getCurrentTopicForCourse = async (batchId, courseId, studentIds, course) =
 
 exports.getBatchTopicBoard = async (req, res) => {
   try {
-    const teacherBatches = await TeacherBatch.find({ isActive: true })
+    const { batchId, facultyId } = req.query;
+
+    const tbQuery = { isActive: true };
+    if (batchId) tbQuery.batch = batchId;
+    if (facultyId) {
+      const userDoc = await User.findOne({ facultyId }).select('_id').lean();
+      if (!userDoc) {
+        return res.json({ success: true, data: [] });
+      }
+      tbQuery.teacher = userDoc._id;
+    }
+
+    const teacherBatches = await TeacherBatch.find(tbQuery)
       .populate('batch', 'batchName displayName startTime endTime')
       .populate('teacher', 'name')
       .populate('assignedStudents.student', 'studentId fullName courseCode additionalCourses')
