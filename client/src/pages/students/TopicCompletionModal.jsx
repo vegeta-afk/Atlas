@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, X, CheckSquare, CheckCircle2 } from "lucide-react";
+import { ChevronDown, ChevronUp, X, CheckSquare } from "lucide-react";
 
 const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved }) => {
   const [topicsByCourse, setTopicsByCourse] = useState({});
@@ -8,7 +8,8 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
   const [completingKey, setCompletingKey] = useState(null);
   const [expandedTopics, setExpandedTopics] = useState({});
   const [checkedTopics, setCheckedTopics] = useState({});
-  const [checkedSubtopics, setCheckedSubtopics] = useState({});
+  // subStatus[id] = "not_started" | "in_progress" | "completed" — what the DROPDOWN currently shows
+  const [subStatus, setSubStatus] = useState({});
 
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -29,8 +30,19 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
       const result = await response.json();
       if (result.success) {
         const map = {};
-        result.data.forEach(c => { map[c.courseId] = c.topics; });
+        const initialStatus = {};
+        result.data.forEach(c => {
+          map[c.courseId] = c.topics;
+          c.topics.forEach(topic => {
+            topic.subtopics.forEach(sub => {
+              const id = `${c.courseId}_${sub.key}`;
+              // Default the dropdown to whatever the DB actually says today — fixes the "resets to blank" bug
+              initialStatus[id] = sub.completed ? "completed" : (sub.inProgress ? "in_progress" : "not_started");
+            });
+          });
+        });
         setTopicsByCourse(map);
+        setSubStatus(initialStatus);
       }
     } catch (error) {
       console.error("Error fetching topics:", error);
@@ -48,44 +60,46 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
     setCheckedTopics(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const toggleSubtopic = (courseId, subKey) => {
-    const id = `${courseId}_${subKey}`;
-    setCheckedSubtopics(prev => ({ ...prev, [id]: !prev[id] }));
+  const handleStatusChange = async (group, subKey, newStatus) => {
+    const id = `${group.courseId}_${subKey}`;
+
+    if (newStatus === "completed") {
+      setCompletingKey(subKey);
+      try {
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+        const response = await fetch(`${BASE_URL}/api/attendance/topics/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            batchId,
+            courseId: group.courseId,
+            studentIds: group.studentIds,
+            subtopicKey: subKey,
+          })
+        });
+        const result = await response.json();
+        if (result.success) {
+          setSubStatus(prev => ({ ...prev, [id]: "completed" }));
+        } else {
+          alert('Error marking complete: ' + result.message);
+        }
+      } catch (error) {
+        alert('Error marking complete: ' + error.message);
+        console.error(error);
+      } finally {
+        setCompletingKey(null);
+      }
+      return;
+    }
+
+    // "in_progress" or "not_started" — just update local dropdown state,
+    // actual "taught today" log happens on Save (same as before)
+    setSubStatus(prev => ({ ...prev, [id]: newStatus }));
   };
 
   const hasAnySelection = () => {
-    return Object.values(checkedTopics).some(Boolean) || Object.values(checkedSubtopics).some(Boolean);
-  };
-
-  const handleMarkComplete = async (group, subKey) => {
-    setCompletingKey(subKey);
-    try {
-      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-      const response = await fetch(`${BASE_URL}/api/attendance/topics/complete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          batchId,
-          courseId: group.courseId,
-          studentIds: group.studentIds,
-          subtopicKey: subKey,
-        })
-      });
-      const result = await response.json();
-      if (result.success) {
-        await fetchTopics();
-      } else {
-        alert('Error marking complete: ' + result.message);
-      }
-    } catch (error) {
-      alert('Error marking complete: ' + error.message);
-      console.error(error);
-    } finally {
-      setCompletingKey(null);
-    }
+    const anySubInProgress = Object.values(subStatus).some(s => s === "in_progress");
+    return Object.values(checkedTopics).some(Boolean) || anySubInProgress;
   };
 
   const handleSave = async () => {
@@ -101,7 +115,8 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
             completedTopicKeys.push(topic.key);
           }
           topic.subtopics.forEach(sub => {
-            if (checkedSubtopics[`${group.courseId}_${sub.key}`]) {
+            const id = `${group.courseId}_${sub.key}`;
+            if (subStatus[id] === "in_progress") {
               completedSubtopicKeys.push(sub.key);
             }
           });
@@ -117,10 +132,7 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
       const token = sessionStorage.getItem('token') || localStorage.getItem('token');
       const response = await fetch(`${BASE_URL}/api/attendance/topics/save`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ batchId, date, courseGroups: payloadGroups })
       });
       const result = await response.json();
@@ -203,47 +215,54 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
                             </div>
 
                             {isExpanded && topic.subtopics.length > 0 && (
-                              <div className="mt-2 pl-7 space-y-1">
+                              <div className="mt-2 pl-7 space-y-2">
                                 {topic.subtopics.map((sub) => {
-                                  const subChecked = !!checkedSubtopics[`${group.courseId}_${sub.key}`];
+                                  const id = `${group.courseId}_${sub.key}`;
+                                  const status = subStatus[id] || "not_started";
                                   return (
-                                    <div key={sub.key} className="flex items-center gap-2">
-                                      <label className="flex items-center gap-2 cursor-pointer flex-1">
-                                        <input
-                                          type="checkbox"
-                                          checked={subChecked}
-                                          onChange={() => toggleSubtopic(group.courseId, sub.key)}
-                                          disabled={sub.completed}
-                                          className="w-4 h-4 rounded-full accent-blue-500 disabled:opacity-40"
-                                        />
-                                        <span className={`text-sm ${sub.completed ? "text-gray-400" : "text-gray-600"}`}>
-                                          {sub.name}
-                                        </span>
-                                        {sub.completed && (
-                                          <span className="text-[9px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded-full">
-                                            ✓ Completed
+                                    <div key={sub.key} className="flex items-center justify-between gap-2">
+                                      <span className={`text-sm ${status === "completed" ? "text-gray-400" : "text-gray-700"}`}>
+                                        {sub.name}
+                                        {status === "in_progress" && sub.taughtDaysCount > 0 && (
+                                          <span className="ml-2 text-[10px] text-amber-600">
+                                            ({sub.taughtDaysCount} day{sub.taughtDaysCount !== 1 ? "s" : ""} so far)
                                           </span>
                                         )}
-                                        {sub.inProgress && (
-                                          <span className="text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded-full">
-                                            In Progress · {sub.taughtDaysCount} day{sub.taughtDaysCount !== 1 ? "s" : ""}
-                                          </span>
-                                        )}
-                                      </label>
-                                      {!sub.completed && sub.inProgress && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleMarkComplete(group, sub.key)}
-                                          disabled={completingKey === sub.key}
-                                          className="flex items-center gap-1 text-[10px] px-2 py-1 bg-green-600 text-white rounded-full hover:bg-green-700 disabled:opacity-50"
-                                        >
-                                          <CheckCircle2 size={10} />
-                                          {completingKey === sub.key ? "..." : "Mark Done"}
-                                        </button>
-                                      )}
+                                      </span>
+                                      <select
+                                        value={status}
+                                        disabled={status === "completed" || completingKey === sub.key}
+                                        onChange={(e) => handleStatusChange(group, sub.key, e.target.value)}
+                                        className={`text-xs border rounded-md px-2 py-1 font-medium cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 ${
+                                          status === "completed"
+                                            ? "bg-green-50 text-green-700 border-green-200"
+                                            : status === "in_progress"
+                                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                                            : "bg-gray-50 text-gray-500 border-gray-200"
+                                        }`}
+                                      >
+                                        <option value="not_started">Not Started</option>
+                                        <option value="in_progress">In Progress</option>
+                                        <option value="completed">Completed</option>
+                                      </select>
                                     </div>
                                   );
-                                })}
+                                })}<select
+                                        value={status === "not_started" ? "" : status}
+                                        disabled={status === "completed" || completingKey === sub.key}
+                                        onChange={(e) => handleStatusChange(group, sub.key, e.target.value)}
+                                        className={`text-xs border rounded-md px-2 py-1 font-medium cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 ${
+                                          status === "completed"
+                                            ? "bg-green-50 text-green-700 border-green-200"
+                                            : status === "in_progress"
+                                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                                            : "bg-gray-50 text-gray-500 border-gray-200"
+                                        }`}
+                                      >
+                                        <option value="" disabled>Select status</option>
+                                        <option value="in_progress">In Progress</option>
+                                        <option value="completed">Completed</option>
+                                      </select>
                               </div>
                             )}
                           </div>
