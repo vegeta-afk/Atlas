@@ -1796,7 +1796,7 @@ const getCurrentTopicForCourse = async (batchId, courseId, studentIds, course) =
     });
   });
 
-  let currentTopic = null;
+  let currentTopic = null; // { topicName, startDate, lastActivity }
   let currentSubtopic = null;
 
   (course.syllabus || []).forEach((sem, sIdx) => {
@@ -1812,13 +1812,15 @@ const getCurrentTopicForCourse = async (batchId, courseId, studentIds, course) =
       );
 
       if (anyTaught && !allCompleted) {
-        const dates = subKeys.map((k) => subtopicFirstDate[k]).filter(Boolean);
-        const earliest = dates.length > 0 ? new Date(Math.min(...dates.map((d) => d.getTime()))) : null;
-        if (!currentTopic || (earliest && (!currentTopic.startDate || earliest > currentTopic.startDate))) {
-          currentTopic = { topicName: topic.name, startDate: earliest };
+        const firstDates = subKeys.map((k) => subtopicFirstDate[k]).filter(Boolean);
+        const lastDates = subKeys.map((k) => subtopicLastDate[k]).filter(Boolean);
+        const earliest = firstDates.length > 0 ? new Date(Math.min(...firstDates.map((d) => d.getTime()))) : null;
+        const mostRecentActivity = lastDates.length > 0 ? new Date(Math.max(...lastDates.map((d) => d.getTime()))) : null;
 
-          // Within this topic, find the specific subtopic currently in progress (not yet completed by everyone),
-          // preferring the most recently touched one
+        // Pick whichever topic was touched MOST RECENTLY — not whichever started most recently
+        if (!currentTopic || (mostRecentActivity && (!currentTopic.lastActivity || mostRecentActivity > currentTopic.lastActivity))) {
+          currentTopic = { topicName: topic.name, startDate: earliest, lastActivity: mostRecentActivity };
+
           let bestSub = null;
           (topic.subtopics || []).forEach((sub, subIdx) => {
             const subKey = `${sIdx}_${tIdx}_${subIdx}`;
