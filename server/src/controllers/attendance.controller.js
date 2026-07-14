@@ -1868,8 +1868,16 @@ exports.getBatchTopicBoard = async (req, res) => {
 
     const allCourseIds = new Set();
     teacherBatches.forEach((tb) => {
+      if (!tb.batch) return;
+      const bIdStr = tb.batch._id.toString();
       (tb.assignedStudents || []).filter((s) => s.isActive && s.student).forEach((as) => {
-        if (as.student.courseCode) allCourseIds.add(as.student.courseCode.toString());
+        const student = as.student;
+        if (student.courseCode) allCourseIds.add(student.courseCode.toString());
+        (student.additionalCourses || []).forEach((ac) => {
+          if (ac.isActive && ac.courseId && ac.batchId && ac.batchId.toString() === bIdStr) {
+            allCourseIds.add(ac.courseId.toString());
+          }
+        });
       });
     });
 
@@ -1887,14 +1895,32 @@ exports.getBatchTopicBoard = async (req, res) => {
       const activeStudents = (tb.assignedStudents || []).filter((s) => s.isActive && s.student);
 
       // Count students per course to find the dominant one for this row
+      // Resolve each student's ACTUAL applicable course for THIS batch —
+      // mirrors getTeacherBatchStudents: prefer an additionalCourses entry whose
+      // batchId matches this batch, otherwise fall back to their primary courseCode.
+      const bIdStr = tb.batch._id.toString();
+      const studentApplicableCourse = {};
+      activeStudents.forEach((as) => {
+        const student = as.student;
+        let applicableCourseId = student.courseCode ? student.courseCode.toString() : null;
+        if (student.additionalCourses?.length > 0) {
+          const ac = student.additionalCourses.find(
+            (a) => a.isActive && a.courseId && a.batchId && a.batchId.toString() === bIdStr
+          );
+          if (ac) applicableCourseId = ac.courseId.toString();
+        }
+        studentApplicableCourse[student._id.toString()] = applicableCourseId;
+      });
+
+      // Count students per (correctly resolved) course to find the dominant one for this row
       const courseCounts = {};
       activeStudents.forEach((as) => {
-        const cid = as.student.courseCode?.toString();
+        const cid = studentApplicableCourse[as.student._id.toString()];
         if (cid) courseCounts[cid] = (courseCounts[cid] || 0) + 1;
       });
       const dominantCourseId = Object.entries(courseCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
       const dominantStudentIds = activeStudents
-        .filter((as) => as.student.courseCode?.toString() === dominantCourseId)
+        .filter((as) => studentApplicableCourse[as.student._id.toString()] === dominantCourseId)
         .map((as) => as.student._id.toString());
 
       let regularTopic = { topicName: null, startDate: null, subtopicName: null };
