@@ -230,24 +230,6 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
                                         )}
                                       </span>
                                       <select
-                                        value={status}
-                                        disabled={status === "completed" || completingKey === sub.key}
-                                        onChange={(e) => handleStatusChange(group, sub.key, e.target.value)}
-                                        className={`text-xs border rounded-md px-2 py-1 font-medium cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 ${
-                                          status === "completed"
-                                            ? "bg-green-50 text-green-700 border-green-200"
-                                            : status === "in_progress"
-                                            ? "bg-amber-50 text-amber-700 border-amber-200"
-                                            : "bg-gray-50 text-gray-500 border-gray-200"
-                                        }`}
-                                      >
-                                        <option value="not_started">Not Started</option>
-                                        <option value="in_progress">In Progress</option>
-                                        <option value="completed">Completed</option>
-                                      </select>
-                                    </div>
-                                  );
-                                })}<select
                                         value={status === "not_started" ? "" : status}
                                         disabled={status === "completed" || completingKey === sub.key}
                                         onChange={(e) => handleStatusChange(group, sub.key, e.target.value)}
@@ -263,6 +245,9 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
                                         <option value="in_progress">In Progress</option>
                                         <option value="completed">Completed</option>
                                       </select>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
