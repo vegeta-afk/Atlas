@@ -63,7 +63,7 @@ const StudentListTooltip = ({ students, count }) => {
         type="button"
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
-        className="font-bold text-red-600 hover:underline cursor-pointer"
+        className="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-bold text-sm hover:bg-red-200 transition cursor-pointer"
       >
         {count}
       </button>
