@@ -1889,6 +1889,15 @@ exports.getBatchTopicBoard = async (req, res) => {
     const bridgeBatches = await BridgeBatch.find({ status: { $in: ['active', 'ready_to_merge'] } }).lean();
     bridgeBatches.forEach((b) => allCourseIds.add(b.courseId.toString()));
 
+    // Fetch names for every bridge student across all batches, once, up front
+    const allBridgeStudentIds = new Set();
+    bridgeBatches.forEach((b) => (b.studentIds || []).forEach((sid) => allBridgeStudentIds.add(sid.toString())));
+    const bridgeStudentDocs = allBridgeStudentIds.size > 0
+      ? await Student.find({ _id: { $in: [...allBridgeStudentIds] } }).select('fullName').lean()
+      : [];
+    const bridgeStudentNameMap = {};
+    bridgeStudentDocs.forEach((s) => { bridgeStudentNameMap[s._id.toString()] = s.fullName; });
+
     const courses = await Course.find({ _id: { $in: [...allCourseIds] } }).select('courseFullName courseShortName syllabus').lean();
     const courseMap = {};
     courses.forEach((c) => { courseMap[c._id.toString()] = c; });
@@ -1954,12 +1963,24 @@ exports.getBatchTopicBoard = async (req, res) => {
 
       const primary = regularTopics[0] || { topicName: null, startDate: null, subtopicName: null };
 
+      // Build the name+tag list for the Total column tooltip: regular students first, then bridge students
+      const studentList = [
+        ...activeStudents.map((as) => ({ name: as.student.fullName, tag: 'Reg' })),
+        ...relevantBridges.flatMap((b) =>
+          (b.studentIds || []).map((sid) => ({
+            name: bridgeStudentNameMap[sid.toString()] || 'Unknown',
+            tag: 'Bridge',
+          }))
+        ),
+      ];
+
       rows.push({
         batchId: tb.batch._id.toString(),
         batchTime: tb.batch.displayName || `${tb.batch.startTime} to ${tb.batch.endTime}`,
         batchStartTime: tb.batch.startTime,
         facultyName: tb.teacher.name,
         bsCount: activeStudents.length,
+        studentList,
         courseStartDate: primary.startDate,
         runningCourse: primary.topicName,
         runningSubtopic: primary.subtopicName,

@@ -51,6 +51,38 @@ const CourseBreakdownTooltip = ({ topics }) => {
     </span>
   );
 };
+
+
+const StudentListTooltip = ({ students, count }) => {
+  const [show, setShow] = useState(false);
+  if (!students || students.length === 0) return count || "";
+
+  return (
+    <span className="relative inline-block">
+      <button
+        type="button"
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        className="font-bold text-red-600 hover:underline cursor-pointer"
+      >
+        {count}
+      </button>
+      {show && (
+        <div className="absolute z-20 left-1/2 -translate-x-1/2 top-6 w-56 max-h-64 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs text-left">
+          {students.map((s, i) => (
+            <div key={i} className="flex items-center justify-between gap-2 py-1 border-b border-gray-50 last:border-0">
+              <span className="text-gray-700">{s.name}</span>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${s.tag === 'Reg' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                {s.tag}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+};
+
 const BatchTopicBoard = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -232,7 +264,9 @@ const BatchTopicBoard = () => {
                             {idx === 0 ? group.batchTime : ""}
                           </td>
                           <td className="px-3 py-1.5 border">{r.facultyName}</td>
-                          <td className="px-3 py-1.5 border text-center font-bold text-red-600">{r.total || ""}</td>
+                          <td className="px-3 py-1.5 border text-center">
+                            <StudentListTooltip students={r.studentList} count={r.total} />
+                          </td>
                           <td className="px-3 py-1.5 border text-center">{r.bsCount || ""}</td>
                           <td className="px-3 py-1.5 border text-center text-red-600 font-medium">{formatDate(r.courseStartDate)}</td>
                           <td className="px-3 py-1.5 border">
