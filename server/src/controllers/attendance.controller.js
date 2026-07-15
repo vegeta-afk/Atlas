@@ -1899,12 +1899,11 @@ exports.getBatchTopicBoard = async (req, res) => {
       if (!tb.batch || !tb.teacher) continue;
       const activeStudents = (tb.assignedStudents || []).filter((s) => s.isActive && s.student);
 
-      // Count students per course to find the dominant one for this row
       // Resolve each student's ACTUAL applicable course for THIS batch —
-      // mirrors getTeacherBatchStudents: prefer an additionalCourses entry whose
-      // batchId matches this batch, otherwise fall back to their primary courseCode.
+      // prefer an additionalCourses entry scoped to this batch, else fall back to primary courseCode.
       const bIdStr = tb.batch._id.toString();
-      const studentApplicableCourse = {};
+      const courseGroupMap = {}; // courseId -> Set of studentIds
+
       activeStudents.forEach((as) => {
         const student = as.student;
         let applicableCourseId = student.courseCode ? student.courseCode.toString() : null;
@@ -1914,26 +1913,30 @@ exports.getBatchTopicBoard = async (req, res) => {
           );
           if (ac) applicableCourseId = ac.courseId.toString();
         }
-        studentApplicableCourse[student._id.toString()] = applicableCourseId;
+        if (!applicableCourseId) return;
+        if (!courseGroupMap[applicableCourseId]) courseGroupMap[applicableCourseId] = new Set();
+        courseGroupMap[applicableCourseId].add(student._id.toString());
       });
 
-      // Count students per (correctly resolved) course to find the dominant one for this row
-      const courseCounts = {};
-      activeStudents.forEach((as) => {
-        const cid = studentApplicableCourse[as.student._id.toString()];
-        if (cid) courseCounts[cid] = (courseCounts[cid] || 0) + 1;
-      });
-      const dominantCourseId = Object.entries(courseCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
-      const dominantStudentIds = activeStudents
-        .filter((as) => studentApplicableCourse[as.student._id.toString()] === dominantCourseId)
-        .map((as) => as.student._id.toString());
-
-      let regularTopic = { topicName: null, startDate: null, subtopicName: null };
-      if (dominantCourseId && dominantStudentIds.length > 0) {
-        regularTopic = await getCurrentTopicForCourse(
-          tb.batch._id, dominantCourseId, dominantStudentIds, courseMap[dominantCourseId]
-        );
+      // Compute current topic for EVERY course present in this batch — not just the dominant one
+      const regularTopics = [];
+      for (const [cid, sidSet] of Object.entries(courseGroupMap)) {
+        const sids = [...sidSet];
+        const topicInfo = await getCurrentTopicForCourse(tb.batch._id, cid, sids, courseMap[cid]);
+        regularTopics.push({
+          courseName: courseMap[cid]?.courseFullName || 'Course',
+          studentCount: sids.length,
+          startDate: topicInfo.startDate,
+          topicName: topicInfo.topicName,
+          subtopicName: topicInfo.subtopicName,
+        });
       }
+      regularTopics.sort((a, b) => new Date(b.startDate || 0) - new Date(a.startDate || 0));
+
+      // Detect whether every course group has actually converged on the same topic —
+      // if so, no need for a breakdown tooltip, just show the shared value cleanly
+      const distinctTopicNames = new Set(regularTopics.map((t) => t.topicName).filter(Boolean));
+      const hasConverged = distinctTopicNames.size <= 1;
 
       // Bridge students where this same person is the temp faculty, tied to this batch
       const relevantBridges = bridgeBatches.filter(
@@ -1949,15 +1952,19 @@ exports.getBatchTopicBoard = async (req, res) => {
         );
       }
 
+      const primary = regularTopics[0] || { topicName: null, startDate: null, subtopicName: null };
+
       rows.push({
         batchId: tb.batch._id.toString(),
         batchTime: tb.batch.displayName || `${tb.batch.startTime} to ${tb.batch.endTime}`,
         batchStartTime: tb.batch.startTime,
         facultyName: tb.teacher.name,
         bsCount: activeStudents.length,
-        courseStartDate: regularTopic.startDate,
-        runningCourse: regularTopic.topicName,
-        runningSubtopic: regularTopic.subtopicName,
+        courseStartDate: primary.startDate,
+        runningCourse: primary.topicName,
+        runningSubtopic: primary.subtopicName,
+        hasConverged,
+        regularTopics,
         doubleExtra,
         bridgeStartDate: bridgeTopic.startDate,
         bridgeRunningCourse: bridgeTopic.topicName,

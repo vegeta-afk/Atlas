@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { attendanceReportAPI, setupAPI, facultyAPI } from "../services/api";
-import { RefreshCw, AlertCircle, Filter } from "lucide-react";
+import { RefreshCw, AlertCircle, Filter, Users } from "lucide-react";
 
 const formatDate = (d) => {
   if (!d) return "";
@@ -18,6 +18,39 @@ const formatTime = (time) => {
 
 const BATCH_COLORS = ["#fff9c4", "#bbdefb", "#ffcdd2", "#c8e6c9", "#e1bee7", "#ffe0b2"];
 
+const CourseBreakdownTooltip = ({ topics }) => {
+  const [show, setShow] = useState(false);
+  if (!topics || topics.length <= 1) return null;
+
+  return (
+    <span className="relative inline-block ml-1">
+      <button
+        type="button"
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 text-[10px] font-bold hover:bg-indigo-200"
+      >
+        {topics.length}
+      </button>
+      {show && (
+        <div className="absolute z-20 left-0 top-5 w-64 bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs">
+          {topics.map((t, i) => (
+            <div key={i} className={`flex items-start justify-between gap-2 py-1 ${i !== 0 ? "border-t border-gray-100" : ""}`}>
+              <div>
+                <div className="font-medium text-gray-700 flex items-center gap-1">
+                  <Users size={10} /> {t.studentCount} on {t.courseName}
+                </div>
+                <div className="text-gray-500">
+                  {t.topicName || "No topic yet"}{t.subtopicName ? ` → ${t.subtopicName}` : ""}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+};
 const BatchTopicBoard = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -202,8 +235,15 @@ const BatchTopicBoard = () => {
                           <td className="px-3 py-1.5 border text-center font-bold text-red-600">{r.total || ""}</td>
                           <td className="px-3 py-1.5 border text-center">{r.bsCount || ""}</td>
                           <td className="px-3 py-1.5 border text-center text-red-600 font-medium">{formatDate(r.courseStartDate)}</td>
-                          <td className="px-3 py-1.5 border">{r.runningCourse || ""}</td>
-                          <td className="px-3 py-1.5 border text-gray-600">{r.runningSubtopic || ""}</td>
+                          <td className="px-3 py-1.5 border">
+                            {r.runningCourse || ""}
+                            {!r.hasConverged && <CourseBreakdownTooltip topics={r.regularTopics} />}
+                          </td>
+                          <td className="px-3 py-1.5 border text-gray-600">
+                            {r.hasConverged ? (r.runningSubtopic || "") : (
+                              <span className="text-gray-400 italic text-xs">mixed — hover count above</span>
+                            )}
+                          </td>
                           <td className="px-3 py-1.5 border text-center bg-gray-50">{r.doubleExtra || ""}</td>
                           <td className="px-3 py-1.5 border text-center text-red-600 font-medium bg-gray-50">{formatDate(r.bridgeStartDate)}</td>
                           <td className="px-3 py-1.5 border bg-gray-50">{r.bridgeRunningCourse || ""}</td>
