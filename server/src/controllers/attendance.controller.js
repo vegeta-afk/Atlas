@@ -1618,22 +1618,27 @@ exports.getBatchCourseProgress = async (req, res) => {
       }
       if (tb.teacher?.name) batchCourseMap[bId].teachers.add(tb.teacher.name);
 
+      const bIdStr = bId;
       const activeStudents = (tb.assignedStudents || []).filter((s) => s.isActive && s.student);
       activeStudents.forEach((as) => {
         const student = as.student;
-        if (student.courseCode) {
-          const cid = student.courseCode.toString();
-          if (!batchCourseMap[bId].courses[cid]) batchCourseMap[bId].courses[cid] = { studentIds: new Set() };
-          batchCourseMap[bId].courses[cid].studentIds.add(student._id.toString());
+
+        // Resolve the ONE course this student is actually attending in THIS batch —
+        // prefer an additionalCourses entry scoped to this batch, else fall back to primary courseCode.
+        let applicableCourseId = student.courseCode ? student.courseCode.toString() : null;
+        if (student.additionalCourses?.length > 0) {
+          const ac = student.additionalCourses.find(
+            (a) => a.isActive && a.courseId && a.batchId && a.batchId.toString() === bIdStr
+          );
+          if (ac) applicableCourseId = ac.courseId.toString();
         }
-        (student.additionalCourses || []).forEach((ac) => {
-          if (!ac.isActive || !ac.courseId) return;
-          if (ac.batchId && ac.batchId.toString() === bId) {
-            const cid = ac.courseId.toString();
-            if (!batchCourseMap[bId].courses[cid]) batchCourseMap[bId].courses[cid] = { studentIds: new Set() };
-            batchCourseMap[bId].courses[cid].studentIds.add(student._id.toString());
+
+        if (applicableCourseId) {
+          if (!batchCourseMap[bId].courses[applicableCourseId]) {
+            batchCourseMap[bId].courses[applicableCourseId] = { studentIds: new Set() };
           }
-        });
+          batchCourseMap[bId].courses[applicableCourseId].studentIds.add(student._id.toString());
+        }
       });
     });
 
