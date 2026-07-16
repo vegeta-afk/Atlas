@@ -1908,10 +1908,14 @@ exports.getBatchTopicBoard = async (req, res) => {
       if (!tb.batch || !tb.teacher) continue;
       const activeStudents = (tb.assignedStudents || []).filter((s) => s.isActive && s.student);
 
-      // Resolve each student's ACTUAL applicable course for THIS batch —
+       // Resolve each student's ACTUAL applicable course for THIS batch —
       // prefer an additionalCourses entry scoped to this batch, else fall back to primary courseCode.
       const bIdStr = tb.batch._id.toString();
       const courseGroupMap = {}; // courseId -> Set of studentIds
+      const studentNameMap = {}; // studentId -> fullName, for course breakdown tooltip
+      activeStudents.forEach((as) => {
+        studentNameMap[as.student._id.toString()] = as.student.fullName;
+      });
 
       activeStudents.forEach((as) => {
         const student = as.student;
@@ -1938,6 +1942,7 @@ exports.getBatchTopicBoard = async (req, res) => {
           startDate: topicInfo.startDate,
           topicName: topicInfo.topicName,
           subtopicName: topicInfo.subtopicName,
+          studentNames: sids.map((sid) => studentNameMap[sid] || 'Unknown'),
         });
       }
       regularTopics.sort((a, b) => new Date(b.startDate || 0) - new Date(a.startDate || 0));

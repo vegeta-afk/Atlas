@@ -18,6 +18,33 @@ const formatTime = (time) => {
 
 const BATCH_COLORS = ["#fff9c4", "#bbdefb", "#ffcdd2", "#c8e6c9", "#e1bee7", "#ffe0b2"];
 
+const CourseGroupNamesTooltip = ({ names }) => {
+  const [show, setShow] = useState(false);
+  if (!names || names.length === 0) return null;
+
+  return (
+    <span className="relative inline-block ml-1">
+      <button
+        type="button"
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        className="inline-flex items-center justify-center min-w-[18px] px-1 rounded-full bg-indigo-200 text-indigo-800 text-[10px] font-bold hover:bg-indigo-300 cursor-pointer"
+      >
+        {names.length}
+      </button>
+      {show && (
+        <div className="absolute z-30 left-full top-0 ml-1 w-48 max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs text-left">
+          {names.map((n, i) => (
+            <div key={i} className="py-1 border-b border-gray-50 last:border-0 text-gray-700">
+              {n}
+            </div>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+};
+
 const CourseBreakdownTooltip = ({ topics }) => {
   const [show, setShow] = useState(false);
   if (!topics || topics.length <= 1) return null;
@@ -38,7 +65,9 @@ const CourseBreakdownTooltip = ({ topics }) => {
             <div key={i} className={`flex items-start justify-between gap-2 py-1 ${i !== 0 ? "border-t border-gray-100" : ""}`}>
               <div>
                 <div className="font-medium text-gray-700 flex items-center gap-1">
-                  <Users size={10} /> {t.studentCount} on {t.courseName}
+                  <Users size={10} />
+                  <CourseGroupNamesTooltip names={t.studentNames} />
+                  {" "}on {t.courseName}
                 </div>
                 <div className="text-gray-500">
                   {t.topicName || "No topic yet"}{t.subtopicName ? ` → ${t.subtopicName}` : ""}
