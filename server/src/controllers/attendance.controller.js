@@ -1893,10 +1893,14 @@ exports.getBatchTopicBoard = async (req, res) => {
     const allBridgeStudentIds = new Set();
     bridgeBatches.forEach((b) => (b.studentIds || []).forEach((sid) => allBridgeStudentIds.add(sid.toString())));
     const bridgeStudentDocs = allBridgeStudentIds.size > 0
-      ? await Student.find({ _id: { $in: [...allBridgeStudentIds] } }).select('fullName').lean()
+      ? await Student.find({ _id: { $in: [...allBridgeStudentIds] } }).select('fullName studentId').lean()
       : [];
     const bridgeStudentNameMap = {};
-    bridgeStudentDocs.forEach((s) => { bridgeStudentNameMap[s._id.toString()] = s.fullName; });
+    const bridgeStudentAdmissionMap = {};
+    bridgeStudentDocs.forEach((s) => {
+      bridgeStudentNameMap[s._id.toString()] = s.fullName;
+      bridgeStudentAdmissionMap[s._id.toString()] = s.studentId;
+    });
 
     const courses = await Course.find({ _id: { $in: [...allCourseIds] } }).select('courseFullName courseShortName syllabus').lean();
     const courseMap = {};
@@ -1912,11 +1916,8 @@ exports.getBatchTopicBoard = async (req, res) => {
       // prefer an additionalCourses entry scoped to this batch, else fall back to primary courseCode.
       const bIdStr = tb.batch._id.toString();
       const courseGroupMap = {}; // courseId -> Set of studentIds
-      const studentNameMap = {}; // studentId -> fullName, for course breakdown tooltip
-      activeStudents.forEach((as) => {
-        studentNameMap[as.student._id.toString()] = as.student.fullName;
-      });
 
+      const studentCourseIdMap = {}; // studentId -> resolved courseId, for Total tooltip tags
       activeStudents.forEach((as) => {
         const student = as.student;
         let applicableCourseId = student.courseCode ? student.courseCode.toString() : null;
@@ -1929,6 +1930,7 @@ exports.getBatchTopicBoard = async (req, res) => {
         if (!applicableCourseId) return;
         if (!courseGroupMap[applicableCourseId]) courseGroupMap[applicableCourseId] = new Set();
         courseGroupMap[applicableCourseId].add(student._id.toString());
+        studentCourseIdMap[student._id.toString()] = applicableCourseId;
       });
 
       // Compute current topic for EVERY course present in this batch — not just the dominant one
@@ -1942,7 +1944,6 @@ exports.getBatchTopicBoard = async (req, res) => {
           startDate: topicInfo.startDate,
           topicName: topicInfo.topicName,
           subtopicName: topicInfo.subtopicName,
-          studentNames: sids.map((sid) => studentNameMap[sid] || 'Unknown'),
         });
       }
       regularTopics.sort((a, b) => new Date(b.startDate || 0) - new Date(a.startDate || 0));
@@ -1969,14 +1970,30 @@ exports.getBatchTopicBoard = async (req, res) => {
       const primary = regularTopics[0] || { topicName: null, startDate: null, subtopicName: null };
 
       // Build the name+tag list for the Total column tooltip: regular students first, then bridge students
+      // Build the name+tag list for the Total column tooltip: regular students first, then bridge students
       const studentList = [
-        ...activeStudents.map((as) => ({ name: as.student.fullName, tag: 'Reg' })),
-        ...relevantBridges.flatMap((b) =>
-          (b.studentIds || []).map((sid) => ({
-            name: bridgeStudentNameMap[sid.toString()] || 'Unknown',
-            tag: 'Bridge',
-          }))
-        ),
+        ...activeStudents.map((as) => {
+          const cid = studentCourseIdMap[as.student._id.toString()];
+          const admissionNo = as.student.studentId || '';
+          return {
+            name: as.student.fullName,
+            tag: 'Reg',
+            courseShortName: courseMap[cid]?.courseShortName || '',
+            last4: admissionNo ? admissionNo.slice(-4) : '',
+          };
+        }),
+        ...relevantBridges.flatMap((b) => {
+          const cid = b.courseId.toString();
+          return (b.studentIds || []).map((sid) => {
+            const admissionNo = bridgeStudentAdmissionMap[sid.toString()] || '';
+            return {
+              name: bridgeStudentNameMap[sid.toString()] || 'Unknown',
+              tag: 'Bridge',
+              courseShortName: courseMap[cid]?.courseShortName || '',
+              last4: admissionNo ? admissionNo.slice(-4) : '',
+            };
+          });
+        }),
       ];
 
       rows.push({
