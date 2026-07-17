@@ -240,8 +240,8 @@ const BatchTopicBoard = () => {
                 <th className="px-3 py-2 text-center font-semibold text-gray-700 border">Course Start Date</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-700 border">Running Course</th>
                 <th className="px-3 py-2 text-left font-semibold text-gray-700 border">Subtopic</th>
-                <th className="px-3 py-2 text-center font-semibold text-blue-700 border bg-blue-50">Double Extra</th>
-                <th className="px-3 py-2 text-center font-semibold text-blue-700 border bg-blue-50">Course Start Date</th>
+                <th className="px-3 py-2 text-center font-semibold text-blue-700 border bg-blue-50">Bridge Batch</th>
+                <th className="px-3 py-2 text-center font-semibold text-blue-700 border bg-blue-50">Bridge Start Date</th>
                 <th className="px-3 py-2 text-left font-semibold text-blue-700 border bg-blue-50">Running Course (Bridge)</th>
                 <th className="px-3 py-2 text-left font-semibold text-blue-700 border bg-blue-50">Subtopic (Bridge)</th>
               </tr>
