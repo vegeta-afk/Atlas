@@ -266,7 +266,7 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
                                   </span>
                                   <select
                                     value={status === "not_started" ? "" : status}
-                                    disabled={mergedSub.perCourse.some(pc => {
+                                    disabled={sub.perCourse.some(pc => {
                                       const courseTopics = topicsByCourse[pc.courseId] || [];
                                       const origSub = courseTopics.flatMap(t => t.subtopics).find(s => s.key === pc.subKey);
                                       return origSub?.completed;
