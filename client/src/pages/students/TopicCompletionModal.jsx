@@ -266,7 +266,11 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
                                   </span>
                                   <select
                                     value={status === "not_started" ? "" : status}
-                                    disabled={status === "completed" || saving}
+                                    disabled={mergedSub.perCourse.some(pc => {
+                                      const courseTopics = topicsByCourse[pc.courseId] || [];
+                                      const origSub = courseTopics.flatMap(t => t.subtopics).find(s => s.key === pc.subKey);
+                                      return origSub?.completed;
+                                    }) || saving}
                                     onChange={(e) => handleMergedStatusChange(sub, e.target.value)}
                                     className={`text-xs border rounded-md px-2 py-1 font-medium cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 ${
                                       status === "completed"
@@ -358,7 +362,7 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
                                           </span>
                                           <select
                                             value={status === "not_started" ? "" : status}
-                                            disabled={status === "completed" || saving}
+                                            disabled={sub.completed || saving}
                                             onChange={(e) => handleStatusChange(group, sub.key, e.target.value)}
                                             className={`text-xs border rounded-md px-2 py-1 font-medium cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 ${
                                               status === "completed"

@@ -1851,6 +1851,46 @@ const getCurrentTopicForCourse = async (batchId, courseId, studentIds, course) =
   };
 };
 
+// Helper: checks whether EVERY subtopic in the course syllabus is marked completed
+// for every one of the given students, under this batchId — used to detect a bridge
+// batch that has finished its entire catch-up syllabus and is ready to merge back.
+const isCourseFullyCompleted = async (batchId, courseId, studentIds, course) => {
+  if (!course || studentIds.length === 0) return false;
+
+  let totalSubtopics = 0;
+  (course.syllabus || []).forEach((sem) => {
+    (sem.topics || []).forEach((topic) => {
+      totalSubtopics += (topic.subtopics || []).length;
+    });
+  });
+  if (totalSubtopics === 0) return false;
+
+  const completions = await TopicCompletion.find({
+    batchId, courseId, studentIds: { $in: studentIds }, date: SENTINEL_COMPLETION_DATE,
+  }).select('completedSubtopicKeys studentIds').lean();
+
+  const subtopicCompleted = {};
+  studentIds.forEach((sid) => { subtopicCompleted[sid] = new Set(); });
+  completions.forEach((c) => {
+    (c.studentIds || []).forEach((sid) => {
+      const sidStr = sid.toString();
+      if (!subtopicCompleted[sidStr]) return;
+      (c.completedSubtopicKeys || []).forEach((k) => subtopicCompleted[sidStr].add(k));
+    });
+  });
+
+  let allDone = true;
+  (course.syllabus || []).forEach((sem, sIdx) => {
+    (sem.topics || []).forEach((topic, tIdx) => {
+      (topic.subtopics || []).forEach((sub, subIdx) => {
+        const subKey = `${sIdx}_${tIdx}_${subIdx}`;
+        if (!studentIds.every((sid) => subtopicCompleted[sid]?.has(subKey))) allDone = false;
+      });
+    });
+  });
+  return allDone;
+};
+
 exports.getBatchTopicBoard = async (req, res) => {
   try {
     const { batchId, facultyId } = req.query;
@@ -1948,23 +1988,32 @@ exports.getBatchTopicBoard = async (req, res) => {
       }
       regularTopics.sort((a, b) => new Date(b.startDate || 0) - new Date(a.startDate || 0));
 
-      // Detect whether every course group has actually converged on the same topic —
-      // if so, no need for a breakdown tooltip, just show the shared value cleanly
-      const distinctTopicNames = new Set(regularTopics.map((t) => t.topicName).filter(Boolean));
-      const hasConverged = distinctTopicNames.size <= 1;
+      // Detect whether every course group has actually converged on the same TOPIC *and* SUBTOPIC —
+      // matching topic name alone isn't enough, since two courses can be on the same topic
+      // but different subtopics within it (that's still "mixed", not converged).
+      const distinctTopicSubtopicPairs = new Set(
+        regularTopics
+          .map((t) => `${t.topicName || ''}||${t.subtopicName || ''}`)
+          .filter((k) => k !== '||')
+      );
+      const hasConverged = distinctTopicSubtopicPairs.size <= 1;
 
       // Bridge students where this same person is the temp faculty, tied to this batch
       const relevantBridges = bridgeBatches.filter(
         (b) => b.tempFacultyId.toString() === tb.teacher._id.toString() && b.parentBatchId.toString() === tb.batch._id.toString()
       );
       let doubleExtra = 0, bridgeTopic = { topicName: null, startDate: null, subtopicName: null };
+      let bridgeCompleted = false;
       if (relevantBridges.length > 0) {
         doubleExtra = relevantBridges.reduce((sum, b) => sum + (b.studentIds?.length || 0), 0);
         const b = relevantBridges[0];
         const bStudentIds = (b.studentIds || []).map((s) => s.toString());
-        bridgeTopic = await getCurrentTopicForCourse(
-          b.parentBatchId, b.courseId, bStudentIds, courseMap[b.courseId.toString()]
-        );
+        const bCourse = courseMap[b.courseId.toString()];
+
+        // Bridge sessions are tracked under the BRIDGE BATCH's own id, not the parent batch's —
+        // this is what was pulling in the parent (regular) batch's progress by mistake.
+        bridgeTopic = await getCurrentTopicForCourse(b._id, b.courseId, bStudentIds, bCourse);
+        bridgeCompleted = await isCourseFullyCompleted(b._id, b.courseId, bStudentIds, bCourse);
       }
 
       const primary = regularTopics[0] || { topicName: null, startDate: null, subtopicName: null };
@@ -2012,6 +2061,7 @@ exports.getBatchTopicBoard = async (req, res) => {
         bridgeStartDate: bridgeTopic.startDate,
         bridgeRunningCourse: bridgeTopic.topicName,
         bridgeRunningSubtopic: bridgeTopic.subtopicName,
+        bridgeCompleted,
         total: activeStudents.length + doubleExtra,
       });
     }
