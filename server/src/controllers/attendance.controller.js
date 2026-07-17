@@ -2019,16 +2019,28 @@ exports.getBatchTopicBoard = async (req, res) => {
         bridgeCompleted = (topics.length > 0 || subtopics.length > 0) && allTopicsDone && allSubtopicsDone;
 
         if (!bridgeCompleted) {
-          // First not-yet-completed topic, and the first not-yet-completed subtopic
-          // belonging to it (subtopicKey is prefixed with its parent topic's topicKey)
-          const currentTopic = topics.find((t) => !t.completed) || null;
+          // A topic's own checkbox can be ticked "complete" while its subtopics are still
+          // pending (they're tracked independently) — so find "current" by PENDING SUBTOPIC
+          // first, not by the topic-level flag, otherwise an already-checked topic hides
+          // its own still-pending subtopics.
+          let currentTopic = null;
           let currentSubtopicName = null;
-          if (currentTopic) {
-            const sub = subtopics.find(
-              (s) => !s.completed && s.subtopicKey.startsWith(`${currentTopic.topicKey}_`)
-            );
-            currentSubtopicName = sub ? sub.subtopicName : null;
+
+          for (const t of topics) {
+            const subsUnderTopic = subtopics.filter((s) => s.subtopicKey.startsWith(`${t.topicKey}_`));
+            const pendingSub = subsUnderTopic.find((s) => !s.completed);
+            if (pendingSub) {
+              currentTopic = t;
+              currentSubtopicName = pendingSub.subtopicName;
+              break;
+            }
           }
+          // Fallback: no subtopic-level match found (e.g. topic has no subtopics at all) —
+          // use the first topic not yet marked complete
+          if (!currentTopic) {
+            currentTopic = topics.find((t) => !t.completed) || null;
+          }
+
           bridgeTopic = {
             topicName: currentTopic ? currentTopic.topicName : null,
             startDate: b.approvedDate || b.createdAt || null,
