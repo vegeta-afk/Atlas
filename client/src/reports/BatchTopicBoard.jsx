@@ -287,7 +287,7 @@ const BatchTopicBoard = () => {
                           <td className="px-3 py-1.5 border text-center text-red-600 font-medium bg-gray-50">{formatDate(r.bridgeStartDate)}</td>
                           <td className="px-3 py-1.5 border bg-gray-50">
                             {r.bridgeCompleted ? (
-                              <span className="text-green-700 font-semibold text-xs">✓ Completed — ready to merge</span>
+                              <span className="text-green-700 font-semibold text-xs">Merge Now</span>
                             ) : (r.bridgeRunningCourse || "")}
                           </td>
                           <td className="px-3 py-1.5 border text-gray-600 bg-gray-50">{r.bridgeRunningSubtopic || ""}</td>

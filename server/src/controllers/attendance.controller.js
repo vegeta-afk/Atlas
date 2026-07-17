@@ -2007,13 +2007,34 @@ exports.getBatchTopicBoard = async (req, res) => {
       if (relevantBridges.length > 0) {
         doubleExtra = relevantBridges.reduce((sum, b) => sum + (b.studentIds?.length || 0), 0);
         const b = relevantBridges[0];
-        const bStudentIds = (b.studentIds || []).map((s) => s.toString());
-        const bCourse = courseMap[b.courseId.toString()];
 
-        // Bridge sessions are tracked under the BRIDGE BATCH's own id, not the parent batch's —
-        // this is what was pulling in the parent (regular) batch's progress by mistake.
-        bridgeTopic = await getCurrentTopicForCourse(b._id, b.courseId, bStudentIds, bCourse);
-        bridgeCompleted = await isCourseFullyCompleted(b._id, b.courseId, bStudentIds, bCourse);
+        // Bridge completion lives directly on the BridgeBatch document itself
+        // (selectedTopics/selectedSubtopics, each with their own `completed` flag) —
+        // it is NOT stored in TopicCompletion, so read it straight from `b`.
+        const topics = b.selectedTopics || [];
+        const subtopics = b.selectedSubtopics || [];
+
+        const allTopicsDone = topics.length === 0 || topics.every((t) => t.completed);
+        const allSubtopicsDone = subtopics.length === 0 || subtopics.every((s) => s.completed);
+        bridgeCompleted = (topics.length > 0 || subtopics.length > 0) && allTopicsDone && allSubtopicsDone;
+
+        if (!bridgeCompleted) {
+          // First not-yet-completed topic, and the first not-yet-completed subtopic
+          // belonging to it (subtopicKey is prefixed with its parent topic's topicKey)
+          const currentTopic = topics.find((t) => !t.completed) || null;
+          let currentSubtopicName = null;
+          if (currentTopic) {
+            const sub = subtopics.find(
+              (s) => !s.completed && s.subtopicKey.startsWith(`${currentTopic.topicKey}_`)
+            );
+            currentSubtopicName = sub ? sub.subtopicName : null;
+          }
+          bridgeTopic = {
+            topicName: currentTopic ? currentTopic.topicName : null,
+            startDate: b.approvedDate || b.createdAt || null,
+            subtopicName: currentSubtopicName,
+          };
+        }
       }
 
       const primary = regularTopics[0] || { topicName: null, startDate: null, subtopicName: null };
