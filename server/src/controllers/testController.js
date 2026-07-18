@@ -5,7 +5,7 @@ const TestSession = require('../models/TestSession');
 const Student = require('../models/Student');
 const TestSubmission = require('../models/TestSubmission');
 
-// @desc    Create a new test
+/// @desc    Create a new test (AUTO-GENERATES question pool immediately)
 // @route   POST /api/exam/tests
 // @access  Private (Admin/Faculty)
 exports.createTest = async (req, res) => {
@@ -29,10 +29,8 @@ exports.createTest = async (req, res) => {
       batchId
     } = req.body;
 
-    // ✅ FIX: Handle empty batchId
     const cleanBatchId = batchId && batchId.trim() !== "" ? batchId : null;
 
-    // Validate required fields
     const requiredFields = [
       'testName', 'courseId', 'selectedSemesters', 'selectedTopics',
       'totalQuestionsInPool', 'questionsPerStudent', 'duration', 'scheduledDate'
@@ -46,7 +44,6 @@ exports.createTest = async (req, res) => {
       });
     }
 
-    // Validate course exists
     const course = await Course.findById(courseId);
     if (!course) {
       return res.status(404).json({
@@ -55,7 +52,34 @@ exports.createTest = async (req, res) => {
       });
     }
 
-    // Create test (without question pool initially)
+    // ✅ STEP 1: Find matching questions BEFORE creating the test,
+    // so we fail fast if there aren't enough — nothing gets created
+    // in a broken half-state.
+    const matchingQuestions = await Question.find({
+      courseId,
+      semester: { $in: selectedSemesters },
+      topic: { $in: selectedTopics },
+      isActive: true
+    }).select('_id');
+
+    if (matchingQuestions.length < totalQuestionsInPool) {
+      return res.status(400).json({
+        success: false,
+        message: `Only ${matchingQuestions.length} questions found for selected semesters/topics. Need ${totalQuestionsInPool}. Add more questions or lower the pool size.`,
+        available: matchingQuestions.length,
+        required: totalQuestionsInPool
+      });
+    }
+
+    // ✅ STEP 2: Randomly select the pool
+    const shuffled = [...matchingQuestions];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const questionIds = shuffled.slice(0, totalQuestionsInPool).map(q => q._id);
+
+    // ✅ STEP 3: Create test WITH the pool already attached
     const test = await Test.create({
       testName,
       description,
@@ -73,22 +97,33 @@ exports.createTest = async (req, res) => {
       shuffleQuestions: shuffleQuestions !== false,
       shuffleOptions: shuffleOptions !== false,
       allowMultipleAttempts: allowMultipleAttempts || false,
-      batchId: cleanBatchId, // ✅ Use the cleaned batchId
+      batchId: cleanBatchId,
       createdBy: req.user.id,
       createdByName: req.user.name,
-      status: 'draft'
+      questionPool: questionIds,           // ← pool attached immediately
+      questionPoolCount: questionIds.length,
+      status: 'active'                     // ← ready to attempt immediately.
+      // If you want faculty to review/schedule before students can see it,
+      // change this to 'scheduled' and add a separate "Activate" action
+      // in the admin panel that just flips status to 'active'
+      // (pool is already generated, so that flip alone is now safe).
     });
+
+    // ✅ STEP 4: Track usage count on the questions
+    await Question.updateMany(
+      { _id: { $in: questionIds } },
+      { $inc: { timesUsed: 1 } }
+    );
 
     res.status(201).json({
       success: true,
-      message: "Test created successfully. Use generateQuestionPool to add questions.",
+      message: `Test created successfully with ${questionIds.length} questions in the pool.`,
       data: test
     });
 
   } catch (error) {
     console.error("Create test error:", error);
-    
-    // Better error handling
+
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
@@ -99,7 +134,7 @@ exports.createTest = async (req, res) => {
         }))
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: "Server error",
