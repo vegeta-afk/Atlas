@@ -18,7 +18,8 @@ exports.createTest = async (req, res) => {
       selectedSemesters, // semester mode
       selectedTopics,    // both modes
       facultyId,         // regular mode
-      batchId,           // both modes (required for regular, optional for semester)
+      batchId, 
+      selectedCourseIds,          // both modes (required for regular, optional for semester)
       totalQuestionsInPool,
       questionsPerStudent,
       duration,
@@ -78,10 +79,16 @@ exports.createTest = async (req, res) => {
           message: "Faculty and batch are required for Regular exams"
         });
       }
+      if (!selectedCourseIds || selectedCourseIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Please select at least one course for Regular exam"
+        });
+      }
 
       let context;
       try {
-        context = await exports.resolveRegularExamContext(facultyId, cleanBatchId);
+        context = await exports.resolveRegularExamContext(facultyId, cleanBatchId, selectedCourseIds);
       } catch (e) {
         return res.status(e.status || 400).json({ success: false, message: e.message });
       }
@@ -453,6 +460,7 @@ exports.startTest = async (req, res) => {
     }
 
     // Strict check: regular-mode tests require explicit TeacherBatch assignment
+    // Strict check: regular-mode tests require explicit TeacherBatch assignment + course match
     if (test.examMode === 'regular' && test.teacherBatchId) {
       const TeacherBatch = require('../models/TeacherBatch');
       const tb = await TeacherBatch.findById(test.teacherBatchId).select('assignedStudents').lean();
@@ -462,6 +470,14 @@ exports.startTest = async (req, res) => {
       );
       if (!isAssigned) {
         return res.status(403).json({ success: false, message: "You are not assigned to this exam" });
+      }
+
+      if (test.relevantCourseIds && test.relevantCourseIds.length > 0) {
+        const studentCourseId = exports.resolveStudentCourseIdForBatch(student, test.batchId);
+        const matches = studentCourseId && test.relevantCourseIds.some(cid => cid.toString() === studentCourseId);
+        if (!matches) {
+          return res.status(403).json({ success: false, message: "This exam is not for your course" });
+        }
       }
     }
 
@@ -855,32 +871,40 @@ exports.getStudentResults = async (req, res) => {
 // @access  Private (Admin/Faculty)
 exports.getAvailableQuestions = async (req, res) => {
   try {
-    const { courseId, semesters, topics } = req.query;
+    const { courseId, courseIds, semesters, topics } = req.query;
 
-    if (!courseId || !semesters || !topics) {
+    if (!topics) {
       return res.status(400).json({
         success: false,
-        message: "Course ID, semesters, and topics are required"
+        message: "topics is required"
       });
     }
 
-    const semesterArray = semesters.split(',');
-    const topicArray = topics.split(',');
+    const topicArray = topics.split(',').filter(Boolean);
+    const query = { topic: { $in: topicArray }, isActive: true };
 
-    const count = await Question.countDocuments({
-      courseId,
-      semester: { $in: semesterArray },
-      topic: { $in: topicArray },
-      isActive: true
-    });
+    if (courseIds) {
+      // Regular mode: multiple courses
+      query.courseId = { $in: courseIds.split(',').filter(Boolean) };
+    } else if (courseId) {
+      // Semester mode: single course, optionally scoped to semesters
+      query.courseId = courseId;
+      if (semesters) {
+        query.semester = { $in: semesters.split(',').filter(Boolean) };
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "courseId or courseIds is required"
+      });
+    }
+
+    const count = await Question.countDocuments(query);
 
     res.json({
       success: true,
       data: {
-        availableQuestions: count,
-        courseId,
-        semesters: semesterArray,
-        topics: topicArray
+        availableQuestions: count
       }
     });
 
@@ -977,7 +1001,16 @@ exports.getStudentTests = async (req, res) => {
           as && as.student && as.student.toString() === student._id.toString() &&
           (as.isActive !== undefined ? as.isActive : true)
         );
-        if (isAssigned) allowedRegularTestIds.add(t._id.toString());
+        if (!isAssigned) return;
+
+        // Course-level check: student's course (for THIS batch) must be in the exam's target courses
+        if (t.relevantCourseIds && t.relevantCourseIds.length > 0) {
+          const studentCourseId = exports.resolveStudentCourseIdForBatch(student, t.batchId);
+          const matches = studentCourseId && t.relevantCourseIds.some(cid => cid.toString() === studentCourseId);
+          if (!matches) return;
+        }
+
+        allowedRegularTestIds.add(t._id.toString());
       });
     }
 
@@ -1212,19 +1245,15 @@ exports.getMyMarksheet = async (req, res) => {
   }
 };
 
-// ── Helper: given a facultyId + batchId, find the TeacherBatch, its
-// assigned students, resolve each student's applicable course FOR THIS
-// BATCH, and return only topics that have actually been TAUGHT so far
-// (completed or in-progress, per TopicCompletion records) — deduplicated
-// by name across all courses this batch's students study.
-async function resolveRegularExamContext(facultyId, batchId) {
+const SENTINEL_COMPLETION_DATE_REGULAR = new Date(0);
+
+// ── Internal: resolve which students study which course, WITHIN this specific batch ──
+async function getRegularBatchCourseGroups(facultyId, batchId) {
   const User = require('../models/user');
   const TeacherBatch = require('../models/TeacherBatch');
   const Student = require('../models/Student');
   const Course = require('../models/Course');
-  const TopicCompletion = require('../models/TopicCompletion');
   const mongoose = require('mongoose');
-  const SENTINEL_COMPLETION_DATE = new Date(0);
 
   const facultyUser = await User.findOne({
     facultyId: new mongoose.Types.ObjectId(facultyId),
@@ -1257,8 +1286,6 @@ async function resolveRegularExamContext(facultyId, batchId) {
     .select('courseCode additionalCourses')
     .lean();
 
-  // Resolve each student's applicable course FOR THIS SPECIFIC BATCH
-  // (same logic used in attendance.controller.js's getBatchCourseProgress)
   const bIdStr = batchId.toString();
   const courseGroupMap = {}; // courseId -> Set(studentId)
 
@@ -1276,21 +1303,74 @@ async function resolveRegularExamContext(facultyId, batchId) {
   });
 
   const courseIds = Object.keys(courseGroupMap);
-  if (courseIds.length === 0) {
-    throw { status: 400, message: 'Could not resolve courses for these students' };
-  }
-
-  const courses = await Course.find({ _id: { $in: courseIds } })
-    .select('courseFullName syllabus')
-    .lean();
+  const courses = courseIds.length > 0
+    ? await Course.find({ _id: { $in: courseIds } }).select('courseFullName syllabus').lean()
+    : [];
   const courseMap = {};
   courses.forEach(c => { courseMap[c._id.toString()] = c; });
 
-  // Deduplicated topic map — ONLY topics that have actually been taught
-  // (completed or in-progress), by normalized name
-  const topicMap = new Map(); // key: lowercase name -> { name, subtopics: Set }
+  return { teacherBatch, courseGroupMap, courseMap };
+}
 
-  for (const [cid, sidSet] of Object.entries(courseGroupMap)) {
+// ── Given a student doc + a batchId, resolve which course applies to them IN that batch ──
+function resolveStudentCourseIdForBatch(student, batchId) {
+  if (!student || !batchId) return null;
+  let applicableCourseId = student.courseCode ? student.courseCode.toString() : null;
+  if (student.additionalCourses?.length > 0) {
+    const ac = student.additionalCourses.find(
+      a => a.isActive && a.courseId && a.batchId && a.batchId.toString() === batchId.toString()
+    );
+    if (ac) applicableCourseId = ac.courseId.toString();
+  }
+  return applicableCourseId;
+}
+
+// @desc    Get courses (with student counts) available for a faculty+batch — Regular exam step 1
+// @route   GET /api/exam/tests/regular/courses?facultyId=X&batchId=Y
+exports.getRegularExamCourses = async (req, res) => {
+  try {
+    const { facultyId, batchId } = req.query;
+    if (!facultyId || !batchId) {
+      return res.status(400).json({ success: false, message: 'facultyId and batchId are required' });
+    }
+
+    const { courseGroupMap, courseMap } = await getRegularBatchCourseGroups(facultyId, batchId);
+
+    const courses = Object.entries(courseGroupMap).map(([cid, sidSet]) => ({
+      courseId: cid,
+      courseName: courseMap[cid]?.courseFullName || 'Unknown Course',
+      studentCount: sidSet.size
+    })).sort((a, b) => a.courseName.localeCompare(b.courseName));
+
+    res.json({ success: true, data: { courses } });
+  } catch (error) {
+    console.error('Get regular exam courses error:', error);
+    res.status(error.status || 500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
+// ── Resolve topics (deduplicated, with subtopics) for SELECTED courses only ──
+async function resolveRegularExamContext(facultyId, batchId, selectedCourseIds) {
+  const Course = require('../models/Course');
+  const TopicCompletion = require('../models/TopicCompletion');
+
+  const { teacherBatch, courseGroupMap, courseMap } = await getRegularBatchCourseGroups(facultyId, batchId);
+
+  let entries = Object.entries(courseGroupMap);
+  if (selectedCourseIds && selectedCourseIds.length > 0) {
+    entries = entries.filter(([cid]) => selectedCourseIds.includes(cid));
+  }
+
+  if (entries.length === 0) {
+    throw { status: 400, message: 'No matching courses found for this selection' };
+  }
+
+  const courseIds = entries.map(([cid]) => cid);
+
+  // Deduplicated topic map (by name), each with a merged, deduplicated subtopic name list
+  const topicMap = new Map(); // key: lowercase topic name -> { name, subtopics: Set }
+
+  for (const [cid, sidSet] of entries) {
     const course = courseMap[cid];
     if (!course) continue;
     const studentIds = [...sidSet];
@@ -1307,7 +1387,7 @@ async function resolveRegularExamContext(facultyId, batchId) {
     });
 
     completions.forEach(c => {
-      const isSentinel = new Date(c.date).getTime() === SENTINEL_COMPLETION_DATE.getTime();
+      const isSentinel = new Date(c.date).getTime() === SENTINEL_COMPLETION_DATE_REGULAR.getTime();
       (c.studentIds || []).forEach(sid => {
         const sidStr = sid.toString();
         if (!topicTaught[sidStr]) return;
@@ -1331,10 +1411,9 @@ async function resolveRegularExamContext(facultyId, batchId) {
           const subKey = `${sIdx}_${tIdx}_${subIdx}`;
           const sCompleted = studentIds.some(sid => subtopicCompleted[sid]?.has(subKey));
           const sTaught = studentIds.some(sid => subtopicTaught[sid]?.has(subKey));
-          if (sCompleted || sTaught) eligibleSubs.push(sub.name);
+          if (sCompleted || sTaught) eligibleSubs.push(sub.name.trim());
         });
 
-        // Include this topic only if IT (or any of its subtopics) has been taught/completed
         if (tCompleted || tTaught || eligibleSubs.length > 0) {
           const key = topic.name.trim().toLowerCase();
           if (!topicMap.has(key)) {
@@ -1354,25 +1433,25 @@ async function resolveRegularExamContext(facultyId, batchId) {
   return {
     teacherBatch,
     courseIds,
-    courses: courses.map(c => ({ _id: c._id, name: c.courseFullName })),
+    courses: courseIds.map(cid => ({ _id: cid, name: courseMap[cid]?.courseFullName || 'Unknown Course' })),
     topics
   };
 }
 
-// @desc    Get deduplicated topic list for a faculty+batch (Regular exam mode)
-// @route   GET /api/exam/regular/topics?facultyId=X&batchId=Y
-// @access  Private (Admin/Faculty)
+// @desc    Get deduplicated topic+subtopic list for faculty+batch+selected courses — Regular exam step 2
+// @route   GET /api/exam/tests/regular/topics?facultyId=X&batchId=Y&courseIds=A,B
 exports.getRegularExamTopics = async (req, res) => {
   try {
-    const { facultyId, batchId } = req.query;
+    const { facultyId, batchId, courseIds } = req.query;
     if (!facultyId || !batchId) {
-      return res.status(400).json({
-        success: false,
-        message: 'facultyId and batchId are required'
-      });
+      return res.status(400).json({ success: false, message: 'facultyId and batchId are required' });
+    }
+    if (!courseIds) {
+      return res.status(400).json({ success: false, message: 'courseIds is required — select at least one course' });
     }
 
-    const context = await resolveRegularExamContext(facultyId, batchId);
+    const selectedCourseIds = courseIds.split(',').filter(Boolean);
+    const context = await resolveRegularExamContext(facultyId, batchId, selectedCourseIds);
 
     res.json({
       success: true,
@@ -1385,12 +1464,9 @@ exports.getRegularExamTopics = async (req, res) => {
     });
   } catch (error) {
     console.error('Get regular exam topics error:', error);
-    res.status(error.status || 500).json({
-      success: false,
-      message: error.message || 'Server error'
-    });
+    res.status(error.status || 500).json({ success: false, message: error.message || 'Server error' });
   }
 };
 
-// Export the helper too so createTest can reuse it
 exports.resolveRegularExamContext = resolveRegularExamContext;
+exports.resolveStudentCourseIdForBatch = resolveStudentCourseIdForBatch;

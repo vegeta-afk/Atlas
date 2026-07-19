@@ -60,13 +60,19 @@ export const testAPI = {
     return response.data;
   },
 
-  getRegularTopics: async (facultyId, batchId) => {
-    const response = await api.get(`/exam/tests/regular/topics`, { params: { facultyId, batchId } });
+  getRegularCourses: async (facultyId, batchId) => {
+    const response = await api.get(`/exam/tests/regular/courses`, { params: { facultyId, batchId } });
+    return response.data;
+},
+
+getRegularTopics: async (facultyId, batchId, courseIds) => {
+    const params = { facultyId, batchId };
+    if (courseIds && courseIds.length > 0) params.courseIds = courseIds.join(',');
+    const response = await api.get(`/exam/tests/regular/topics`, { params });
     return response.data;
 },
 
   
-
   // Generate question pool
   generateQuestionPool: async (testId) => {
     const response = await api.post(`/exam/tests/${testId}/generate-pool`, {});
@@ -81,19 +87,9 @@ export const testAPI = {
 
 
   // Get available questions count
-  getAvailableQuestions: async (courseId, semesters, topics) => {
-  console.log('📊 Checking available questions (MOCKED)');
-  
-  // TEMPORARY: Return mock data until backend is implemented
-  return {
-    success: true,
-    data: {
-      availableQuestions: 100, // Assume 100 questions available
-      courseId,
-      semesters: Array.isArray(semesters) ? semesters : semesters,
-      topics: Array.isArray(topics) ? topics : topics
-    }
-  };
+  getAvailableQuestions: async (params) => {
+  const response = await api.get('/exam/tests/questions/available', { params });
+  return response.data;
 },
 
   // Get test results
