@@ -1212,15 +1212,19 @@ exports.getMyMarksheet = async (req, res) => {
   }
 };
 
-// ── Helper: given a facultyId + batchId, find the TeacherBatch,
-// its assigned students, the distinct courses those students study,
-// and a deduplicated topic list (by name) across those courses' syllabi.
+// ── Helper: given a facultyId + batchId, find the TeacherBatch, its
+// assigned students, resolve each student's applicable course FOR THIS
+// BATCH, and return only topics that have actually been TAUGHT so far
+// (completed or in-progress, per TopicCompletion records) — deduplicated
+// by name across all courses this batch's students study.
 async function resolveRegularExamContext(facultyId, batchId) {
   const User = require('../models/user');
   const TeacherBatch = require('../models/TeacherBatch');
   const Student = require('../models/Student');
   const Course = require('../models/Course');
+  const TopicCompletion = require('../models/TopicCompletion');
   const mongoose = require('mongoose');
+  const SENTINEL_COMPLETION_DATE = new Date(0);
 
   const facultyUser = await User.findOne({
     facultyId: new mongoose.Types.ObjectId(facultyId),
@@ -1241,9 +1245,9 @@ async function resolveRegularExamContext(facultyId, batchId) {
     throw { status: 404, message: 'This faculty is not assigned to that batch' };
   }
 
-  const activeStudentIds = (teacherBatch.assignedStudents || [])
-    .filter(s => s && s.student && (s.isActive !== undefined ? s.isActive : true))
-    .map(s => s.student);
+  const activeAssigned = (teacherBatch.assignedStudents || [])
+    .filter(s => s && s.student && (s.isActive !== undefined ? s.isActive : true));
+  const activeStudentIds = activeAssigned.map(s => s.student);
 
   if (activeStudentIds.length === 0) {
     throw { status: 400, message: 'No active students assigned to this faculty in this batch' };
@@ -1253,37 +1257,94 @@ async function resolveRegularExamContext(facultyId, batchId) {
     .select('courseCode additionalCourses')
     .lean();
 
-  // Collect distinct course IDs these students study
-  const courseIdSet = new Set();
+  // Resolve each student's applicable course FOR THIS SPECIFIC BATCH
+  // (same logic used in attendance.controller.js's getBatchCourseProgress)
+  const bIdStr = batchId.toString();
+  const courseGroupMap = {}; // courseId -> Set(studentId)
+
   students.forEach(s => {
-    if (s.courseCode) courseIdSet.add(s.courseCode.toString());
-    (s.additionalCourses || []).forEach(ac => {
-      if (ac.isActive && ac.courseId) courseIdSet.add(ac.courseId.toString());
-    });
+    let applicableCourseId = s.courseCode ? s.courseCode.toString() : null;
+    if (s.additionalCourses?.length > 0) {
+      const ac = s.additionalCourses.find(
+        a => a.isActive && a.courseId && a.batchId && a.batchId.toString() === bIdStr
+      );
+      if (ac) applicableCourseId = ac.courseId.toString();
+    }
+    if (!applicableCourseId) return;
+    if (!courseGroupMap[applicableCourseId]) courseGroupMap[applicableCourseId] = new Set();
+    courseGroupMap[applicableCourseId].add(s._id.toString());
   });
 
-  const courseIds = [...courseIdSet];
+  const courseIds = Object.keys(courseGroupMap);
+  if (courseIds.length === 0) {
+    throw { status: 400, message: 'Could not resolve courses for these students' };
+  }
+
   const courses = await Course.find({ _id: { $in: courseIds } })
-    .select('courseFullName courseShortName syllabus')
+    .select('courseFullName syllabus')
     .lean();
+  const courseMap = {};
+  courses.forEach(c => { courseMap[c._id.toString()] = c; });
 
-  // Deduplicate topics by lowercase-trimmed name, merging subtopics
-  const topicMap = new Map(); // key: normalized name -> { name, subtopics: Set }
+  // Deduplicated topic map — ONLY topics that have actually been taught
+  // (completed or in-progress), by normalized name
+  const topicMap = new Map(); // key: lowercase name -> { name, subtopics: Set }
 
-  courses.forEach(course => {
-    (course.syllabus || []).forEach(semester => {
-      (semester.topics || []).forEach(topic => {
-        if (!topic || !topic.name) return;
-        const key = topic.name.trim().toLowerCase();
-        if (!topicMap.has(key)) {
-          topicMap.set(key, { name: topic.name.trim(), subtopics: new Set() });
-        }
-        (topic.subtopics || []).forEach(st => {
-          if (st && st.name) topicMap.get(key).subtopics.add(st.name.trim());
+  for (const [cid, sidSet] of Object.entries(courseGroupMap)) {
+    const course = courseMap[cid];
+    if (!course) continue;
+    const studentIds = [...sidSet];
+
+    const completions = await TopicCompletion.find({
+      courseId: cid,
+      studentIds: { $in: studentIds },
+    }).select('completedTopicKeys completedSubtopicKeys studentIds date').lean();
+
+    const topicTaught = {}, topicCompleted = {}, subtopicTaught = {}, subtopicCompleted = {};
+    studentIds.forEach(sid => {
+      topicTaught[sid] = new Set(); topicCompleted[sid] = new Set();
+      subtopicTaught[sid] = new Set(); subtopicCompleted[sid] = new Set();
+    });
+
+    completions.forEach(c => {
+      const isSentinel = new Date(c.date).getTime() === SENTINEL_COMPLETION_DATE.getTime();
+      (c.studentIds || []).forEach(sid => {
+        const sidStr = sid.toString();
+        if (!topicTaught[sidStr]) return;
+        (c.completedTopicKeys || []).forEach(k => {
+          if (isSentinel) topicCompleted[sidStr].add(k); else topicTaught[sidStr].add(k);
+        });
+        (c.completedSubtopicKeys || []).forEach(k => {
+          if (isSentinel) subtopicCompleted[sidStr].add(k); else subtopicTaught[sidStr].add(k);
         });
       });
     });
-  });
+
+    (course.syllabus || []).forEach((sem, sIdx) => {
+      (sem.topics || []).forEach((topic, tIdx) => {
+        const topicKey = `${sIdx}_${tIdx}`;
+        const tCompleted = studentIds.some(sid => topicCompleted[sid]?.has(topicKey));
+        const tTaught = studentIds.some(sid => topicTaught[sid]?.has(topicKey));
+
+        const eligibleSubs = [];
+        (topic.subtopics || []).forEach((sub, subIdx) => {
+          const subKey = `${sIdx}_${tIdx}_${subIdx}`;
+          const sCompleted = studentIds.some(sid => subtopicCompleted[sid]?.has(subKey));
+          const sTaught = studentIds.some(sid => subtopicTaught[sid]?.has(subKey));
+          if (sCompleted || sTaught) eligibleSubs.push(sub.name);
+        });
+
+        // Include this topic only if IT (or any of its subtopics) has been taught/completed
+        if (tCompleted || tTaught || eligibleSubs.length > 0) {
+          const key = topic.name.trim().toLowerCase();
+          if (!topicMap.has(key)) {
+            topicMap.set(key, { name: topic.name.trim(), subtopics: new Set() });
+          }
+          eligibleSubs.forEach(n => topicMap.get(key).subtopics.add(n));
+        }
+      });
+    });
+  }
 
   const topics = [...topicMap.values()].map(t => ({
     name: t.name,
