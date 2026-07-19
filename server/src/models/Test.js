@@ -13,17 +13,40 @@ const testSchema = new mongoose.Schema({
   },
   
   // Link to course
+  // ── Exam mode ──
+  examMode: {
+    type: String,
+    enum: ['semester', 'regular'],
+    default: 'semester'
+  },
+
   courseId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Course',
-    required: [true, "Course is required"]
+    required: false   // ← only required for 'semester' mode, validated in controller
   },
   courseName: String, // Denormalized for quick access
-  
-  // Topic selection (from your course syllabus structure)
+
+  // ── Regular mode only ──
+  facultyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Faculty',
+    default: null
+  },
+  teacherBatchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'TeacherBatch',
+    default: null
+  },
+  relevantCourseIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Course'
+  }],
+
+  // Topic selection (semester mode uses selectedSemesters + selectedTopics grouped;
+  // regular mode uses only selectedTopics — flat, deduplicated topic names)
   selectedSemesters: [{
-    type: String,
-    required: true
+    type: String
   }],
   selectedTopics: [{
     type: String,

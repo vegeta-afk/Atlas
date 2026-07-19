@@ -13,11 +13,12 @@ import {
   Clock,
   Users,
   FileText,
-  Hash
+  Hash,
+  GraduationCap
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { testAPI, examCourseAPI, questionAPI } from '../../../services/examAPI';
-import { setupAPI } from '../../../services/api';
+import { setupAPI, facultyAPI } from '../../../services/api';
 import useBasePath from '../../../hooks/useBasePath';
 
 const CreateTest = () => {
@@ -27,14 +28,23 @@ const CreateTest = () => {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [courseTopics, setCourseTopics] = useState([]);
   const [availableQuestions, setAvailableQuestions] = useState(0);
-  const [batchList, setBatchList] = useState([]); // ✅ BUG 1 FIXED - Added batchList state
+  const [batchList, setBatchList] = useState([]);
   const basePath = useBasePath();
+
+  // ── NEW: Exam mode + Regular-mode state ──
+  const [examMode, setExamMode] = useState('semester'); // 'semester' | 'regular'
+  const [facultyList, setFacultyList] = useState([]);
+  const [facultyBatches, setFacultyBatches] = useState([]);
+  const [regularTopics, setRegularTopics] = useState([]);
+  const [loadingRegularTopics, setLoadingRegularTopics] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
+    examMode: 'semester',
     testName: '',
     description: '',
     courseId: '',
+    facultyId: '',
     selectedSemesters: [],
     selectedTopics: [],
     totalQuestionsInPool: '',
@@ -50,10 +60,11 @@ const CreateTest = () => {
     batchId: ''
   });
 
-  // Load courses on mount
+  // Load courses + batches + faculty on mount
   useEffect(() => {
     loadCourses();
-    fetchBatches(); // ✅ BUG 2 FIXED - Added fetchBatches() here
+    fetchBatches();
+    loadFacultyList();
   }, []);
 
   const loadCourses = async () => {
@@ -68,35 +79,83 @@ const CreateTest = () => {
     }
   };
 
-  // Load course topics when course is selected
+  const loadFacultyList = async () => {
+    try {
+      const response = await facultyAPI.getFaculty({ status: 'active', limit: 200 });
+      if (response.data.success) {
+        setFacultyList(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Load faculty error:', error);
+      toast.error('Failed to load faculty list');
+    }
+  };
+
+  const loadFacultyBatches = async (facultyId) => {
+    try {
+      const response = await facultyAPI.getFacultyBatches(facultyId, { includeEmpty: 'true' });
+      if (response.data.success) {
+        setFacultyBatches(response.data.data.batches || []);
+      } else {
+        setFacultyBatches([]);
+      }
+    } catch (error) {
+      console.error('Load faculty batches error:', error);
+      toast.error(error.response?.data?.message || 'Failed to load batches for this faculty');
+      setFacultyBatches([]);
+    }
+  };
+
+  const loadRegularTopics = async (facultyId, batchId) => {
+    setLoadingRegularTopics(true);
+    try {
+      const response = await testAPI.getRegularTopics(facultyId, batchId);
+      if (response.success) {
+        const topics = response.data.topics || [];
+        setRegularTopics(topics);
+        // Auto-select all deduplicated topics by default
+        setFormData(prev => ({
+          ...prev,
+          selectedTopics: topics.map(t => t.name)
+        }));
+      } else {
+        toast.error(response.message || 'Failed to load topics');
+        setRegularTopics([]);
+      }
+    } catch (error) {
+      console.error('Load regular topics error:', error);
+      toast.error(error.response?.data?.message || 'Failed to load topics for this batch');
+      setRegularTopics([]);
+    } finally {
+      setLoadingRegularTopics(false);
+    }
+  };
+
+  // Load course topics when course is selected (Semester mode)
   useEffect(() => {
-    if (formData.courseId) {
+    if (examMode === 'semester' && formData.courseId) {
       loadCourseTopics(formData.courseId);
       const course = courses.find(c => c._id === formData.courseId);
       setSelectedCourse(course);
     }
-  }, [formData.courseId, courses]);
+  }, [examMode, formData.courseId, courses]);
+
+  // Load regular topics when faculty + batch both selected (Regular mode)
+  useEffect(() => {
+    if (examMode === 'regular' && formData.facultyId && formData.batchId) {
+      loadRegularTopics(formData.facultyId, formData.batchId);
+    }
+  }, [examMode, formData.facultyId, formData.batchId]);
 
   const loadCourseTopics = async (courseId) => {
     try {
-      console.log(`🔍 Loading topics for course: ${courseId}`);
-      
-      // Use course API instead of exam API
       const response = await questionAPI.getCourseTopics(courseId);
-      
-      console.log('📦 Course API response:', response);
-      
+
       if (response.success) {
         const course = response.data;
-        console.log('📚 Full course data:', course);
-        
-        // Extract syllabus from course - check different possible structures
         const syllabus = course.syllabus || course.syllabusData || course.data?.syllabus || [];
-        console.log('📖 Extracted syllabus:', syllabus);
-        
-        // Extract topics from syllabus
         const topics = [];
-        
+
         if (Array.isArray(syllabus)) {
           syllabus.forEach((semester, index) => {
             if (semester && semester.topics && Array.isArray(semester.topics)) {
@@ -112,66 +171,37 @@ const CreateTest = () => {
             }
           });
         }
-        
-        console.log('✅ Processed topics:', topics);
+
         setCourseTopics(topics);
-        
-        // Auto-select all semesters and topics
+
         const semesters = [...new Set(topics.map(t => t.semester))];
         const topicNames = topics.map(t => t.topic).filter(t => t);
-        
+
         setFormData(prev => ({
           ...prev,
           selectedSemesters: semesters,
           selectedTopics: topicNames
         }));
-        
-        console.log('🎯 Auto-selected:', {
-          semesters,
-          topicNames
-        });
       } else {
-        console.error('❌ API response not successful:', response);
         toast.error('Failed to load course structure');
       }
     } catch (error) {
-      console.error('❌ Load course topics error:', error);
-      console.error('❌ Error details:', error.response?.data);
+      console.error('Load course topics error:', error);
       toast.error('Failed to load course topics: ' + (error.response?.data?.message || error.message));
     }
   };
 
-  // Calculate available questions when selection changes
-  useEffect(() => {
-    if (formData.courseId && formData.selectedSemesters.length > 0 && formData.selectedTopics.length > 0) {
-      calculateAvailableQuestions();
-    }
-  }, [formData.courseId, formData.selectedSemesters, formData.selectedTopics]);
-
   const calculateAvailableQuestions = async () => {
     try {
-      console.log('🔍 Calculating available questions...');
-      
-      // TEMPORARY: Use mock data
-      const mockData = {
-        success: true,
-        data: {
-          availableQuestions: 100
-        }
-      };
-      
+      const mockData = { success: true, data: { availableQuestions: 100 } };
       setAvailableQuestions(mockData.data.availableQuestions);
-      
-      // Auto-set default values
       setFormData(prev => ({
         ...prev,
         totalQuestionsInPool: '50',
         questionsPerStudent: '20'
       }));
-      
     } catch (error) {
-      console.error('❌ Calculate available questions error:', error);
-      // Set defaults anyway
+      console.error('Calculate available questions error:', error);
       setAvailableQuestions(100);
       setFormData(prev => ({
         ...prev,
@@ -181,14 +211,47 @@ const CreateTest = () => {
     }
   };
 
+  useEffect(() => {
+    if (examMode === 'semester' && formData.courseId && formData.selectedSemesters.length > 0 && formData.selectedTopics.length > 0) {
+      calculateAvailableQuestions();
+    }
+  }, [examMode, formData.courseId, formData.selectedSemesters, formData.selectedTopics]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
     if (type === 'checkbox') {
       setFormData(prev => ({ ...prev, [name]: checked }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
+  };
+
+  // ── NEW: Mode toggle ──
+  const handleModeToggle = (mode) => {
+    setExamMode(mode);
+    setFormData(prev => ({
+      ...prev,
+      examMode: mode,
+      courseId: '',
+      facultyId: '',
+      batchId: '',
+      selectedSemesters: [],
+      selectedTopics: []
+    }));
+    setCourseTopics([]);
+    setRegularTopics([]);
+    setFacultyBatches([]);
+    setSelectedCourse(null);
+    setAvailableQuestions(0);
+  };
+
+  // ── NEW: Faculty change (Regular mode) ──
+  const handleFacultyChange = (e) => {
+    const facultyId = e.target.value;
+    setFormData(prev => ({ ...prev, facultyId, batchId: '', selectedTopics: [] }));
+    setRegularTopics([]);
+    setFacultyBatches([]);
+    if (facultyId) loadFacultyBatches(facultyId);
   };
 
   const handleSemesterToggle = (semester) => {
@@ -197,7 +260,6 @@ const CreateTest = () => {
       const newSemesters = isSelected
         ? prev.selectedSemesters.filter(s => s !== semester)
         : [...prev.selectedSemesters, semester];
-      
       return { ...prev, selectedSemesters: newSemesters };
     });
   };
@@ -208,7 +270,6 @@ const CreateTest = () => {
       const newTopics = isSelected
         ? prev.selectedTopics.filter(t => t !== topic)
         : [...prev.selectedTopics, topic];
-      
       return { ...prev, selectedTopics: newTopics };
     });
   };
@@ -223,56 +284,16 @@ const CreateTest = () => {
     setFormData(prev => ({ ...prev, selectedTopics: allTopics }));
   };
 
-  const clearAllSemesters = () => {
-    setFormData(prev => ({ ...prev, selectedSemesters: [] }));
+  // ── NEW: Select all / clear all for Regular mode topics ──
+  const selectAllRegularTopics = () => {
+    setFormData(prev => ({ ...prev, selectedTopics: regularTopics.map(t => t.name) }));
   };
 
-  const clearAllTopics = () => {
+  const clearAllRegularTopics = () => {
     setFormData(prev => ({ ...prev, selectedTopics: [] }));
   };
 
   const validateForm = () => {
-    // const requiredFields = [
-    //   { name: 'testName', label: 'Test Name' },
-    //   { name: 'courseId', label: 'Course' },
-    //   { name: 'totalQuestionsInPool', label: 'Total Questions in Pool' },
-    //   { name: 'questionsPerStudent', label: 'Questions Per Student' },
-    //   { name: 'duration', label: 'Duration' },
-    //   { name: 'scheduledDate', label: 'Scheduled Date' }
-    // ];
-
-    // const missingFields = requiredFields.filter(
-    //   field => !formData[field.name] || formData[field.name].toString().trim() === ''
-    // );
-
-    // if (missingFields.length > 0) {
-    //   toast.error(`Please fill: ${missingFields.map(f => f.label).join(', ')}`);
-    //   return false;
-    // }
-
-    // if (formData.selectedSemesters.length === 0) {
-    //   toast.error('Please select at least one semester');
-    //   return false;
-    // }
-
-    // if (formData.selectedTopics.length === 0) {
-    //   toast.error('Please select at least one topic');
-    //   return false;
-    // }
-
-    // const total = parseInt(formData.totalQuestionsInPool);
-    // const perStudent = parseInt(formData.questionsPerStudent);
-    
-    // if (perStudent > total) {
-    //   toast.error('Questions per student cannot exceed total questions in pool');
-    //   return false;
-    // }
-
-    // if (total > availableQuestions) {
-    //   toast.error(`Only ${availableQuestions} questions available. Reduce total questions.`);
-    //   return false;
-    // }
-
     return true;
   };
 
@@ -289,13 +310,20 @@ const CreateTest = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
-    
+
+    if (examMode === 'regular' && (!formData.facultyId || !formData.batchId)) {
+      toast.error('Please select a faculty and batch for Regular exam');
+      return;
+    }
+    if (examMode === 'semester' && !formData.courseId) {
+      toast.error('Please select a course for Semester exam');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Prepare data
       const submitData = {
         ...formData,
         totalQuestionsInPool: parseInt(formData.totalQuestionsInPool),
@@ -305,18 +333,14 @@ const CreateTest = () => {
         scheduledDate: new Date(formData.scheduledDate).toISOString()
       };
 
-      // ✅ FIX: Remove empty batchId
-      if (!submitData.batchId || submitData.batchId.trim() === '') {
+      if (!submitData.batchId || submitData.batchId.toString().trim() === '') {
         delete submitData.batchId;
       }
 
-      console.log('Creating test with data:', submitData);
-
       const response = await testAPI.createTest(submitData);
-      
+
       if (response.success) {
         toast.success('Test created successfully!');
-        
         navigate(`${basePath}/exam/manage-tests`);
       } else {
         toast.error(response.message || 'Failed to create test');
@@ -329,21 +353,7 @@ const CreateTest = () => {
     }
   };
 
-  const generateQuestionPool = async (testId) => {
-    try {
-      const response = await testAPI.generateQuestionPool(testId);
-      if (response.success) {
-        toast.success(`Question pool generated with ${response.data.poolSize} questions`);
-      } else {
-        toast.error(response.message || 'Failed to generate question pool');
-      }
-    } catch (error) {
-      console.error('Generate question pool error:', error);
-      toast.error('Failed to generate question pool');
-    }
-  };
-
-  // Group topics by semester
+  // Group topics by semester (Semester mode)
   const topicsBySemester = {};
   courseTopics.forEach(topic => {
     if (!topicsBySemester[topic.semester]) {
@@ -371,6 +381,43 @@ const CreateTest = () => {
             <h1 className="text-2xl font-bold text-gray-800">Create New Test</h1>
             <p className="text-gray-600">Create a new online test with randomized questions</p>
           </div>
+        </div>
+      </div>
+
+      {/* ── NEW: Exam Mode Toggle ── */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="flex items-center gap-3">
+          <GraduationCap className="text-gray-500" size={20} />
+          <span className="text-sm font-medium text-gray-700">Exam Type:</span>
+          <div className="inline-flex rounded-lg border border-gray-300 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => handleModeToggle('semester')}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                examMode === 'semester'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Semester
+            </button>
+            <button
+              type="button"
+              onClick={() => handleModeToggle('regular')}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                examMode === 'regular'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Regular
+            </button>
+          </div>
+          <span className="text-xs text-gray-500 ml-2">
+            {examMode === 'semester'
+              ? 'Course-based exam, topics grouped by semester'
+              : 'Faculty/batch-based exam, topics across all courses that batch studies'}
+          </span>
         </div>
       </div>
 
@@ -419,61 +466,116 @@ const CreateTest = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Course *
-                </label>
-                <select
-                  name="courseId"
-                  value={formData.courseId}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select Course</option>
-                  {courses.map(course => (
-                    <option key={course._id} value={course._id}>
-                      {course.courseFullName} ({course.courseCode})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {selectedCourse && (
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <div className="flex items-center gap-2 text-sm text-blue-800">
-                    <BookOpen size={16} />
-                    <span className="font-medium">{selectedCourse.courseFullName}</span>
-                    <span className="text-blue-600">•</span>
-                    <span>{selectedCourse.duration}</span>
-                    <span className="text-blue-600">•</span>
-                    <span>{selectedCourse.totalSemesters} semesters</span>
+              {/* ── SEMESTER MODE: Course dropdown ── */}
+              {examMode === 'semester' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Course *
+                    </label>
+                    <select
+                      name="courseId"
+                      value={formData.courseId}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select Course</option>
+                      {courses.map(course => (
+                        <option key={course._id} value={course._id}>
+                          {course.courseFullName} ({course.courseCode})
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                </div>
+
+                  {selectedCourse && (
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center gap-2 text-sm text-blue-800">
+                        <BookOpen size={16} />
+                        <span className="font-medium">{selectedCourse.courseFullName}</span>
+                        <span className="text-blue-600">•</span>
+                        <span>{selectedCourse.duration}</span>
+                        <span className="text-blue-600">•</span>
+                        <span>{selectedCourse.totalSemesters} semesters</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Assign to Batch (Optional)
+                    </label>
+                    <select
+                      name="batchId"
+                      value={formData.batchId}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">All Batches (No restriction)</option>
+                      {batchList.map(batch => (
+                        <option key={batch._id} value={batch._id}>
+                          {batch.batchName} ({batch.displayName})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Only students of selected batch will see this exam
+                    </p>
+                  </div>
+                </>
               )}
 
-              {/* ✅ BUG 3 FIXED - Batch Select inside Card 1 space-y-4 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Assign to Batch (Optional)
-                </label>
-                <select
-                  name="batchId"
-                  value={formData.batchId}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">All Batches (No restriction)</option>
-                  {batchList.map(batch => (
-                    <option key={batch._id} value={batch._id}>
-                      {batch.batchName} ({batch.displayName})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Only students of selected batch will see this exam
-                </p>
-              </div>
+              {/* ── REGULAR MODE: Faculty + Batch dropdowns ── */}
+              {examMode === 'regular' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Faculty *
+                    </label>
+                    <select
+                      name="facultyId"
+                      value={formData.facultyId}
+                      onChange={handleFacultyChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select Faculty</option>
+                      {facultyList.map(f => (
+                        <option key={f._id} value={f._id}>
+                          {f.facultyName} ({f.facultyNo})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Only students assigned to this faculty will see this exam
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Batch *
+                    </label>
+                    <select
+                      name="batchId"
+                      value={formData.batchId}
+                      onChange={handleChange}
+                      required
+                      disabled={!formData.facultyId}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                    >
+                      <option value="">
+                        {formData.facultyId ? 'Select Batch' : 'Select a faculty first'}
+                      </option>
+                      {facultyBatches.map(batch => (
+                        <option key={batch.batchId || batch._id} value={batch.batchId || batch._id}>
+                          {batch.displayName || batch.name} ({batch.totalStudents} students)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -604,8 +706,7 @@ const CreateTest = () => {
                 </div>
               </div>
 
-              {/* Available Questions Info */}
-              {availableQuestions > 0 && (
+              {examMode === 'semester' && availableQuestions > 0 && (
                 <div className={`p-3 rounded-lg ${availableQuestions >= formData.totalQuestionsInPool ? 'bg-green-50' : 'bg-yellow-50'}`}>
                   <div className="flex items-center gap-2">
                     <AlertCircle size={16} className={availableQuestions >= formData.totalQuestionsInPool ? 'text-green-600' : 'text-yellow-600'} />
@@ -614,7 +715,7 @@ const CreateTest = () => {
                     </span>
                   </div>
                   <p className={`text-xs mt-1 ${availableQuestions >= formData.totalQuestionsInPool ? 'text-green-600' : 'text-yellow-600'}`}>
-                    {availableQuestions >= formData.totalQuestionsInPool 
+                    {availableQuestions >= formData.totalQuestionsInPool
                       ? '✓ Enough questions available for pool'
                       : `⚠ Need ${formData.totalQuestionsInPool - availableQuestions} more questions`}
                   </p>
@@ -640,103 +741,172 @@ const CreateTest = () => {
                 </p>
               </div>
             </div>
-            
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={selectAllSemesters}
-                className="px-3 py-1.5 text-sm bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200"
-              >
-                Select All Semesters
-              </button>
-              <button
-                type="button"
-                onClick={selectAllTopics}
-                className="px-3 py-1.5 text-sm bg-green-100 text-green-800 rounded-lg hover:bg-green-200"
-              >
-                Select All Topics
-              </button>
-            </div>
+
+            {examMode === 'semester' ? (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={selectAllSemesters}
+                  className="px-3 py-1.5 text-sm bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200"
+                >
+                  Select All Semesters
+                </button>
+                <button
+                  type="button"
+                  onClick={selectAllTopics}
+                  className="px-3 py-1.5 text-sm bg-green-100 text-green-800 rounded-lg hover:bg-green-200"
+                >
+                  Select All Topics
+                </button>
+              </div>
+            ) : (
+              regularTopics.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={selectAllRegularTopics}
+                    className="px-3 py-1.5 text-sm bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearAllRegularTopics}
+                    className="px-3 py-1.5 text-sm bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              )
+            )}
           </div>
 
-          {formData.courseId ? (
-            <div className="space-y-6">
-              {Object.keys(topicsBySemester).map(semester => (
-                <div key={semester} className="border border-gray-200 rounded-lg overflow-hidden">
-                  {/* Semester Header */}
-                  <div className={`p-4 border-b ${formData.selectedSemesters.includes(semester) ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={formData.selectedSemesters.includes(semester)}
-                          onChange={() => handleSemesterToggle(semester)}
-                          className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
-                        />
-                        <span className="font-medium text-gray-800">{semester}</span>
-                        <span className="text-sm text-gray-500">
-                          ({topicsBySemester[semester].length} topics)
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          formData.selectedSemesters.includes(semester)
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {formData.selectedTopics.filter(t => 
-                            topicsBySemester[semester].some(st => st.topic === t)
-                          ).length} selected
-                        </span>
+          {/* ── SEMESTER MODE topic UI (unchanged) ── */}
+          {examMode === 'semester' && (
+            formData.courseId ? (
+              <div className="space-y-6">
+                {Object.keys(topicsBySemester).map(semester => (
+                  <div key={semester} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className={`p-4 border-b ${formData.selectedSemesters.includes(semester) ? 'bg-blue-50' : 'bg-gray-50'}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={formData.selectedSemesters.includes(semester)}
+                            onChange={() => handleSemesterToggle(semester)}
+                            className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+                          />
+                          <span className="font-medium text-gray-800">{semester}</span>
+                          <span className="text-sm text-gray-500">
+                            ({topicsBySemester[semester].length} topics)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            formData.selectedSemesters.includes(semester)
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {formData.selectedTopics.filter(t =>
+                              topicsBySemester[semester].some(st => st.topic === t)
+                            ).length} selected
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Topics List */}
-                  {formData.selectedSemesters.includes(semester) && (
-                    <div className="p-4 bg-gray-50">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {topicsBySemester[semester].map((topicData, index) => (
-                          <div
-                            key={`${semester}-${topicData.topic}`}
-                            className={`flex items-center p-3 rounded-lg border ${
-                              formData.selectedTopics.includes(topicData.topic)
-                                ? 'border-blue-300 bg-blue-50'
-                                : 'border-gray-200 bg-white'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              id={`topic-${semester}-${index}`}
-                              checked={formData.selectedTopics.includes(topicData.topic)}
-                              onChange={() => handleTopicToggle(topicData.topic)}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                            />
-                            <label
-                              htmlFor={`topic-${semester}-${index}`}
-                              className="ml-3 flex-1"
+                    {formData.selectedSemesters.includes(semester) && (
+                      <div className="p-4 bg-gray-50">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {topicsBySemester[semester].map((topicData, index) => (
+                            <div
+                              key={`${semester}-${topicData.topic}`}
+                              className={`flex items-center p-3 rounded-lg border ${
+                                formData.selectedTopics.includes(topicData.topic)
+                                  ? 'border-blue-300 bg-blue-50'
+                                  : 'border-gray-200 bg-white'
+                              }`}
                             >
-                              <span className="font-medium text-gray-800">{topicData.topic}</span>
-                              {topicData.subtopics && topicData.subtopics.length > 0 && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {topicData.subtopics.length} subtopics
-                                </p>
-                              )}
-                            </label>
-                          </div>
-                        ))}
+                              <input
+                                type="checkbox"
+                                id={`topic-${semester}-${index}`}
+                                checked={formData.selectedTopics.includes(topicData.topic)}
+                                onChange={() => handleTopicToggle(topicData.topic)}
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                              />
+                              <label htmlFor={`topic-${semester}-${index}`} className="ml-3 flex-1">
+                                <span className="font-medium text-gray-800">{topicData.topic}</span>
+                                {topicData.subtopics && topicData.subtopics.length > 0 && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {topicData.subtopics.length} subtopics
+                                  </p>
+                                )}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <BookOpen className="mx-auto text-gray-400 mb-3" size={40} />
+                <p className="text-gray-500">Select a course to view topics</p>
+              </div>
+            )
+          )}
+
+          {/* ── REGULAR MODE topic UI (flat, deduplicated) ── */}
+          {examMode === 'regular' && (
+            <>
+              {!formData.facultyId || !formData.batchId ? (
+                <div className="text-center py-8">
+                  <BookOpen className="mx-auto text-gray-400 mb-3" size={40} />
+                  <p className="text-gray-500">Select a faculty and batch to view topics</p>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <BookOpen className="mx-auto text-gray-400 mb-3" size={40} />
-              <p className="text-gray-500">Select a course to view topics</p>
-            </div>
+              ) : loadingRegularTopics ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-3 text-gray-500 text-sm">Loading topics from all courses this batch studies...</p>
+                </div>
+              ) : regularTopics.length === 0 ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="mx-auto text-yellow-400 mb-3" size={40} />
+                  <p className="text-gray-500">No topics found for this batch's courses</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {regularTopics.map((topicData, index) => (
+                    <div
+                      key={topicData.name}
+                      className={`flex items-center p-3 rounded-lg border ${
+                        formData.selectedTopics.includes(topicData.name)
+                          ? 'border-blue-300 bg-blue-50'
+                          : 'border-gray-200 bg-white'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        id={`regular-topic-${index}`}
+                        checked={formData.selectedTopics.includes(topicData.name)}
+                        onChange={() => handleTopicToggle(topicData.name)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                      />
+                      <label htmlFor={`regular-topic-${index}`} className="ml-3 flex-1">
+                        <span className="font-medium text-gray-800">{topicData.name}</span>
+                        {topicData.subtopics && topicData.subtopics.length > 0 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {topicData.subtopics.length} subtopics
+                          </p>
+                        )}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           {/* Selection Summary */}
@@ -746,7 +916,9 @@ const CreateTest = () => {
                 <Check className="text-green-600" size={20} />
                 <div>
                   <p className="font-medium text-green-800">
-                    Selected {formData.selectedTopics.length} topics from {formData.selectedSemesters.length} semesters
+                    {examMode === 'semester'
+                      ? `Selected ${formData.selectedTopics.length} topics from ${formData.selectedSemesters.length} semesters`
+                      : `Selected ${formData.selectedTopics.length} topics (deduplicated across all courses this batch studies)`}
                   </p>
                   <p className="text-sm text-green-600 mt-1">
                     Each student will get {formData.questionsPerStudent || 'N/A'} random questions from a pool of {formData.totalQuestionsInPool || 'N/A'} questions

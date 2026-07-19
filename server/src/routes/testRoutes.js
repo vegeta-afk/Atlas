@@ -14,6 +14,7 @@ router.get('/student/my-results', authorize('student'), testController.getMyResu
 router.get('/student/marksheet', authorize('student'), testController.getMyMarksheet);      // ✅ moved up
 router.get('/student/:studentId/results', authorize('admin', 'instructor'), testController.getStudentResults);
 router.get('/questions/available', authorize('admin', 'faculty', 'instructor'), testController.getAvailableQuestions);
+router.get('/regular/topics', authorize('admin', 'faculty', 'instructor'), testController.getRegularExamTopics);
 
 // Submissions publish (static path — must be before /:id)
 router.put('/submissions/:submissionId/publish', authorize('admin'), testController.publishResult); // ✅ moved up

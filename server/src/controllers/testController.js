@@ -11,11 +11,14 @@ const TestSubmission = require('../models/TestSubmission');
 exports.createTest = async (req, res) => {
   try {
     const {
+      examMode,          // 'semester' | 'regular'
       testName,
       description,
-      courseId,
-      selectedSemesters,
-      selectedTopics,
+      courseId,          // semester mode
+      selectedSemesters, // semester mode
+      selectedTopics,    // both modes
+      facultyId,         // regular mode
+      batchId,           // both modes (required for regular, optional for semester)
       totalQuestionsInPool,
       questionsPerStudent,
       duration,
@@ -25,44 +28,80 @@ exports.createTest = async (req, res) => {
       endTime,
       shuffleQuestions,
       shuffleOptions,
-      allowMultipleAttempts,
-      batchId
+      allowMultipleAttempts
     } = req.body;
 
+    const mode = examMode === 'regular' ? 'regular' : 'semester';
     const cleanBatchId = batchId && batchId.trim() !== "" ? batchId : null;
 
-    const requiredFields = [
-      'testName', 'courseId', 'selectedSemesters', 'selectedTopics',
-      'totalQuestionsInPool', 'questionsPerStudent', 'duration', 'scheduledDate'
-    ];
-
-    const missingFields = requiredFields.filter(field => !req.body[field]);
-    if (missingFields.length > 0) {
+    // Base required fields for both modes
+    const baseRequired = ['testName', 'selectedTopics', 'totalQuestionsInPool', 'questionsPerStudent', 'duration', 'scheduledDate'];
+    const missingBase = baseRequired.filter(f => !req.body[f] || (Array.isArray(req.body[f]) && req.body[f].length === 0));
+    if (missingBase.length > 0) {
       return res.status(400).json({
         success: false,
-        message: `Missing required fields: ${missingFields.join(', ')}`
+        message: `Missing required fields: ${missingBase.join(', ')}`
       });
     }
 
-    const course = await Course.findById(courseId);
-    if (!course) {
-      return res.status(404).json({
-        success: false,
-        message: "Course not found"
-      });
-    }
+    let matchingQuestions, courseIdForTest = null, courseNameForTest = "", relevantCourseIds = [], facultyIdForTest = null, teacherBatchIdForTest = null;
 
-    const matchingQuestions = await Question.find({
-      courseId,
-      semester: { $in: selectedSemesters },
-      topic: { $in: selectedTopics },
-      isActive: true
-    }).select('_id');
+    if (mode === 'semester') {
+      if (!courseId || !selectedSemesters || selectedSemesters.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Course and semesters are required for Semester exams"
+        });
+      }
+
+      const course = await Course.findById(courseId);
+      if (!course) {
+        return res.status(404).json({ success: false, message: "Course not found" });
+      }
+
+      matchingQuestions = await Question.find({
+        courseId,
+        semester: { $in: selectedSemesters },
+        topic: { $in: selectedTopics },
+        isActive: true
+      }).select('_id');
+
+      courseIdForTest = courseId;
+      courseNameForTest = course.courseFullName;
+      relevantCourseIds = [courseId];
+
+    } else {
+      // REGULAR mode
+      if (!facultyId || !cleanBatchId) {
+        return res.status(400).json({
+          success: false,
+          message: "Faculty and batch are required for Regular exams"
+        });
+      }
+
+      let context;
+      try {
+        context = await exports.resolveRegularExamContext(facultyId, cleanBatchId);
+      } catch (e) {
+        return res.status(e.status || 400).json({ success: false, message: e.message });
+      }
+
+      matchingQuestions = await Question.find({
+        courseId: { $in: context.courseIds },
+        topic: { $in: selectedTopics },
+        isActive: true
+      }).select('_id');
+
+      courseNameForTest = context.courses.map(c => c.name).join(' + ');
+      relevantCourseIds = context.courseIds;
+      facultyIdForTest = facultyId;
+      teacherBatchIdForTest = context.teacherBatch._id;
+    }
 
     if (matchingQuestions.length < totalQuestionsInPool) {
       return res.status(400).json({
         success: false,
-        message: `Only ${matchingQuestions.length} questions found for selected semesters/topics. Need ${totalQuestionsInPool}. Add more questions or lower the pool size.`,
+        message: `Only ${matchingQuestions.length} questions found for selected topics. Need ${totalQuestionsInPool}. Add more questions or lower the pool size.`,
         available: matchingQuestions.length,
         required: totalQuestionsInPool
       });
@@ -76,11 +115,15 @@ exports.createTest = async (req, res) => {
     const questionIds = shuffled.slice(0, totalQuestionsInPool).map(q => q._id);
 
     const test = await Test.create({
+      examMode: mode,
       testName,
       description,
-      courseId,
-      courseName: course.courseFullName,
-      selectedSemesters,
+      courseId: courseIdForTest,
+      courseName: courseNameForTest,
+      facultyId: facultyIdForTest,
+      teacherBatchId: teacherBatchIdForTest,
+      relevantCourseIds,
+      selectedSemesters: mode === 'semester' ? selectedSemesters : [],
       selectedTopics,
       totalQuestionsInPool,
       questionsPerStudent,
@@ -407,6 +450,19 @@ exports.startTest = async (req, res) => {
 
     if (test.status !== 'active') {
       return res.status(400).json({ success: false, message: "Test is not active" });
+    }
+
+    // Strict check: regular-mode tests require explicit TeacherBatch assignment
+    if (test.examMode === 'regular' && test.teacherBatchId) {
+      const TeacherBatch = require('../models/TeacherBatch');
+      const tb = await TeacherBatch.findById(test.teacherBatchId).select('assignedStudents').lean();
+      const isAssigned = tb && (tb.assignedStudents || []).some(as =>
+        as && as.student && as.student.toString() === student._id.toString() &&
+        (as.isActive !== undefined ? as.isActive : true)
+      );
+      if (!isAssigned) {
+        return res.status(403).json({ success: false, message: "You are not assigned to this exam" });
+      }
     }
 
     
@@ -899,6 +955,38 @@ exports.getStudentTests = async (req, res) => {
 
     console.log(`✅ Tests found: ${tests.length}`);
 
+    // ── Strict filter: for 'regular' mode tests, student must be in the
+    // TeacherBatch.assignedStudents for that test's teacherBatchId ──
+    const TeacherBatch = require('../models/TeacherBatch');
+    const regularTests = tests.filter(t => t.examMode === 'regular');
+    let allowedRegularTestIds = new Set();
+
+    if (regularTests.length > 0) {
+      const teacherBatchIds = [...new Set(regularTests.map(t => t.teacherBatchId?.toString()).filter(Boolean))];
+      const relevantTeacherBatches = await TeacherBatch.find({ _id: { $in: teacherBatchIds } })
+        .select('assignedStudents')
+        .lean();
+
+      const tbMap = {};
+      relevantTeacherBatches.forEach(tb => { tbMap[tb._id.toString()] = tb; });
+
+      regularTests.forEach(t => {
+        const tb = tbMap[t.teacherBatchId?.toString()];
+        if (!tb) return;
+        const isAssigned = (tb.assignedStudents || []).some(as =>
+          as && as.student && as.student.toString() === student._id.toString() &&
+          (as.isActive !== undefined ? as.isActive : true)
+        );
+        if (isAssigned) allowedRegularTestIds.add(t._id.toString());
+      });
+    }
+
+    // Keep semester-mode tests as-is (existing batch logic already filtered them);
+    // for regular-mode tests, only keep ones the student is explicitly assigned to
+    const visibleTests = tests.filter(t =>
+      t.examMode !== 'regular' || allowedRegularTestIds.has(t._id.toString())
+    );
+
 
 tests.forEach(t => console.log(`  - ${t.testName} | status: ${t.status} | batchId: ${t.batchId}`));
 
@@ -913,7 +1001,7 @@ tests.forEach(t => console.log(`  - ${t.testName} | status: ${t.status} | batchI
       attemptedMap[session.testId.toString()] = session;
     });
 
-    const formattedTests = tests.map(test => ({
+    const formattedTests = visibleTests.map(test => ({
       _id: test._id,
       testName: test.testName,
       description: test.description,
@@ -1123,3 +1211,125 @@ exports.getMyMarksheet = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// ── Helper: given a facultyId + batchId, find the TeacherBatch,
+// its assigned students, the distinct courses those students study,
+// and a deduplicated topic list (by name) across those courses' syllabi.
+async function resolveRegularExamContext(facultyId, batchId) {
+  const User = require('../models/user');
+  const TeacherBatch = require('../models/TeacherBatch');
+  const Student = require('../models/Student');
+  const Course = require('../models/Course');
+  const mongoose = require('mongoose');
+
+  const facultyUser = await User.findOne({
+    facultyId: new mongoose.Types.ObjectId(facultyId),
+    role: 'instructor'
+  }).select('_id').lean();
+
+  if (!facultyUser) {
+    throw { status: 404, message: 'Faculty user account not found' };
+  }
+
+  const teacherBatch = await TeacherBatch.findOne({
+    teacher: facultyUser._id,
+    batch: batchId,
+    isActive: true
+  }).lean();
+
+  if (!teacherBatch) {
+    throw { status: 404, message: 'This faculty is not assigned to that batch' };
+  }
+
+  const activeStudentIds = (teacherBatch.assignedStudents || [])
+    .filter(s => s && s.student && (s.isActive !== undefined ? s.isActive : true))
+    .map(s => s.student);
+
+  if (activeStudentIds.length === 0) {
+    throw { status: 400, message: 'No active students assigned to this faculty in this batch' };
+  }
+
+  const students = await Student.find({ _id: { $in: activeStudentIds } })
+    .select('courseCode additionalCourses')
+    .lean();
+
+  // Collect distinct course IDs these students study
+  const courseIdSet = new Set();
+  students.forEach(s => {
+    if (s.courseCode) courseIdSet.add(s.courseCode.toString());
+    (s.additionalCourses || []).forEach(ac => {
+      if (ac.isActive && ac.courseId) courseIdSet.add(ac.courseId.toString());
+    });
+  });
+
+  const courseIds = [...courseIdSet];
+  const courses = await Course.find({ _id: { $in: courseIds } })
+    .select('courseFullName courseShortName syllabus')
+    .lean();
+
+  // Deduplicate topics by lowercase-trimmed name, merging subtopics
+  const topicMap = new Map(); // key: normalized name -> { name, subtopics: Set }
+
+  courses.forEach(course => {
+    (course.syllabus || []).forEach(semester => {
+      (semester.topics || []).forEach(topic => {
+        if (!topic || !topic.name) return;
+        const key = topic.name.trim().toLowerCase();
+        if (!topicMap.has(key)) {
+          topicMap.set(key, { name: topic.name.trim(), subtopics: new Set() });
+        }
+        (topic.subtopics || []).forEach(st => {
+          if (st && st.name) topicMap.get(key).subtopics.add(st.name.trim());
+        });
+      });
+    });
+  });
+
+  const topics = [...topicMap.values()].map(t => ({
+    name: t.name,
+    subtopics: [...t.subtopics]
+  }));
+
+  return {
+    teacherBatch,
+    courseIds,
+    courses: courses.map(c => ({ _id: c._id, name: c.courseFullName })),
+    topics
+  };
+}
+
+// @desc    Get deduplicated topic list for a faculty+batch (Regular exam mode)
+// @route   GET /api/exam/regular/topics?facultyId=X&batchId=Y
+// @access  Private (Admin/Faculty)
+exports.getRegularExamTopics = async (req, res) => {
+  try {
+    const { facultyId, batchId } = req.query;
+    if (!facultyId || !batchId) {
+      return res.status(400).json({
+        success: false,
+        message: 'facultyId and batchId are required'
+      });
+    }
+
+    const context = await resolveRegularExamContext(facultyId, batchId);
+
+    res.json({
+      success: true,
+      data: {
+        courses: context.courses,
+        courseIds: context.courseIds,
+        topics: context.topics,
+        totalTopics: context.topics.length
+      }
+    });
+  } catch (error) {
+    console.error('Get regular exam topics error:', error);
+    res.status(error.status || 500).json({
+      success: false,
+      message: error.message || 'Server error'
+    });
+  }
+};
+
+// Export the helper too so createTest can reuse it
+exports.resolveRegularExamContext = resolveRegularExamContext;
