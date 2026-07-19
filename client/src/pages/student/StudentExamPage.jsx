@@ -107,7 +107,11 @@ const StudentExamPage = () => {
 
     try {
       const token = getToken();
-      const answersArray = questions.map((_, i) => answers[i] || "");
+      // ✅ NAYA (fixed)
+const answersArray = questions.map((q, i) => ({
+  questionId: q._id,
+  selectedOption: answers[i] || ""
+}));
 
       const res = await fetch(`${BASE_URL}/api/exam/tests/${testId}/submit`,{
         method: "POST",

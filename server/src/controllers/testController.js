@@ -52,9 +52,6 @@ exports.createTest = async (req, res) => {
       });
     }
 
-    // ✅ STEP 1: Find matching questions BEFORE creating the test,
-    // so we fail fast if there aren't enough — nothing gets created
-    // in a broken half-state.
     const matchingQuestions = await Question.find({
       courseId,
       semester: { $in: selectedSemesters },
@@ -71,7 +68,6 @@ exports.createTest = async (req, res) => {
       });
     }
 
-    // ✅ STEP 2: Randomly select the pool
     const shuffled = [...matchingQuestions];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -79,7 +75,6 @@ exports.createTest = async (req, res) => {
     }
     const questionIds = shuffled.slice(0, totalQuestionsInPool).map(q => q._id);
 
-    // ✅ STEP 3: Create test WITH the pool already attached
     const test = await Test.create({
       testName,
       description,
@@ -100,16 +95,11 @@ exports.createTest = async (req, res) => {
       batchId: cleanBatchId,
       createdBy: req.user.id,
       createdByName: req.user.name,
-      questionPool: questionIds,           // ← pool attached immediately
+      questionPool: questionIds,
       questionPoolCount: questionIds.length,
-      status: 'active'                     // ← ready to attempt immediately.
-      // If you want faculty to review/schedule before students can see it,
-      // change this to 'scheduled' and add a separate "Activate" action
-      // in the admin panel that just flips status to 'active'
-      // (pool is already generated, so that flip alone is now safe).
+      status: 'active'
     });
 
-    // ✅ STEP 4: Track usage count on the questions
     await Question.updateMany(
       { _id: { $in: questionIds } },
       { $inc: { timesUsed: 1 } }
@@ -388,6 +378,15 @@ exports.deleteTest = async (req, res) => {
   }
 };
 
+function stringToNumericSeed(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
 // @desc    Start a test for student
 // @route   POST /api/exam/tests/:id/start
 // @access  Private (Student)
@@ -410,6 +409,8 @@ exports.startTest = async (req, res) => {
       return res.status(400).json({ success: false, message: "Test is not active" });
     }
 
+    
+
     // ✅ Use student._id (ObjectId) not studentId string
     if (!test.allowMultipleAttempts) {
       const existingSession = await TestSession.findOne({
@@ -427,7 +428,7 @@ exports.startTest = async (req, res) => {
     const questionPool = await Question.find({ _id: { $in: test.questionPool } });
 
     const shuffledQuestions = [...questionPool];
-    const seed = req.user.studentId + test._id.toString();
+    const seed = stringToNumericSeed(req.user.studentId + test._id.toString());
 
     for (let i = shuffledQuestions.length - 1; i > 0; i--) {
       const j = Math.floor((seed % (i + 1)) + i) % shuffledQuestions.length;

@@ -317,10 +317,6 @@ const CreateTest = () => {
       if (response.success) {
         toast.success('Test created successfully!');
         
-        // Generate question pool automatically
-        const testId = response.data._id;
-        await generateQuestionPool(testId);
-        
         navigate(`${basePath}/exam/manage-tests`);
       } else {
         toast.error(response.message || 'Failed to create test');
