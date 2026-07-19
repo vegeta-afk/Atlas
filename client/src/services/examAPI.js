@@ -60,6 +60,11 @@ export const testAPI = {
     return response.data;
   },
 
+  getRegularTopics: async (facultyId, batchId) => {
+    const response = await api.get(`/exam/tests/regular/topics`, { params: { facultyId, batchId } });
+    return response.data;
+},
+
   
 
   // Generate question pool
