@@ -218,28 +218,28 @@ const answersArray = questions.map((q, i) => ({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">{testInfo?.testName}</h1>
-            <p className="text-sm text-gray-500">
-              Question {currentIndex + 1} of {questions.length}
-            </p>
-          </div>
+<div className="bg-slate-800 shadow-sm sticky top-0 z-10">
+  <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div>
+      <h1 className="text-lg font-bold text-white">{testInfo?.testName}</h1>
+      <p className="text-sm text-slate-300">
+        Question {currentIndex + 1} of {questions.length}
+      </p>
+    </div>
 
-          {/* Timer */}
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-mono font-bold text-lg ${
-            timeRemaining < 300
-              ? "bg-red-100 text-red-700"
-              : timeRemaining < 600
-              ? "bg-yellow-100 text-yellow-700"
-              : "bg-blue-100 text-blue-700"
-          }`}>
-            <Clock size={20} />
-            {formatTime(timeRemaining)}
-          </div>
-        </div>
-      </div>
+    {/* Timer */}
+    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-mono font-bold text-lg ${
+      timeRemaining < 300
+        ? "bg-red-100 text-red-700"
+        : timeRemaining < 600
+        ? "bg-slate-200 text-slate-800"
+        : "bg-slate-700 text-slate-100"
+    }`}>
+      <Clock size={20} />
+      {formatTime(timeRemaining)}
+    </div>
+  </div>
+</div>
 
       <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
 
@@ -257,7 +257,7 @@ const answersArray = questions.map((q, i) => ({
                 <div className="w-3 h-3 rounded bg-orange-400"></div> Visited
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded bg-gray-300"></div> Not Visited
+                <div className="w-3 h-3 rounded bg-red-500"></div> Not Attempted
               </div>
             </div>
 
@@ -268,7 +268,7 @@ const answersArray = questions.map((q, i) => ({
                 const isVisited = visitedQuestions.has(i);
                 const isCurrent = currentIndex === i;
 
-                let bg = "bg-gray-200 text-gray-700";
+                let bg = "bg-red-500 text-white";
                 if (isAnswered) bg = "bg-green-500 text-white";
                 else if (isVisited) bg = "bg-orange-400 text-white";
 
@@ -277,7 +277,7 @@ const answersArray = questions.map((q, i) => ({
                     key={i}
                     onClick={() => setCurrentIndex(i)}
                     className={`h-9 w-9 rounded-lg text-sm font-medium ${bg} ${
-                      isCurrent ? "ring-2 ring-blue-600 ring-offset-1" : ""
+                      isCurrent ? "ring-2 ring-slate-800 ring-offset-1" : ""
                     }`}
                   >
                     {i + 1}
@@ -385,11 +385,11 @@ const answersArray = questions.map((q, i) => ({
             </div>
 
             {/* Navigation */}
-            <div className="px-6 py-4 border-t flex justify-between">
+            <div className="px-6 py-4 border-t bg-slate-50 flex justify-between">
               <button
                 onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
                 disabled={currentIndex === 0}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ChevronLeft size={20} /> Previous
               </button>
@@ -397,7 +397,7 @@ const answersArray = questions.map((q, i) => ({
               <button
                 onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
                 disabled={currentIndex === questions.length - 1}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-5 py-2 rounded-lg bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Next <ChevronRight size={20} />
               </button>
