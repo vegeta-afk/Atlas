@@ -20,6 +20,7 @@ exports.createTest = async (req, res) => {
       facultyId,         // regular mode
       batchId, 
       selectedCourseIds,          // both modes (required for regular, optional for semester)
+      topicSelections,   // regular mode — [{ topic, subtopics: null | [names] }] for subtopic-level filtering
       totalQuestionsInPool,
       questionsPerStudent,
       duration,
@@ -93,9 +94,17 @@ exports.createTest = async (req, res) => {
         return res.status(e.status || 400).json({ success: false, message: e.message });
       }
 
+      const orConditions = (topicSelections && topicSelections.length > 0)
+        ? topicSelections.map(sel =>
+            (!sel.subtopics || sel.subtopics.length === 0)
+              ? { topic: sel.topic }
+              : { topic: sel.topic, subtopic: { $in: sel.subtopics } }
+          )
+        : selectedTopics.map(t => ({ topic: t }));
+
       matchingQuestions = await Question.find({
         courseId: { $in: context.courseIds },
-        topic: { $in: selectedTopics },
+        $or: orConditions,
         isActive: true
       }).select('_id');
 
@@ -871,23 +880,13 @@ exports.getStudentResults = async (req, res) => {
 // @access  Private (Admin/Faculty)
 exports.getAvailableQuestions = async (req, res) => {
   try {
-    const { courseId, courseIds, semesters, topics } = req.query;
+    const { courseId, courseIds, semesters, topics, topicSelections } = req.query;
 
-    if (!topics) {
-      return res.status(400).json({
-        success: false,
-        message: "topics is required"
-      });
-    }
-
-    const topicArray = topics.split(',').filter(Boolean);
-    const query = { topic: { $in: topicArray }, isActive: true };
+    const query = { isActive: true };
 
     if (courseIds) {
-      // Regular mode: multiple courses
       query.courseId = { $in: courseIds.split(',').filter(Boolean) };
     } else if (courseId) {
-      // Semester mode: single course, optionally scoped to semesters
       query.courseId = courseId;
       if (semesters) {
         query.semester = { $in: semesters.split(',').filter(Boolean) };
@@ -899,13 +898,43 @@ exports.getAvailableQuestions = async (req, res) => {
       });
     }
 
+    if (topicSelections) {
+      // Regular mode with subtopic-level granularity:
+      // topicSelections = JSON string: [{ topic, subtopics: null | [names] }]
+      // subtopics: null  → match the whole topic (any/no subtopic tag)
+      // subtopics: [...] → match only questions tagged with one of these subtopics
+      let parsed;
+      try {
+        parsed = JSON.parse(topicSelections);
+      } catch {
+        return res.status(400).json({ success: false, message: 'Invalid topicSelections format' });
+      }
+
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        return res.json({ success: true, data: { availableQuestions: 0 } });
+      }
+
+      query.$or = parsed.map(sel => {
+        if (!sel.subtopics || sel.subtopics.length === 0) {
+          return { topic: sel.topic };
+        }
+        return { topic: sel.topic, subtopic: { $in: sel.subtopics } };
+      });
+    } else if (topics) {
+      // Semester mode: flat topic name list
+      query.topic = { $in: topics.split(',').filter(Boolean) };
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "topics or topicSelections is required"
+      });
+    }
+
     const count = await Question.countDocuments(query);
 
     res.json({
       success: true,
-      data: {
-        availableQuestions: count
-      }
+      data: { availableQuestions: count }
     });
 
   } catch (error) {

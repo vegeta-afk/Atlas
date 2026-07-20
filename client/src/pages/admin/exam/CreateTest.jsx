@@ -50,6 +50,7 @@ const CreateTest = () => {
     selectedCourseIds: [], // regular mode — which course(s) this exam targets
     selectedSemesters: [],
     selectedTopics: [],
+    subtopicSelections: {}, // regular mode — { [topicName]: [selected subtopic names] }
     totalQuestionsInPool: '',
     questionsPerStudent: '',
     duration: '',
@@ -136,7 +137,8 @@ const CreateTest = () => {
         setRegularTopics(topics);
         setFormData(prev => ({
           ...prev,
-          selectedTopics: topics.map(t => t.name)
+          selectedTopics: topics.map(t => t.name),
+          subtopicSelections: Object.fromEntries(topics.map(t => [t.name, [...(t.subtopics || [])]]))
         }));
       } else {
         toast.error(response.message || 'Failed to load topics');
@@ -241,11 +243,24 @@ const CreateTest = () => {
     }
   };
 
+  // ── Build the granular topic+subtopic selection payload for Regular mode ──
+  const buildTopicSelections = () => {
+    return formData.selectedTopics.map(topicName => {
+      const topicData = regularTopics.find(t => t.name === topicName);
+      const totalSubs = topicData?.subtopics?.length || 0;
+      const selectedSubs = formData.subtopicSelections[topicName] || [];
+      if (totalSubs === 0 || selectedSubs.length === totalSubs) {
+        return { topic: topicName, subtopics: null }; // whole topic
+      }
+      return { topic: topicName, subtopics: selectedSubs }; // partial — only these subtopics
+    });
+  };
+
   const calculateRegularAvailableQuestions = async () => {
     try {
       const response = await testAPI.getAvailableQuestions({
         courseIds: formData.selectedCourseIds.join(','),
-        topics: formData.selectedTopics.join(',')
+        topicSelections: JSON.stringify(buildTopicSelections())
       });
       if (response.success) {
         const count = response.data.availableQuestions;
@@ -267,7 +282,7 @@ const CreateTest = () => {
     if (examMode === 'regular' && formData.selectedCourseIds.length > 0 && formData.selectedTopics.length > 0) {
       calculateRegularAvailableQuestions();
     }
-  }, [examMode, formData.selectedCourseIds, formData.selectedTopics]);
+  }, [examMode, formData.selectedCourseIds, formData.selectedTopics, formData.subtopicSelections]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -277,6 +292,36 @@ const CreateTest = () => {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
+
+  // ── 12-hour time picker helpers (storage stays 24-hour "HH:mm" for backend) ──
+  const to12Hour = (time24) => {
+    if (!time24) return { hour: '09', minute: '00', period: 'AM' };
+    const [h, m] = time24.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    let hour12 = h % 12;
+    if (hour12 === 0) hour12 = 12;
+    return { hour: String(hour12).padStart(2, '0'), minute: String(m).padStart(2, '0'), period };
+  };
+
+  const to24Hour = (hour12, minute, period) => {
+    let h = parseInt(hour12, 10);
+    if (period === 'AM') {
+      if (h === 12) h = 0;
+    } else {
+      if (h !== 12) h += 12;
+    }
+    return `${String(h).padStart(2, '0')}:${minute}`;
+  };
+
+  const handleTimeChange = (field, part, value) => {
+    const current = to12Hour(formData[field]);
+    const updated = { ...current, [part]: value };
+    const time24 = to24Hour(updated.hour, updated.minute, updated.period);
+    setFormData(prev => ({ ...prev, [field]: time24 }));
+  };
+
+  const HOUR_OPTIONS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
+  const MINUTE_OPTIONS = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
 
   // ── Mode toggle ──
   const handleModeToggle = (mode) => {
@@ -289,7 +334,8 @@ const CreateTest = () => {
       batchId: '',
       selectedCourseIds: [],
       selectedSemesters: [],
-      selectedTopics: []
+      selectedTopics: [],
+      subtopicSelections: {}
     }));
     setCourseTopics([]);
     setRegularTopics([]);
@@ -335,6 +381,47 @@ const CreateTest = () => {
     });
   };
 
+  // ── Regular mode: topic checkbox toggles ALL its subtopics on/off ──
+  const handleRegularTopicToggle = (topicData) => {
+    const totalSubs = topicData.subtopics?.length || 0;
+    const isCurrentlyFull = totalSubs === 0
+      ? formData.selectedTopics.includes(topicData.name)
+      : (formData.subtopicSelections[topicData.name] || []).length === totalSubs && totalSubs > 0;
+
+    setFormData(prev => {
+      const newSelectedTopics = isCurrentlyFull
+        ? prev.selectedTopics.filter(t => t !== topicData.name)
+        : [...new Set([...prev.selectedTopics, topicData.name])];
+
+      const newSubtopicSelections = { ...prev.subtopicSelections };
+      if (totalSubs > 0) {
+        newSubtopicSelections[topicData.name] = isCurrentlyFull ? [] : [...topicData.subtopics];
+      }
+
+      return { ...prev, selectedTopics: newSelectedTopics, subtopicSelections: newSubtopicSelections };
+    });
+  };
+
+  // ── Regular mode: individual subtopic checkbox ──
+  const handleRegularSubtopicToggle = (topicData, subtopicName) => {
+    setFormData(prev => {
+      const current = prev.subtopicSelections[topicData.name] || [];
+      const isChecked = current.includes(subtopicName);
+      const updated = isChecked ? current.filter(s => s !== subtopicName) : [...current, subtopicName];
+
+      const newSubtopicSelections = { ...prev.subtopicSelections, [topicData.name]: updated };
+
+      let newSelectedTopics = prev.selectedTopics;
+      if (updated.length > 0 && !newSelectedTopics.includes(topicData.name)) {
+        newSelectedTopics = [...newSelectedTopics, topicData.name];
+      } else if (updated.length === 0) {
+        newSelectedTopics = newSelectedTopics.filter(t => t !== topicData.name);
+      }
+
+      return { ...prev, subtopicSelections: newSubtopicSelections, selectedTopics: newSelectedTopics };
+    });
+  };
+
   const selectAllSemesters = () => {
     const allSemesters = [...new Set(courseTopics.map(t => t.semester))];
     setFormData(prev => ({ ...prev, selectedSemesters: allSemesters }));
@@ -346,11 +433,15 @@ const CreateTest = () => {
   };
 
   const selectAllRegularTopics = () => {
-    setFormData(prev => ({ ...prev, selectedTopics: regularTopics.map(t => t.name) }));
+    setFormData(prev => ({
+      ...prev,
+      selectedTopics: regularTopics.map(t => t.name),
+      subtopicSelections: Object.fromEntries(regularTopics.map(t => [t.name, [...(t.subtopics || [])]]))
+    }));
   };
 
   const clearAllRegularTopics = () => {
-    setFormData(prev => ({ ...prev, selectedTopics: [] }));
+    setFormData(prev => ({ ...prev, selectedTopics: [], subtopicSelections: {} }));
   };
 
   const validateForm = () => {
@@ -400,7 +491,8 @@ const CreateTest = () => {
         questionsPerStudent: parseInt(formData.questionsPerStudent),
         duration: parseInt(formData.duration),
         maxMarks: formData.maxMarks ? parseInt(formData.maxMarks) : 100,
-        scheduledDate: new Date(formData.scheduledDate).toISOString()
+        scheduledDate: new Date(formData.scheduledDate).toISOString(),
+        topicSelections: examMode === 'regular' ? buildTopicSelections() : undefined
       };
 
       if (!submitData.batchId || submitData.batchId.toString().trim() === '') {
@@ -779,26 +871,60 @@ const CreateTest = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Start Time
                   </label>
-                  <input
-                    type="time"
-                    name="startTime"
-                    value={formData.startTime}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="flex gap-2">
+                    <select
+                      value={to12Hour(formData.startTime).hour}
+                      onChange={(e) => handleTimeChange('startTime', 'hour', e.target.value)}
+                      className="flex-1 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                    <select
+                      value={to12Hour(formData.startTime).minute}
+                      onChange={(e) => handleTimeChange('startTime', 'minute', e.target.value)}
+                      className="flex-1 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <select
+                      value={to12Hour(formData.startTime).period}
+                      onChange={(e) => handleTimeChange('startTime', 'period', e.target.value)}
+                      className="px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     End Time
                   </label>
-                  <input
-                    type="time"
-                    name="endTime"
-                    value={formData.endTime}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="flex gap-2">
+                    <select
+                      value={to12Hour(formData.endTime).hour}
+                      onChange={(e) => handleTimeChange('endTime', 'hour', e.target.value)}
+                      className="flex-1 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                    <select
+                      value={to12Hour(formData.endTime).minute}
+                      onChange={(e) => handleTimeChange('endTime', 'minute', e.target.value)}
+                      className="flex-1 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <select
+                      value={to12Hour(formData.endTime).period}
+                      onChange={(e) => handleTimeChange('endTime', 'period', e.target.value)}
+                      className="px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -974,37 +1100,50 @@ const CreateTest = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {regularTopics.map((topicData, index) => (
-                    <div
-                      key={topicData.name}
-                      className={`flex items-start p-3 rounded-lg border ${
-                        formData.selectedTopics.includes(topicData.name)
-                          ? 'border-blue-300 bg-blue-50'
-                          : 'border-gray-200 bg-white'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        id={`regular-topic-${index}`}
-                        checked={formData.selectedTopics.includes(topicData.name)}
-                        onChange={() => handleTopicToggle(topicData.name)}
-                        className="h-4 w-4 mt-1 text-blue-600 focus:ring-blue-500"
-                      />
-                      <label htmlFor={`regular-topic-${index}`} className="ml-3 flex-1">
-                        <span className="font-medium text-gray-800">{topicData.name}</span>
-                        {topicData.subtopics && topicData.subtopics.length > 0 && (
-                          <ul className="mt-1 space-y-0.5">
+                  {regularTopics.map((topicData) => {
+                    const totalSubs = topicData.subtopics?.length || 0;
+                    const subSelections = formData.subtopicSelections[topicData.name] || [];
+                    const isTopicIncluded = formData.selectedTopics.includes(topicData.name);
+                    const isFullySelected = totalSubs === 0
+                      ? isTopicIncluded
+                      : (subSelections.length === totalSubs && totalSubs > 0);
+                    const isPartial = totalSubs > 0 && subSelections.length > 0 && subSelections.length < totalSubs;
+
+                    return (
+                      <div
+                        key={topicData.name}
+                        className={`p-3 rounded-lg border ${
+                          isTopicIncluded ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-start">
+                          <input
+                            type="checkbox"
+                            ref={(el) => { if (el) el.indeterminate = isPartial; }}
+                            checked={isFullySelected}
+                            onChange={() => handleRegularTopicToggle(topicData)}
+                            className="h-4 w-4 mt-0.5 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="ml-3 font-medium text-gray-800">{topicData.name}</span>
+                        </div>
+                        {totalSubs > 0 && (
+                          <ul className="mt-2 ml-7 space-y-1.5">
                             {topicData.subtopics.map((st, si) => (
-                              <li key={si} className="text-xs text-gray-500 flex items-start gap-1">
-                                <span className="mt-1.5 w-1 h-1 rounded-full bg-gray-400 flex-shrink-0"></span>
-                                <span>{st}</span>
+                              <li key={si} className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={subSelections.includes(st)}
+                                  onChange={() => handleRegularSubtopicToggle(topicData, st)}
+                                  className="h-3.5 w-3.5 text-blue-500 focus:ring-blue-400 rounded"
+                                />
+                                <span className="text-xs text-gray-600">{st}</span>
                               </li>
                             ))}
                           </ul>
                         )}
-                      </label>
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </>
