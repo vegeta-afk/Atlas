@@ -444,16 +444,25 @@ const AddQuestion = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Subtopic (Optional)
+                  Subtopic *
                 </label>
-                <input
-                  type="text"
+                <select
                   name="subtopic"
                   value={courseSelection.subtopic}
                   onChange={handleCourseSelectionChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter subtopic if applicable"
-                />
+                  disabled={!courseSelection.topic}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                >
+                  <option value="">-- No specific subtopic (whole topic) --</option>
+                  {availableTopics
+                    .find(t => t.semester === courseSelection.semester && t.topic === courseSelection.topic)
+                    ?.subtopics.map(sub => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Selecting a subtopic lets this question be used for subtopic-specific exams
+                </p>
               </div>
 
               <div className="p-4 bg-blue-50 rounded-lg">
