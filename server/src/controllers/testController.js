@@ -1028,21 +1028,30 @@ exports.getStudentTests = async (req, res) => {
       relevantTeacherBatches.forEach(tb => { tbMap[tb._id.toString()] = tb; });
 
       regularTests.forEach(t => {
+        console.log(`\n🧪 Checking regular test: ${t.testName} | teacherBatchId: ${t.teacherBatchId}`);
         const tb = tbMap[t.teacherBatchId?.toString()];
-        if (!tb) return;
+        if (!tb) {
+          console.log(`   ❌ No TeacherBatch found for teacherBatchId ${t.teacherBatchId}`);
+          return;
+        }
         const isAssigned = (tb.assignedStudents || []).some(as =>
           as && as.student && as.student.toString() === student._id.toString() &&
           (as.isActive !== undefined ? as.isActive : true)
         );
+        console.log(`   student._id: ${student._id} | isAssigned: ${isAssigned}`);
+        console.log(`   assignedStudents:`, JSON.stringify(tb.assignedStudents));
         if (!isAssigned) return;
 
         // Course-level check: student's course (for THIS batch) must be in the exam's target courses
         if (t.relevantCourseIds && t.relevantCourseIds.length > 0) {
           const studentCourseId = exports.resolveStudentCourseIdForBatch(student, t.batchId);
+          console.log(`   relevantCourseIds: ${JSON.stringify(t.relevantCourseIds)} | resolved studentCourseId: ${studentCourseId}`);
           const matches = studentCourseId && t.relevantCourseIds.some(cid => cid.toString() === studentCourseId);
+          console.log(`   course matches: ${matches}`);
           if (!matches) return;
         }
 
+        console.log(`   ✅ Test allowed for this student`);
         allowedRegularTestIds.add(t._id.toString());
       });
     }
