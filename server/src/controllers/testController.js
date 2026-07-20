@@ -987,16 +987,20 @@ exports.getStudentTests = async (req, res) => {
     console.log(`📚 Student batch: ${student.batchTime} → found: ${studentBatch?._id}`);
 
     // Build query
+    // Build query — regular-mode tests skip the Setup-Batch gate entirely;
+    // TeacherBatch.assignedStudents (checked further below) decides their eligibility.
+    // Semester-mode tests keep the original batchId/batchTime gate.
     const query = {
       status: { $in: ['active', 'scheduled', 'completed'] },
       $or: [
+        { examMode: 'regular' },
         { batchId: null },
         { batchId: { $exists: false } },
       ]
     };
 
     if (studentBatch) {
-      query.$or.push({ batchId: studentBatch._id });
+      query.$or.push({ batchId: studentBatch._id, examMode: { $ne: 'regular' } });
     }
 
     console.log('🔍 Query:', JSON.stringify(query));
