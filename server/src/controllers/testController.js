@@ -1497,5 +1497,109 @@ exports.getRegularExamTopics = async (req, res) => {
   }
 };
 
+// @desc    Get eligibility vs attempted report for a specific test
+// @route   GET /api/exam/tests/:id/eligibility-report
+// @access  Private (Admin/Faculty)
+exports.getTestEligibilityReport = async (req, res) => {
+  try {
+    const testId = req.params.id;
+    const test = await Test.findById(testId)
+      .populate('courseId', 'courseFullName')
+      .lean();
+
+    if (!test) {
+      return res.status(404).json({ success: false, message: 'Test not found' });
+    }
+
+    let eligibleStudents = [];
+
+    if (test.examMode === 'regular' && test.teacherBatchId) {
+      // Regular mode: eligible = TeacherBatch.assignedStudents, further filtered
+      // by relevantCourseIds (the specific course(s) this exam targeted)
+      const TeacherBatch = require('../models/TeacherBatch');
+      const tb = await TeacherBatch.findById(test.teacherBatchId).select('assignedStudents').lean();
+      const activeAssigned = (tb?.assignedStudents || []).filter(
+        s => s && s.student && (s.isActive !== undefined ? s.isActive : true)
+      );
+      const studentIds = activeAssigned.map(s => s.student);
+
+      const students = await Student.find({ _id: { $in: studentIds } })
+        .select('studentId fullName courseCode additionalCourses')
+        .lean();
+
+      if (test.relevantCourseIds && test.relevantCourseIds.length > 0) {
+        eligibleStudents = students.filter(s => {
+          const cid = exports.resolveStudentCourseIdForBatch(s, test.batchId);
+          return cid && test.relevantCourseIds.some(rc => rc.toString() === cid);
+        });
+      } else {
+        eligibleStudents = students;
+      }
+    } else {
+      // Semester mode: eligible = students matching batchId (or everyone if no batchId set)
+      const query = { isActive: true, status: 'active' };
+      if (test.batchId) {
+        const { Batch } = require('../models/Setup');
+        const batchDoc = await Batch.findById(test.batchId).lean();
+        if (batchDoc) {
+          query.batchTime = batchDoc.displayName;
+        }
+      }
+      eligibleStudents = await Student.find(query).select('studentId fullName').lean();
+    }
+
+    const eligibleIds = eligibleStudents.map(s => s._id.toString());
+
+    const submissions = await TestSubmission.find({ testId: test._id })
+      .select('studentId submittedAt marksObtained maxMarks percentage isPassed')
+      .lean();
+
+    const attemptedMap = {};
+    submissions.forEach(s => { attemptedMap[s.studentId.toString()] = s; });
+
+    const attemptedEligibleCount = eligibleIds.filter(id => attemptedMap[id]).length;
+
+    res.json({
+      success: true,
+      data: {
+        test: {
+          _id: test._id,
+          testName: test.testName,
+          examMode: test.examMode,
+          courseName: test.courseName || test.courseId?.courseFullName,
+          scheduledDate: test.scheduledDate,
+          status: test.status,
+          maxMarks: test.maxMarks
+        },
+        summary: {
+          totalEligible: eligibleStudents.length,
+          totalAttempted: attemptedEligibleCount,
+          notAttemptedCount: eligibleStudents.length - attemptedEligibleCount,
+          attemptPercentage: eligibleStudents.length > 0
+            ? Math.round((attemptedEligibleCount / eligibleStudents.length) * 100)
+            : 0
+        },
+        students: eligibleStudents.map(s => {
+          const sub = attemptedMap[s._id.toString()];
+          return {
+            _id: s._id,
+            studentId: s.studentId,
+            fullName: s.fullName,
+            attempted: !!sub,
+            marksObtained: sub?.marksObtained ?? null,
+            maxMarks: sub?.maxMarks ?? null,
+            percentage: sub?.percentage ?? null,
+            submittedAt: sub?.submittedAt ?? null
+          };
+        })
+      }
+    });
+
+  } catch (error) {
+    console.error('Get test eligibility report error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
 exports.resolveRegularExamContext = resolveRegularExamContext;
 exports.resolveStudentCourseIdForBatch = resolveStudentCourseIdForBatch;

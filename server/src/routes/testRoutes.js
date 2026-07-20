@@ -32,7 +32,8 @@ router.get('/', authorize('admin', 'faculty', 'instructor'), testController.getT
 // ══════════════════════════════════════════════
 
 router.get('/:id/results', authorize('admin', 'faculty', 'instructor'), testController.getTestResults);
-router.get('/:id/submissions', authorize('admin', 'instructor'), testController.getTestSubmissions); // ✅ moved here
+router.get('/:id/submissions', authorize('admin', 'instructor'), testController.getTestSubmissions);
+router.get('/:id/eligibility-report', authorize('admin', 'faculty', 'instructor'), testController.getTestEligibilityReport); // ✅ moved here
 router.post('/:id/generate-pool', authorize('admin', 'faculty', 'instructor'), testController.generateQuestionPool);
 router.post('/:id/start', authorize('student'), testController.startTest);
 router.post('/:id/submit', authorize('student'), testController.submitTest);

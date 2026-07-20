@@ -140,6 +140,8 @@ const Sidebar = ({ isOpen, onClose }) => {
         { path: "/admin/reports/attendance-monthly",     label: "Monthly Attendance Report", icon: <ClipboardCheck size={15} /> },
         { path: "/admin/reports/batch-course-progress",  label: "Batch Course Progress",     icon: <BookOpen size={15} /> },
         { path: "/admin/reports/batch-topic-board", label: "Batch Topic Board", icon: <BookOpen size={15} /> },
+        { divider: true }
+        { path: "/admin/reports/test-eligibility", label: "Test Eligibility Report", icon: <ClipboardCheck size={15} /> },
       ],
     },
     {

@@ -98,6 +98,11 @@ getRegularTopics: async (facultyId, batchId, courseIds) => {
     return response.data;
   },
 
+  getEligibilityReport: async (testId) => {
+    const response = await api.get(`/exam/tests/${testId}/eligibility-report`);
+    return response.data;
+},
+
   // Update test
   updateTest: async (testId, updateData) => {
     const response = await api.put(`/exam/tests/${testId}`, updateData);
