@@ -33,7 +33,7 @@ const CreateTest = () => {
   const basePath = useBasePath();
 
   // ── Exam mode + Regular-mode state ──
-  const [examMode, setExamMode] = useState('semester'); // 'semester' | 'regular'
+  const [examMode, setExamMode] = useState('regular'); // 'semester' | 'regular'
   const [facultyList, setFacultyList] = useState([]);
   const [facultyBatches, setFacultyBatches] = useState([]);
   const [regularCourses, setRegularCourses] = useState([]); // courses available in selected faculty+batch, with student counts
@@ -585,10 +585,8 @@ const CreateTest = () => {
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
-        {/* Two Cards Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Card 1: Basic Information */}
-          <div className="bg-white rounded-lg shadow p-6">
+        {/* Card 1: Basic Information */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b">
               <div className="p-2 bg-blue-50 rounded-lg">
                 <FileText className="text-blue-600" size={20} />
@@ -765,181 +763,6 @@ const CreateTest = () => {
                 </>
               )}
             </div>
-          </div>
-
-          {/* Card 2: Test Configuration */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b">
-              <div className="p-2 bg-green-50 rounded-lg">
-                <Clock className="text-green-600" size={20} />
-              </div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                Test Configuration
-              </h2>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
-                    Total Questions in Pool *
-                    <Lock size={12} className="text-gray-400" />
-                  </label>
-                  <input
-                    type="number"
-                    name="totalQuestionsInPool"
-                    value={formData.totalQuestionsInPool}
-                    readOnly
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
-                    placeholder="Auto-calculated from selected topics"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Auto-calculated from selected topics — not editable
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Questions Per Student *
-                  </label>
-                  <input
-                    type="number"
-                    name="questionsPerStudent"
-                    value={formData.questionsPerStudent}
-                    onChange={handleChange}
-                    min="1"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g., 20"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Each student gets random subset
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Duration (minutes) *
-                  </label>
-                  <input
-                    type="number"
-                    name="duration"
-                    value={formData.duration}
-                    onChange={handleChange}
-                    min="1"
-                    required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g., 30"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Max Marks
-                  </label>
-                  <input
-                    type="number"
-                    name="maxMarks"
-                    value={formData.maxMarks}
-                    onChange={handleChange}
-                    min="1"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g., 100"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Scheduled Date *
-                </label>
-                <input
-                  type="date"
-                  name="scheduledDate"
-                  value={formData.scheduledDate}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Time
-                  </label>
-                  <div className="flex gap-2">
-                    <select
-                      value={to12Hour(formData.startTime).hour}
-                      onChange={(e) => handleTimeChange('startTime', 'hour', e.target.value)}
-                      className="flex-1 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
-                    </select>
-                    <select
-                      value={to12Hour(formData.startTime).minute}
-                      onChange={(e) => handleTimeChange('startTime', 'minute', e.target.value)}
-                      className="flex-1 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                    <select
-                      value={to12Hour(formData.startTime).period}
-                      onChange={(e) => handleTimeChange('startTime', 'period', e.target.value)}
-                      className="px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="AM">AM</option>
-                      <option value="PM">PM</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Time
-                  </label>
-                  <div className="flex gap-2">
-                    <select
-                      value={to12Hour(formData.endTime).hour}
-                      onChange={(e) => handleTimeChange('endTime', 'hour', e.target.value)}
-                      className="flex-1 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
-                    </select>
-                    <select
-                      value={to12Hour(formData.endTime).minute}
-                      onChange={(e) => handleTimeChange('endTime', 'minute', e.target.value)}
-                      className="flex-1 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                    <select
-                      value={to12Hour(formData.endTime).period}
-                      onChange={(e) => handleTimeChange('endTime', 'period', e.target.value)}
-                      className="px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="AM">AM</option>
-                      <option value="PM">PM</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {availableQuestions > 0 && (
-                <div className={`p-3 rounded-lg ${availableQuestions >= formData.totalQuestionsInPool ? 'bg-green-50' : 'bg-yellow-50'}`}>
-                  <div className="flex items-center gap-2">
-                    <AlertCircle size={16} className={availableQuestions >= formData.totalQuestionsInPool ? 'text-green-600' : 'text-yellow-600'} />
-                    <span className={`text-sm font-medium ${availableQuestions >= formData.totalQuestionsInPool ? 'text-green-800' : 'text-yellow-800'}`}>
-                      {availableQuestions} questions available from selected topics
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
 
         {/* Card 3: Topic Selection */}
@@ -1167,6 +990,180 @@ const CreateTest = () => {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Card 2: Test Configuration */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b">
+            <div className="p-2 bg-green-50 rounded-lg">
+              <Clock className="text-green-600" size={20} />
+            </div>
+            <h2 className="text-lg font-semibold text-gray-800">
+              Test Configuration
+            </h2>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
+                  Total Questions in Pool *
+                  <Lock size={12} className="text-gray-400" />
+                </label>
+                <input
+                  type="number"
+                  name="totalQuestionsInPool"
+                  value={formData.totalQuestionsInPool}
+                  readOnly
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
+                  placeholder="Auto-calculated from selected topics"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Auto-calculated from selected topics — not editable
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Questions Per Student *
+                </label>
+                <input
+                  type="number"
+                  name="questionsPerStudent"
+                  value={formData.questionsPerStudent}
+                  onChange={handleChange}
+                  min="1"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., 20"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Each student gets random subset
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Duration (minutes) *
+                </label>
+                <input
+                  type="number"
+                  name="duration"
+                  value={formData.duration}
+                  onChange={handleChange}
+                  min="1"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., 30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Max Marks
+                </label>
+                <input
+                  type="number"
+                  name="maxMarks"
+                  value={formData.maxMarks}
+                  onChange={handleChange}
+                  min="1"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., 100"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Scheduled Date *
+              </label>
+              <input
+                type="date"
+                name="scheduledDate"
+                value={formData.scheduledDate}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Start Time
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={to12Hour(formData.startTime).hour}
+                    onChange={(e) => handleTimeChange('startTime', 'hour', e.target.value)}
+                    className="flex-1 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                  <select
+                    value={to12Hour(formData.startTime).minute}
+                    onChange={(e) => handleTimeChange('startTime', 'minute', e.target.value)}
+                    className="flex-1 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <select
+                    value={to12Hour(formData.startTime).period}
+                    onChange={(e) => handleTimeChange('startTime', 'period', e.target.value)}
+                    className="px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  End Time
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={to12Hour(formData.endTime).hour}
+                    onChange={(e) => handleTimeChange('endTime', 'hour', e.target.value)}
+                    className="flex-1 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {HOUR_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                  <select
+                    value={to12Hour(formData.endTime).minute}
+                    onChange={(e) => handleTimeChange('endTime', 'minute', e.target.value)}
+                    className="flex-1 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {MINUTE_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <select
+                    value={to12Hour(formData.endTime).period}
+                    onChange={(e) => handleTimeChange('endTime', 'period', e.target.value)}
+                    className="px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {availableQuestions > 0 && (
+              <div className={`p-3 rounded-lg ${availableQuestions >= formData.totalQuestionsInPool ? 'bg-green-50' : 'bg-yellow-50'}`}>
+                <div className="flex items-center gap-2">
+                  <AlertCircle size={16} className={availableQuestions >= formData.totalQuestionsInPool ? 'text-green-600' : 'text-yellow-600'} />
+                  <span className={`text-sm font-medium ${availableQuestions >= formData.totalQuestionsInPool ? 'text-green-800' : 'text-yellow-800'}`}>
+                    {availableQuestions} questions available from selected topics
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Card 4: Test Settings */}
