@@ -411,15 +411,10 @@ exports.deleteTest = async (req, res) => {
       });
     }
 
-    // Check if test has any sessions
-    const sessionsCount = await TestSession.countDocuments({ testId: test._id });
-    if (sessionsCount > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Cannot delete test that has been taken by students"
-      });
-    }
-
+    // Note: TestSession/TestSubmission documents for this test are intentionally
+    // left in place — they store their own snapshot fields (testName, courseName,
+    // marksObtained, etc.) so student results/marksheets keep working even after
+    // the parent Test document is deleted.
     await test.deleteOne();
 
     res.json({
