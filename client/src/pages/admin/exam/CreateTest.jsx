@@ -42,7 +42,7 @@ const CreateTest = () => {
 
   // Form state
   const [formData, setFormData] = useState({
-    examMode: 'semester',
+    examMode: 'regular',
     testName: '',
     description: '',
     courseId: '',
