@@ -260,6 +260,29 @@ const EditTest = () => {
               </div>
             </div>
 
+            {test.examMode === 'regular' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Faculty</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={test.facultyId?.facultyName ? `${test.facultyId.facultyName} (${test.facultyId.facultyNo})` : '—'}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Batch Time</label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={test.batchId?.displayName || test.batchId?.batchName || '—'}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Selected Topics</label>
               <div className="flex flex-wrap gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50">

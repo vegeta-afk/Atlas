@@ -327,7 +327,8 @@ exports.getTest = async (req, res) => {
   try {
     const test = await Test.findById(req.params.id)
   .populate('courseId', 'courseFullName courseCode')
-  .populate('batchId', 'batchName')
+  .populate('batchId', 'batchName displayName')
+  .populate('facultyId', 'facultyName facultyNo')
   .populate('questionPool', 'questionText questionType options correctAnswer marks difficulty');
 
     if (!test) {

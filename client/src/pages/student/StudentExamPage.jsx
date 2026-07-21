@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Clock, ChevronLeft, ChevronRight,
+  Clock, ChevronLeft, ChevronRight, SkipForward,
   Send, AlertCircle, CheckCircle, BookOpen
 } from "lucide-react";
 
 const StudentExamPage = () => {
   const { testId } = useParams();
   const navigate = useNavigate();
+
+  const STORAGE_KEY = `examProgress_${testId}`;
 
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
@@ -28,7 +30,30 @@ const StudentExamPage = () => {
   const getToken = () =>
     sessionStorage.getItem("token") || localStorage.getItem("token");
 
+  // ── On mount: restore from localStorage if a session is already in progress,
+  // otherwise start a fresh exam. This avoids re-calling /start on refresh,
+  // which the backend would reject since a session already exists. ──
   useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const elapsedSeconds = Math.floor((Date.now() - (parsed.savedAt || Date.now())) / 1000);
+        const restoredTimeRemaining = Math.max(0, (parsed.timeRemaining || 0) - elapsedSeconds);
+
+        setSessionId(parsed.sessionId);
+        setTestInfo(parsed.testInfo);
+        setQuestions(parsed.questions || []);
+        setAnswers(parsed.answers || {});
+        setCurrentIndex(parsed.currentIndex || 0);
+        setVisitedQuestions(new Set(parsed.visitedQuestions || [parsed.currentIndex || 0]));
+        setTimeRemaining(restoredTimeRemaining);
+        setLoading(false);
+        return () => clearInterval(timerRef.current);
+      } catch (e) {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
     startExam();
     return () => clearInterval(timerRef.current);
   }, []);
@@ -53,6 +78,25 @@ const StudentExamPage = () => {
   useEffect(() => {
     setVisitedQuestions(prev => new Set([...prev, currentIndex]));
   }, [currentIndex]);
+
+  // ── Persist progress to localStorage on every relevant change ──
+  useEffect(() => {
+    if (!sessionId || isSubmitted) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        sessionId,
+        testInfo,
+        questions,
+        answers,
+        currentIndex,
+        timeRemaining,
+        visitedQuestions: [...visitedQuestions],
+        savedAt: Date.now()
+      }));
+    } catch (e) {
+      console.error("Failed to save exam progress:", e);
+    }
+  }, [answers, currentIndex, timeRemaining, sessionId]);
 
   const startExam = async () => {
     setLoading(true);
@@ -107,11 +151,10 @@ const StudentExamPage = () => {
 
     try {
       const token = getToken();
-      // ✅ NAYA (fixed)
-const answersArray = questions.map((q, i) => ({
-  questionId: q._id,
-  selectedOption: answers[i] || ""
-}));
+      const answersArray = questions.map((q, i) => ({
+        questionId: q._id,
+        selectedOption: answers[i] || ""
+      }));
 
       const res = await fetch(`${BASE_URL}/api/exam/tests/${testId}/submit`,{
         method: "POST",
@@ -124,6 +167,7 @@ const answersArray = questions.map((q, i) => ({
 
       const data = await res.json();
       if (data.success) {
+        localStorage.removeItem(STORAGE_KEY);
         setIsSubmitted(true);
       } else {
         alert("Failed to submit: " + data.message);
@@ -133,6 +177,10 @@ const answersArray = questions.map((q, i) => ({
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSkip = () => {
+    setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1));
   };
 
   const formatTime = (seconds) => {
@@ -218,28 +266,28 @@ const answersArray = questions.map((q, i) => ({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-<div className="bg-slate-800 shadow-sm sticky top-0 z-10">
-  <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-    <div>
-      <h1 className="text-lg font-bold text-white">{testInfo?.testName}</h1>
-      <p className="text-sm text-slate-300">
-        Question {currentIndex + 1} of {questions.length}
-      </p>
-    </div>
+      <div className="bg-slate-800 shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold text-white">{testInfo?.testName}</h1>
+            <p className="text-sm text-slate-300">
+              Question {currentIndex + 1} of {questions.length}
+            </p>
+          </div>
 
-    {/* Timer */}
-    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-mono font-bold text-lg ${
-      timeRemaining < 300
-        ? "bg-red-100 text-red-700"
-        : timeRemaining < 600
-        ? "bg-slate-200 text-slate-800"
-        : "bg-slate-700 text-slate-100"
-    }`}>
-      <Clock size={20} />
-      {formatTime(timeRemaining)}
-    </div>
-  </div>
-</div>
+          {/* Timer */}
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-mono font-bold text-lg ${
+            timeRemaining < 300
+              ? "bg-red-100 text-red-700"
+              : timeRemaining < 600
+              ? "bg-slate-200 text-slate-800"
+              : "bg-slate-700 text-slate-100"
+          }`}>
+            <Clock size={20} />
+            {formatTime(timeRemaining)}
+          </div>
+        </div>
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
 
@@ -320,32 +368,32 @@ const answersArray = questions.map((q, i) => ({
             <div className="p-6">
               {currentQuestion?.questionType === "mcq" ? (
                 <div className="space-y-3">
-  {currentQuestion.options?.filter(opt => opt && opt.text).map((option, idx) => (
-    <label
-      key={idx}
-      className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-        answers[currentIndex] === option.text
-          ? "border-blue-500 bg-blue-50"
-          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-      }`}
-    >
-      <input
-        type="radio"
-        name={`q-${currentIndex}`}
-        value={option.text}
-        checked={answers[currentIndex] === option.text}
-        onChange={() =>
-          setAnswers(prev => ({ ...prev, [currentIndex]: option.text }))
-        }
-        className="h-5 w-5 text-blue-600"
-      />
-      <span className="flex-1 text-gray-800">{option.text}</span>
-      <span className="text-gray-400 text-sm font-medium">
-        {String.fromCharCode(65 + idx)}
-      </span>
-    </label>
-  ))}
-</div>
+                  {currentQuestion.options?.filter(opt => opt && opt.text).map((option, idx) => (
+                    <label
+                      key={idx}
+                      className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                        answers[currentIndex] === option.text
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`q-${currentIndex}`}
+                        value={option.text}
+                        checked={answers[currentIndex] === option.text}
+                        onChange={() =>
+                          setAnswers(prev => ({ ...prev, [currentIndex]: option.text }))
+                        }
+                        className="h-5 w-5 text-blue-600"
+                      />
+                      <span className="flex-1 text-gray-800">{option.text}</span>
+                      <span className="text-gray-400 text-sm font-medium">
+                        {String.fromCharCode(65 + idx)}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               ) : currentQuestion?.questionType === "truefalse" ? (
                 <div className="grid grid-cols-2 gap-4">
                   {["True", "False"].map(val => (
@@ -385,13 +433,21 @@ const answersArray = questions.map((q, i) => ({
             </div>
 
             {/* Navigation */}
-            <div className="px-6 py-4 border-t bg-slate-50 flex justify-between">
+            <div className="px-6 py-4 border-t bg-slate-50 flex items-center justify-between">
               <button
                 onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
                 disabled={currentIndex === 0}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ChevronLeft size={20} /> Previous
+              </button>
+
+              <button
+                onClick={handleSkip}
+                disabled={currentIndex === questions.length - 1}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <SkipForward size={18} /> Skip
               </button>
 
               <button
