@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Clock, ChevronLeft, ChevronRight, SkipForward,
+  Clock, ChevronLeft, ChevronRight,
   Send, AlertCircle, CheckCircle, BookOpen
 } from "lucide-react";
 
@@ -25,10 +25,34 @@ const StudentExamPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const timerRef = useRef(null);
 
+  // ── Fullscreen enforcement state ──
+  const [showFullscreenWarning, setShowFullscreenWarning] = useState(false);
+  const [fsCountdown, setFsCountdown] = useState(15);
+  const fsCountdownRef = useRef(null);
+
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const getToken = () =>
     sessionStorage.getItem("token") || localStorage.getItem("token");
+
+  // ── Fullscreen helpers ──
+  const enterFullscreen = () => {
+    const elem = document.documentElement;
+    try {
+      if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(() => {});
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+      } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
+      }
+    } catch (e) {
+      // Ignore — some browsers block programmatic fullscreen without a direct user gesture
+    }
+  };
+
+  const isCurrentlyFullscreen = () =>
+    !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
 
   // ── On mount: restore from localStorage if a session is already in progress,
   // otherwise start a fresh exam. This avoids re-calling /start on refresh,
@@ -97,6 +121,55 @@ const StudentExamPage = () => {
       console.error("Failed to save exam progress:", e);
     }
   }, [answers, currentIndex, timeRemaining, sessionId]);
+
+  // ── Enter fullscreen once the exam is actually loaded and active ──
+  useEffect(() => {
+    if (!loading && sessionId && !isSubmitted) {
+      enterFullscreen();
+    }
+  }, [loading, sessionId, isSubmitted]);
+
+  // ── Detect fullscreen exit (F11 / Esc / manual) while exam is active ──
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!isCurrentlyFullscreen() && sessionId && !isSubmitted) {
+        setShowFullscreenWarning(true);
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+    };
+  }, [sessionId, isSubmitted]);
+
+  // ── 15-second auto-submit countdown while the fullscreen warning is showing ──
+  useEffect(() => {
+    if (showFullscreenWarning && !isSubmitted) {
+      setFsCountdown(15);
+      fsCountdownRef.current = setInterval(() => {
+        setFsCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(fsCountdownRef.current);
+            setShowFullscreenWarning(false);
+            handleSubmit(true); // auto submit
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(fsCountdownRef.current);
+  }, [showFullscreenWarning]);
+
+  const handleFullscreenWarningOk = () => {
+    clearInterval(fsCountdownRef.current);
+    setShowFullscreenWarning(false);
+    enterFullscreen();
+  };
 
   const startExam = async () => {
     setLoading(true);
@@ -177,10 +250,6 @@ const StudentExamPage = () => {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleSkip = () => {
-    setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1));
   };
 
   const formatTime = (seconds) => {
@@ -265,6 +334,32 @@ const StudentExamPage = () => {
   // ---- EXAM UI ----
   return (
     <div className="min-h-screen bg-gray-50">
+
+      {/* ── Fullscreen exit warning modal ── */}
+      {showFullscreenWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-5">
+              <AlertCircle size={32} className="text-red-600" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">
+              You exited fullscreen mode!
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Your exam will be <span className="font-semibold text-red-600">automatically submitted</span> in{" "}
+              <span className="font-bold text-red-600 text-lg">{fsCountdown}</span> second{fsCountdown !== 1 ? 's' : ''}{" "}
+              unless you return to fullscreen mode now.
+            </p>
+            <button
+              onClick={handleFullscreenWarningOk}
+              className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
+            >
+              OK, Return to Fullscreen
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-slate-800 shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -440,14 +535,6 @@ const StudentExamPage = () => {
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ChevronLeft size={20} /> Previous
-              </button>
-
-              <button
-                onClick={handleSkip}
-                disabled={currentIndex === questions.length - 1}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <SkipForward size={18} /> Skip
               </button>
 
               <button
