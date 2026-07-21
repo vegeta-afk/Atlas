@@ -911,7 +911,7 @@ const CreateTest = () => {
           {/* ── REGULAR MODE topic UI (flat, deduplicated, with subtopics) ── */}
           {examMode === 'regular' && (
             <>
-              {!formData.facultyId || !formData.batchId || formData.selectedCourseIds.length === 0 ? (
+              {!formData.facultyId || formData.batchIds.length === 0 || formData.selectedCourseIds.length === 0 ? (
                 <div className="text-center py-8">
                   <BookOpen className="mx-auto text-gray-400 mb-3" size={40} />
                   <p className="text-gray-500">Select a faculty, batch, and course(s) to view topics</p>
