@@ -281,7 +281,8 @@ exports.getTests = async (req, res) => {
     } = req.query;
 
     // Build filter
-    const filter = {};
+    // Build filter
+    const filter = { isArchived: { $ne: true } };
 
     if (search) {
       filter.testName = { $regex: search, $options: 'i' };
@@ -411,15 +412,16 @@ exports.deleteTest = async (req, res) => {
       });
     }
 
-    // Note: TestSession/TestSubmission documents for this test are intentionally
-    // left in place — they store their own snapshot fields (testName, courseName,
-    // marksObtained, etc.) so student results/marksheets keep working even after
-    // the parent Test document is deleted.
-    await test.deleteOne();
+    // Soft delete: hide from the admin Manage Tests grid only.
+    // The Test document itself is preserved so results, eligibility reports,
+    // and student-side history (marksheet/results) keep working normally.
+    test.isArchived = true;
+    test.archivedAt = new Date();
+    await test.save();
 
     res.json({
       success: true,
-      message: "Test deleted successfully"
+      message: "Test removed from Manage Tests"
     });
 
   } catch (error) {
@@ -1606,6 +1608,31 @@ exports.getTestEligibilityReport = async (req, res) => {
   } catch (error) {
     console.error('Get test eligibility report error:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+// ── Auto-archive regular-mode tests 7+ days after creation ──
+// Soft delete only — same as manual delete, results/history stay intact.
+exports.autoArchiveOldRegularTests = async () => {
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const result = await Test.updateMany(
+      {
+        examMode: 'regular',
+        isArchived: { $ne: true },
+        createdAt: { $lte: sevenDaysAgo }
+      },
+      {
+        $set: { isArchived: true, archivedAt: new Date() }
+      }
+    );
+
+    if (result.modifiedCount > 0) {
+      console.log(`🗄️  Auto-archived ${result.modifiedCount} regular test(s) older than 7 days`);
+    }
+  } catch (error) {
+    console.error('Auto-archive tests error:', error);
   }
 };
 

@@ -65,6 +65,7 @@ const birthdayRoutes = require("./routes/birthdayRoutes");
 const batchReportRoutes = require("./routes/batchReportRoutes");
 const templateRoutes = require("./routes/templateRoutes");
 const bridgeBatchRoutes = require('./routes/bridgeBatchRoutes');
+const testController = require('./controllers/testController');
 
 // Use routes
 app.use("/api/auth", authRoutes);
@@ -131,12 +132,17 @@ app.use((err, req, res, next) => {
 
 
 // Start server
+// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🧪 Body test: POST http://localhost:${PORT}/api/test-body`);
   console.log(`🔐 Auth API: http://localhost:${PORT}/api/auth`);
+
+  // Auto-archive regular-mode tests older than 7 days (soft delete only)
+  testController.autoArchiveOldRegularTests();
+  setInterval(testController.autoArchiveOldRegularTests, 6 * 60 * 60 * 1000);
 });
 
 console.log("\n" + "=".repeat(50));

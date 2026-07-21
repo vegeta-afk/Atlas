@@ -52,6 +52,8 @@ const testSchema = new mongoose.Schema({
     type: String,
     required: true
   }],
+
+  
   
   // Test configuration
   totalQuestionsInPool: {
@@ -127,6 +129,16 @@ const testSchema = new mongoose.Schema({
     enum: ['draft', 'scheduled', 'active', 'completed', 'cancelled'],
     default: 'draft'
   },
+
+  isArchived: {
+    type: Boolean,
+    default: false
+  },
+  archivedAt: {
+    type: Date,
+    default: null
+  },
+
   
   // Created by
   createdBy: {
@@ -164,6 +176,8 @@ testSchema.pre('save', function(next) {
   }
   next();
 });
+
+
 
 // Auto-calculate maxMarks if not provided
 testSchema.pre('save', async function(next) {
