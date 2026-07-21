@@ -137,4 +137,3 @@ export const examBatchAPI = {
   }
 };
 
-getStudentResults: (studentId) => api.get(`/tests/student/${studentId}/results`);
