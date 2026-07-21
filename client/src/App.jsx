@@ -70,6 +70,7 @@ import AddQuestion from './pages/admin/exam/AddQuestion';
 import EditTest from './pages/admin/exam/EditTest';
 import TestPreview from './pages/admin/exam/TestPreview';
 import StudentExamPage from "./pages/student/StudentExamPage";
+import StudentExamInstructions from "./pages/student/ExamInstructions";
 
 import BatchTransferList from "./pages/students/BatchTransferList";
 import AddBatchTransfer from "./pages/students/AddBatchTransfer";
@@ -245,6 +246,7 @@ function App() {
         <Route path="marksheet" element={<MyMarksheet />} />
         <Route path="exam/:testId" element={<StudentExamPage />} />
         <Route path="scan-qr" element={<StudentScanQR />} />
+        <Route path="exam/:testId/instructions" element={<StudentExamInstructions />} />
       </Route>
 
       {/* Redirects */}
