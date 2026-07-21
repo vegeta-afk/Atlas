@@ -202,7 +202,7 @@ const MyExams = () => {
                 <div className="flex-shrink-0">
                   {exam.status === "active" && !exam.attempted && (
                     <button
-                      onClick={() => navigate(`/student/exam/${exam._id}`)}
+                      onClick={() => navigate(`/student/exam/${exam._id}/instructions`, { state: { testName: exam.testName } })}
                       className="px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors flex items-center gap-2"
                     >
                       <Play size={18} />

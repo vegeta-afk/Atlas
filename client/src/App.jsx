@@ -93,6 +93,7 @@ import BridgeBatchList from "./pages/students/BridgeBatchList";
 import AddBridgeBatchRequest from "./pages/students/AddBridgeBatchRequest";
 import BatchTopicBoard from "./reports/BatchTopicBoard";
 import TestEligibilityReport from "./reports/TestEligibilityReport";
+import ExamInstructions from "./pages/admin/exam/ExamInstructions";
 
 
 function App() {
@@ -165,6 +166,7 @@ function App() {
           <Route path="manage-tests" element={<ManageTests />} />
           <Route path="results/:testId" element={<ExamResults />} />
           <Route path="edit-test/:testId" element={<EditTest />} />
+          <Route path="instructions/:testId" element={<ExamInstructions />} />
         </Route>
 
         <Route path="reports">
