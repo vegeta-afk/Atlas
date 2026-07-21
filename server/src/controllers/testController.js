@@ -34,7 +34,11 @@ exports.createTest = async (req, res) => {
     } = req.body;
 
     const mode = examMode === 'regular' ? 'regular' : 'semester';
-    const cleanBatchId = batchId && batchId.trim() !== "" ? batchId : null;
+    // batchId(s) can arrive as a single string (legacy) or an array (new multi-batch UI)
+    const rawBatchIds = req.body.batchIds || (batchId ? [batchId] : []);
+    const cleanBatchIds = Array.isArray(rawBatchIds)
+      ? rawBatchIds.filter(b => b && b.trim() !== "")
+      : [];
 
     // Base required fields for both modes
     const baseRequired = ['testName', 'selectedTopics', 'totalQuestionsInPool', 'questionsPerStudent', 'duration', 'scheduledDate'];
@@ -74,10 +78,10 @@ exports.createTest = async (req, res) => {
 
     } else {
       // REGULAR mode
-      if (!facultyId || !cleanBatchId) {
+      if (!facultyId || cleanBatchIds.length === 0) {
         return res.status(400).json({
           success: false,
-          message: "Faculty and batch are required for Regular exams"
+          message: "Faculty and at least one batch are required for Regular exams"
         });
       }
       if (!selectedCourseIds || selectedCourseIds.length === 0) {
@@ -89,7 +93,7 @@ exports.createTest = async (req, res) => {
 
       let context;
       try {
-        context = await exports.resolveRegularExamContext(facultyId, cleanBatchId, selectedCourseIds);
+        context = await resolveRegularExamContextMulti(facultyId, cleanBatchIds, selectedCourseIds);
       } catch (e) {
         return res.status(e.status || 400).json({ success: false, message: e.message });
       }
@@ -111,7 +115,7 @@ exports.createTest = async (req, res) => {
       courseNameForTest = context.courses.map(c => c.name).join(' + ');
       relevantCourseIds = context.courseIds;
       facultyIdForTest = facultyId;
-      teacherBatchIdForTest = context.teacherBatch._id;
+      teacherBatchIdForTest = context.teacherBatches[0]?._id || null; // legacy single field
     }
 
     if (matchingQuestions.length < totalQuestionsInPool) {
@@ -137,7 +141,14 @@ exports.createTest = async (req, res) => {
       courseId: courseIdForTest,
       courseName: courseNameForTest,
       facultyId: facultyIdForTest,
-      teacherBatchId: teacherBatchIdForTest,
+      teacherBatchId: teacherBatchIdForTest, // legacy — first batch only
+      teacherBatchIds: mode === 'regular'
+        ? (await (async () => {
+            const TeacherBatch = require('../models/TeacherBatch');
+            const tbs = await TeacherBatch.find({ batch: { $in: cleanBatchIds } }).select('_id').lean();
+            return tbs.map(tb => tb._id);
+          })())
+        : [],
       relevantCourseIds,
       selectedSemesters: mode === 'semester' ? selectedSemesters : [],
       selectedTopics,
@@ -151,7 +162,8 @@ exports.createTest = async (req, res) => {
       shuffleQuestions: shuffleQuestions !== false,
       shuffleOptions: shuffleOptions !== false,
       allowMultipleAttempts: allowMultipleAttempts || false,
-      batchId: cleanBatchId,
+      batchId: cleanBatchIds[0] || null, // legacy — first batch only
+      batchIds: cleanBatchIds,
       createdBy: req.user.id,
       createdByName: req.user.name,
       questionPool: questionIds,
@@ -468,19 +480,26 @@ exports.startTest = async (req, res) => {
 
     // Strict check: regular-mode tests require explicit TeacherBatch assignment
     // Strict check: regular-mode tests require explicit TeacherBatch assignment + course match
-    if (test.examMode === 'regular' && test.teacherBatchId) {
+    const testTeacherBatchIds = (test.teacherBatchIds && test.teacherBatchIds.length > 0
+      ? test.teacherBatchIds
+      : [test.teacherBatchId]
+    ).filter(Boolean);
+
+    if (test.examMode === 'regular' && testTeacherBatchIds.length > 0) {
       const TeacherBatch = require('../models/TeacherBatch');
-      const tb = await TeacherBatch.findById(test.teacherBatchId).select('assignedStudents').lean();
-      const isAssigned = tb && (tb.assignedStudents || []).some(as =>
+      const tbs = await TeacherBatch.find({ _id: { $in: testTeacherBatchIds } }).select('assignedStudents batch').lean();
+
+      const matchedTb = tbs.find(tb => (tb.assignedStudents || []).some(as =>
         as && as.student && as.student.toString() === student._id.toString() &&
         (as.isActive !== undefined ? as.isActive : true)
-      );
-      if (!isAssigned) {
+      ));
+
+      if (!matchedTb) {
         return res.status(403).json({ success: false, message: "You are not assigned to this exam" });
       }
 
       if (test.relevantCourseIds && test.relevantCourseIds.length > 0) {
-        const studentCourseId = exports.resolveStudentCourseIdForBatch(student, test.batchId);
+        const studentCourseId = exports.resolveStudentCourseIdForBatch(student, matchedTb.batch);
         const matches = studentCourseId && test.relevantCourseIds.some(cid => cid.toString() === studentCourseId);
         if (!matches) {
           return res.status(403).json({ success: false, message: "This exam is not for your course" });
@@ -998,7 +1017,10 @@ exports.getStudentTests = async (req, res) => {
     };
 
     if (studentBatch) {
-      query.$or.push({ batchId: studentBatch._id, examMode: { $ne: 'regular' } });
+      query.$or.push(
+        { batchId: studentBatch._id, examMode: { $ne: 'regular' } },
+        { batchIds: studentBatch._id, examMode: { $ne: 'regular' } }
+      );
     }
 
     console.log('🔍 Query:', JSON.stringify(query));
@@ -1017,39 +1039,42 @@ exports.getStudentTests = async (req, res) => {
     let allowedRegularTestIds = new Set();
 
     if (regularTests.length > 0) {
-      const teacherBatchIds = [...new Set(regularTests.map(t => t.teacherBatchId?.toString()).filter(Boolean))];
-      const relevantTeacherBatches = await TeacherBatch.find({ _id: { $in: teacherBatchIds } })
-        .select('assignedStudents')
+      const allTeacherBatchIds = new Set();
+      regularTests.forEach(t => {
+        (t.teacherBatchIds && t.teacherBatchIds.length > 0 ? t.teacherBatchIds : [t.teacherBatchId])
+          .filter(Boolean)
+          .forEach(id => allTeacherBatchIds.add(id.toString()));
+      });
+      const relevantTeacherBatches = await TeacherBatch.find({ _id: { $in: [...allTeacherBatchIds] } })
+        .select('assignedStudents batch')
         .lean();
 
       const tbMap = {};
       relevantTeacherBatches.forEach(tb => { tbMap[tb._id.toString()] = tb; });
 
       regularTests.forEach(t => {
-        console.log(`\n🧪 Checking regular test: ${t.testName} | teacherBatchId: ${t.teacherBatchId}`);
-        const tb = tbMap[t.teacherBatchId?.toString()];
-        if (!tb) {
-          console.log(`   ❌ No TeacherBatch found for teacherBatchId ${t.teacherBatchId}`);
-          return;
-        }
-        const isAssigned = (tb.assignedStudents || []).some(as =>
-          as && as.student && as.student.toString() === student._id.toString() &&
-          (as.isActive !== undefined ? as.isActive : true)
-        );
-        console.log(`   student._id: ${student._id} | isAssigned: ${isAssigned}`);
-        console.log(`   assignedStudents:`, JSON.stringify(tb.assignedStudents));
-        if (!isAssigned) return;
+        const testTeacherBatchIds = (t.teacherBatchIds && t.teacherBatchIds.length > 0
+          ? t.teacherBatchIds
+          : [t.teacherBatchId]
+        ).filter(Boolean).map(id => id.toString());
 
-        // Course-level check: student's course (for THIS batch) must be in the exam's target courses
+        // Find the specific TeacherBatch (of the test's several) this student is assigned to
+        const matchedTb = testTeacherBatchIds
+          .map(id => tbMap[id])
+          .find(tb => tb && (tb.assignedStudents || []).some(as =>
+            as && as.student && as.student.toString() === student._id.toString() &&
+            (as.isActive !== undefined ? as.isActive : true)
+          ));
+
+        if (!matchedTb) return;
+
+        // Course-level check: student's course, resolved for the specific batch they're assigned in
         if (t.relevantCourseIds && t.relevantCourseIds.length > 0) {
-          const studentCourseId = exports.resolveStudentCourseIdForBatch(student, t.batchId);
-          console.log(`   relevantCourseIds: ${JSON.stringify(t.relevantCourseIds)} | resolved studentCourseId: ${studentCourseId}`);
+          const studentCourseId = exports.resolveStudentCourseIdForBatch(student, matchedTb.batch);
           const matches = studentCourseId && t.relevantCourseIds.some(cid => cid.toString() === studentCourseId);
-          console.log(`   course matches: ${matches}`);
           if (!matches) return;
         }
 
-        console.log(`   ✅ Test allowed for this student`);
         allowedRegularTestIds.add(t._id.toString());
       });
     }
@@ -1352,6 +1377,155 @@ async function getRegularBatchCourseGroups(facultyId, batchId) {
   return { teacherBatch, courseGroupMap, courseMap };
 }
 
+// ── Multi-batch version: resolve course groups across SEVERAL faculty+batch pairs ──
+async function getRegularBatchCourseGroupsMulti(facultyId, batchIds) {
+  const User = require('../models/user');
+  const TeacherBatch = require('../models/TeacherBatch');
+  const Student = require('../models/Student');
+  const Course = require('../models/Course');
+  const mongoose = require('mongoose');
+
+  const facultyUser = await User.findOne({
+    facultyId: new mongoose.Types.ObjectId(facultyId),
+    role: 'instructor'
+  }).select('_id').lean();
+
+  if (!facultyUser) {
+    throw { status: 404, message: 'Faculty user account not found' };
+  }
+
+  const teacherBatches = await TeacherBatch.find({
+    teacher: facultyUser._id,
+    batch: { $in: batchIds },
+    isActive: true
+  }).lean();
+
+  if (teacherBatches.length === 0) {
+    throw { status: 404, message: 'This faculty is not assigned to any of the selected batches' };
+  }
+
+  // courseGroupMap: courseId -> Set of "studentId|batchId" pairs
+  // (kept per-batch since a student's course can differ per batch via additionalCourses)
+  const courseGroupMap = {};
+
+  for (const teacherBatch of teacherBatches) {
+    const bIdStr = teacherBatch.batch.toString();
+    const activeAssigned = (teacherBatch.assignedStudents || [])
+      .filter(s => s && s.student && (s.isActive !== undefined ? s.isActive : true));
+    const studentIds = activeAssigned.map(s => s.student);
+
+    if (studentIds.length === 0) continue;
+
+    const students = await Student.find({ _id: { $in: studentIds } })
+      .select('courseCode additionalCourses')
+      .lean();
+
+    students.forEach(s => {
+      let applicableCourseId = s.courseCode ? s.courseCode.toString() : null;
+      if (s.additionalCourses?.length > 0) {
+        const ac = s.additionalCourses.find(
+          a => a.isActive && a.courseId && a.batchId && a.batchId.toString() === bIdStr
+        );
+        if (ac) applicableCourseId = ac.courseId.toString();
+      }
+      if (!applicableCourseId) return;
+      if (!courseGroupMap[applicableCourseId]) courseGroupMap[applicableCourseId] = new Set();
+      courseGroupMap[applicableCourseId].add(`${s._id.toString()}|${bIdStr}`);
+    });
+  }
+
+  const courseIds = Object.keys(courseGroupMap);
+  const courses = courseIds.length > 0
+    ? await Course.find({ _id: { $in: courseIds } }).select('courseFullName syllabus').lean()
+    : [];
+  const courseMap = {};
+  courses.forEach(c => { courseMap[c._id.toString()] = c; });
+
+  return { teacherBatches, courseGroupMap, courseMap };
+}
+
+// ── Multi-batch version of resolveRegularExamContext ──
+async function resolveRegularExamContextMulti(facultyId, batchIds, selectedCourseIds) {
+  const Course = require('../models/Course');
+  const TopicCompletion = require('../models/TopicCompletion');
+
+  const { teacherBatches, courseGroupMap, courseMap } = await getRegularBatchCourseGroupsMulti(facultyId, batchIds);
+
+  let entries = Object.entries(courseGroupMap);
+  if (selectedCourseIds && selectedCourseIds.length > 0) {
+    entries = entries.filter(([cid]) => selectedCourseIds.includes(cid));
+  }
+
+  if (entries.length === 0) {
+    throw { status: 400, message: 'No matching courses found for this selection' };
+  }
+
+  const courseIds = entries.map(([cid]) => cid);
+  const topicMap = new Map();
+
+  for (const [cid, pairSet] of entries) {
+    const course = courseMap[cid];
+    if (!course) continue;
+    const studentIds = [...new Set([...pairSet].map(p => p.split('|')[0]))];
+
+    const completions = await TopicCompletion.find({
+      courseId: cid,
+      studentIds: { $in: studentIds },
+    }).select('completedTopicKeys completedSubtopicKeys studentIds date').lean();
+
+    const topicTaught = {}, topicCompleted = {}, subtopicTaught = {}, subtopicCompleted = {};
+    studentIds.forEach(sid => {
+      topicTaught[sid] = new Set(); topicCompleted[sid] = new Set();
+      subtopicTaught[sid] = new Set(); subtopicCompleted[sid] = new Set();
+    });
+
+    completions.forEach(c => {
+      const isSentinel = new Date(c.date).getTime() === SENTINEL_COMPLETION_DATE_REGULAR.getTime();
+      (c.studentIds || []).forEach(sid => {
+        const sidStr = sid.toString();
+        if (!topicTaught[sidStr]) return;
+        (c.completedTopicKeys || []).forEach(k => {
+          if (isSentinel) topicCompleted[sidStr].add(k); else topicTaught[sidStr].add(k);
+        });
+        (c.completedSubtopicKeys || []).forEach(k => {
+          if (isSentinel) subtopicCompleted[sidStr].add(k); else subtopicTaught[sidStr].add(k);
+        });
+      });
+    });
+
+    (course.syllabus || []).forEach((sem, sIdx) => {
+      (sem.topics || []).forEach((topic, tIdx) => {
+        const topicKey = `${sIdx}_${tIdx}`;
+        const tCompleted = studentIds.some(sid => topicCompleted[sid]?.has(topicKey));
+        const tTaught = studentIds.some(sid => topicTaught[sid]?.has(topicKey));
+
+        const eligibleSubs = [];
+        (topic.subtopics || []).forEach((sub, subIdx) => {
+          const subKey = `${sIdx}_${tIdx}_${subIdx}`;
+          const sCompleted = studentIds.some(sid => subtopicCompleted[sid]?.has(subKey));
+          const sTaught = studentIds.some(sid => subtopicTaught[sid]?.has(subKey));
+          if (sCompleted || sTaught) eligibleSubs.push(sub.name.trim());
+        });
+
+        if (tCompleted || tTaught || eligibleSubs.length > 0) {
+          const key = topic.name.trim().toLowerCase();
+          if (!topicMap.has(key)) topicMap.set(key, { name: topic.name.trim(), subtopics: new Set() });
+          eligibleSubs.forEach(n => topicMap.get(key).subtopics.add(n));
+        }
+      });
+    });
+  }
+
+  const topics = [...topicMap.values()].map(t => ({ name: t.name, subtopics: [...t.subtopics] }));
+
+  return {
+    teacherBatches,
+    courseIds,
+    courses: courseIds.map(cid => ({ _id: cid, name: courseMap[cid]?.courseFullName || 'Unknown Course' })),
+    topics
+  };
+}
+
 // ── Given a student doc + a batchId, resolve which course applies to them IN that batch ──
 function resolveStudentCourseIdForBatch(student, batchId) {
   if (!student || !batchId) return null;
@@ -1365,21 +1539,20 @@ function resolveStudentCourseIdForBatch(student, batchId) {
   return applicableCourseId;
 }
 
-// @desc    Get courses (with student counts) available for a faculty+batch — Regular exam step 1
-// @route   GET /api/exam/tests/regular/courses?facultyId=X&batchId=Y
 exports.getRegularExamCourses = async (req, res) => {
   try {
-    const { facultyId, batchId } = req.query;
-    if (!facultyId || !batchId) {
-      return res.status(400).json({ success: false, message: 'facultyId and batchId are required' });
+    const { facultyId, batchIds } = req.query;
+    if (!facultyId || !batchIds) {
+      return res.status(400).json({ success: false, message: 'facultyId and batchIds are required' });
     }
 
-    const { courseGroupMap, courseMap } = await getRegularBatchCourseGroups(facultyId, batchId);
+    const batchIdList = batchIds.split(',').filter(Boolean);
+    const { courseGroupMap, courseMap } = await getRegularBatchCourseGroupsMulti(facultyId, batchIdList);
 
-    const courses = Object.entries(courseGroupMap).map(([cid, sidSet]) => ({
+    const courses = Object.entries(courseGroupMap).map(([cid, pairSet]) => ({
       courseId: cid,
       courseName: courseMap[cid]?.courseFullName || 'Unknown Course',
-      studentCount: sidSet.size
+      studentCount: new Set([...pairSet].map(p => p.split('|')[0])).size
     })).sort((a, b) => a.courseName.localeCompare(b.courseName));
 
     res.json({ success: true, data: { courses } });
@@ -1482,16 +1655,17 @@ async function resolveRegularExamContext(facultyId, batchId, selectedCourseIds) 
 // @route   GET /api/exam/tests/regular/topics?facultyId=X&batchId=Y&courseIds=A,B
 exports.getRegularExamTopics = async (req, res) => {
   try {
-    const { facultyId, batchId, courseIds } = req.query;
-    if (!facultyId || !batchId) {
-      return res.status(400).json({ success: false, message: 'facultyId and batchId are required' });
+    const { facultyId, batchIds, courseIds } = req.query;
+    if (!facultyId || !batchIds) {
+      return res.status(400).json({ success: false, message: 'facultyId and batchIds are required' });
     }
     if (!courseIds) {
       return res.status(400).json({ success: false, message: 'courseIds is required — select at least one course' });
     }
 
+    const batchIdList = batchIds.split(',').filter(Boolean);
     const selectedCourseIds = courseIds.split(',').filter(Boolean);
-    const context = await resolveRegularExamContext(facultyId, batchId, selectedCourseIds);
+    const context = await resolveRegularExamContextMulti(facultyId, batchIdList, selectedCourseIds);
 
     res.json({
       success: true,
@@ -1524,23 +1698,36 @@ exports.getTestEligibilityReport = async (req, res) => {
 
     let eligibleStudents = [];
 
-    if (test.examMode === 'regular' && test.teacherBatchId) {
-      // Regular mode: eligible = TeacherBatch.assignedStudents, further filtered
-      // by relevantCourseIds (the specific course(s) this exam targeted)
-      const TeacherBatch = require('../models/TeacherBatch');
-      const tb = await TeacherBatch.findById(test.teacherBatchId).select('assignedStudents').lean();
-      const activeAssigned = (tb?.assignedStudents || []).filter(
-        s => s && s.student && (s.isActive !== undefined ? s.isActive : true)
-      );
-      const studentIds = activeAssigned.map(s => s.student);
+    const eligTeacherBatchIds = (test.teacherBatchIds && test.teacherBatchIds.length > 0
+      ? test.teacherBatchIds
+      : [test.teacherBatchId]
+    ).filter(Boolean);
 
+    if (test.examMode === 'regular' && eligTeacherBatchIds.length > 0) {
+      // Regular mode: eligible = union of assignedStudents across all selected TeacherBatches,
+      // each resolved against their own batch for the course-level check
+      const TeacherBatch = require('../models/TeacherBatch');
+      const tbs = await TeacherBatch.find({ _id: { $in: eligTeacherBatchIds } }).select('assignedStudents batch').lean();
+
+      const studentToBatch = new Map(); // studentId -> batchId they're assigned in (first match)
+      tbs.forEach(tb => {
+        (tb.assignedStudents || []).forEach(as => {
+          if (as && as.student && (as.isActive !== undefined ? as.isActive : true)) {
+            const sid = as.student.toString();
+            if (!studentToBatch.has(sid)) studentToBatch.set(sid, tb.batch);
+          }
+        });
+      });
+
+      const studentIds = [...studentToBatch.keys()];
       const students = await Student.find({ _id: { $in: studentIds } })
         .select('studentId fullName courseCode additionalCourses')
         .lean();
 
       if (test.relevantCourseIds && test.relevantCourseIds.length > 0) {
         eligibleStudents = students.filter(s => {
-          const cid = exports.resolveStudentCourseIdForBatch(s, test.batchId);
+          const batchForStudent = studentToBatch.get(s._id.toString());
+          const cid = exports.resolveStudentCourseIdForBatch(s, batchForStudent);
           return cid && test.relevantCourseIds.some(rc => rc.toString() === cid);
         });
       } else {

@@ -47,6 +47,7 @@ const CreateTest = () => {
     description: '',
     courseId: '',
     facultyId: '',
+    batchIds: [], // multi-batch, both modes
     selectedCourseIds: [], // regular mode — which course(s) this exam targets
     selectedSemesters: [],
     selectedTopics: [],
@@ -60,8 +61,7 @@ const CreateTest = () => {
     endTime: '17:00',
     shuffleQuestions: true,
     shuffleOptions: true,
-    allowMultipleAttempts: false,
-    batchId: ''
+    allowMultipleAttempts: false
   });
 
   // Load courses + batches + faculty on mount
@@ -111,9 +111,9 @@ const CreateTest = () => {
   };
 
   // ── Step 1 (Regular mode): load courses in this faculty+batch, with student counts ──
-  const loadRegularCourses = async (facultyId, batchId) => {
+  const loadRegularCourses = async (facultyId, batchIds) => {
     try {
-      const response = await testAPI.getRegularCourses(facultyId, batchId);
+      const response = await testAPI.getRegularCourses(facultyId, batchIds);
       if (response.success) {
         setRegularCourses(response.data.courses || []);
       } else {
@@ -128,10 +128,10 @@ const CreateTest = () => {
   };
 
   // ── Step 2 (Regular mode): load deduplicated taught topics for SELECTED course(s) ──
-  const loadRegularTopics = async (facultyId, batchId, courseIds) => {
+  const loadRegularTopics = async (facultyId, batchIds, courseIds) => {
     setLoadingRegularTopics(true);
     try {
-      const response = await testAPI.getRegularTopics(facultyId, batchId, courseIds);
+      const response = await testAPI.getRegularTopics(facultyId, batchIds, courseIds);
       if (response.success) {
         const topics = response.data.topics || [];
         setRegularTopics(topics);
@@ -163,18 +163,19 @@ const CreateTest = () => {
   }, [examMode, formData.courseId, courses]);
 
   // Regular mode: faculty + batch selected → load courses in that batch
+  // Regular mode: faculty + batch(es) selected → load courses across those batches
   useEffect(() => {
-    if (examMode === 'regular' && formData.facultyId && formData.batchId) {
-      loadRegularCourses(formData.facultyId, formData.batchId);
+    if (examMode === 'regular' && formData.facultyId && formData.batchIds.length > 0) {
+      loadRegularCourses(formData.facultyId, formData.batchIds);
       setFormData(prev => ({ ...prev, selectedCourseIds: [], selectedTopics: [] }));
       setRegularTopics([]);
     }
-  }, [examMode, formData.facultyId, formData.batchId]);
+  }, [examMode, formData.facultyId, formData.batchIds]);
 
   // Regular mode: course(s) selected → load their deduplicated taught topics
   useEffect(() => {
-    if (examMode === 'regular' && formData.facultyId && formData.batchId && formData.selectedCourseIds.length > 0) {
-      loadRegularTopics(formData.facultyId, formData.batchId, formData.selectedCourseIds);
+    if (examMode === 'regular' && formData.facultyId && formData.batchIds.length > 0 && formData.selectedCourseIds.length > 0) {
+      loadRegularTopics(formData.facultyId, formData.batchIds, formData.selectedCourseIds);
     } else if (examMode === 'regular' && formData.selectedCourseIds.length === 0) {
       setRegularTopics([]);
       setFormData(prev => ({ ...prev, selectedTopics: [] }));
@@ -331,7 +332,7 @@ const CreateTest = () => {
       examMode: mode,
       courseId: '',
       facultyId: '',
-      batchId: '',
+      batchIds: [],
       selectedCourseIds: [],
       selectedSemesters: [],
       selectedTopics: [],
@@ -348,7 +349,7 @@ const CreateTest = () => {
   // ── Faculty change (Regular mode) ──
   const handleFacultyChange = (e) => {
     const facultyId = e.target.value;
-    setFormData(prev => ({ ...prev, facultyId, batchId: '', selectedCourseIds: [], selectedTopics: [] }));
+    setFormData(prev => ({ ...prev, facultyId, batchIds: [], selectedCourseIds: [], selectedTopics: [] }));
     setRegularTopics([]);
     setRegularCourses([]);
     setFacultyBatches([]);
@@ -464,8 +465,8 @@ const CreateTest = () => {
     if (!validateForm()) return;
 
     if (examMode === 'regular') {
-      if (!formData.facultyId || !formData.batchId) {
-        toast.error('Please select a faculty and batch for Regular exam');
+      if (!formData.facultyId || formData.batchIds.length === 0) {
+        toast.error('Please select a faculty and at least one batch for Regular exam');
         return;
       }
       if (formData.selectedCourseIds.length === 0) {
@@ -495,8 +496,8 @@ const CreateTest = () => {
         topicSelections: examMode === 'regular' ? buildTopicSelections() : undefined
       };
 
-      if (!submitData.batchId || submitData.batchId.toString().trim() === '') {
-        delete submitData.batchId;
+      if (!submitData.batchIds || submitData.batchIds.length === 0) {
+        delete submitData.batchIds;
       }
 
       const response = await testAPI.createTest(submitData);
@@ -664,15 +665,18 @@ const CreateTest = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Assign to Batch (Optional)
+                      Assign to Batch(es) (Optional) <span className="text-xs font-normal text-gray-500">(hold Ctrl / Cmd to select multiple)</span>
                     </label>
                     <select
-                      name="batchId"
-                      value={formData.batchId}
-                      onChange={handleChange}
+                      multiple
+                      value={formData.batchIds}
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.selectedOptions).map(o => o.value);
+                        setFormData(prev => ({ ...prev, batchIds: selected }));
+                      }}
+                      size={Math.min(6, Math.max(3, batchList.length || 3))}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">All Batches (No restriction)</option>
                       {batchList.map(batch => (
                         <option key={batch._id} value={batch._id}>
                           {batch.batchName} ({batch.displayName})
@@ -680,7 +684,7 @@ const CreateTest = () => {
                       ))}
                     </select>
                     <p className="text-xs text-gray-500 mt-1">
-                      Only students of selected batch will see this exam
+                      Leave nothing selected for no restriction — otherwise only students in the selected batch(es) will see this exam
                     </p>
                   </div>
                 </>
@@ -714,19 +718,20 @@ const CreateTest = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Batch *
+                      Batch(es) * <span className="text-xs font-normal text-gray-500">(hold Ctrl / Cmd to select multiple)</span>
                     </label>
                     <select
-                      name="batchId"
-                      value={formData.batchId}
-                      onChange={handleChange}
+                      multiple
+                      value={formData.batchIds}
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.selectedOptions).map(o => o.value);
+                        setFormData(prev => ({ ...prev, batchIds: selected, selectedCourseIds: [], selectedTopics: [] }));
+                      }}
                       required
                       disabled={!formData.facultyId}
+                      size={Math.min(6, Math.max(3, facultyBatches.length || 3))}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     >
-                      <option value="">
-                        {formData.facultyId ? 'Select Batch' : 'Select a faculty first'}
-                      </option>
                       {facultyBatches.map(batch => (
                         <option key={batch.batchId || batch._id} value={batch.batchId || batch._id}>
                           {batch.displayName || batch.name} ({batch.totalStudents} students)
@@ -735,7 +740,7 @@ const CreateTest = () => {
                     </select>
                   </div>
 
-                  {formData.batchId && (
+                  {formData.batchIds.length > 0 && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Course(s) * <span className="text-xs font-normal text-gray-500">(hold Ctrl / Cmd to select multiple)</span>

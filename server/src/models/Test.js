@@ -91,9 +91,20 @@ const testSchema = new mongoose.Schema({
  batchId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Batch',
-    required: false, // ✅ Make it optional
-    default: null // ✅ Default value
+    required: false,
+    default: null
   },
+  // Multi-batch support (semester + regular mode). batchId above is kept
+  // for older tests created before this change; new tests use batchIds.
+  batchIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Batch'
+  }],
+  // Regular mode only — one TeacherBatch per selected batch
+  teacherBatchIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'TeacherBatch'
+  }],
   
   // Timing
   scheduledDate: {

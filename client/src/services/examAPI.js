@@ -60,13 +60,14 @@ export const testAPI = {
     return response.data;
   },
 
-  getRegularCourses: async (facultyId, batchId) => {
-    const response = await api.get(`/exam/tests/regular/courses`, { params: { facultyId, batchId } });
+  getRegularCourses: async (facultyId, batchIds) => {
+    const params = { facultyId, batchIds: (batchIds || []).join(',') };
+    const response = await api.get(`/exam/tests/regular/courses`, { params });
     return response.data;
 },
 
-getRegularTopics: async (facultyId, batchId, courseIds) => {
-    const params = { facultyId, batchId };
+getRegularTopics: async (facultyId, batchIds, courseIds) => {
+    const params = { facultyId, batchIds: (batchIds || []).join(',') };
     if (courseIds && courseIds.length > 0) params.courseIds = courseIds.join(',');
     const response = await api.get(`/exam/tests/regular/topics`, { params });
     return response.data;
