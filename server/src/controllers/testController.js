@@ -1820,10 +1820,11 @@ exports.getTestEligibilityReport = async (req, res) => {
             const matchedAdditional = (s.additionalCourses || []).find(
               ac => ac.isActive && ac.courseId
             );
-            const cid = matchedAdditional
-              ? matchedAdditional.courseId.toString()
-              : (s.courseCode ? s.courseCode.toString() : null);
-            courseShortName = cid ? courseShortNameMap[cid] : null;
+            if (matchedAdditional) {
+              courseShortName = courseShortNameMap[matchedAdditional.courseId.toString()] || null;
+            } else {
+              courseShortName = s.courseCode?.courseShortName || null;
+            }
           }
 
           return {
