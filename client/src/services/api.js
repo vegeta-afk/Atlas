@@ -386,6 +386,8 @@ export const examReportAPI = {
     });
   },
 
+  toggleExamDue: (data) => api.put('/reports/exams/upcoming/mark-due', data),
+
   exportUpcomingExamReport: () =>
     api.get("/reports/exams/upcoming/export", { responseType: 'blob' }),
 

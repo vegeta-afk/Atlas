@@ -229,6 +229,30 @@ const UpcomingExamReport = () => {
     return dateString;
   };
 
+  const handleStatusClick = async (exam) => {
+    const isCurrentlyDue = exam.status === "Due";
+    const confirmMsg = isCurrentlyDue
+      ? `Remove "Due" status for ${exam.studentName}? This will restore the normal countdown.`
+      : `Mark this exam as "Due" for ${exam.studentName}?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const response = await examReportAPI.toggleExamDue({
+        studentId: exam.studentId,
+        courseId: exam.courseId,
+        examNumber: exam.examNumber,
+        markDue: !isCurrentlyDue
+      });
+      if (response?.data?.success) {
+        fetchReportData();
+      }
+    } catch (err) {
+      console.error("Toggle due status error:", err);
+      alert("Failed to update status");
+    }
+  };
+
   // Calculate showing range
   const start = ((pagination.page - 1) * pagination.limit) + 1;
   const end = Math.min(start + exams.length - 1, pagination.total);
@@ -536,7 +560,17 @@ const UpcomingExamReport = () => {
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      {getStatusBadge(exam.status, exam.daysLeft)}
+                      {exam.isCompleted ? (
+                        getStatusBadge(exam.status, exam.daysLeft)
+                      ) : (
+                        <button
+                          onClick={() => handleStatusClick(exam)}
+                          className="cursor-pointer hover:opacity-75 transition-opacity"
+                          title={exam.status === "Due" ? "Click to remove Due status" : "Click to mark as Due"}
+                        >
+                          {getStatusBadge(exam.status, exam.daysLeft)}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

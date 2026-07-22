@@ -270,6 +270,12 @@ scholarship: {
       }
     ],
 
+    // Manually-marked "Due" exam overrides — set from Upcoming Exam Report.
+  // Format: "<courseId>_<examNumber>", e.g. "671f2a.._1"
+  manuallyDueExamKeys: [{
+    type: String
+  }],
+
     // Payment History (Primary Course)
     paymentHistory: [
       {

@@ -25,4 +25,6 @@ router.get("/upcoming/export", examReportController.exportUpcomingExamReport);
 // @route   GET /api/reports/exams/stats
 router.get("/stats", examReportController.getExamStats);
 
+router.put('/upcoming/mark-due', authorize('admin', 'faculty', 'instructor'), examReportController.toggleExamDueStatus);
+
 module.exports = router;

@@ -89,6 +89,8 @@ exports.getUpcomingExamReport = async (req, res) => {
       const cid = student.courseCode._id ? student.courseCode._id.toString() : "unknown";
       const studentSubmissions = submissionMap[sid]?.[cid] || [];
 
+      const dueKeys = new Set(student.manuallyDueExamKeys || []);
+
       examMonths.forEach((monthNum, index) => {
         const examDate = new Date(startDate);
         examDate.setMonth(startDate.getMonth() + monthNum - 1);
@@ -101,14 +103,15 @@ exports.getUpcomingExamReport = async (req, res) => {
         const matchedSubmission = studentSubmissions[index] || null;
         const isCompleted = !!matchedSubmission;
         const isOverdue = !isCompleted && daysLeft < 0;
+        const isManuallyDue = !isCompleted && dueKeys.has(`${cid}_${index + 1}`);
 
-        // Determine status — completion now depends on an actual submission,
-        // not just the calculated date passing
+        // Determine status — completion depends on an actual submission;
+        // "Due" can also be set manually by an admin regardless of the date
         let status = "";
         if (isCompleted) {
           status = "Completed";
-        } else if (isOverdue) {
-          status = "Due"; // date passed but student hasn't taken the exam yet
+        } else if (isOverdue || isManuallyDue) {
+          status = "Due";
         } else if (daysLeft <= 15) {
           status = "Critical";
         } else if (daysLeft <= 30) {
@@ -120,7 +123,6 @@ exports.getUpcomingExamReport = async (req, res) => {
         } else {
           status = "Far";
         }
-
         if (examNumber === "all" ||
             (examNumber === "first" && index === 0) ||
             (examNumber === "second" && index === 1) ||
@@ -129,6 +131,7 @@ exports.getUpcomingExamReport = async (req, res) => {
           reportData.push({
             id: `${student._id}_exam_${index + 1}`,
             studentId: student._id,
+            courseId: cid,
             rollNo: student.studentId || "N/A",
             studentName: student.fullName || "N/A",
             courseName: student.course || "N/A",
@@ -142,6 +145,7 @@ exports.getUpcomingExamReport = async (req, res) => {
             status,
             isCompleted,
             isOverdue,
+            isManuallyDue,
             marksObtained: matchedSubmission?.marksObtained ?? null,
             maxMarks: matchedSubmission?.maxMarks ?? null,
             percentage: matchedSubmission?.percentage ?? null,
@@ -153,10 +157,15 @@ exports.getUpcomingExamReport = async (req, res) => {
       });
     });
 
-    // Filter out completed exams if a specific exam number was requested
-    let filteredData = reportData;
+    // Only show what actually needs attention: Due, ≤10 days left, or Completed
+    // (kept so admins can still see the record — remove `|| item.isCompleted`
+    // below if you'd rather hide completed rows entirely)
+    let filteredData = reportData.filter(item =>
+      item.status === "Due" || item.daysLeft <= 10 || item.isCompleted
+    );
+
     if (examNumber !== "all") {
-      filteredData = reportData.filter(item => !item.isCompleted);
+      filteredData = filteredData.filter(item => !item.isCompleted);
     }
 
     // Sort data
@@ -223,6 +232,48 @@ exports.getUpcomingExamReport = async (req, res) => {
       message: "Server error",
       error: error.message,
     });
+  }
+};
+
+// @desc    Manually mark/unmark a student's exam slot as "Due"
+// @route   PUT /api/reports/exams/upcoming/mark-due
+// @access  Private (Admin)
+exports.toggleExamDueStatus = async (req, res) => {
+  try {
+    const { studentId, courseId, examNumber, markDue } = req.body;
+
+    if (!studentId || !courseId || !examNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "studentId, courseId, and examNumber are required"
+      });
+    }
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    const key = `${courseId}_${examNumber}`;
+    const current = student.manuallyDueExamKeys || [];
+    const alreadyMarked = current.includes(key);
+
+    if (markDue && !alreadyMarked) {
+      student.manuallyDueExamKeys = [...current, key];
+    } else if (!markDue && alreadyMarked) {
+      student.manuallyDueExamKeys = current.filter(k => k !== key);
+    }
+
+    await student.save();
+
+    res.json({
+      success: true,
+      message: markDue ? "Marked as Due" : "Due status removed",
+      data: { studentId, courseId, examNumber, dueStatus: markDue }
+    });
+  } catch (error) {
+    console.error("❌ Toggle exam due status error:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
 
