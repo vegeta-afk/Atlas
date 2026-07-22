@@ -488,7 +488,7 @@ exports.startTest = async (req, res) => {
       }
     }
 
-    // Strict check: regular-mode tests require explicit TeacherBatch assignment
+    // Strict check: regular-mode tests require explicit TeacherBatch assignmen
 
     // Strict check: regular-mode tests require explicit TeacherBatch assignment
     // Strict check: regular-mode tests require explicit TeacherBatch assignment + course match
@@ -1675,7 +1675,7 @@ exports.getTestEligibilityReport = async (req, res) => {
   try {
     const testId = req.params.id;
     const test = await Test.findById(testId)
-      .populate('courseId', 'courseFullName')
+      .populate('courseId', 'courseFullName courseShortName')
       .lean();
 
     if (!test) {
@@ -1708,6 +1708,8 @@ exports.getTestEligibilityReport = async (req, res) => {
       const studentIds = [...studentToBatch.keys()];
       const students = await Student.find({ _id: { $in: studentIds } })
         .select('studentId fullName courseCode additionalCourses')
+        .populate('courseCode', 'courseShortName')
+        .populate('additionalCourses.courseId', 'courseShortName')
         .lean();
 
       if (test.relevantCourseIds && test.relevantCourseIds.length > 0) {
@@ -1726,7 +1728,7 @@ exports.getTestEligibilityReport = async (req, res) => {
 
       const candidateStudents = await Student.find({ isActive: true, status: 'active' })
         .select('studentId fullName courseCode additionalCourses admissionDate manuallyDueExamKeys')
-        .populate('courseCode', 'examMonths')
+        .populate('courseCode', 'examMonths courseShortName')
         .lean();
 
       eligibleStudents = candidateStudents.filter(s => {
@@ -1815,10 +1817,25 @@ exports.getTestEligibilityReport = async (req, res) => {
         },
         students: eligibleStudents.map(s => {
           const sub = attemptedMap[s._id.toString()];
+
+          // Resolve this student's course short name — check additionalCourses
+          // for an active match to the test's target course first, else fall back
+          // to their primary courseCode.
+          const targetCourseId = test.courseId?._id?.toString() || test.courseId?.toString();
+          const matchedAdditional = (s.additionalCourses || []).find(
+            ac => ac.isActive && ac.courseId && ac.courseId._id?.toString() === targetCourseId
+          );
+          const courseShortName =
+            matchedAdditional?.courseId?.courseShortName ||
+            s.courseCode?.courseShortName ||
+            test.courseId?.courseShortName ||
+            null;
+
           return {
             _id: s._id,
             studentId: s.studentId,
             fullName: s.fullName,
+            courseShortName,
             attempted: !!sub,
             activated: activatedSet.has(s._id.toString()),
             marksObtained: sub?.marksObtained ?? null,

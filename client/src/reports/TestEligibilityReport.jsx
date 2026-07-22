@@ -243,7 +243,14 @@ const TestEligibilityReport = () => {
                                     {(s.fullName || "?").charAt(0).toUpperCase()}
                                   </div>
                                   <div>
-                                    <p className="font-semibold text-slate-800 text-sm">{s.fullName}</p>
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-semibold text-slate-800 text-sm">{s.fullName}</p>
+                                      {s.courseShortName && (
+                                        <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] font-semibold uppercase tracking-wide">
+                                          {s.courseShortName}
+                                        </span>
+                                      )}
+                                    </div>
                                     <p className="text-xs text-slate-400">{s.studentId}</p>
                                   </div>
                                 </div>
