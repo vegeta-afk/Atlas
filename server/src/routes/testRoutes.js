@@ -41,6 +41,7 @@ router.post('/:id/submit', authorize('student'), testController.submitTest);
 router.get('/:id', authorize('admin', 'faculty', 'instructor'), testController.getTest);
 router.put('/:id/activate-student/:studentId', authorize('admin', 'faculty', 'instructor'), testController.toggleStudentActivation);
 router.put('/:id', authorize('admin', 'faculty', 'instructor'), testController.updateTest);
+router.put('/:id/mark-due/:studentId', authorize('admin', 'faculty', 'instructor'), testController.toggleStudentDueStatus);
 router.delete('/:id', authorize('admin'), testController.deleteTest);
 
 module.exports = router;

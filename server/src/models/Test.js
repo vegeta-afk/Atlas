@@ -106,6 +106,11 @@ const testSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Student'
   }],
+
+  manuallyDueStudentIds: [{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Student'
+}],
   // Regular mode only — one TeacherBatch per selected batch
   teacherBatchIds: [{
     type: mongoose.Schema.Types.ObjectId,

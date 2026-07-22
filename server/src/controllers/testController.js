@@ -967,25 +967,18 @@ exports.getAvailableQuestions = async (req, res) => {
 exports.getStudentTests = async (req, res) => {
   try {
     const Student = require('../models/Student');
-    const { Batch } = require('../models/Setup');
-    const User = require('../models/user'); // ← add this
+    const User = require('../models/user');
 
-    console.log('👤 req.user:', JSON.stringify(req.user));
-
-    // ✅ FIX: Get studentId from User record since JWT doesn't have it
     const userRecord = await User.findById(req.user.id).select('studentId');
-    console.log('👤 userRecord:', userRecord);
     if (!userRecord?.studentId) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Student ID not found on user account" 
+      return res.status(404).json({
+        success: false,
+        message: "Student ID not found on user account"
       });
     }
 
     const student = await Student.findOne({ studentId: userRecord.studentId })
       .select('batchTime enrolledBatches studentId _id fullName courseCode additionalCourses');
-
-    console.log('📚 student:', student?.fullName, student?.batchTime);
 
     if (!student) {
       return res.status(404).json({
@@ -994,49 +987,19 @@ exports.getStudentTests = async (req, res) => {
       });
     }
 
-    // Find student's batch
-    const studentBatch = await Batch.findOne({
-      displayName: student.batchTime
-    });
-
-    console.log('🏫 Batch found:', JSON.stringify(studentBatch));
-
-    console.log(`📚 Student batch: ${student.batchTime} → found: ${studentBatch?._id}`);
-
-    // Build query
-    // Build query — regular-mode tests skip the Setup-Batch gate entirely;
-    // TeacherBatch.assignedStudents (checked further below) decides their eligibility.
-    // Semester-mode tests keep the original batchId/batchTime gate.
-    const query = {
+    // Fetch all potentially-visible tests; fine-grained eligibility applied per mode below
+    const tests = await Test.find({
       status: { $in: ['active', 'scheduled', 'completed'] },
-      $or: [
-        { examMode: 'regular' },
-        { batchId: null },
-        { batchId: { $exists: false } },
-      ]
-    };
-
-    if (studentBatch) {
-      query.$or.push(
-        { batchId: studentBatch._id, examMode: { $ne: 'regular' } },
-        { batchIds: studentBatch._id, examMode: { $ne: 'regular' } }
-      );
-    }
-
-    console.log('🔍 Query:', JSON.stringify(query));
-
-    const tests = await Test.find(query)
+      examMode: { $in: ['regular', 'semester'] }
+    })
       .populate('courseId', 'courseFullName')
       .select('-questionPool')
       .sort({ scheduledDate: -1 });
 
-    console.log(`✅ Tests found: ${tests.length}`);
-
-    // ── Strict filter: for 'regular' mode tests, student must be in the
-    // TeacherBatch.assignedStudents for that test's teacherBatchId ──
+    // ── Regular-mode gate: TeacherBatch assignment + course match ──
     const TeacherBatch = require('../models/TeacherBatch');
     const regularTests = tests.filter(t => t.examMode === 'regular');
-    let allowedRegularTestIds = new Set();
+    const allowedRegularTestIds = new Set();
 
     if (regularTests.length > 0) {
       const allTeacherBatchIds = new Set();
@@ -1058,7 +1021,6 @@ exports.getStudentTests = async (req, res) => {
           : [t.teacherBatchId]
         ).filter(Boolean).map(id => id.toString());
 
-        // Find the specific TeacherBatch (of the test's several) this student is assigned to
         const matchedTb = testTeacherBatchIds
           .map(id => tbMap[id])
           .find(tb => tb && (tb.assignedStudents || []).some(as =>
@@ -1068,7 +1030,6 @@ exports.getStudentTests = async (req, res) => {
 
         if (!matchedTb) return;
 
-        // Course-level check: student's course, resolved for the specific batch they're assigned in
         if (t.relevantCourseIds && t.relevantCourseIds.length > 0) {
           const studentCourseId = exports.resolveStudentCourseIdForBatch(student, matchedTb.batch);
           const matches = studentCourseId && t.relevantCourseIds.some(cid => cid.toString() === studentCourseId);
@@ -1079,15 +1040,30 @@ exports.getStudentTests = async (req, res) => {
       });
     }
 
-    // Keep semester-mode tests as-is (existing batch logic already filtered them);
-    // for regular-mode tests, only keep ones the student is explicitly assigned to
+    // ── Semester-mode gate: course match + manual activation ──
+    const semesterTests = tests.filter(t => t.examMode === 'semester');
+    const allowedSemesterTestIds = new Set();
+
+    semesterTests.forEach(t => {
+      const isActivated = (t.activatedStudentIds || []).some(id => id.toString() === student._id.toString());
+      if (!isActivated) return;
+
+      const targetCourseId = t.courseId?._id?.toString() || t.courseId?.toString();
+      const studentCourseId = student.courseCode ? student.courseCode.toString() : null;
+      const matchesBase = studentCourseId && studentCourseId === targetCourseId;
+      const matchesAdditional = (student.additionalCourses || []).some(
+        ac => ac.isActive && ac.courseId && ac.courseId.toString() === targetCourseId
+      );
+
+      if (matchesBase || matchesAdditional) {
+        allowedSemesterTestIds.add(t._id.toString());
+      }
+    });
+
     const visibleTests = tests.filter(t =>
-      t.examMode !== 'regular' || allowedRegularTestIds.has(t._id.toString())
+      (t.examMode === 'regular' && allowedRegularTestIds.has(t._id.toString())) ||
+      (t.examMode === 'semester' && allowedSemesterTestIds.has(t._id.toString()))
     );
-
-
-tests.forEach(t => console.log(`  - ${t.testName} | status: ${t.status} | batchId: ${t.batchId}`));
-
 
     // Check attempted sessions
     const attemptedSessions = await TestSession.find({
@@ -1128,8 +1104,6 @@ tests.forEach(t => console.log(`  - ${t.testName} | status: ${t.status} | batchI
       success: false,
       message: "Server error",
       error: error.message
-
-      
     });
   }
 };
@@ -1750,6 +1724,21 @@ exports.getTestEligibilityReport = async (req, res) => {
       });
     }
 
+    // Days left until this test's scheduled date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const examDate = new Date(test.scheduledDate);
+    examDate.setHours(0, 0, 0, 0);
+    const daysLeft = Math.ceil((examDate - today) / (1000 * 60 * 60 * 24));
+
+    // Manually-marked "Due" students for this test
+    const dueSet = new Set((test.manuallyDueStudentIds || []).map(id => id.toString()));
+
+    // Only keep students whose exam is ≤10 days away, or who are manually marked Due
+    if (daysLeft > 10) {
+      eligibleStudents = eligibleStudents.filter(s => dueSet.has(s._id.toString()));
+    }
+
     const eligibleIds = eligibleStudents.map(s => s._id.toString());
 
     const submissions = await TestSubmission.find({ testId: test._id })
@@ -1790,6 +1779,7 @@ exports.getTestEligibilityReport = async (req, res) => {
             fullName: s.fullName,
             attempted: !!sub,
             activated: activatedSet.has(s._id.toString()),
+            manuallyDue: dueSet.has(s._id.toString()),
             marksObtained: sub?.marksObtained ?? null,
             maxMarks: sub?.maxMarks ?? null,
             percentage: sub?.percentage ?? null,
@@ -1838,6 +1828,40 @@ exports.toggleStudentActivation = async (req, res) => {
     });
   } catch (error) {
     console.error('Toggle student activation error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+// @desc    Toggle a student's manual "Due" status for a test (controls eligibility visibility)
+// @route   PUT /api/exam/tests/:id/mark-due/:studentId
+// @access  Private (Admin/Faculty)
+exports.toggleStudentDueStatus = async (req, res) => {
+  try {
+    const { id, studentId } = req.params;
+    const { markDue } = req.body; // true | false
+
+    const test = await Test.findById(id);
+    if (!test) {
+      return res.status(404).json({ success: false, message: 'Test not found' });
+    }
+
+    const alreadyDue = (test.manuallyDueStudentIds || []).some(sid => sid.toString() === studentId);
+
+    if (markDue && !alreadyDue) {
+      test.manuallyDueStudentIds.push(studentId);
+    } else if (!markDue && alreadyDue) {
+      test.manuallyDueStudentIds = test.manuallyDueStudentIds.filter(sid => sid.toString() !== studentId);
+    }
+
+    await test.save();
+
+    res.json({
+      success: true,
+      message: markDue ? 'Student marked as Due for this exam' : 'Due status removed',
+      data: { studentId, manuallyDue: markDue }
+    });
+  } catch (error) {
+    console.error('Toggle student due status error:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
