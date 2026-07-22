@@ -1732,11 +1732,9 @@ exports.getTestEligibilityReport = async (req, res) => {
     const daysLeft = Math.ceil((examDate - today) / (1000 * 60 * 60 * 24));
 
     // Manually-marked "Due" students for this test
-    const dueSet = new Set((test.manuallyDueStudentIds || []).map(id => id.toString()));
-
-    // Only keep students whose exam is ≤10 days away, or who are manually marked Due
+    // Only show eligible students if the exam is within 10 days
     if (daysLeft > 10) {
-      eligibleStudents = eligibleStudents.filter(s => dueSet.has(s._id.toString()));
+      eligibleStudents = [];
     }
 
     const eligibleIds = eligibleStudents.map(s => s._id.toString());
