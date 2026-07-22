@@ -1682,7 +1682,13 @@ exports.getTestEligibilityReport = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Test not found' });
     }
 
+    const Course = require('../models/Course');
+    const allCourses = await Course.find({}).select('courseShortName').lean();
+    const courseShortNameMap = {};
+    allCourses.forEach(c => { courseShortNameMap[c._id.toString()] = c.courseShortName; });
+
     let eligibleStudents = [];
+    let studentToBatch = null;
 
     const eligTeacherBatchIds = (test.teacherBatchIds && test.teacherBatchIds.length > 0
       ? test.teacherBatchIds
@@ -1695,7 +1701,7 @@ exports.getTestEligibilityReport = async (req, res) => {
       const TeacherBatch = require('../models/TeacherBatch');
       const tbs = await TeacherBatch.find({ _id: { $in: eligTeacherBatchIds } }).select('assignedStudents batch').lean();
 
-      const studentToBatch = new Map();
+     studentToBatch = new Map();
       tbs.forEach(tb => {
         (tb.assignedStudents || []).forEach(as => {
           if (as && as.student && (as.isActive !== undefined ? as.isActive : true)) {
@@ -1708,8 +1714,6 @@ exports.getTestEligibilityReport = async (req, res) => {
       const studentIds = [...studentToBatch.keys()];
       const students = await Student.find({ _id: { $in: studentIds } })
         .select('studentId fullName courseCode additionalCourses')
-        .populate('courseCode', 'courseShortName')
-        .populate('additionalCourses.courseId', 'courseShortName')
         .lean();
 
       if (test.relevantCourseIds && test.relevantCourseIds.length > 0) {
@@ -1771,18 +1775,6 @@ exports.getTestEligibilityReport = async (req, res) => {
     }
 
     // Days left until this test's scheduled date
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const examDate = new Date(test.scheduledDate);
-    examDate.setHours(0, 0, 0, 0);
-    const daysLeft = Math.ceil((examDate - today) / (1000 * 60 * 60 * 24));
-
-    // Manually-marked "Due" students for this test
-    // Only show eligible students if the exam is within 10 days
-    if (daysLeft > 10) {
-      eligibleStudents = [];
-    }
-
     const eligibleIds = eligibleStudents.map(s => s._id.toString());
 
     const submissions = await TestSubmission.find({ testId: test._id })
@@ -1818,18 +1810,21 @@ exports.getTestEligibilityReport = async (req, res) => {
         students: eligibleStudents.map(s => {
           const sub = attemptedMap[s._id.toString()];
 
-          // Resolve this student's course short name — check additionalCourses
-          // for an active match to the test's target course first, else fall back
-          // to their primary courseCode.
-          const targetCourseId = test.courseId?._id?.toString() || test.courseId?.toString();
-          const matchedAdditional = (s.additionalCourses || []).find(
-            ac => ac.isActive && ac.courseId && ac.courseId._id?.toString() === targetCourseId
-          );
-          const courseShortName =
-            matchedAdditional?.courseId?.courseShortName ||
-            s.courseCode?.courseShortName ||
-            test.courseId?.courseShortName ||
-            null;
+          // Resolve this student's course short name via the plain ObjectId map
+          let courseShortName = null;
+          if (test.examMode === 'regular') {
+            const batchForStudent = studentToBatch?.get(s._id.toString());
+            const cid = exports.resolveStudentCourseIdForBatch(s, batchForStudent);
+            courseShortName = cid ? courseShortNameMap[cid] : null;
+          } else {
+            const matchedAdditional = (s.additionalCourses || []).find(
+              ac => ac.isActive && ac.courseId
+            );
+            const cid = matchedAdditional
+              ? matchedAdditional.courseId.toString()
+              : (s.courseCode ? s.courseCode.toString() : null);
+            courseShortName = cid ? courseShortNameMap[cid] : null;
+          }
 
           return {
             _id: s._id,
