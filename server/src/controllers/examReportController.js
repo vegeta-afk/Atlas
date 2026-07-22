@@ -158,15 +158,11 @@ exports.getUpcomingExamReport = async (req, res) => {
     });
 
     // Only show what actually needs attention: Due, ≤10 days left, or Completed
-    // (kept so admins can still see the record — remove `|| item.isCompleted`
-    // below if you'd rather hide completed rows entirely)
-    let filteredData = reportData.filter(item =>
-      item.status === "Due" || item.daysLeft <= 10 || item.isCompleted
-    );
-
-    if (examNumber !== "all") {
-      filteredData = filteredData.filter(item => !item.isCompleted);
-    }
+    // Filter out completed exams if a specific exam number was requested
+let filteredData = reportData;
+if (examNumber !== "all") {
+  filteredData = reportData.filter(item => !item.isCompleted);
+}
 
     // Sort data
     const sortedData = filteredData.sort((a, b) => {
