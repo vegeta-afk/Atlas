@@ -1777,7 +1777,6 @@ exports.getTestEligibilityReport = async (req, res) => {
             fullName: s.fullName,
             attempted: !!sub,
             activated: activatedSet.has(s._id.toString()),
-            manuallyDue: dueSet.has(s._id.toString()),
             marksObtained: sub?.marksObtained ?? null,
             maxMarks: sub?.maxMarks ?? null,
             percentage: sub?.percentage ?? null,
