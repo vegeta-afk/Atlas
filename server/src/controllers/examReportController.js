@@ -8,7 +8,7 @@ const Course = require("../models/Course");
 exports.getUpcomingExamReport = async (req, res) => {
   try {
     console.log("📊 Generating upcoming exam report...");
-    
+
     const {
       page = 1,
       limit = 10,
@@ -21,10 +21,11 @@ exports.getUpcomingExamReport = async (req, res) => {
       sortOrder = "asc",
     } = req.query;
 
+    const TestSubmission = require("../models/TestSubmission");
+
     // Build filter object
     const filter = { isActive: true, status: "active" };
 
-    // Search filter
     if (search) {
       filter.$or = [
         { fullName: { $regex: search, $options: "i" } },
@@ -33,31 +34,43 @@ exports.getUpcomingExamReport = async (req, res) => {
       ];
     }
 
-    // Course filter
     if (course && course !== "all") {
       filter.course = { $regex: course, $options: "i" };
     }
-
-    // Faculty filter
     if (faculty && faculty !== "all") {
       filter.facultyAllot = { $regex: faculty, $options: "i" };
     }
-
-    // Batch filter
     if (batch && batch !== "all") {
       filter.batchTime = { $regex: batch, $options: "i" };
     }
 
-    // Get students with course details
     const students = await Student.find(filter)
       .populate("courseCode", "courseFullName duration examMonths numberOfExams")
-      .lean();  
+      .lean();
 
     console.log(`📋 Found ${students.length} active students`);
 
-    
+    // ── Fetch each student's semester-exam submissions for their course,
+    // sorted chronologically, so submission #1 maps to exam #1, etc. ──
+    const studentIds = students.map(s => s._id);
+    const submissions = await TestSubmission.find({
+      studentId: { $in: studentIds },
+      examType: "semester"
+    })
+      .select("studentId courseId marksObtained maxMarks percentage submittedAt")
+      .sort({ submittedAt: 1 })
+      .lean();
 
-    // Calculate upcoming exams for each student
+    // studentId -> courseId -> [submissions in order]
+    const submissionMap = {};
+    submissions.forEach(sub => {
+      const sid = sub.studentId.toString();
+      const cid = sub.courseId ? sub.courseId.toString() : "unknown";
+      if (!submissionMap[sid]) submissionMap[sid] = {};
+      if (!submissionMap[sid][cid]) submissionMap[sid][cid] = [];
+      submissionMap[sid][cid].push(sub);
+    });
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -72,21 +85,30 @@ exports.getUpcomingExamReport = async (req, res) => {
         .map(m => parseInt(m.trim()))
         .filter(m => !isNaN(m));
 
-      // Calculate exam dates
+      const sid = student._id.toString();
+      const cid = student.courseCode._id ? student.courseCode._id.toString() : "unknown";
+      const studentSubmissions = submissionMap[sid]?.[cid] || [];
+
       examMonths.forEach((monthNum, index) => {
         const examDate = new Date(startDate);
         examDate.setMonth(startDate.getMonth() + monthNum - 1);
-        
-        // Set exam to a specific day (e.g., 15th of the month)
         examDate.setDate(15);
-        
+
         const diffTime = examDate - today;
         const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        // Determine status
+
+        // Submission for THIS exam number, matched by chronological position
+        const matchedSubmission = studentSubmissions[index] || null;
+        const isCompleted = !!matchedSubmission;
+        const isOverdue = !isCompleted && daysLeft < 0;
+
+        // Determine status — completion now depends on an actual submission,
+        // not just the calculated date passing
         let status = "";
-        if (daysLeft < 0) {
+        if (isCompleted) {
           status = "Completed";
+        } else if (isOverdue) {
+          status = "Due"; // date passed but student hasn't taken the exam yet
         } else if (daysLeft <= 15) {
           status = "Critical";
         } else if (daysLeft <= 30) {
@@ -99,12 +121,11 @@ exports.getUpcomingExamReport = async (req, res) => {
           status = "Far";
         }
 
-        // Filter by exam number
-        if (examNumber === "all" || 
+        if (examNumber === "all" ||
             (examNumber === "first" && index === 0) ||
             (examNumber === "second" && index === 1) ||
             (examNumber === "third" && index === 2)) {
-          
+
           reportData.push({
             id: `${student._id}_exam_${index + 1}`,
             studentId: student._id,
@@ -118,8 +139,13 @@ exports.getUpcomingExamReport = async (req, res) => {
             examDate: examDate.toISOString(),
             dateOfExam: examDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
             daysLeft: daysLeft >= 0 ? daysLeft : 0,
-            status: daysLeft < 0 ? "Completed" : status,
-            isCompleted: daysLeft < 0,
+            status,
+            isCompleted,
+            isOverdue,
+            marksObtained: matchedSubmission?.marksObtained ?? null,
+            maxMarks: matchedSubmission?.maxMarks ?? null,
+            percentage: matchedSubmission?.percentage ?? null,
+            submittedAt: matchedSubmission?.submittedAt ?? null,
             admissionDate: student.admissionDate,
             dateOfJoining: student.admissionDate ? new Date(student.admissionDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : "N/A",
           });
@@ -127,7 +153,7 @@ exports.getUpcomingExamReport = async (req, res) => {
       });
     });
 
-    // Filter out completed exams if needed
+    // Filter out completed exams if a specific exam number was requested
     let filteredData = reportData;
     if (examNumber !== "all") {
       filteredData = reportData.filter(item => !item.isCompleted);
@@ -138,7 +164,7 @@ exports.getUpcomingExamReport = async (req, res) => {
       if (sortBy === "daysLeft") {
         return sortOrder === "asc" ? a.daysLeft - b.daysLeft : b.daysLeft - a.daysLeft;
       } else if (sortBy === "studentName") {
-        return sortOrder === "asc" 
+        return sortOrder === "asc"
           ? a.studentName.localeCompare(b.studentName)
           : b.studentName.localeCompare(a.studentName);
       } else if (sortBy === "examDate") {
@@ -151,19 +177,16 @@ exports.getUpcomingExamReport = async (req, res) => {
       return 0;
     });
 
-    // Pagination
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const startIndex = (pageNum - 1) * limitNum;
     const endIndex = pageNum * limitNum;
     const paginatedData = sortedData.slice(startIndex, endIndex);
 
-    // Get unique values for filters
     const uniqueCourses = [...new Set(students.map(s => s.course).filter(Boolean))];
     const uniqueFaculties = [...new Set(students.map(s => s.facultyAllot).filter(Boolean))];
     const uniqueBatches = [...new Set(students.map(s => s.batchTime).filter(Boolean))];
 
-    // Calculate stats
     const stats = {
       totalExams: filteredData.length,
       critical: filteredData.filter(item => item.status === "Critical").length,
@@ -171,9 +194,10 @@ exports.getUpcomingExamReport = async (req, res) => {
       soon: filteredData.filter(item => item.status === "Soon").length,
       approaching: filteredData.filter(item => item.status === "Approaching").length,
       far: filteredData.filter(item => item.status === "Far").length,
+      due: filteredData.filter(item => item.status === "Due").length,
       completed: filteredData.filter(item => item.status === "Completed").length,
-      averageDaysLeft: filteredData.filter(item => !item.isCompleted).length > 0 
-        ? Math.round(filteredData.filter(item => !item.isCompleted).reduce((sum, item) => sum + item.daysLeft, 0) / filteredData.filter(item => !item.isCompleted).length)
+      averageDaysLeft: filteredData.filter(item => !item.isCompleted && !item.isOverdue).length > 0
+        ? Math.round(filteredData.filter(item => !item.isCompleted && !item.isOverdue).reduce((sum, item) => sum + item.daysLeft, 0) / filteredData.filter(item => !item.isCompleted && !item.isOverdue).length)
         : 0,
     };
 

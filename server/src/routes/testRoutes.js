@@ -39,6 +39,7 @@ router.post('/:id/start', authorize('student'), testController.startTest);
 router.post('/:id/submit', authorize('student'), testController.submitTest);
 
 router.get('/:id', authorize('admin', 'faculty', 'instructor'), testController.getTest);
+router.put('/:id/activate-student/:studentId', authorize('admin', 'faculty', 'instructor'), testController.toggleStudentActivation);
 router.put('/:id', authorize('admin', 'faculty', 'instructor'), testController.updateTest);
 router.delete('/:id', authorize('admin'), testController.deleteTest);
 

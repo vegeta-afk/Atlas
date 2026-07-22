@@ -1709,7 +1709,7 @@ exports.getTestEligibilityReport = async (req, res) => {
       const TeacherBatch = require('../models/TeacherBatch');
       const tbs = await TeacherBatch.find({ _id: { $in: eligTeacherBatchIds } }).select('assignedStudents batch').lean();
 
-      const studentToBatch = new Map(); // studentId -> batchId they're assigned in (first match)
+      const studentToBatch = new Map();
       tbs.forEach(tb => {
         (tb.assignedStudents || []).forEach(as => {
           if (as && as.student && (as.isActive !== undefined ? as.isActive : true)) {
@@ -1734,16 +1734,20 @@ exports.getTestEligibilityReport = async (req, res) => {
         eligibleStudents = students;
       }
     } else {
-      // Semester mode: eligible = students matching batchId (or everyone if no batchId set)
-      const query = { isActive: true, status: 'active' };
-      if (test.batchId) {
-        const { Batch } = require('../models/Setup');
-        const batchDoc = await Batch.findById(test.batchId).lean();
-        if (batchDoc) {
-          query.batchTime = batchDoc.displayName;
-        }
-      }
-      eligibleStudents = await Student.find(query).select('studentId fullName').lean();
+      // Semester mode: eligible = students enrolled in this course (any batch),
+      // via courseCode or an active additionalCourses entry — batch-independent
+      const targetCourseId = test.courseId?._id?.toString() || test.courseId?.toString();
+
+      const candidateStudents = await Student.find({ isActive: true, status: 'active' })
+        .select('studentId fullName courseCode additionalCourses')
+        .lean();
+
+      eligibleStudents = candidateStudents.filter(s => {
+        if (s.courseCode && s.courseCode.toString() === targetCourseId) return true;
+        return (s.additionalCourses || []).some(
+          ac => ac.isActive && ac.courseId && ac.courseId.toString() === targetCourseId
+        );
+      });
     }
 
     const eligibleIds = eligibleStudents.map(s => s._id.toString());
@@ -1756,6 +1760,7 @@ exports.getTestEligibilityReport = async (req, res) => {
     submissions.forEach(s => { attemptedMap[s.studentId.toString()] = s; });
 
     const attemptedEligibleCount = eligibleIds.filter(id => attemptedMap[id]).length;
+    const activatedSet = new Set((test.activatedStudentIds || []).map(id => id.toString()));
 
     res.json({
       success: true,
@@ -1784,6 +1789,7 @@ exports.getTestEligibilityReport = async (req, res) => {
             studentId: s.studentId,
             fullName: s.fullName,
             attempted: !!sub,
+            activated: activatedSet.has(s._id.toString()),
             marksObtained: sub?.marksObtained ?? null,
             maxMarks: sub?.maxMarks ?? null,
             percentage: sub?.percentage ?? null,
@@ -1795,6 +1801,43 @@ exports.getTestEligibilityReport = async (req, res) => {
 
   } catch (error) {
     console.error('Get test eligibility report error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+// @desc    Toggle a student's manual activation for a semester-mode test
+// @route   PUT /api/exam/tests/:id/activate-student/:studentId
+// @access  Private (Admin/Faculty)
+exports.toggleStudentActivation = async (req, res) => {
+  try {
+    const { id, studentId } = req.params;
+    const { activate } = req.body; // true | false
+
+    const test = await Test.findById(id);
+    if (!test) {
+      return res.status(404).json({ success: false, message: 'Test not found' });
+    }
+    if (test.examMode !== 'semester') {
+      return res.status(400).json({ success: false, message: 'Manual activation only applies to Semester-mode exams' });
+    }
+
+    const alreadyActive = (test.activatedStudentIds || []).some(sid => sid.toString() === studentId);
+
+    if (activate && !alreadyActive) {
+      test.activatedStudentIds.push(studentId);
+    } else if (!activate && alreadyActive) {
+      test.activatedStudentIds = test.activatedStudentIds.filter(sid => sid.toString() !== studentId);
+    }
+
+    await test.save();
+
+    res.json({
+      success: true,
+      message: activate ? 'Student activated for this exam' : 'Student deactivated',
+      data: { studentId, activated: activate }
+    });
+  } catch (error) {
+    console.error('Toggle student activation error:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };

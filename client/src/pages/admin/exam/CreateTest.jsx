@@ -29,7 +29,6 @@ const CreateTest = () => {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [courseTopics, setCourseTopics] = useState([]);
   const [availableQuestions, setAvailableQuestions] = useState(0);
-  const [batchList, setBatchList] = useState([]);
   const basePath = useBasePath();
 
   // ── Exam mode + Regular-mode state ──
@@ -67,7 +66,6 @@ const CreateTest = () => {
   // Load courses + batches + faculty on mount
   useEffect(() => {
     loadCourses();
-    fetchBatches();
     loadFacultyList();
   }, []);
 
@@ -449,16 +447,7 @@ const CreateTest = () => {
     return true;
   };
 
-  const fetchBatches = async () => {
-    try {
-      const response = await setupAPI.getAll();
-      if (response.data.success) {
-        setBatchList(response.data.data.batches || []);
-      }
-    } catch (err) {
-      console.error("Error fetching batches:", err);
-    }
-  };
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -663,28 +652,11 @@ const CreateTest = () => {
                     </div>
                   )}
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Assign to Batch(es) (Optional) <span className="text-xs font-normal text-gray-500">(hold Ctrl / Cmd to select multiple)</span>
-                    </label>
-                    <select
-                      multiple
-                      value={formData.batchIds}
-                      onChange={(e) => {
-                        const selected = Array.from(e.target.selectedOptions).map(o => o.value);
-                        setFormData(prev => ({ ...prev, batchIds: selected }));
-                      }}
-                      size={Math.min(6, Math.max(3, batchList.length || 3))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {batchList.map(batch => (
-                        <option key={batch._id} value={batch._id}>
-                          {batch.batchName} ({batch.displayName})
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Leave nothing selected for no restriction — otherwise only students in the selected batch(es) will see this exam
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p className="text-sm text-gray-600">
+                      This exam will be available to all students enrolled in the selected course.
+                      You'll choose which specific students can see it in their portal after creating the test,
+                      from the Upcoming Exam Report.
                     </p>
                   </div>
                 </>
@@ -1097,10 +1069,10 @@ const CreateTest = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Start Time
-                </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Exam Opens At
+                  </label>
                 <div className="flex gap-2">
                   <select
                     value={to12Hour(formData.startTime).hour}
@@ -1128,9 +1100,9 @@ const CreateTest = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  End Time
-                </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Exam Closes At
+                  </label>
                 <div className="flex gap-2">
                   <select
                     value={to12Hour(formData.endTime).hour}

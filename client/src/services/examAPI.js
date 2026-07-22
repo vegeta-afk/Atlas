@@ -66,6 +66,11 @@ export const testAPI = {
     return response.data;
 },
 
+toggleStudentActivation: async (testId, studentId, activate) => {
+    const response = await api.put(`/exam/tests/${testId}/activate-student/${studentId}`, { activate });
+    return response.data;
+  },
+
 getRegularTopics: async (facultyId, batchIds, courseIds) => {
     const params = { facultyId, batchIds: (batchIds || []).join(',') };
     if (courseIds && courseIds.length > 0) params.courseIds = courseIds.join(',');
@@ -137,4 +142,5 @@ export const examBatchAPI = {
     return response.data;
   }
 };
+
 

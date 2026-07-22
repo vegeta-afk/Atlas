@@ -47,6 +47,19 @@ const TestEligibilityReport = () => {
     }
   };
 
+  const handleToggleActivation = async (studentId, currentlyActivated) => {
+    try {
+      const response = await testAPI.toggleStudentActivation(selectedTest._id, studentId, !currentlyActivated);
+      if (response.success) {
+        setStudents(prev => prev.map(s =>
+          s._id === studentId ? { ...s, activated: !currentlyActivated } : s
+        ));
+      }
+    } catch (error) {
+      console.error("Toggle activation error:", error);
+    }
+  };
+
   const filtered = students.filter((s) => {
     const matchSearch =
       s.fullName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -216,6 +229,9 @@ const TestEligibilityReport = () => {
                             <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                             <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Score</th>
                             <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Submitted</th>
+                            {selectedTest.examMode === "semester" && (
+                              <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Portal Access</th>
+                            )}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -253,6 +269,20 @@ const TestEligibilityReport = () => {
                                     })
                                   : "—"}
                               </td>
+                              {selectedTest.examMode === "semester" && (
+                                <td className="px-5 py-4">
+                                  <button
+                                    onClick={() => handleToggleActivation(s._id, s.activated)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                      s.activated
+                                        ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                    }`}
+                                  >
+                                    {s.activated ? "Active" : "Activate"}
+                                  </button>
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </tbody>

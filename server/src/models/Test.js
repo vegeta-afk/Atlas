@@ -100,6 +100,12 @@ const testSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Batch'
   }],
+  // Semester mode: students explicitly given portal access to this exam,
+  // toggled from the Upcoming Exam Report. Empty until an admin activates them.
+  activatedStudentIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Student'
+  }],
   // Regular mode only — one TeacherBatch per selected batch
   teacherBatchIds: [{
     type: mongoose.Schema.Types.ObjectId,
