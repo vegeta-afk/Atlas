@@ -478,6 +478,18 @@ exports.startTest = async (req, res) => {
       return res.status(400).json({ success: false, message: "Test is not active" });
     }
 
+    // Semester-mode: must be manually activated by admin
+    if (test.examMode === 'semester') {
+      const isActivated = (test.activatedStudentIds || []).some(
+        id => id.toString() === student._id.toString()
+      );
+      if (!isActivated) {
+        return res.status(403).json({ success: false, message: "You do not have access to this exam" });
+      }
+    }
+
+    // Strict check: regular-mode tests require explicit TeacherBatch assignment
+
     // Strict check: regular-mode tests require explicit TeacherBatch assignment
     // Strict check: regular-mode tests require explicit TeacherBatch assignment + course match
     const testTeacherBatchIds = (test.teacherBatchIds && test.teacherBatchIds.length > 0

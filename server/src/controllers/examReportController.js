@@ -141,7 +141,7 @@ exports.getUpcomingExamReport = async (req, res) => {
             examMonth: monthNum,
             examDate: examDate.toISOString(),
             dateOfExam: examDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-            daysLeft: daysLeft >= 0 ? daysLeft : 0,
+            daysLeft: isManuallyDue ? 0 : (daysLeft >= 0 ? daysLeft : 0),
             status,
             isCompleted,
             isOverdue,
