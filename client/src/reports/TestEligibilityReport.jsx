@@ -133,6 +133,13 @@ const TestEligibilityReport = () => {
                           {test.examMode === "regular" ? "Regular" : "Semester"}
                         </span>
                       </div>
+                      {test.scheduledDate && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          {new Date(test.scheduledDate).toLocaleDateString("en-GB", {
+                            day: "2-digit", month: "short", year: "numeric"
+                          })}
+                        </p>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -278,16 +285,22 @@ const TestEligibilityReport = () => {
                               </td>
                               {selectedTest.examMode === "semester" && (
                                 <td className="px-5 py-4">
-                                  <button
-                                    onClick={() => handleToggleActivation(s._id, s.activated)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                                      s.activated
-                                        ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                    }`}
-                                  >
-                                    {s.activated ? "Active" : "Activate"}
-                                  </button>
+                                  {s.attempted ? (
+                                    <span className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-100 text-purple-700 inline-block">
+                                      Completed
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleToggleActivation(s._id, s.activated)}
+                                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                        s.activated
+                                          ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                      }`}
+                                    >
+                                      {s.activated ? "Active" : "Activate"}
+                                    </button>
+                                  )}
                                 </td>
                               )}
                             </tr>

@@ -54,8 +54,7 @@ exports.getUpcomingExamReport = async (req, res) => {
     // sorted chronologically, so submission #1 maps to exam #1, etc. ──
     const studentIds = students.map(s => s._id);
     const submissions = await TestSubmission.find({
-      studentId: { $in: studentIds },
-      examType: "semester"
+      studentId: { $in: studentIds }
     })
       .select("studentId courseId marksObtained maxMarks percentage submittedAt")
       .sort({ submittedAt: 1 })
