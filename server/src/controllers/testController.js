@@ -1713,14 +1713,46 @@ exports.getTestEligibilityReport = async (req, res) => {
       const targetCourseId = test.courseId?._id?.toString() || test.courseId?.toString();
 
       const candidateStudents = await Student.find({ isActive: true, status: 'active' })
-        .select('studentId fullName courseCode additionalCourses')
+        .select('studentId fullName courseCode additionalCourses admissionDate manuallyDueExamKeys')
+        .populate('courseCode', 'examMonths')
         .lean();
 
       eligibleStudents = candidateStudents.filter(s => {
-        if (s.courseCode && s.courseCode.toString() === targetCourseId) return true;
+        if (s.courseCode && s.courseCode._id?.toString() === targetCourseId) return true;
         return (s.additionalCourses || []).some(
           ac => ac.isActive && ac.courseId && ac.courseId.toString() === targetCourseId
         );
+      });
+
+      // ── Only keep students whose exam for THIS semester is ≤10 days away,
+      // overdue, or manually marked "Due" — same rule as Upcoming Exam Report ──
+      const semesterNumber = parseInt(test.selectedSemesters?.[0]) || 1;
+      const examIndex = semesterNumber - 1;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      eligibleStudents = eligibleStudents.filter(s => {
+        if (!s.admissionDate || !s.courseCode?.examMonths) return false;
+
+        const examMonths = s.courseCode.examMonths
+          .split(',')
+          .map(m => parseInt(m.trim()))
+          .filter(m => !isNaN(m));
+
+        const monthNum = examMonths[examIndex];
+        if (!monthNum) return false;
+
+        const examDate = new Date(s.admissionDate);
+        examDate.setMonth(examDate.getMonth() + monthNum - 1);
+        examDate.setDate(15);
+        examDate.setHours(0, 0, 0, 0);
+
+        const daysLeft = Math.ceil((examDate - today) / (1000 * 60 * 60 * 24));
+        const isOverdue = daysLeft < 0;
+        const dueKey = `${targetCourseId}_${semesterNumber}`;
+        const isManuallyDue = (s.manuallyDueExamKeys || []).includes(dueKey);
+
+        return daysLeft <= 10 || isOverdue || isManuallyDue;
       });
     }
 
