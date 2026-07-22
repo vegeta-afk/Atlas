@@ -569,6 +569,7 @@ const UpcomingExamReport = () => {
                           title={exam.status === "Due" ? "Click to remove Due status" : "Click to mark as Due"}
                         >
                           {getStatusBadge(exam.status, exam.daysLeft)}
+                          
                         </button>
                       )}
                     </td>
