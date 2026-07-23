@@ -104,7 +104,8 @@ exports.getUpcomingExamReport = async (req, res) => {
       studentSubmissions.forEach(sub => {
         const test = testInfoMap[sub.testId?.toString()];
         if (!test || test.examMode !== 'semester') return;
-        const semesterNumber = parseInt(test.selectedSemesters?.[0]);
+        const semMatch = test.selectedSemesters?.[0]?.match(/\d+/);
+        const semesterNumber = semMatch ? parseInt(semMatch[0]) : null;
         if (!semesterNumber) return;
         submissionByExamIndex[semesterNumber - 1] = sub;
       });

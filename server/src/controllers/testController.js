@@ -1744,7 +1744,8 @@ exports.getTestEligibilityReport = async (req, res) => {
 
       // ── Only keep students whose exam for THIS semester is ≤10 days away,
       // overdue, or manually marked "Due" — same rule as Upcoming Exam Report ──
-      const semesterNumber = parseInt(test.selectedSemesters?.[0]) || 1;
+      const semMatch = test.selectedSemesters?.[0]?.match(/\d+/);
+      const semesterNumber = semMatch ? parseInt(semMatch[0]) : 1;
       const examIndex = semesterNumber - 1;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
