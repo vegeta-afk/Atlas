@@ -1,6 +1,8 @@
 const Student = require("../models/Student");
 const Faculty = require("../models/Faculty");
 const Course = require("../models/Course");
+const Test = require("../models/Test");
+
 
 // @desc    Get upcoming exam report
 // @route   GET /api/reports/exams/upcoming
@@ -56,11 +58,18 @@ exports.getUpcomingExamReport = async (req, res) => {
     const submissions = await TestSubmission.find({
       studentId: { $in: studentIds }
     })
-      .select("studentId courseId marksObtained maxMarks percentage submittedAt")
+      .select("studentId courseId testId marksObtained maxMarks percentage submittedAt")
       .sort({ submittedAt: 1 })
       .lean();
 
-    // studentId -> courseId -> [submissions in order]
+    const testIds = [...new Set(submissions.map(s => s.testId?.toString()).filter(Boolean))];
+    const relatedTests = await Test.find({ _id: { $in: testIds } })
+      .select('examMode selectedSemesters')
+      .lean();
+    const testInfoMap = {};
+    relatedTests.forEach(t => { testInfoMap[t._id.toString()] = t; });
+
+    // studentId -> courseId -> [raw submissions]
     const submissionMap = {};
     submissions.forEach(sub => {
       const sid = sub.studentId.toString();
@@ -90,6 +99,16 @@ exports.getUpcomingExamReport = async (req, res) => {
 
       const dueKeys = new Set(student.manuallyDueExamKeys || []);
 
+      // Match each submission to its REAL exam number (from the Test it belongs to)
+      const submissionByExamIndex = {};
+      studentSubmissions.forEach(sub => {
+        const test = testInfoMap[sub.testId?.toString()];
+        if (!test || test.examMode !== 'semester') return;
+        const semesterNumber = parseInt(test.selectedSemesters?.[0]);
+        if (!semesterNumber) return;
+        submissionByExamIndex[semesterNumber - 1] = sub;
+      });
+
       examMonths.forEach((monthNum, index) => {
         const examDate = new Date(startDate);
         examDate.setMonth(startDate.getMonth() + monthNum - 1);
@@ -98,8 +117,7 @@ exports.getUpcomingExamReport = async (req, res) => {
         const diffTime = examDate - today;
         const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        // Submission for THIS exam number, matched by chronological position
-        const matchedSubmission = studentSubmissions[index] || null;
+        const matchedSubmission = submissionByExamIndex[index] || null;
         const isCompleted = !!matchedSubmission;
         const isOverdue = !isCompleted && daysLeft < 0;
         const isManuallyDue = !isCompleted && dueKeys.has(`${cid}_${index + 1}`);
@@ -140,7 +158,7 @@ exports.getUpcomingExamReport = async (req, res) => {
             examMonth: monthNum,
             examDate: examDate.toISOString(),
             dateOfExam: examDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-            daysLeft: isManuallyDue ? 0 : (daysLeft >= 0 ? daysLeft : 0),
+            daysLeft: (isCompleted || isManuallyDue) ? 0 : (daysLeft >= 0 ? daysLeft : 0),
             status,
             isCompleted,
             isOverdue,
