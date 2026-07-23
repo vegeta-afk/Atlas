@@ -876,22 +876,6 @@ setFilteredAdmissions(activeAdmissions);
                               </button>
                             )}
                             
-                            {/* Complete Option - Only show if active/admitted */}
-                            {(admission.admissionStatus === "admitted" || admission.admissionStatus === "confirmed") && (
-                              <button
-                                className="dropdown-item complete-option"
-                                onClick={() => {
-                                  setSelectedStudent(admission);
-                                  setStatusAction('complete');
-                                  setStatusReason('');
-                                  setShowStatusModal(true);
-                                  setOpenDropdown(null);
-                                }}
-                              >
-                                <CheckCircle2 size={14} color="#10b981" />
-                                <span>Mark Complete</span>
-                              </button>
-                            )}
                             
                             {/* Reactivate Option - Only show if cancelled or on hold */}
                             {(admission.admissionStatus === "cancelled" || admission.admissionStatus === "on_hold") && (

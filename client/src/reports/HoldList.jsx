@@ -10,6 +10,7 @@ import {
   Phone,
   Calendar,
   CheckCircle,
+  CheckCircle2,
   UserCheck,
   CalendarDays,
   MessageCircle,
@@ -39,6 +40,7 @@ const HoldList = () => {
   const [selectedFaculty, setSelectedFaculty] = useState("all");
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [statusAction, setStatusAction] = useState(null);
   const [statusReason, setStatusReason] = useState("");
   const [processingStatus, setProcessingStatus] = useState(false);
   const [dateRange, setDateRange] = useState({
@@ -203,28 +205,40 @@ const HoldList = () => {
     });
   };
 
-  const handleReactivate = async () => {
-    if (!selectedStudent) return;
-    
-    setProcessingStatus(true);
-    try {
-      const response = await admissionAPI.reactivateAdmission(
-        selectedStudent.id, 
-        statusReason || "Reactivated from Hold List"
-      );
-      
-      if (response.data.success) {
-        alert("Student reactivated successfully!");
-        setShowStatusModal(false);
-        fetchHoldAdmissions(); // Refresh the list
-      }
-    } catch (error) {
-      console.error("Error reactivating student:", error);
-      alert(`Failed to reactivate student: ${error.response?.data?.message || error.message}`);
-    } finally {
-      setProcessingStatus(false);
+  const handleStatusAction = async () => {
+  if (!selectedStudent || !statusAction) return;
+
+  setProcessingStatus(true);
+  try {
+    let response;
+    switch (statusAction) {
+      case "reactivate":
+        response = await admissionAPI.reactivateAdmission(
+          selectedStudent.id,
+          statusReason || "Reactivated from Hold List"
+        );
+        break;
+      case "complete":
+        response = await admissionAPI.completeAdmission(
+          selectedStudent.id,
+          statusReason || "Marked complete from Hold List"
+        );
+        break;
+      default:
+        return;
     }
-  };
+
+    if (response.data.success) {
+      setShowStatusModal(false);
+      fetchHoldAdmissions(); // Refresh the list
+    }
+  } catch (error) {
+    console.error(`Error ${statusAction}ing student:`, error);
+    alert(`Failed to ${statusAction} student: ${error.response?.data?.message || error.message}`);
+  } finally {
+    setProcessingStatus(false);
+  }
+};
 
   const handleDateRangeChange = (e) => {
     const { name, value } = e.target;
@@ -637,28 +651,44 @@ const HoldList = () => {
                         </button>
 
                         {openDropdown === admission.id && (
-                          <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              className="dropdown-item reactivate-option"
-                              onClick={() => {
-                                setSelectedStudent(admission);
-                                setStatusReason("");
-                                setShowStatusModal(true);
-                                setOpenDropdown(null);
-                              }}
-                            >
-                              <RotateCcw size={14} color="#3b82f6" />
-                              <span>Reactivate Student</span>
-                            </button>
-                            <button
-                              className="dropdown-item"
-                              onClick={() => openWhatsApp(admission.whatsappNumber || admission.mobileNumber)}
-                            >
-                              <MessageCircle size={14} />
-                              <span>Chat on WhatsApp</span>
-                            </button>
-                          </div>
-                        )}
+  <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
+    <button
+      className="dropdown-item reactivate-option"
+      onClick={() => {
+        setSelectedStudent(admission);
+        setStatusAction("reactivate");
+        setStatusReason("");
+        setShowStatusModal(true);
+        setOpenDropdown(null);
+      }}
+    >
+      <RotateCcw size={14} color="#3b82f6" />
+      <span>Reactivate Student</span>
+    </button>
+
+    <button
+      className="dropdown-item complete-option"
+      onClick={() => {
+        setSelectedStudent(admission);
+        setStatusAction("complete");
+        setStatusReason("");
+        setShowStatusModal(true);
+        setOpenDropdown(null);
+      }}
+    >
+      <CheckCircle2 size={14} color="#10b981" />
+      <span>Mark Complete</span>
+    </button>
+
+    <button
+      className="dropdown-item"
+      onClick={() => openWhatsApp(admission.whatsappNumber || admission.mobileNumber)}
+    >
+      <MessageCircle size={14} />
+      <span>Chat on WhatsApp</span>
+    </button>
+  </div>
+)}
                       </div>
                     </div>
                   </td>
@@ -713,43 +743,54 @@ const HoldList = () => {
 
       {/* Reactivate Modal */}
       {showStatusModal && (
-        <div className="modal-overlay" onClick={() => setShowStatusModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Reactivate Student from Hold</h3>
-            
-            <p className="modal-student-name">
-              {selectedStudent?.name} ({selectedStudent?.studentId})
-            </p>
-            
-            <div className="form-group">
-              <label>Reason for Reactivation (optional)</label>
-              <textarea
-                value={statusReason}
-                onChange={(e) => setStatusReason(e.target.value)}
-                placeholder="Why is this student being reactivated from hold?"
-                rows="3"
-              />
-            </div>
-            
-            <div className="modal-actions">
-              <button 
-                className="btn-secondary" 
-                onClick={() => setShowStatusModal(false)}
-                disabled={processingStatus}
-              >
-                Cancel
-              </button>
-              <button 
-                className="btn-reactivate"
-                onClick={handleReactivate}
-                disabled={processingStatus}
-              >
-                {processingStatus ? 'Processing...' : 'Yes, Reactivate'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+  <div className="modal-overlay" onClick={() => setShowStatusModal(false)}>
+    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <h3>
+        {statusAction === "reactivate" && "Reactivate Student from Hold"}
+        {statusAction === "complete" && "Mark Student as Complete"}
+      </h3>
+
+      <p className="modal-student-name">
+        {selectedStudent?.name} ({selectedStudent?.studentId})
+      </p>
+
+      <div className="form-group">
+        <label>Reason (optional)</label>
+        <textarea
+          value={statusReason}
+          onChange={(e) => setStatusReason(e.target.value)}
+          placeholder={
+            statusAction === "reactivate"
+              ? "Why is this student being reactivated from hold?"
+              : "Completion remarks (optional)"
+          }
+          rows="3"
+        />
+      </div>
+
+      <div className="modal-actions">
+        <button
+          className="btn-secondary"
+          onClick={() => setShowStatusModal(false)}
+          disabled={processingStatus}
+        >
+          Cancel
+        </button>
+        <button
+          className={`btn-${statusAction}`}
+          onClick={handleStatusAction}
+          disabled={processingStatus}
+        >
+          {processingStatus
+            ? "Processing..."
+            : statusAction === "reactivate"
+            ? "Yes, Reactivate"
+            : "Yes, Complete"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
