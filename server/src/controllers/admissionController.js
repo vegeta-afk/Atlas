@@ -6,6 +6,9 @@ const Course = require("../models/Course");
 const { generateFeeSchedule, generateFeeScheduleWithScholarship } = require("../utils/feeGenerator");
 const { createStudentUserAccount } = require("./studentController");
 
+const Test = require("../models/Test");
+const TestSubmission = require("../models/TestSubmission");
+
 // @desc    Get all admissions
 // @route   GET /api/admissions
 // @access  Private (Admin, Front Office, Accountant)
@@ -924,6 +927,89 @@ const checkFeeEligibilityForCompletion = (student) => {
 };
 
 // ============================================
+// CHECK EXAM ATTEMPT ELIGIBILITY FOR COMPLETION
+// (separate from fee — checks actual paper attempt via TestSubmission)
+// ============================================
+const checkExamEligibilityForCompletion = async (student) => {
+  const pendingExams = [];
+
+  if (!student.courseCode?.examMonths || !student.admissionDate) {
+    return { eligible: true, pendingExams };
+  }
+
+  const examMonths = student.courseCode.examMonths
+    .split(",")
+    .map((m) => parseInt(m.trim()))
+    .filter((m) => !isNaN(m));
+
+  if (examMonths.length === 0) {
+    return { eligible: true, pendingExams };
+  }
+
+  const submissions = await TestSubmission.find({
+    studentId: student._id,
+    courseId: student.courseCode._id,
+  })
+    .select("testId submittedAt")
+    .sort({ submittedAt: 1 })
+    .lean();
+
+  const testIds = [...new Set(submissions.map((s) => s.testId?.toString()).filter(Boolean))];
+  const relatedTests = await Test.find({ _id: { $in: testIds } })
+    .select("examMode selectedSemesters")
+    .lean();
+  const testInfoMap = {};
+  relatedTests.forEach((t) => {
+    testInfoMap[t._id.toString()] = t;
+  });
+
+  const submissionByExamIndex = {};
+  submissions.forEach((sub) => {
+    const test = testInfoMap[sub.testId?.toString()];
+    if (!test || test.examMode !== "semester") return;
+    const semMatch = test.selectedSemesters?.[0]?.match(/\d+/);
+    const semesterNumber = semMatch ? parseInt(semMatch[0]) : null;
+    if (!semesterNumber) return;
+    submissionByExamIndex[semesterNumber - 1] = sub;
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startDate = new Date(student.admissionDate);
+
+  examMonths.forEach((monthNum, index) => {
+    const isCompleted = !!submissionByExamIndex[index];
+    if (isCompleted) return; // paper de diya, no block
+
+    const examDate = new Date(startDate);
+    examDate.setMonth(startDate.getMonth() + monthNum - 1);
+    examDate.setDate(15);
+
+    const isDue = examDate <= today; // exam ka time aa chuka hai but attempt nahi hua
+    const dueKey = `${student.courseCode._id}_${index + 1}`;
+    const isManuallyDue = (student.manuallyDueExamKeys || []).includes(dueKey);
+
+    if (isDue || isManuallyDue) {
+      pendingExams.push({
+        examNumber: index + 1,
+        month: `Month ${monthNum}`,
+        type: "Exam Not Attempted",
+        examDate: examDate.toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }),
+      });
+    }
+  });
+
+  return {
+    eligible: pendingExams.length === 0,
+    pendingExams,
+  };
+};
+
+// ============================================
 // 🔥🔥🔥 AUTO STUDENT CREATION FUNCTION 🔥🔥🔥
 // ============================================
 
@@ -1458,7 +1544,7 @@ exports.holdAdmission = async (req, res) => {
 // @access  Private
 exports.completeAdmission = async (req, res) => {
   try {
-    const { reason, force } = req.body; // force = optional override for admin
+    const { reason, force } = req.body;
 
     const admission = await Admission.findById(req.params.id);
 
@@ -1469,34 +1555,33 @@ exports.completeAdmission = async (req, res) => {
       });
     }
 
-    // ── FEE ELIGIBILITY CHECK ──────────────────────────────────
-    const student = await Student.findOne({ admissionId: admission._id });
+    // ── FEE + EXAM ELIGIBILITY CHECK ──────────────────────────────
+    const student = await Student.findOne({ admissionId: admission._id })
+      .populate("courseCode", "examMonths"); // ← NEEDED for exam check
 
     if (student && !force) {
-      const eligibility = checkFeeEligibilityForCompletion(student);
+      const feeEligibility = checkFeeEligibilityForCompletion(student);
+      const examEligibility = await checkExamEligibilityForCompletion(student);
 
-      if (!eligibility.eligible) {
+      if (!feeEligibility.eligible || !examEligibility.eligible) {
         return res.status(400).json({
           success: false,
-          message: "Cannot mark complete — fees are pending",
+          message: "Cannot mark complete — fees or exams are pending",
           reason: "FEES_PENDING",
-          pendingMonths: eligibility.pendingMonths,
+          pendingMonths: feeEligibility.pendingMonths,
+          pendingExams: examEligibility.pendingExams,
         });
       }
     }
     // ─────────────────────────────────────────────────────────
 
-    // Store old status
     const oldStatus = admission.status;
-
-    // Update admission status
     admission.status = "completed";
     admission.remarks = `[COMPLETED] ${reason || 'Manually completed'} | Previous: ${oldStatus}`;
     admission.updatedBy = req.user?.id;
 
     await admission.save();
 
-    // Update associated student if exists
     if (student) {
       student.status = "completed";
       student.remarks = student.remarks ?
@@ -1731,3 +1816,4 @@ exports.repairTeacherBatches = async (req, res) => {
 };
 
 exports.assignStudentToFacultyBatch = assignStudentToFacultyBatch;
+exports.checkExamEligibilityForCompletion = checkExamEligibilityForCompletion;

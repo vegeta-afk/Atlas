@@ -242,7 +242,8 @@ const HoldList = () => {
       setShowStatusModal(false);
       setPendingFeeModal({
         studentName: selectedStudent.name,
-        pendingMonths: error.response.data.pendingMonths,
+        pendingMonths: error.response.data.pendingMonths || [],
+        pendingExams: error.response.data.pendingExams || [],
       });
     } else {
       alert(`Failed to ${statusAction} student: ${error.response?.data?.message || error.message}`);
@@ -811,32 +812,59 @@ const HoldList = () => {
 
       <p className="modal-student-name">{pendingFeeModal.studentName}</p>
 
-      <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "12px" }}>
-        This student has pending dues. Clear these before marking complete:
-      </p>
-
-      <div style={{ maxHeight: "220px", overflowY: "auto" }}>
-        {pendingFeeModal.pendingMonths.map((m, i) => (
-          <div
-            key={i}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "8px 12px",
-              marginBottom: "6px",
-              borderRadius: "6px",
-              background: m.isExamMonth ? "#fef3c7" : "#fee2e2",
-              fontSize: "13px",
-            }}
-          >
-            <span>
-              {m.isExamMonth ? "🎓 " : "💰 "}
-              {m.month} — {m.type}
-            </span>
-            <strong>₹{m.balanceAmount}</strong>
+      {pendingFeeModal.pendingMonths.length > 0 && (
+        <>
+          <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "8px" }}>
+            Pending fee dues:
+          </p>
+          <div style={{ maxHeight: "160px", overflowY: "auto", marginBottom: "12px" }}>
+            {pendingFeeModal.pendingMonths.map((m, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "8px 12px",
+                  marginBottom: "6px",
+                  borderRadius: "6px",
+                  background: m.isExamMonth ? "#fef3c7" : "#fee2e2",
+                  fontSize: "13px",
+                }}
+              >
+                <span>{m.month} — {m.type}</span>
+                <strong>₹{m.balanceAmount}</strong>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
+
+      {pendingFeeModal.pendingExams.length > 0 && (
+        <>
+          <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "8px" }}>
+            Exams not attempted:
+          </p>
+          <div style={{ maxHeight: "160px", overflowY: "auto" }}>
+            {pendingFeeModal.pendingExams.map((ex, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "8px 12px",
+                  marginBottom: "6px",
+                  borderRadius: "6px",
+                  background: "#e0e7ff",
+                  fontSize: "13px",
+                }}
+              >
+                <span>Exam {ex.examNumber} ({ex.month})</span>
+                <strong>Due since {ex.examDate}</strong>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="modal-actions" style={{ marginTop: "16px" }}>
         <button className="btn-secondary" onClick={() => setPendingFeeModal(null)}>
