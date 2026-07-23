@@ -123,6 +123,13 @@ exports.getUpcomingExamReport = async (req, res) => {
         const isOverdue = !isCompleted && daysLeft < 0;
         const isManuallyDue = !isCompleted && dueKeys.has(`${cid}_${index + 1}`);
 
+        // ── Exam fee status for THIS exam's month (from student's feeSchedule) ──
+        const feeEntry = (student.feeSchedule || []).find(f => f.monthNumber === monthNum);
+        const examFeeAmount = feeEntry?.examFee || 0;
+        const examFeePaid = feeEntry
+          ? (feeEntry.examPaid || 0) >= examFeeAmount && examFeeAmount > 0
+          : false;
+
         // Determine status — completion depends on an actual submission;
         // "Due" can also be set manually by an admin regardless of the date
         let status = "";
@@ -161,6 +168,8 @@ exports.getUpcomingExamReport = async (req, res) => {
             dateOfExam: examDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
             daysLeft: (isCompleted || isManuallyDue) ? 0 : (daysLeft >= 0 ? daysLeft : 0),
             status,
+            examFeePaid,
+            examFeeAmount,
             isCompleted,
             isOverdue,
             isManuallyDue,

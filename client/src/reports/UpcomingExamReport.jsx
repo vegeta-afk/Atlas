@@ -459,9 +459,6 @@ const UpcomingExamReport = () => {
           <table className="w-full min-w-[1500px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Type
-                </th>
                 <th onClick={() => handleSort("dateOfJoining")} className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                   D.O.A {getSortIndicator("dateOfJoining")}
                 </th>
@@ -479,6 +476,9 @@ const UpcomingExamReport = () => {
                 </th>
                 <th onClick={() => handleSort("courseName")} className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                   Course Name {getSortIndicator("courseName")}
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  Exam Fees
                 </th>
                 <th onClick={() => handleSort("examNumber")} className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                   Exam No. {getSortIndicator("examNumber")}
@@ -499,14 +499,13 @@ const UpcomingExamReport = () => {
                 exams.map((exam, index) => (
                   <tr key={exam.id || index} className={`hover:bg-gray-50 ${exam.courseType === 'additional' ? 'bg-purple-50/30' : ''}`}>
                     <td className="px-4 py-4 text-center">
-                      {exam.courseType === 'primary' ? (
-                        <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                          Primary
+                      {exam.examFeePaid ? (
+                        <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                          Paid
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                          <Layers size={10} className="mr-1" />
-                          Additional
+                        <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                          Not Paid
                         </span>
                       )}
                     </td>

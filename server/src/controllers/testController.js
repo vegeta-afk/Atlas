@@ -1731,7 +1731,7 @@ exports.getTestEligibilityReport = async (req, res) => {
       const targetCourseId = test.courseId?._id?.toString() || test.courseId?.toString();
 
       const candidateStudents = await Student.find({ isActive: true, status: 'active' })
-        .select('studentId fullName courseCode additionalCourses admissionDate manuallyDueExamKeys')
+        .select('studentId fullName courseCode additionalCourses admissionDate manuallyDueExamKeys feeSchedule')
         .populate('courseCode', 'examMonths courseShortName')
         .lean();
 
@@ -1770,8 +1770,16 @@ exports.getTestEligibilityReport = async (req, res) => {
         const isOverdue = daysLeft < 0;
         const dueKey = `${targetCourseId}_${semesterNumber}`;
         const isManuallyDue = (s.manuallyDueExamKeys || []).includes(dueKey);
+        const isDueOrSoon = daysLeft <= 10 || isOverdue || isManuallyDue;
 
-        return daysLeft <= 10 || isOverdue || isManuallyDue;
+        // ── Exam fee for this exam's month must be paid ──
+        const feeEntry = (s.feeSchedule || []).find(f => f.monthNumber === monthNum);
+        const examFeeAmount = feeEntry?.examFee || 0;
+        const examFeePaid = feeEntry
+          ? (feeEntry.examPaid || 0) >= examFeeAmount && examFeeAmount > 0
+          : false;
+
+        return isDueOrSoon && examFeePaid;
       });
     }
 
