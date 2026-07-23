@@ -498,17 +498,7 @@ const UpcomingExamReport = () => {
               {exams.length > 0 ? (
                 exams.map((exam, index) => (
                   <tr key={exam.id || index} className={`hover:bg-gray-50 ${exam.courseType === 'additional' ? 'bg-purple-50/30' : ''}`}>
-                    <td className="px-4 py-4 text-center">
-                      {exam.examFeePaid ? (
-                        <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                          Paid
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
-                          Not Paid
-                        </span>
-                      )}
-                    </td>
+                    
                     <td className="px-4 py-4 text-center text-sm text-gray-700">{formatDate(exam.dateOfJoining)}</td>
                     <td className="px-4 py-4 text-center">
                       <span className={`inline-block px-3 py-1 text-xs font-medium rounded ${
@@ -537,6 +527,18 @@ const UpcomingExamReport = () => {
                       {exam.courseName}
                       {exam.courseType === 'additional' && (
                         <div className="text-xs text-purple-600 mt-1">Additional</div>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-4 text-center">
+                      {exam.examFeePaid ? (
+                        <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                          Paid
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                          Not Paid
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-4 text-center text-sm font-medium text-purple-600">
