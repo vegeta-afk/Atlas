@@ -893,6 +893,36 @@ exports.getAdmissionActivities = async (req, res) => {
   }
 };
 
+
+
+// ============================================
+// CHECK FEE ELIGIBILITY FOR COMPLETION
+// ============================================
+const checkFeeEligibilityForCompletion = (student) => {
+  const pendingMonths = [];
+
+  const schedule = student.feeSchedule || [];
+
+  for (const fee of schedule) {
+    if (fee.status === "suspended") continue; // suspended months don't block completion
+
+    if (fee.status !== "paid") {
+      pendingMonths.push({
+        month: fee.month || `Month ${fee.monthNumber}`,
+        monthNumber: fee.monthNumber,
+        isExamMonth: fee.isExamMonth || false,
+        balanceAmount: fee.balanceAmount || 0,
+        type: fee.isExamMonth ? "Exam Fee" : "Monthly Fee",
+      });
+    }
+  }
+
+  return {
+    eligible: pendingMonths.length === 0,
+    pendingMonths,
+  };
+};
+
 // ============================================
 // 🔥🔥🔥 AUTO STUDENT CREATION FUNCTION 🔥🔥🔥
 // ============================================
@@ -1428,10 +1458,10 @@ exports.holdAdmission = async (req, res) => {
 // @access  Private
 exports.completeAdmission = async (req, res) => {
   try {
-    const { reason } = req.body;
-    
+    const { reason, force } = req.body; // force = optional override for admin
+
     const admission = await Admission.findById(req.params.id);
-    
+
     if (!admission) {
       return res.status(404).json({
         success: false,
@@ -1439,22 +1469,38 @@ exports.completeAdmission = async (req, res) => {
       });
     }
 
+    // ── FEE ELIGIBILITY CHECK ──────────────────────────────────
+    const student = await Student.findOne({ admissionId: admission._id });
+
+    if (student && !force) {
+      const eligibility = checkFeeEligibilityForCompletion(student);
+
+      if (!eligibility.eligible) {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot mark complete — fees are pending",
+          reason: "FEES_PENDING",
+          pendingMonths: eligibility.pendingMonths,
+        });
+      }
+    }
+    // ─────────────────────────────────────────────────────────
+
     // Store old status
     const oldStatus = admission.status;
-    
+
     // Update admission status
     admission.status = "completed";
     admission.remarks = `[COMPLETED] ${reason || 'Manually completed'} | Previous: ${oldStatus}`;
     admission.updatedBy = req.user?.id;
-    
+
     await admission.save();
-    
+
     // Update associated student if exists
-    const student = await Student.findOne({ admissionId: admission._id });
     if (student) {
       student.status = "completed";
-      student.remarks = student.remarks ? 
-        `${student.remarks} | Completed: ${reason}` : 
+      student.remarks = student.remarks ?
+        `${student.remarks} | Completed: ${reason}` :
         `Completed: ${reason}`;
       await student.save();
     }

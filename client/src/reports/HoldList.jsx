@@ -62,6 +62,8 @@ const HoldList = () => {
     totalPages: 1,
   });
 
+  const [pendingFeeModal, setPendingFeeModal] = useState(null);
+
   // Course options
   const courseOptions = [
     "All Courses",
@@ -230,11 +232,21 @@ const HoldList = () => {
 
     if (response.data.success) {
       setShowStatusModal(false);
-      fetchHoldAdmissions(); // Refresh the list
+      fetchHoldAdmissions();
     }
   } catch (error) {
     console.error(`Error ${statusAction}ing student:`, error);
-    alert(`Failed to ${statusAction} student: ${error.response?.data?.message || error.message}`);
+
+    // ── NAYA: Fee pending case ko chhote popup mein dikhao ──
+    if (error.response?.data?.reason === "FEES_PENDING") {
+      setShowStatusModal(false);
+      setPendingFeeModal({
+        studentName: selectedStudent.name,
+        pendingMonths: error.response.data.pendingMonths,
+      });
+    } else {
+      alert(`Failed to ${statusAction} student: ${error.response?.data?.message || error.message}`);
+    }
   } finally {
     setProcessingStatus(false);
   }
@@ -786,6 +798,49 @@ const HoldList = () => {
             : statusAction === "reactivate"
             ? "Yes, Reactivate"
             : "Yes, Complete"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{pendingFeeModal && (
+  <div className="modal-overlay" onClick={() => setPendingFeeModal(null)}>
+    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "420px" }}>
+      <h3 style={{ color: "#dc2626" }}>Cannot Mark Complete</h3>
+
+      <p className="modal-student-name">{pendingFeeModal.studentName}</p>
+
+      <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "12px" }}>
+        This student has pending dues. Clear these before marking complete:
+      </p>
+
+      <div style={{ maxHeight: "220px", overflowY: "auto" }}>
+        {pendingFeeModal.pendingMonths.map((m, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "8px 12px",
+              marginBottom: "6px",
+              borderRadius: "6px",
+              background: m.isExamMonth ? "#fef3c7" : "#fee2e2",
+              fontSize: "13px",
+            }}
+          >
+            <span>
+              {m.isExamMonth ? "🎓 " : "💰 "}
+              {m.month} — {m.type}
+            </span>
+            <strong>₹{m.balanceAmount}</strong>
+          </div>
+        ))}
+      </div>
+
+      <div className="modal-actions" style={{ marginTop: "16px" }}>
+        <button className="btn-secondary" onClick={() => setPendingFeeModal(null)}>
+          Close
         </button>
       </div>
     </div>
