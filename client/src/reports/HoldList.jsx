@@ -253,6 +253,32 @@ const HoldList = () => {
   }
 };
 
+
+const handleDirectComplete = async (admission) => {
+  try {
+    const response = await admissionAPI.completeAdmission(
+      admission.id,
+      "Marked complete from Hold List"
+    );
+
+    if (response.data.success) {
+      fetchHoldAdmissions();
+    }
+  } catch (error) {
+    console.error("Error completing student:", error);
+
+    if (error.response?.data?.reason === "FEES_PENDING") {
+      setPendingFeeModal({
+        studentName: admission.name,
+        pendingMonths: error.response.data.pendingMonths || [],
+        pendingExams: error.response.data.pendingExams || [],
+      });
+    } else {
+      alert(`Failed to complete student: ${error.response?.data?.message || error.message}`);
+    }
+  }
+};
+
   const handleDateRangeChange = (e) => {
     const { name, value } = e.target;
     setDateRange((prev) => ({
@@ -680,18 +706,15 @@ const HoldList = () => {
     </button>
 
     <button
-      className="dropdown-item complete-option"
-      onClick={() => {
-        setSelectedStudent(admission);
-        setStatusAction("complete");
-        setStatusReason("");
-        setShowStatusModal(true);
-        setOpenDropdown(null);
-      }}
-    >
-      <CheckCircle2 size={14} color="#10b981" />
-      <span>Mark Complete</span>
-    </button>
+  className="dropdown-item complete-option"
+  onClick={() => {
+    setOpenDropdown(null);
+    handleDirectComplete(admission);
+  }}
+>
+  <CheckCircle2 size={14} color="#10b981" />
+  <span>Mark Complete</span>
+</button>
 
     <button
       className="dropdown-item"
