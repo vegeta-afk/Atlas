@@ -985,22 +985,19 @@ const checkExamEligibilityForCompletion = async (student) => {
     examDate.setMonth(startDate.getMonth() + monthNum - 1);
     examDate.setDate(15);
 
-    const isDue = examDate <= today; // exam ka time aa chuka hai but attempt nahi hua
-    const dueKey = `${student.courseCode._id}_${index + 1}`;
-    const isManuallyDue = (student.manuallyDueExamKeys || []).includes(dueKey);
-
-    if (isDue || isManuallyDue) {
-      pendingExams.push({
-        examNumber: index + 1,
-        month: `Month ${monthNum}`,
-        type: "Exam Not Attempted",
-        examDate: examDate.toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        }),
-      });
-    }
+    // ── No date gating: for Mark Complete, ANY exam without a
+    // matching submission blocks completion — regardless of whether
+    // its scheduled date has arrived yet. ──
+    pendingExams.push({
+      examNumber: index + 1,
+      month: `Month ${monthNum}`,
+      type: "Exam Not Attempted",
+      examDate: examDate.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }),
+    });
   });
 
   return {
