@@ -121,6 +121,14 @@ photo: {
   default: null,
 },
 
+    // Auto-generated once, on first certificate view — never regenerated,
+    // never repeats (unique + sparse so admissions without one don't collide).
+    certificateNo: {
+      type: Number,
+      unique: true,
+      sparse: true,
+    },
+
     // Academic Information
     lastQualification: {
       type: String,

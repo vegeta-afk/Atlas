@@ -86,6 +86,9 @@ router.route("/:id/status")
 router.route("/:id/fees")
   .put(authorize("admin", "accountant", "instructor", "faculty"), admissionController.updateFees);
 
+router.route("/:id/certificate-no")
+  .get(authorize(...READ_ROLES), admissionController.getOrCreateCertificateNo);  
+
 // ── Status management ─────────────────────────────────────────────────────
 router.put("/:id/cancel",     authorize(...WRITE_ROLES), admissionController.cancelAdmission);
 router.put("/:id/hold",       authorize(...WRITE_ROLES), admissionController.holdAdmission);

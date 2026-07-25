@@ -1007,6 +1007,58 @@ const checkExamEligibilityForCompletion = async (student) => {
 };
 
 // ============================================
+// 🎓 CERTIFICATE NUMBER — auto-generated, random, starts near 1000,
+// guaranteed unique forever (DB unique index backs this up).
+// ============================================
+const generateUniqueCertificateNo = async () => {
+  let certNo;
+  let taken = true;
+  let attempts = 0;
+
+  // First try a tight 1000-9999 range (matches "starting from 1000" ask)
+  while (taken && attempts < 30) {
+    certNo = 1000 + Math.floor(Math.random() * 9000);
+    taken = await Admission.exists({ certificateNo: certNo });
+    attempts++;
+  }
+
+  // Extremely unlikely fallback once the 1000-9999 range is nearly full
+  while (taken) {
+    certNo = 1000 + Math.floor(Math.random() * 900000);
+    taken = await Admission.exists({ certificateNo: certNo });
+  }
+
+  return certNo;
+};
+
+// @desc    Get this admission's certificate number, generating one on first call
+// @route   GET /api/admissions/:id/certificate-no
+// @access  Private (Admin, Front Office)
+exports.getOrCreateCertificateNo = async (req, res) => {
+  try {
+    const admission = await Admission.findById(req.params.id);
+    if (!admission) {
+      return res.status(404).json({ success: false, message: "Admission not found" });
+    }
+
+    if (admission.certificateNo) {
+      return res.json({ success: true, certificateNo: admission.certificateNo });
+    }
+
+    const certificateNo = await generateUniqueCertificateNo();
+    admission.certificateNo = certificateNo;
+    await admission.save();
+
+    res.json({ success: true, certificateNo });
+  } catch (error) {
+    console.error("Get/create certificate number error:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+
+
+// ============================================
 // 🔥🔥🔥 AUTO STUDENT CREATION FUNCTION 🔥🔥🔥
 // ============================================
 

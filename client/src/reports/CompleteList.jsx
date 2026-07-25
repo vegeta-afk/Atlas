@@ -5,8 +5,8 @@ import { Search, Filter, Download, Eye, ChevronDown, MoreVertical,
   MessageCircle, AlertCircle, Award, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import "./ReportList.css";
-import { admissionAPI } from "../services/api";
-import CertificateModal from "../components/certifications/CertificateModal";
+import { admissionAPI, templateAPI } from "../services/api";
+import DynamicCardModal from "../components/certifications/dynamic-templates/DynamicCardModal";
 import MarksheetModal from "../components/certifications/MarksheetModal";
 
 const CompleteList = () => {
@@ -38,6 +38,9 @@ const CompleteList = () => {
 
   const [marksheetModal, setMarksheetModal] = useState(null);
   const [certModal, setCertModal] = useState(null);
+  const [certTemplateId, setCertTemplateId] = useState(null);
+  const [certLoadingId, setCertLoadingId] = useState(null); // which row's cert# is being fetched
+
   // Course options
   const courseOptions = [
     "All Courses",
@@ -79,6 +82,14 @@ const CompleteList = () => {
     admissionDate: "admissionDate",
   };
 
+  // Duration in months between two dates — used for the certificate's duration field
+  const calcDurationMonths = (start, end) => {
+    if (!start || !end) return 1;
+    const s = new Date(start);
+    const e = new Date(end);
+    return Math.max(1, (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()));
+  };
+
   // Fetch completed admissions from backend
   const fetchCompletedAdmissions = async () => {
     try {
@@ -108,6 +119,7 @@ const CompleteList = () => {
           id: admission._id,
           studentId: admission.admissionNo || `ADM${admission._id.substring(0, 8)}`,
           name: admission.fullName || admission.applicantName,
+          fatherName: admission.fatherName,
           mobileNumber: admission.mobileNumber || admission.contactNo,
           whatsappNumber: admission.mobileNumber || admission.contactNo,
           course: admission.course || admission.courseInterested,
@@ -117,6 +129,8 @@ const CompleteList = () => {
           aadharNumber: admission.aadharNumber || "Not provided",
           admissionStatus: admission.status || "completed",
           email: admission.email,
+          city: admission.city,
+          photo: admission.photo,
           completionRemarks: admission.remarks || "Course completed",
           completedAt: admission.updatedAt || admission.createdAt,
         }));
@@ -151,6 +165,17 @@ const CompleteList = () => {
     sortConfig.key,
     sortConfig.direction,
   ]);
+
+  // Load the saved Certificate template (same pattern as ID card template lookup in BatchReportList)
+  useEffect(() => {
+    templateAPI
+      .getAll("certificate")
+      .then((res) => {
+        const templates = res.data.templates || [];
+        if (templates.length > 0) setCertTemplateId(templates[0]._id);
+      })
+      .catch((err) => console.error("Failed to load certificate template:", err));
+  }, []);
 
   // Local filtering for search
   useEffect(() => {
@@ -288,7 +313,27 @@ const CompleteList = () => {
     return "";
   };
 
-  
+  // Open the certificate: fetch/generate its unique certificate number first,
+  // then hand everything to DynamicCardModal — same pattern as the ID card
+  // button in BatchReportList.jsx.
+  const handleViewCertificate = async (admission) => {
+    if (!certTemplateId) {
+      alert("No certificate template saved yet — create one in Template Designer first.");
+      return;
+    }
+
+    try {
+      setCertLoadingId(admission.id);
+      const res = await admissionAPI.getCertificateNo(admission.id);
+      const certificateNo = res.data.certificateNo;
+      setCertModal({ ...admission, certificateNo });
+    } catch (err) {
+      console.error("Failed to get certificate number:", err);
+      alert("Failed to generate certificate number. Please try again.");
+    } finally {
+      setCertLoadingId(null);
+    }
+  };
 
   return (
     <div className="admission-list-container">
@@ -584,19 +629,21 @@ const CompleteList = () => {
                       <button
   className="action-btn"
   title="View Certificate"
+  disabled={certLoadingId === admission.id}
   onClick={(e) => {
     e.stopPropagation();
-    setCertModal({ id: admission.id, name: admission.name });
+    handleViewCertificate(admission);
   }}
   style={{
     background: "#fff8e1",
     border: "1px solid #f9a825",
     borderRadius: 6,
     padding: "5px 8px",
-    cursor: "pointer",
+    cursor: certLoadingId === admission.id ? "wait" : "pointer",
     display: "inline-flex",
     alignItems: "center",
     color: "#f57f17",
+    opacity: certLoadingId === admission.id ? 0.6 : 1,
   }}
 >
   <Award size={16} />
@@ -689,15 +736,30 @@ const CompleteList = () => {
           </div>
         </div>
       )}
-      {certModal && (
-  <CertificateModal
-    studentId={certModal.id}
-    studentName={certModal.name}
-    onClose={() => setCertModal(null)}
-  />
 
-  
-)}
+      {/* ===== Certificate overlay (dynamic template) ===== */}
+      {certModal && certTemplateId && (
+        <DynamicCardModal
+          templateId={certTemplateId}
+          data={{
+            certificateNo: certModal.certificateNo,
+            fullName: certModal.name,
+            fatherName: certModal.fatherName || "N/A",
+            admissionNo: certModal.studentId,
+            enrollmentNo: certModal.studentId,
+            course: certModal.course,
+            trainingCenter: certModal.city ? `Branch - ${certModal.city}` : (certModal.batch || "Main Center"),
+            duration: calcDurationMonths(certModal.admissionDate, certModal.completedAt),
+            durationFrom: formatDate(certModal.admissionDate),
+            durationTo: formatDate(certModal.completedAt),
+            grade: "A",
+            dateOfIssue: formatDate(new Date()),
+            photo: certModal.photo,
+          }}
+          fileName={`Certificate-${certModal.name}`}
+          onClose={() => setCertModal(null)}
+        />
+      )}
 
 {marksheetModal && (
   <MarksheetModal
