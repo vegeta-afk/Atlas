@@ -321,5 +321,4 @@ console.log(`   Discounted Monthly: ₹${discountedMonthlyFee}`);
   }
 };
 
-export { generateFeeSchedule, generateConvertedFeeSchedule, generateFeeScheduleWithScholarship };
-
+module.exports = { generateFeeSchedule, generateConvertedFeeSchedule, generateFeeScheduleWithScholarship };

@@ -76,7 +76,7 @@ exports.getEligibleStudents = async (req, res) => {
 // @access  Private (Admin)
 exports.getExtensionPreview = async (req, res) => {
   try {
-    const { studentId, newCourseId, extensionMonth } = req.body;
+    const { studentId, newCourseId, extensionMonth, hasScholarship, scholarshipPercent, finalMonthlyFee } = req.body;
 
     // ✅ FIXED: removed .populate("courseCode"), use courseCode2 if needed
     const student = await Student.findById(studentId);

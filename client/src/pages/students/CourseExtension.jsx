@@ -761,12 +761,7 @@ setIsNewCourseScholarshipEligible(false);
     )}
   </div>
                   
-                  <div className="p-5 bg-green-50 rounded-xl border border-green-200">
-                    <p className="text-sm text-green-600 mb-1">Monthly Fee</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {formatCurrency(previewData.monthlyFee)}
-                    </p>
-                  </div>
+                  
                   
                   <div className="p-5 bg-orange-50 rounded-xl border border-orange-200">
                     <p className="text-sm text-orange-600 mb-1">Total Course Fee</p>
