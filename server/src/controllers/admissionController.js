@@ -558,14 +558,32 @@ exports.deleteAdmission = async (req, res) => {
       });
     }
 
-    // Delete associated student
-    await Student.deleteOne({ admissionId: admission._id });
+    // Find associated student BEFORE deleting anything
+    const student = await Student.findOne({ admissionId: admission._id });
+
+    if (student) {
+      const User = require("../models/user");
+      const TeacherBatch = require("../models/TeacherBatch");
+
+      // 🔥 Delete linked login account
+      const deletedUser = await User.deleteOne({ studentId: student.studentId });
+      console.log(`🗑️ Deleted User account for studentId ${student.studentId}:`, deletedUser.deletedCount);
+
+      // 🔥 Also remove from any TeacherBatch (cleanup leftover batch assignments)
+      await TeacherBatch.updateMany(
+        { "assignedStudents.student": student._id },
+        { $pull: { assignedStudents: { student: student._id } } }
+      );
+
+      // Delete the student document
+      await Student.deleteOne({ _id: student._id });
+    }
 
     await admission.deleteOne();
 
     res.json({
       success: true,
-      message: "Admission and associated student deleted successfully",
+      message: "Admission, student, linked login account, and batch assignment deleted successfully",
     });
   } catch (error) {
     console.error("Delete admission error:", error);
