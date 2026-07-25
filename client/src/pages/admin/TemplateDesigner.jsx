@@ -25,6 +25,11 @@ const DATA_KEY_SUGGESTIONS = [
   "grade",
   "duration",
   "photo",
+  "certificateNo",
+  "enrollmentNo",
+  "trainingCenter",
+  "durationFrom",
+  "durationTo",
 ];
 
 const loadFonts = () => {
