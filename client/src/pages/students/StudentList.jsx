@@ -82,10 +82,19 @@ const StudentList = () => {
   const scheduleFees = activeFeeSchedule.length > 0
     ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
     : (student.totalCourseFee || 0);
-  const totalFee = scheduleFees + (student.admissionFee || 0);  // ← add admissionFee
+  let additionalTotalFee = 0;
+  let additionalPaid = 0;
+  if (student.additionalCourses && student.additionalCourses.length > 0) {
+    student.additionalCourses.forEach(course => {
+      const fees = (course.feeSchedule || []).filter(f => f.status !== "suspended");
+      additionalTotalFee += fees.reduce((s, f) => s + (f.totalFee || 0), 0);
+      additionalPaid += fees.reduce((s, f) => s + (f.paidAmount || 0), 0);
+    });
+  }
+  const totalFee = scheduleFees + (student.admissionFee || 0) + additionalTotalFee;
   const monthlyPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
 const admissionPaid = student.admissionFeePaidAmount || 0;
-const paidAmount = monthlyPaid + admissionPaid;
+const paidAmount = monthlyPaid + admissionPaid + additionalPaid;
   if (totalFee === 0) return 0;
   return Math.min(100, Math.round((paidAmount / totalFee) * 100));
 };
@@ -154,11 +163,21 @@ const paidAmount = monthlyPaid + admissionPaid;
             label: "Pending Fees", 
             value: students.filter((s) => {
             const active = (s.feeSchedule || []).filter(f => f.status !== "suspended");
+            let addTotal = 0, addPaid = 0;
+            if (s.additionalCourses && s.additionalCourses.length > 0) {
+              s.additionalCourses.forEach(course => {
+                const fees = (course.feeSchedule || []).filter(f => f.status !== "suspended");
+                addTotal += fees.reduce((sum, f) => sum + (f.totalFee || 0), 0);
+                addPaid += fees.reduce((sum, f) => sum + (f.paidAmount || 0), 0);
+              });
+            }
             const activeBalance = active.length > 0
   ? active.reduce((sum, f) => sum + (f.totalFee || 0), 0) 
     + (s.admissionFee || 0)                               // ← add admissionFee
-    - (s.paidAmount || 0)                                 // ← root paidAmount
+    + addTotal                                             // ← add additional courses total
+    - (s.admissionFeePaidAmount || 0)                     // ← admission paid
     - active.reduce((sum, f) => sum + (f.paidAmount || 0), 0)  // ← monthly paid
+    - addPaid                                              // ← additional courses paid
   : (s.balanceAmount || 0);
             return activeBalance > 0;
             }).length, 
@@ -241,10 +260,19 @@ const activeFeeSchedule = (student.feeSchedule || []).filter(
 const scheduleFees = activeFeeSchedule.length > 0
   ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
   : (student.totalCourseFee || 0);
-const totalFee = scheduleFees + (student.admissionFee || 0);  // ← add admissionFee
+let additionalTotalFee = 0;
+let additionalPaidRow = 0;
+if (student.additionalCourses && student.additionalCourses.length > 0) {
+  student.additionalCourses.forEach(course => {
+    const fees = (course.feeSchedule || []).filter(f => f.status !== "suspended");
+    additionalTotalFee += fees.reduce((s, f) => s + (f.totalFee || 0), 0);
+    additionalPaidRow += fees.reduce((s, f) => s + (f.paidAmount || 0), 0);
+  });
+}
+const totalFee = scheduleFees + (student.admissionFee || 0) + additionalTotalFee;
 const monthlyPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
 const admissionPaid = student.admissionFeePaidAmount || 0;
-const paidAmount = monthlyPaid + admissionPaid;
+const paidAmount = monthlyPaid + admissionPaid + additionalPaidRow;
 
                   return (
                     <tr key={student._id} className="hover:bg-gray-50 transition-colors">

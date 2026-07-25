@@ -429,15 +429,24 @@ const handleMaterialToggle = async (materialId) => {
   const activeFeeSchedule = (student.feeSchedule || []).filter(
   f => f.status !== "suspended"
 );
+let additionalTotalFee = 0;
+let additionalPaid = 0;
+if (student.additionalCourses && student.additionalCourses.length > 0) {
+  student.additionalCourses.forEach(course => {
+    const fees = (course.feeSchedule || []).filter(f => f.status !== "suspended");
+    additionalTotalFee += fees.reduce((s, f) => s + (f.totalFee || 0), 0);
+    additionalPaid += fees.reduce((s, f) => s + (f.paidAmount || 0), 0);
+  });
+}
 const activeTotalFee = activeFeeSchedule.reduce(
   (s, f) => s + (f.totalFee || 0), 0
-) + (student.admissionFee || 0);  // ← add admission fee to total
+) + (student.admissionFee || 0) + additionalTotalFee;  // ← add admission fee + additional courses to total
 
 const monthlyPaid = activeFeeSchedule.reduce(
   (s, f) => s + (f.paidAmount || 0), 0
 );
 const admissionPaid = student.admissionFeePaidAmount || 0;
-const activePaidAmount = monthlyPaid + admissionPaid;
+const activePaidAmount = monthlyPaid + admissionPaid + additionalPaid;
 
 
 const activeBalanceAmount = activeTotalFee - activePaidAmount;

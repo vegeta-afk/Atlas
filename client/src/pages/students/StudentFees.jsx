@@ -292,8 +292,6 @@ const handleRegisterDelete = async (receiptNo) => {
   const scheduleFees = activeFeeSchedule.length > 0
   ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
   : (student.totalCourseFee || 0);
-const activeTotalFee = scheduleFees + (student.admissionFee || 0);
-const schedulesPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
 let additionalTotalFee = 0;
 let additionalPaid = 0;
 if (student.additionalCourses && student.additionalCourses.length > 0) {
@@ -303,10 +301,11 @@ if (student.additionalCourses && student.additionalCourses.length > 0) {
     additionalPaid += fees.reduce((s, f) => s + (f.paidAmount || 0), 0);
   });
 }
+const activeTotalFee = scheduleFees + (student.admissionFee || 0) + additionalTotalFee;
+const schedulesPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
 const admissionPaid = student.admissionFeePaidAmount || 0;
-const totalPaid = schedulesPaid + admissionPaid;
+const totalPaid = schedulesPaid + admissionPaid + additionalPaid;
 const activeBalance = activeTotalFee - totalPaid;
-
   return {
     _id: student._id,
     studentId: student.studentId,
