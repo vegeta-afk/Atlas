@@ -72,10 +72,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       subItems: [
         { path: "/admin/front-office/enquiries",  label: "Enquiry List",    icon: <List size={15} /> },
         { path: "/admin/front-office/admissions", label: "Admission List",  icon: <UsersIcon size={15} /> },
-        { path: "/admin/front-office/visitors",   label: "Visitors",        icon: <UsersIcon size={15} /> },
         { path: "/admin/front-office/calls",      label: "Call Logs",       icon: <Phone size={15} /> },
-        { path: "/admin/front-office/complaints", label: "Complaints",      icon: <AlertCircle size={15} /> },
-        { path: "/admin/front-office/postal",     label: "Postal",          icon: <Mail size={15} /> },
         {
           key: "setup",
           label: "Setup",
