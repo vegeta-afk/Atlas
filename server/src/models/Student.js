@@ -127,15 +127,17 @@ scholarship: {
         // ✅ ADDITIONAL COURSE FEE SCHEDULE
         // ========================================
         feeSchedule: [
-          {
-            _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
-            month: String,
-            monthNumber: Number,
-            baseFee: Number,
-            examFee: { type: Number, default: 0 },
-            totalFee: Number,
-            paidAmount: { type: Number, default: 0 },
-            balanceAmount: Number,
+  {
+    _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+    month: String,
+    monthNumber: Number,
+    baseFee: Number,
+    examFee: { type: Number, default: 0 },
+    totalFee: Number,
+    paidAmount: { type: Number, default: 0 },
+    monthlyPaid: { type: Number, default: 0 },
+    examPaid: { type: Number, default: 0 },
+    balanceAmount: Number,
             status: {
               type: String,
               enum: ["pending", "paid", "partial", "overdue", "promised" , "suspended"],
@@ -399,6 +401,7 @@ if (fee.balanceAmount === 0 && fee.paidAmount > 0) {
   }
   
   // Auto-calculate for additional courses
+  // Auto-calculate for additional courses
   if (this.additionalCourses && this.additionalCourses.length > 0) {
     this.additionalCourses.forEach(course => {
       if (course.feeSchedule && course.feeSchedule.length > 0) {
@@ -406,6 +409,7 @@ if (fee.balanceAmount === 0 && fee.paidAmount > 0) {
           if (fee.totalFee !== undefined && fee.paidAmount !== undefined) {
             fee.balanceAmount = fee.totalFee - fee.paidAmount;
             
+            if (fee.status === "suspended") return; // ← don't override suspended
             if (fee.balanceAmount === 0 && fee.paidAmount > 0) {
               fee.status = "paid";
             } else if (fee.paidAmount > 0 && fee.balanceAmount > 0) {

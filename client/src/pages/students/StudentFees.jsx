@@ -482,28 +482,30 @@ return sorted;
       if (fullStudent.additionalCourses && fullStudent.additionalCourses.length > 0) {
         fullStudent.additionalCourses.forEach((ac, acIndex) => {
   const fees = (ac.feeSchedule || [])
-            .filter(fee => fee.status !== "paid" && (fee.balanceAmount || 0) > 0)
-            .map(fee => ({
-              id: fee._id,
-              monthNumber: fee.monthNumber,
-              month: fee.month,
-              description: `${ac.courseName} - ${fee.isExamMonth ? "Exam Fee" : "Monthly Fee"}`,
-              type: fee.isExamMonth ? "exam" : "monthly",
-              courseName: ac.courseName,
-              courseShortName: getCourseShortName(ac.courseName),
-              courseIndex: acIndex + 1,
-              totalAmount: fee.totalFee || 0,
-              pendingAmount: fee.balanceAmount || fee.totalFee || 0,
-              paidAmount: fee.paidAmount || 0,
-              balanceAmount: fee.balanceAmount || fee.totalFee || 0,
-              status: fee.status || "pending",
-              selected: false,
-              payingAmount: fee.balanceAmount || fee.totalFee || 0,
-              isExamMonth: fee.isExamMonth || false,
-              examFee: fee.examFee || 0,
-              dueDate: fee.dueDate || null,
-              additionalCourseIndex: acIndex
-            }));
+    .filter(fee => fee.status !== "paid" && (fee.balanceAmount || 0) > 0)
+    .map(fee => ({
+      id: fee._id,
+      monthNumber: fee.monthNumber,
+      month: fee.month,
+      description: `${ac.courseName} - ${fee.isExamMonth ? "Exam Fee" : "Monthly Fee"}`,
+      type: fee.isExamMonth ? "exam" : "monthly",
+      courseName: ac.courseName,
+      courseShortName: getCourseShortName(ac.courseName),
+      courseIndex: acIndex + 1,
+      totalAmount: fee.totalFee || 0,
+      pendingAmount: fee.balanceAmount || fee.totalFee || 0,
+      paidAmount: fee.paidAmount || 0,
+      balanceAmount: fee.balanceAmount || fee.totalFee || 0,
+      status: fee.status || "pending",
+      selected: false,
+      payingAmount: fee.balanceAmount || fee.totalFee || 0,
+      isExamMonth: fee.isExamMonth || false,
+      examFee: fee.examFee || 0,
+      examPaid: fee.examPaid || 0,
+      monthlyPaid: fee.monthlyPaid || 0,
+      dueDate: fee.dueDate || null,
+      additionalCourseIndex: acIndex
+    }));
 
           schedules.push({ courseName: ac.courseName, fees });
         });

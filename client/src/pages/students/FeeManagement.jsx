@@ -28,6 +28,8 @@ const FeeManagement = ({ studentId, student, course, additionalCourseIndex }) =>
   const [paymentData, setPaymentData] = useState({
     monthNumber: "",
     amount: "",
+    monthlyAmount: "",
+    examAmount: "",
     paymentDate: new Date().toISOString().split("T")[0],
     receiptNo: "",
     paymentMode: "cash",
@@ -1156,7 +1158,12 @@ const lastIsExam = false;
     const finalSchedule = [...updatedSchedule, newMonth];
 
     // 5. Save to backend
-    const response = await fetch(`${BASE_URL}/api/students/${studentId}/fees/schedule`, {
+    // 5. Save to backend
+    const endpoint = isAdditionalCourse
+      ? `${BASE_URL}/api/students/${studentId}/additional-course-fees/schedule`
+      : `${BASE_URL}/api/students/${studentId}/fees/schedule`;
+
+    const response = await fetch(endpoint, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -1167,6 +1174,7 @@ const lastIsExam = false;
         totalCourseFee: finalSchedule.reduce((s, f) => s + (f.totalFee || 0), 0),
         paidAmount: finalSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0),
         balanceAmount: finalSchedule.reduce((s, f) => s + (f.balanceAmount || 0), 0),
+        ...(isAdditionalCourse && { additionalCourseIndex }),
       }),
     });
 
@@ -1212,7 +1220,11 @@ const handleUnsuspend = async (fee) => {
       });
 
     // 3. Save to backend
-    const response = await fetch(`${BASE_URL}/api/students/${studentId}/fees/schedule`, {
+    const endpoint = isAdditionalCourse
+      ? `${BASE_URL}/api/students/${studentId}/additional-course-fees/schedule`
+      : `${BASE_URL}/api/students/${studentId}/fees/schedule`;
+
+    const response = await fetch(endpoint, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -1223,6 +1235,7 @@ const handleUnsuspend = async (fee) => {
         totalCourseFee: updatedSchedule.reduce((s, f) => s + (f.totalFee || 0), 0),
         paidAmount: updatedSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0),
         balanceAmount: updatedSchedule.reduce((s, f) => s + (f.balanceAmount || 0), 0),
+        ...(isAdditionalCourse && { additionalCourseIndex }),
       }),
     });
 
@@ -1322,6 +1335,8 @@ const response = await fetch(endpoint, {
     setPaymentData({
       monthNumber: fee.monthNumber,
       amount: fee.paidAmount || "",         // show what was already entered
+      monthlyAmount: fee.isExamMonth ? (fee.monthlyPaid || 0) : "",
+      examAmount: fee.isExamMonth ? (fee.examPaid || 0) : "",
       paymentDate: fee.paymentDate
         ? new Date(fee.paymentDate).toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0],
@@ -1334,6 +1349,8 @@ const response = await fetch(endpoint, {
     setPaymentData({
       monthNumber: fee.monthNumber,
       amount: "",
+      monthlyAmount: "",
+      examAmount: "",
       paymentDate: new Date().toISOString().split("T")[0],
       receiptNo: generateReceiptNo(),
       paymentMode: "cash",
@@ -1344,7 +1361,6 @@ const response = await fetch(endpoint, {
 
   setShowPaymentModal(true);
 };
-
   // Generate receipt number
   const generateReceiptNo = () => {
     const date = new Date();
@@ -1372,6 +1388,22 @@ const response = await fetch(endpoint, {
   return monthFee - alreadyPaid;            // remaining balance for new payments
 };
 
+  // Max monthly-portion payment for exam months
+  const getMaxMonthlyPaymentAllowed = () => {
+    if (!selectedMonth) return 0;
+    const monthlyFeeAmt = selectedMonth.monthlyFee || selectedMonth.baseFee || selectedMonth.amount || 0;
+    if (paymentData.action === "edit") return monthlyFeeAmt;
+    return monthlyFeeAmt - (selectedMonth.monthlyPaid || 0);
+  };
+
+  // Max exam-portion payment for exam months
+  const getMaxExamPaymentAllowed = () => {
+    if (!selectedMonth) return 0;
+    const examFeeAmt = selectedMonth.examFee || 0;
+    if (paymentData.action === "edit") return examFeeAmt;
+    return examFeeAmt - (selectedMonth.examPaid || 0);
+  };
+
   // Check if payment exceeds total course fee - FIXED OVERPAYMENT VALIDATION
   const checkOverpayment = (amount) => {
     if (!feeData) return false;
@@ -1396,6 +1428,106 @@ const response = await fetch(endpoint, {
  const handlePayment = async () => {
   try {
     const token = localStorage.getItem("token");
+
+    // ─── EXAM MONTHS: handle monthly + exam portions separately ───
+    if (selectedMonth?.isExamMonth) {
+      const monthlyAmt = parseFloat(paymentData.monthlyAmount) || 0;
+      const examAmt = parseFloat(paymentData.examAmount) || 0;
+      const totalAmt = monthlyAmt + examAmt;
+
+      if (totalAmt <= 0) {
+        alert("Please enter a monthly and/or exam amount");
+        return;
+      }
+
+      const maxMonthly = getMaxMonthlyPaymentAllowed();
+      const maxExam = getMaxExamPaymentAllowed();
+
+      if (monthlyAmt > maxMonthly) {
+        alert(`Monthly fee payment cannot exceed ${formatCurrency(maxMonthly)}`);
+        return;
+      }
+      if (examAmt > maxExam) {
+        alert(`Exam fee payment cannot exceed ${formatCurrency(maxExam)}`);
+        return;
+      }
+      if (checkOverpayment(totalAmt)) {
+        alert("Payment cannot exceed total course fee");
+        return;
+      }
+
+      const updatedFeeSchedule = feeData.feeSchedule.map((fee) => {
+        if (fee.monthNumber === paymentData.monthNumber) {
+          const totalFee = fee.totalFee || 0;
+          const newMonthlyPaid = paymentData.action === "edit"
+            ? monthlyAmt
+            : (fee.monthlyPaid || 0) + monthlyAmt;
+          const newExamPaid = paymentData.action === "edit"
+            ? examAmt
+            : (fee.examPaid || 0) + examAmt;
+          const newPaidAmount = newMonthlyPaid + newExamPaid;
+          const newBalance = totalFee - newPaidAmount;
+          return {
+            ...fee,
+            monthlyPaid: newMonthlyPaid,
+            examPaid: newExamPaid,
+            paidAmount: newPaidAmount,
+            balanceAmount: newBalance,
+            pendingAmount: newBalance,
+            status: newPaidAmount === 0 ? "pending" : newPaidAmount >= totalFee ? "paid" : "partial",
+            paymentDate: new Date(paymentData.paymentDate),
+            receiptNo: paymentData.receiptNo,
+            paymentMode: paymentData.paymentMode,
+            remarks: paymentData.remarks,
+          };
+        }
+        return fee;
+      });
+
+      const totalPaid = updatedFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
+      const balanceAmount = Math.max(0, feeData.summary.totalCourseFee - totalPaid);
+
+      const examEndpoint = isAdditionalCourse
+        ? `${BASE_URL}/api/students/${studentId}/additional-course-fees/schedule`
+        : `${BASE_URL}/api/students/${studentId}/fees/schedule`;
+
+      const examResponse = await fetch(examEndpoint, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          feeSchedule: updatedFeeSchedule.map(cleanFeeForBackend),
+          totalCourseFee: feeData.summary.totalCourseFee,
+          paidAmount: totalPaid,
+          balanceAmount,
+          ...(isAdditionalCourse && { additionalCourseIndex }),
+        }),
+      });
+
+      if (examResponse.ok) {
+        updateFeeSchedule(updatedFeeSchedule);
+        alert(paymentData.action === "edit" ? "Payment updated successfully!" : "Payment recorded successfully!");
+        setShowPaymentModal(false);
+
+        setSelectedReceipt({
+          receiptNo: paymentData.receiptNo,
+          date: new Date(paymentData.paymentDate),
+          studentId: feeData.student.studentId,
+          studentName: feeData.student.fullName,
+          course: feeData.course?.courseFullName || feeData.student.course,
+          month: feeData.feeSchedule.find(f => f.monthNumber === paymentData.monthNumber)?.month,
+          amount: totalAmt,
+          paymentMode: paymentData.paymentMode,
+          balance: balanceAmount,
+          action: paymentData.action,
+        });
+        setShowReceiptModal(true);
+      } else {
+        updateFeeLocally();
+      }
+      return;
+    }
+
+    // ─── NON-EXAM MONTHS: unchanged single-amount flow ───
     const paymentAmount = parseFloat(paymentData.amount) || 0;
 
     if (!paymentAmount || paymentAmount <= 0) {
@@ -1413,6 +1545,8 @@ const response = await fetch(endpoint, {
       alert("Payment cannot exceed total course fee");
       return;
     }
+
+
 
     // ─── EDIT: Replace the amount via schedule PUT (never adds on top) ───
     if (paymentData.action === "edit") {
@@ -2852,29 +2986,85 @@ for (const ph of (admStudent?.paymentHistory || [])) {
 
             <div className="p-6 space-y-4">
               {/* Amount */}
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount (₹)</label>
-                  <span className="text-xs text-gray-400">Max: {formatCurrency(getMaxPaymentAllowed())}</span>
+              {selectedMonth.isExamMonth ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Monthly Fee (₹)</label>
+                        <span className="text-xs text-gray-400">Max: {formatCurrency(getMaxMonthlyPaymentAllowed())}</span>
+                      </div>
+                      <input
+                        type="number"
+                        value={paymentData.monthlyAmount}
+                        onChange={(e) => setPaymentData({ ...paymentData, monthlyAmount: e.target.value })}
+                        className={`w-full border rounded-lg px-3 py-2.5 text-base font-semibold focus:outline-none focus:ring-2 ${
+                          parseFloat(paymentData.monthlyAmount || 0) > getMaxMonthlyPaymentAllowed()
+                            ? "border-red-300 focus:ring-red-300"
+                            : "border-gray-200 focus:ring-blue-400"
+                        }`}
+                        placeholder="0"
+                      />
+                      {parseFloat(paymentData.monthlyAmount || 0) > getMaxMonthlyPaymentAllowed() && (
+                        <p className="text-red-500 text-xs mt-1">⚠ Exceeds monthly fee remaining</p>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="text-xs font-semibold text-yellow-700 uppercase tracking-wider">Exam Fee (₹)</label>
+                        <span className="text-xs text-gray-400">Max: {formatCurrency(getMaxExamPaymentAllowed())}</span>
+                      </div>
+                      <input
+                        type="number"
+                        value={paymentData.examAmount}
+                        onChange={(e) => setPaymentData({ ...paymentData, examAmount: e.target.value })}
+                        className={`w-full border rounded-lg px-3 py-2.5 text-base font-semibold focus:outline-none focus:ring-2 bg-yellow-50 ${
+                          parseFloat(paymentData.examAmount || 0) > getMaxExamPaymentAllowed()
+                            ? "border-red-300 focus:ring-red-300"
+                            : "border-yellow-300 focus:ring-yellow-400"
+                        }`}
+                        placeholder="0"
+                      />
+                      {parseFloat(paymentData.examAmount || 0) > getMaxExamPaymentAllowed() && (
+                        <p className="text-red-500 text-xs mt-1">⚠ Exceeds exam fee remaining</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+                    <span className="text-sm text-gray-600">Total paying:</span>
+                    <span className="font-bold text-gray-800">
+                      {formatCurrency((parseFloat(paymentData.monthlyAmount) || 0) + (parseFloat(paymentData.examAmount) || 0))}
+                    </span>
+                  </div>
+                  {checkOverpayment((parseFloat(paymentData.monthlyAmount) || 0) + (parseFloat(paymentData.examAmount) || 0)) && (
+                    <p className="text-red-500 text-xs">⚠ Payment would exceed total course fee</p>
+                  )}
                 </div>
-                <input
-                  type="number"
-                  value={paymentData.amount}
-                  onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
-                  className={`w-full border rounded-lg px-3 py-2.5 text-lg font-semibold focus:outline-none focus:ring-2 ${
-                    parseFloat(paymentData.amount || 0) > getMaxPaymentAllowed() || checkOverpayment(paymentData.amount)
-                      ? "border-red-300 focus:ring-red-300"
-                      : "border-gray-200 focus:ring-emerald-400"
-                  }`}
-                  placeholder="Enter amount"
-                />
-                {parseFloat(paymentData.amount || 0) > getMaxPaymentAllowed() && (
-                  <p className="text-red-500 text-xs mt-1">⚠ Amount exceeds maximum allowed for this month</p>
-                )}
-                {checkOverpayment(paymentData.amount) && (
-                  <p className="text-red-500 text-xs mt-1">⚠ Payment would exceed total course fee</p>
-                )}
-              </div>
+              ) : (
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount (₹)</label>
+                    <span className="text-xs text-gray-400">Max: {formatCurrency(getMaxPaymentAllowed())}</span>
+                  </div>
+                  <input
+                    type="number"
+                    value={paymentData.amount}
+                    onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
+                    className={`w-full border rounded-lg px-3 py-2.5 text-lg font-semibold focus:outline-none focus:ring-2 ${
+                      parseFloat(paymentData.amount || 0) > getMaxPaymentAllowed() || checkOverpayment(paymentData.amount)
+                        ? "border-red-300 focus:ring-red-300"
+                        : "border-gray-200 focus:ring-emerald-400"
+                    }`}
+                    placeholder="Enter amount"
+                  />
+                  {parseFloat(paymentData.amount || 0) > getMaxPaymentAllowed() && (
+                    <p className="text-red-500 text-xs mt-1">⚠ Amount exceeds maximum allowed for this month</p>
+                  )}
+                  {checkOverpayment(paymentData.amount) && (
+                    <p className="text-red-500 text-xs mt-1">⚠ Payment would exceed total course fee</p>
+                  )}
+                </div>
+              )}
 
               {/* Date + Receipt side by side */}
               <div className="grid grid-cols-2 gap-3">
@@ -2942,10 +3132,19 @@ for (const ph of (admStudent?.paymentHistory || [])) {
               <button
                 onClick={handlePayment}
                 disabled={
-                  !paymentData.amount ||
-                  parseFloat(paymentData.amount || 0) <= 0 ||
-                  parseFloat(paymentData.amount || 0) > getMaxPaymentAllowed() ||
-                  checkOverpayment(paymentData.amount)
+                  selectedMonth.isExamMonth
+                    ? (
+                        ((parseFloat(paymentData.monthlyAmount) || 0) + (parseFloat(paymentData.examAmount) || 0)) <= 0 ||
+                        parseFloat(paymentData.monthlyAmount || 0) > getMaxMonthlyPaymentAllowed() ||
+                        parseFloat(paymentData.examAmount || 0) > getMaxExamPaymentAllowed() ||
+                        checkOverpayment((parseFloat(paymentData.monthlyAmount) || 0) + (parseFloat(paymentData.examAmount) || 0))
+                      )
+                    : (
+                        !paymentData.amount ||
+                        parseFloat(paymentData.amount || 0) <= 0 ||
+                        parseFloat(paymentData.amount || 0) > getMaxPaymentAllowed() ||
+                        checkOverpayment(paymentData.amount)
+                      )
                 }
                 className={`px-5 py-2 text-sm text-white rounded-lg font-medium flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${
                   paymentData.action === "edit" ? "bg-blue-600 hover:bg-blue-700" : "bg-emerald-500 hover:bg-emerald-600"

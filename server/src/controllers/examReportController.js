@@ -85,102 +85,202 @@ exports.getUpcomingExamReport = async (req, res) => {
     const reportData = [];
 
     students.forEach(student => {
-      if (!student.admissionDate || !student.courseCode?.examMonths) return;
-
-      const startDate = new Date(student.admissionDate);
-      const examMonths = student.courseCode.examMonths
-        .split(',')
-        .map(m => parseInt(m.trim()))
-        .filter(m => !isNaN(m));
-
       const sid = student._id.toString();
-      const cid = student.courseCode._id ? student.courseCode._id.toString() : "unknown";
-      const studentSubmissions = submissionMap[sid]?.[cid] || [];
-
       const dueKeys = new Set(student.manuallyDueExamKeys || []);
 
-      // Match each submission to its REAL exam number (from the Test it belongs to)
-      const submissionByExamIndex = {};
-      studentSubmissions.forEach(sub => {
-        const test = testInfoMap[sub.testId?.toString()];
-        if (!test || test.examMode !== 'semester') return;
-        const semMatch = test.selectedSemesters?.[0]?.match(/\d+/);
-        const semesterNumber = semMatch ? parseInt(semMatch[0]) : null;
-        if (!semesterNumber) return;
-        submissionByExamIndex[semesterNumber - 1] = sub;
-      });
+      // ══════════════════════════════════════════════
+      // PRIMARY COURSE
+      // ══════════════════════════════════════════════
+      if (student.admissionDate && student.courseCode?.examMonths) {
+        const startDate = new Date(student.admissionDate);
+        const examMonths = student.courseCode.examMonths
+          .split(',')
+          .map(m => parseInt(m.trim()))
+          .filter(m => !isNaN(m));
 
-      examMonths.forEach((monthNum, index) => {
-        const examDate = new Date(startDate);
-        examDate.setMonth(startDate.getMonth() + monthNum - 1);
-        examDate.setDate(15);
+        const cid = student.courseCode._id ? student.courseCode._id.toString() : "unknown";
+        const studentSubmissions = submissionMap[sid]?.[cid] || [];
 
-        const diffTime = examDate - today;
-        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const submissionByExamIndex = {};
+        studentSubmissions.forEach(sub => {
+          const test = testInfoMap[sub.testId?.toString()];
+          if (!test || test.examMode !== 'semester') return;
+          const semMatch = test.selectedSemesters?.[0]?.match(/\d+/);
+          const semesterNumber = semMatch ? parseInt(semMatch[0]) : null;
+          if (!semesterNumber) return;
+          submissionByExamIndex[semesterNumber - 1] = sub;
+        });
 
-        const matchedSubmission = submissionByExamIndex[index] || null;
-        const isCompleted = !!matchedSubmission;
-        const isOverdue = !isCompleted && daysLeft < 0;
-        const isManuallyDue = !isCompleted && dueKeys.has(`${cid}_${index + 1}`);
+        examMonths.forEach((monthNum, index) => {
+          const examDate = new Date(startDate);
+          examDate.setMonth(startDate.getMonth() + monthNum - 1);
+          examDate.setDate(15);
 
-        // ── Exam fee status for THIS exam's month (from student's feeSchedule) ──
-        const feeEntry = (student.feeSchedule || []).find(f => f.monthNumber === monthNum);
-        const examFeeAmount = feeEntry?.examFee || 0;
-        const examFeePaid = feeEntry
-          ? (feeEntry.examPaid || 0) >= examFeeAmount && examFeeAmount > 0
-          : false;
+          const diffTime = examDate - today;
+          const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        // Determine status — completion depends on an actual submission;
-        // "Due" can also be set manually by an admin regardless of the date
-        let status = "";
-        if (isCompleted) {
-          status = "Completed";
-        } else if (isOverdue || isManuallyDue) {
-          status = "Due";
-        } else if (daysLeft <= 15) {
-          status = "Critical";
-        } else if (daysLeft <= 30) {
-          status = "Very Soon";
-        } else if (daysLeft <= 60) {
-          status = "Soon";
-        } else if (daysLeft <= 90) {
-          status = "Approaching";
-        } else {
-          status = "Far";
-        }
-        if (examNumber === "all" ||
-            (examNumber === "first" && index === 0) ||
-            (examNumber === "second" && index === 1) ||
-            (examNumber === "third" && index === 2)) {
+          const matchedSubmission = submissionByExamIndex[index] || null;
+          const isCompleted = !!matchedSubmission;
+          const isOverdue = !isCompleted && daysLeft < 0;
+          const isManuallyDue = !isCompleted && dueKeys.has(`${cid}_${index + 1}`);
 
-          reportData.push({
-            id: `${student._id}_exam_${index + 1}`,
-            studentId: student._id,
-            courseId: cid,
-            rollNo: student.studentId || "N/A",
-            studentName: student.fullName || "N/A",
-            courseName: student.course || "N/A",
-            facultyName: student.facultyAllot || "Not Allotted",
-            batchTime: student.batchTime || "N/A",
-            examNumber: index + 1,
-            examMonth: monthNum,
-            examDate: examDate.toISOString(),
-            dateOfExam: examDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-            daysLeft: (isCompleted || isManuallyDue) ? 0 : (daysLeft >= 0 ? daysLeft : 0),
-            status,
-            examFeePaid,
-            examFeeAmount,
-            isCompleted,
-            isOverdue,
-            isManuallyDue,
-            marksObtained: matchedSubmission?.marksObtained ?? null,
-            maxMarks: matchedSubmission?.maxMarks ?? null,
-            percentage: matchedSubmission?.percentage ?? null,
-            submittedAt: matchedSubmission?.submittedAt ?? null,
-            admissionDate: student.admissionDate,
-            dateOfJoining: student.admissionDate ? new Date(student.admissionDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : "N/A",
-          });
-        }
+          const feeEntry = (student.feeSchedule || []).find(f => f.monthNumber === monthNum);
+          const examFeeAmount = feeEntry?.examFee || 0;
+          const examFeePaid = feeEntry
+            ? (feeEntry.examPaid || 0) >= examFeeAmount && examFeeAmount > 0
+            : false;
+
+          let status = "";
+          if (isCompleted) {
+            status = "Completed";
+          } else if (isOverdue || isManuallyDue) {
+            status = "Due";
+          } else if (daysLeft <= 15) {
+            status = "Critical";
+          } else if (daysLeft <= 30) {
+            status = "Very Soon";
+          } else if (daysLeft <= 60) {
+            status = "Soon";
+          } else if (daysLeft <= 90) {
+            status = "Approaching";
+          } else {
+            status = "Far";
+          }
+
+          if (examNumber === "all" ||
+              (examNumber === "first" && index === 0) ||
+              (examNumber === "second" && index === 1) ||
+              (examNumber === "third" && index === 2)) {
+
+            reportData.push({
+              id: `${student._id}_exam_${index + 1}`,
+              studentId: student._id,
+              courseId: cid,
+              rollNo: student.studentId || "N/A",
+              studentName: student.fullName || "N/A",
+              courseName: student.course || "N/A",
+              facultyName: student.facultyAllot || "Not Allotted",
+              batchTime: student.batchTime || "N/A",
+              examNumber: index + 1,
+              examMonth: monthNum,
+              examDate: examDate.toISOString(),
+              dateOfExam: examDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+              daysLeft: (isCompleted || isManuallyDue) ? 0 : (daysLeft >= 0 ? daysLeft : 0),
+              status,
+              examFeePaid,
+              examFeeAmount,
+              isCompleted,
+              isOverdue,
+              isManuallyDue,
+              marksObtained: matchedSubmission?.marksObtained ?? null,
+              maxMarks: matchedSubmission?.maxMarks ?? null,
+              percentage: matchedSubmission?.percentage ?? null,
+              submittedAt: matchedSubmission?.submittedAt ?? null,
+              admissionDate: student.admissionDate,
+              dateOfJoining: student.admissionDate ? new Date(student.admissionDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : "N/A",
+              courseType: "primary",
+            });
+          }
+        });
+      }
+
+      // ══════════════════════════════════════════════
+      // ADDITIONAL COURSES
+      // ══════════════════════════════════════════════
+      (student.additionalCourses || []).forEach((ac, acIndex) => {
+        if (!ac.isActive || !student.admissionDate) return;
+
+        const acExamMonths = (ac.feeSchedule || [])
+          .filter(f => f.isExamMonth)
+          .map(f => f.monthNumber)
+          .sort((a, b) => a - b);
+
+        if (acExamMonths.length === 0) return;
+
+        const acStartDate = new Date(student.admissionDate);
+        const acCid = ac.courseId ? ac.courseId.toString() : `additional_${acIndex}`;
+        const acSubmissions = submissionMap[sid]?.[acCid] || [];
+
+        const acSubmissionByExamIndex = {};
+        acSubmissions.forEach(sub => {
+          const test = testInfoMap[sub.testId?.toString()];
+          if (!test || test.examMode !== 'semester') return;
+          const semMatch = test.selectedSemesters?.[0]?.match(/\d+/);
+          const semesterNumber = semMatch ? parseInt(semMatch[0]) : null;
+          if (!semesterNumber) return;
+          acSubmissionByExamIndex[semesterNumber - 1] = sub;
+        });
+
+        acExamMonths.forEach((monthNum, index) => {
+          const examDate = new Date(acStartDate);
+          examDate.setMonth(acStartDate.getMonth() + monthNum - 1);
+          examDate.setDate(15);
+
+          const daysLeft = Math.ceil((examDate - today) / (1000 * 60 * 60 * 24));
+
+          const matchedSubmission = acSubmissionByExamIndex[index] || null;
+          const isCompleted = !!matchedSubmission;
+          const isOverdue = !isCompleted && daysLeft < 0;
+          const isManuallyDue = !isCompleted && dueKeys.has(`${acCid}_${index + 1}`);
+
+          const feeEntry = (ac.feeSchedule || []).find(f => f.monthNumber === monthNum);
+          const examFeeAmount = feeEntry?.examFee || 0;
+          const examFeePaid = feeEntry
+            ? (feeEntry.examPaid || 0) >= examFeeAmount && examFeeAmount > 0
+            : false;
+
+          let status = "";
+          if (isCompleted) {
+            status = "Completed";
+          } else if (isOverdue || isManuallyDue) {
+            status = "Due";
+          } else if (daysLeft <= 15) {
+            status = "Critical";
+          } else if (daysLeft <= 30) {
+            status = "Very Soon";
+          } else if (daysLeft <= 60) {
+            status = "Soon";
+          } else if (daysLeft <= 90) {
+            status = "Approaching";
+          } else {
+            status = "Far";
+          }
+
+          if (examNumber === "all" ||
+              (examNumber === "first" && index === 0) ||
+              (examNumber === "second" && index === 1) ||
+              (examNumber === "third" && index === 2)) {
+
+            reportData.push({
+              id: `${student._id}_additional_${acIndex}_exam_${index + 1}`,
+              studentId: student._id,
+              courseId: acCid,
+              rollNo: student.studentId || "N/A",
+              studentName: student.fullName || "N/A",
+              courseName: ac.courseName || "Additional Course",
+              facultyName: ac.facultyName || "Not Allotted",
+              batchTime: ac.batchTime || "N/A",
+              examNumber: index + 1,
+              examMonth: monthNum,
+              examDate: examDate.toISOString(),
+              dateOfExam: examDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+              daysLeft: (isCompleted || isManuallyDue) ? 0 : (daysLeft >= 0 ? daysLeft : 0),
+              status,
+              examFeePaid,
+              examFeeAmount,
+              isCompleted,
+              isOverdue,
+              isManuallyDue,
+              marksObtained: matchedSubmission?.marksObtained ?? null,
+              maxMarks: matchedSubmission?.maxMarks ?? null,
+              percentage: matchedSubmission?.percentage ?? null,
+              submittedAt: matchedSubmission?.submittedAt ?? null,
+              admissionDate: student.admissionDate,
+              dateOfJoining: student.admissionDate ? new Date(student.admissionDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : "N/A",
+              courseType: "additional",
+            });
+          }
+        });
       });
     });
 
