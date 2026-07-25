@@ -112,6 +112,8 @@ export const admissionAPI = {
   // Put admission on hold
   holdAdmission: (id, reason) => 
     api.put(`/admissions/${id}/hold`, { reason }),
+
+  getCertificateNo: (id) => api.get(`/admissions/${id}/certificate-no`),
   
   // Mark admission as complete (manual)
   completeAdmission: (id, reason) => 
