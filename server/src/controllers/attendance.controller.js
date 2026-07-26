@@ -48,7 +48,7 @@ exports.generateQR = async (req, res) => {
 
     const today = new Date().toISOString().split('T')[0];
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = Date.now() + 30 * 1000; // 2 hours
+    const expiresAt = Date.now() + 30 * 1000; // 30 seconds
 
     const sessionKey = `${batchId}_${today}`;
     activeQRSessions.set(sessionKey, {
@@ -88,7 +88,7 @@ exports.generateQR = async (req, res) => {
 exports.scanQR = async (req, res) => {
   try {
     const { qrData } = req.body;
-    const studentMongoId = req.user.id;
+    const studentMongoId = req.user.studentId;
 
     // Parse QR
     let parsed;
@@ -121,6 +121,8 @@ exports.scanQR = async (req, res) => {
     if (!teacherBatch) {
       return res.status(403).json({ success: false, message: 'Batch not found' });
     }
+
+    console.log('studentMongoId:', studentMongoId, 'assignedStudents:', teacherBatch.assignedStudents.map(s => s.student.toString()));
 
     const isEnrolled = teacherBatch.assignedStudents.some(
       s => s.student.toString() === studentMongoId.toString() && s.isActive
