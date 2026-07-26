@@ -142,6 +142,15 @@ useEffect(() => {
   return () => clearInterval(interval);
 }, [showQRModal, activeQR]);
 
+
+useEffect(() => {
+  if (!showQRModal || !selectedBatch) return;
+  const poll = setInterval(() => {
+    fetchBatchStudents(selectedBatch._id, undefined, true);
+  }, 10000);
+  return () => clearInterval(poll);
+}, [showQRModal, selectedBatch]);
+
   const parseTimeToMinutes = (timeStr) => {
   if (!timeStr) return null;
   const match = String(timeStr).trim().match(/^(\d{1,2}):(\d{2})\s*([AaPp][Mm])?$/);
@@ -271,8 +280,8 @@ const isEditWindowOpen = () => {
 
  // Fetch batch students (BOTH faculty and admin views use this)
 // Fetch batch students (BOTH faculty and admin views use this)
-const fetchBatchStudents = async (batchId, isBridgeParam) => {
-  setLoading(true);
+const fetchBatchStudents = async (batchId, isBridgeParam, silent = false) => {
+  if (!silent) setLoading(true);
   try {
     let apiUrl;
     // Prefer the explicitly passed flag (fresh click) — fall back to state
@@ -356,7 +365,7 @@ const fetchBatchStudents = async (batchId, isBridgeParam) => {
     alert('Error loading students: ' + error.message);
     setStudents([]);
   } finally {
-    setLoading(false);
+    if (!silent) setLoading(false);
   }
 };
 
