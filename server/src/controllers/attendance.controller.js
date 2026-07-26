@@ -88,7 +88,14 @@ exports.generateQR = async (req, res) => {
 exports.scanQR = async (req, res) => {
   try {
     const { qrData } = req.body;
-    const studentMongoId = req.user.studentId;
+
+    // req.user.id is the User collection's _id; Attendance/TeacherBatch
+    // reference the separate Student collection's _id — resolve via admission code.
+    const studentDoc = await Student.findOne({ studentId: req.user.studentId }).select('_id additionalCourses');
+    if (!studentDoc) {
+      return res.status(404).json({ success: false, message: 'Student record not found' });
+    }
+    const studentMongoId = studentDoc._id;
 
     // Parse QR
     let parsed;
@@ -156,7 +163,8 @@ exports.scanQR = async (req, res) => {
     }
 
     // Determine courseType (same logic as manual attendance)
-    const student = await Student.findById(studentMongoId);
+    // Determine courseType (same logic as manual attendance)
+    const student = studentDoc;
     let courseType = 'primary';
 
     if (student?.additionalCourses?.length > 0) {
