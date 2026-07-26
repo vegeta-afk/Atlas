@@ -81,6 +81,7 @@ const StudentAttendance = () => {
   const [showQRModal, setShowQRModal] = useState(false);
 const [activeQR, setActiveQR] = useState(null); // { qrData, batchName, timing, expiresAt }
 const [qrLoading, setQRLoading] = useState(false);
+const [secondsLeft, setSecondsLeft] = useState(0);
 
 const [showTopicModal, setShowTopicModal] = useState(false);
 const [topicModalGroups, setTopicModalGroups] = useState([]);
@@ -131,6 +132,15 @@ const [topicModalGroups, setTopicModalGroups] = useState([]);
     fetchBatchStudents(selectedBatch._id);
   }
 }, [view, selectedDate]);
+
+
+useEffect(() => {
+  if (!showQRModal || !activeQR) return;
+  const tick = () => setSecondsLeft(Math.max(0, Math.round((activeQR.expiresAt - Date.now()) / 1000)));
+  tick();
+  const interval = setInterval(tick, 1000);
+  return () => clearInterval(interval);
+}, [showQRModal, activeQR]);
 
   const parseTimeToMinutes = (timeStr) => {
   if (!timeStr) return null;
@@ -1221,9 +1231,7 @@ const handleBatchSelect = (batch) => {
   const renderQRModal = () => {
   if (!showQRModal || !activeQR) return null;
 
-  const expiryTime = new Date(activeQR.expiresAt).toLocaleTimeString('en-IN', {
-    hour: '2-digit', minute: '2-digit', hour12: true
-  });
+  
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -1258,9 +1266,9 @@ const handleBatchSelect = (batch) => {
         </div>
 
         {/* Expiry */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-6">
-          <p className="text-yellow-800 text-sm font-medium">
-            ⏱️ Valid until: {expiryTime} (2 hours)
+        <div className={`border rounded-xl p-3 mb-6 ${secondsLeft > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'}`}>
+          <p className={`text-sm font-medium ${secondsLeft > 0 ? 'text-yellow-800' : 'text-red-700'}`}>
+            {secondsLeft > 0 ? `⏱️ Expires in ${secondsLeft}s` : '❌ Expired — tap Refresh QR'}
           </p>
         </div>
 

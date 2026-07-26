@@ -1,6 +1,7 @@
 // controllers/attendance.controller.js
 const Attendance = require('../models/Attendance');
 const TeacherBatch = require('../models/TeacherBatch');
+const crypto = require('crypto');
 const AttendanceSummary = require('../models/AttendanceSummary');
 const Student = require('../models/Student');
 const { Batch , Holiday } = require('../models/Setup');
@@ -47,7 +48,7 @@ exports.generateQR = async (req, res) => {
 
     const today = new Date().toISOString().split('T')[0];
     const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = Date.now() + 2 * 60 * 60 * 1000; // 2 hours
+    const expiresAt = Date.now() + 30 * 1000; // 2 hours
 
     const sessionKey = `${batchId}_${today}`;
     activeQRSessions.set(sessionKey, {

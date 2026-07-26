@@ -7,7 +7,7 @@ const StudentScanQR = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const html5QrCodeRef = useRef(null);
-
+  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
   const startScanner = async () => {
     setResult(null);
     setError(null);
