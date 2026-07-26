@@ -50,7 +50,7 @@ const StudentScanQR = () => {
     setLoading(true);
     try {
       const token = sessionStorage.getItem("token") || localStorage.getItem("token");
-      const response = await fetch("/api/attendance/qr/scan", {
+      const response = await fetch(`${BASE_URL}/api/attendance/qr/scan`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -61,7 +61,7 @@ const StudentScanQR = () => {
       const data = await response.json();
       setResult(data);
     } catch (err) {
-      setResult({ success: false, message: "Network error. Please try again." });
+      setResult({ success: false, message: "Network error: " + err.message + " | URL: " + BASE_URL });
     } finally {
       setLoading(false);
     }
