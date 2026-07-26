@@ -162,7 +162,7 @@ exports.scanQR = async (req, res) => {
       });
     }
 
-    // Determine courseType (same logic as manual attendance)
+
     // Determine courseType (same logic as manual attendance)
     const student = studentDoc;
     let courseType = 'primary';
@@ -175,7 +175,7 @@ exports.scanQR = async (req, res) => {
     }
 
     const checkInTime = new Date().toLocaleTimeString('en-IN', {
-      hour: '2-digit', minute: '2-digit', hour12: true
+      hour: '2-digit', minute: '2-digit', hour12: false
     });
 
     // Create Attendance record
