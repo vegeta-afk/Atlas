@@ -776,119 +776,122 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
 </td>
                       <td>
                         <div className="action-buttons">
-                          {/* Convert to Admission Button */}
-                          {enquiry.status !== "converted" && (
-                            <button
-                              className="action-btn convert"
-                              onClick={() => handleConvertToAdmission(enquiry)}
-                              title="Convert to Admission"
-                              disabled={enquiry.status === "converted"}
-                            >
-                              <UserCheck size={16} />
-                            </button>
-                          )}
+  {/* View Button */}
+  <Link
+    to={`${basePath}/front-office/enquiries/view/${enquiry._id}`}
+    className="action-btn view"
+    title="View Enquiry"
+  >
+    <Eye size={16} />
+  </Link>
 
-                          {/* Follow Up Button */}
-                          {enquiry.status !== "follow_up" &&
-                            enquiry.status !== "converted" &&
-                            enquiry.status !== "rejected" &&
-                            enquiry.status !== "lost" && (
-                              <button
-                                className="action-btn followup"
-                                onClick={() => handleFollowUpEnquiry(enquiry)}
-                                title="Mark for Follow Up"
-                              >
-                                <Bell size={16} />
-                              </button>
-                            )}
+  {/* Three dots dropdown menu */}
+  <div className="dropdown-container">
+    <button
+      className="action-btn more"
+      onClick={(e) => {
+        e.stopPropagation();
+        toggleDropdown(enquiry._id);
+      }}
+      title="More options"
+    >
+      <MoreVertical size={16} />
+    </button>
 
-                          {/* Reject Button */}
-                          {enquiry.status !== "rejected" &&
-                            enquiry.status !== "converted" &&
-                            enquiry.status !== "lost" && (
-                              <button
-                                className="action-btn reject"
-                                onClick={() => handleRejectEnquiry(enquiry)}
-                                title="Reject Enquiry"
-                              >
-                                <XCircle size={16} />
-                              </button>
-                            )}
+    {openDropdown === enquiry._id && (
+      <div
+        className="dropdown-menu"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {enquiry.status !== "converted" && (
+          <button
+            className="dropdown-item"
+            onClick={() => {
+              handleConvertToAdmission(enquiry);
+              setOpenDropdown(null);
+            }}
+          >
+            <UserCheck size={14} />
+            <span>Convert to Admission</span>
+          </button>
+        )}
 
-                          {/* Reset to New Button */}
-                          {enquiry.status !== "new" &&
-                            enquiry.status !== "converted" &&
-                            enquiry.status !== "lost" && (
-                              <button
-                                className="action-btn reset"
-                                onClick={() => handleResetToNew(enquiry)}
-                                title="Reset to New"
-                              >
-                                <RotateCcw size={16} />
-                              </button>
-                            )}
+        {enquiry.status !== "follow_up" &&
+          enquiry.status !== "converted" &&
+          enquiry.status !== "rejected" &&
+          enquiry.status !== "lost" && (
+            <button
+              className="dropdown-item"
+              onClick={() => {
+                handleFollowUpEnquiry(enquiry);
+                setOpenDropdown(null);
+              }}
+            >
+              <Bell size={14} />
+              <span>Mark for Follow Up</span>
+            </button>
+          )}
 
-                          {/* View Button */}
-                          <Link
-                            to={`${basePath}/front-office/enquiries/view/${enquiry._id}`}
-                            className="action-btn view"
-                            title="View Enquiry"
-                          >
-                            <Eye size={16} />
-                          </Link>
+        {enquiry.status !== "rejected" &&
+          enquiry.status !== "converted" &&
+          enquiry.status !== "lost" && (
+            <button
+              className="dropdown-item reject-option"
+              onClick={() => {
+                handleRejectEnquiry(enquiry);
+                setOpenDropdown(null);
+              }}
+            >
+              <XCircle size={14} />
+              <span>Reject Enquiry</span>
+            </button>
+          )}
 
-                          {/* Three dots dropdown menu */}
-                          <div className="dropdown-container">
-                            <button
-                              className="action-btn more"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleDropdown(enquiry._id);
-                              }}
-                              title="More options"
-                            >
-                              <MoreVertical size={16} />
-                            </button>
+        {/* Reset to New Button — left as-is, still standalone-style logic, now in dropdown too */}
+        {enquiry.status !== "new" &&
+          enquiry.status !== "converted" &&
+          enquiry.status !== "lost" && (
+            <button
+              className="dropdown-item"
+              onClick={() => {
+                handleResetToNew(enquiry);
+                setOpenDropdown(null);
+              }}
+            >
+              <RotateCcw size={14} />
+              <span>Reset to New</span>
+            </button>
+          )}
 
-                            {openDropdown === enquiry._id && (
-                              <div
-                                className="dropdown-menu"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <button
-                                  className="dropdown-item"
-                                  onClick={() => {
-                                    navigate(`${basePath}/front-office/enquiries/edit/${enquiry._id}`);
-
-                                  }}
-                                >
-                                  <Edit size={14} />
-                                  <span>Edit Enquiry</span>
-                                </button>
-                                <button
-                                  className="dropdown-item"
-                                  onClick={() =>
-                                    openWhatsApp(
-                                      enquiry.whatsappNo || enquiry.contactNo
-                                    )
-                                  }
-                                >
-                                  <MessageCircle size={14} />
-                                  <span>Chat on WhatsApp</span>
-                                </button>
-                                <button
-                                  className="dropdown-item delete-option"
-                                  onClick={() =>
-                                    handleDeleteEnquiry(enquiry._id)
-                                  }
-                                >
-                                  <Trash2 size={14} />
-                                  <span>Delete Enquiry</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+        <button
+          className="dropdown-item"
+          onClick={() => {
+            navigate(`${basePath}/front-office/enquiries/edit/${enquiry._id}`);
+          }}
+        >
+          <Edit size={14} />
+          <span>Edit Enquiry</span>
+        </button>
+        <button
+          className="dropdown-item"
+          onClick={() =>
+            openWhatsApp(enquiry.whatsappNo || enquiry.contactNo)
+          }
+        >
+          <MessageCircle size={14} />
+          <span>Chat on WhatsApp</span>
+        </button>
+        <button
+          className="dropdown-item delete-option"
+          onClick={() => handleDeleteEnquiry(enquiry._id)}
+        >
+          <Trash2 size={14} />
+          <span>Delete Enquiry</span>
+        </button>
+      </div>
+    )}
+  </div>
+</div>
                       </td>
                     </tr>
                   ))
