@@ -4,7 +4,7 @@ import { LayoutDashboard, Calendar, CreditCard, User, LogOut, BookOpen, Bell, Qr
 import "./Sidebar.css";
 import { X } from "lucide-react";
 
-const StudentSidebar = () => {
+const StudentSidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -54,4 +54,5 @@ const StudentSidebar = () => {
     </aside>
   );
 };
+
 export default StudentSidebar;
