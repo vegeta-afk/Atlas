@@ -804,13 +804,13 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
         onClick={(e) => e.stopPropagation()}
       >
         {enquiry.status !== "converted" && (
-          <button
-            className="dropdown-item"
-            onClick={() => {
-              handleConvertToAdmission(enquiry);
-              setOpenDropdown(null);
-            }}
-          >
+  <button
+    className="dropdown-item convert-option"
+    onClick={() => {
+      handleConvertToAdmission(enquiry);
+      setOpenDropdown(null);
+    }}
+  >
             <UserCheck size={14} />
             <span>Convert to Admission</span>
           </button>
@@ -821,12 +821,12 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
           enquiry.status !== "rejected" &&
           enquiry.status !== "lost" && (
             <button
-              className="dropdown-item"
-              onClick={() => {
-                handleFollowUpEnquiry(enquiry);
-                setOpenDropdown(null);
-              }}
-            >
+  className="dropdown-item followup-option"
+  onClick={() => {
+    handleFollowUpEnquiry(enquiry);
+    setOpenDropdown(null);
+  }}
+>
               <Bell size={14} />
               <span>Mark for Follow Up</span>
             </button>

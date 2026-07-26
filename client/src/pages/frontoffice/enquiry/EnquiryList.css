@@ -1435,3 +1435,36 @@ input:disabled {
     grid-template-columns: 1fr 1fr !important;
   }
 }
+
+/* Convert to Admission — dropdown */
+.dropdown-item.convert-option {
+  color: #10b981;
+}
+.dropdown-item.convert-option:hover {
+  background-color: #d1fae5;
+}
+.dropdown-item.convert-option svg {
+  color: #10b981;
+}
+
+/* Mark for Follow Up — dropdown */
+.dropdown-item.followup-option {
+  color: #f97316;
+}
+.dropdown-item.followup-option:hover {
+  background-color: #ffedd5;
+}
+.dropdown-item.followup-option svg {
+  color: #f97316;
+}
+
+/* Reject Enquiry — dropdown */
+.dropdown-item.reject-option {
+  color: #dc2626;
+}
+.dropdown-item.reject-option:hover {
+  background-color: #fee2e2;
+}
+.dropdown-item.reject-option svg {
+  color: #dc2626;
+}
