@@ -227,7 +227,7 @@ function App() {
         <Route path="attendance/scan" element={<StudentScanQR />} />
 
         {/* QR Attendance Scan */}
-<Route path="attendance/scan" element={<FacultyScanAttendance />} />
+        <Route path="attendance/scan" element={<FacultyScanAttendance />} />
 
         {/* Exam */}
         <Route path="exam">

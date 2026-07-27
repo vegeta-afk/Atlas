@@ -111,7 +111,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       subItems: [
         { path: "/admin/faculty",             label: "Faculty List",       icon: <UsersIcon size={15} /> },
         { path: "/admin/faculty/add",         label: "Add Faculty",        icon: <UserPlus size={15} /> },
-        { path: "/admin/faculty/attendance",  label: "Attendance",         icon: <Calendar size={15} /> },
+        { path: "/admin/faculty/admin-attendance",  label: "Attendance",         icon: <Calendar size={15} /> },
         { path: "/admin/faculty/leave",       label: "Leave Management",   icon: <Clock size={15} /> },
         { path: "/admin/faculty/salary",      label: "Salary/Payroll",     icon: <CreditCard size={15} /> },
         { path: "/admin/faculty/schedule",    label: "Schedule/Timetable", icon: <FileText size={15} /> },
