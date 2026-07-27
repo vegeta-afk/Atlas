@@ -223,8 +223,6 @@ function App() {
           <Route path="batch-transfer/add" element={<AddBatchTransfer />} />
         </Route>
 
-        {/* QR Attendance Scan */}
-        <Route path="attendance/scan" element={<StudentScanQR />} />
 
         {/* QR Attendance Scan */}
         <Route path="attendance/scan" element={<FacultyScanAttendance />} />
