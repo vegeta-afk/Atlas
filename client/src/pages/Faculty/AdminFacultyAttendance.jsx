@@ -139,27 +139,64 @@ const AdminFacultyAttendance = () => {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Faculty</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Check-In</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Check-Out</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Location</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
               {records.length === 0 ? (
-                <tr><td colSpan={4} className="px-6 py-8 text-center text-gray-500">No check-ins yet today</td></tr>
+                <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-500">No check-ins yet today</td></tr>
               ) : (
-                records.map((r) => (
-                  <tr key={r._id}>
-                    <td className="px-6 py-4 font-medium text-gray-900">{r.faculty?.facultyName}</td>
-                    <td className="px-6 py-4 text-gray-700">{r.checkInTime || "—"}</td>
-                    <td className="px-6 py-4 text-gray-700">{r.checkOutTime || "—"}</td>
-                    <td className="px-6 py-4">
-                      {r.checkOutTime ? (
-                        <span className="flex items-center gap-1 text-green-700 text-sm"><CheckCircle size={14} /> Complete</span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-yellow-700 text-sm"><XCircle size={14} /> Not checked out</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                records.map((r) => {
+                  const checkInLink = r.checkInLocation?.lat
+                    ? `https://www.google.com/maps?q=${r.checkInLocation.lat},${r.checkInLocation.lng}`
+                    : null;
+                  const checkOutLink = r.checkOutLocation?.lat
+                    ? `https://www.google.com/maps?q=${r.checkOutLocation.lat},${r.checkOutLocation.lng}`
+                    : null;
+
+                  return (
+                    <tr key={r._id}>
+                      <td className="px-6 py-4 font-medium text-gray-900">{r.faculty?.facultyName}</td>
+                      <td className="px-6 py-4 text-gray-700">{r.checkInTime || "—"}</td>
+                      <td className="px-6 py-4 text-gray-700">{r.checkOutTime || "—"}</td>
+                      <td className="px-6 py-4 text-sm">
+                        {checkInLink ? (
+                          <a
+                            href={checkInLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-indigo-600 hover:underline"
+                          >
+                            In ({r.checkInLocation.distanceMeters}m)
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                        {checkOutLink && (
+                          <>
+                            {" · "}
+                            <a
+                              href={checkOutLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-indigo-600 hover:underline"
+                            >
+                              Out ({r.checkOutLocation.distanceMeters}m)
+                            </a>
+                          </>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {r.checkOutTime ? (
+                          <span className="flex items-center gap-1 text-green-700 text-sm"><CheckCircle size={14} /> Complete</span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-yellow-700 text-sm"><XCircle size={14} /> Not checked out</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
