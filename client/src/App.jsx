@@ -101,7 +101,7 @@ import AdminFacultyAttendance from "./pages/Faculty/AdminFacultyAttendance";
 
 import RequestLeave from "./pages/Faculty/RequestLeave";
 
-import AdminFacultyLeave from "../pages/Faculty/AdminFacultyLeave";
+import LeaveManagement from "../pages/Faculty/AdminFacultyLeave";
 
 function App() {
   return (
