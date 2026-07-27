@@ -54,10 +54,19 @@ exports.generateFacultyQR = async (req, res) => {
   }
 };
 
+
+
 // @desc   Faculty scans QR from their phone — first scan of the day = check-in, next = check-out
 // @route  POST /api/faculty-attendance/qr/scan
 // @access Instructor only
 exports.scanFacultyQR = async (req, res) => {
+  console.log('📷 SCAN ATTEMPT:', {
+    userId: req.user?.id,
+    role: req.user?.role,
+    facultyId: req.user?.facultyId,
+    body: req.body,
+    time: new Date().toISOString(),
+  });
   try {
     const { qrData, latitude, longitude } = req.body;
 
