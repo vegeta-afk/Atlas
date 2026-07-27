@@ -101,7 +101,7 @@ import AdminFacultyAttendance from "./pages/Faculty/AdminFacultyAttendance";
 
 import RequestLeave from "./pages/Faculty/RequestLeave";
 
-import LeaveManagement from "../pages/Faculty/AdminFacultyLeave";
+import LeaveManagement from "./pages/Faculty/LeaveManagement";
 
 function App() {
   return (
@@ -146,7 +146,7 @@ function App() {
           <Route path="bridge-batch" element={<BridgeBatchList />} />
           <Route path="bridge-batch/add" element={<AddBridgeBatchRequest />} />
           <Route path="admin-attendance" element={<AdminFacultyAttendance />} />
-          <Route path="admin-leave" element={<AdminFacultyLeave />} />
+          <Route path="admin-leave" element={<LeaveManagement />} />
 
         </Route>
 
