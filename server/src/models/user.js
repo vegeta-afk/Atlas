@@ -58,6 +58,11 @@ const userSchema = new mongoose.Schema({
       return v;
     }
   },
+
+  pushSubscriptions: {
+    type: [mongoose.Schema.Types.Mixed],
+    default: [],
+  },
   // Change studentId to String to match your database
   studentId: {
     type: String,  // Changed from ObjectId to String

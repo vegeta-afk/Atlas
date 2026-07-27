@@ -96,6 +96,9 @@ import BatchTopicBoard from "./reports/BatchTopicBoard";
 import TestEligibilityReport from "./reports/TestEligibilityReport";
 import ExamInstructions from "./pages/student/ExamInstructions";
 
+import FacultyScanAttendance from "./pages/Faculty/FacultyScanAttendance";
+import AdminFacultyAttendance from "./pages/Faculty/AdminFacultyAttendance";
+
 
 function App() {
   return (
@@ -139,6 +142,7 @@ function App() {
           <Route path="edit/:facultyId" element={<EditFaculty />} />  // ← new
           <Route path="bridge-batch" element={<BridgeBatchList />} />
           <Route path="bridge-batch/add" element={<AddBridgeBatchRequest />} />
+          <Route path="admin-attendance" element={<AdminFacultyAttendance />} />
         </Route>
 
         <Route path="students">
@@ -221,6 +225,9 @@ function App() {
 
         {/* QR Attendance Scan */}
         <Route path="attendance/scan" element={<StudentScanQR />} />
+
+        {/* QR Attendance Scan */}
+<Route path="attendance/scan" element={<FacultyScanAttendance />} />
 
         {/* Exam */}
         <Route path="exam">

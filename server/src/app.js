@@ -66,6 +66,7 @@ const batchReportRoutes = require("./routes/batchReportRoutes");
 const templateRoutes = require("./routes/templateRoutes");
 const bridgeBatchRoutes = require('./routes/bridgeBatchRoutes');
 const testController = require('./controllers/testController');
+const facultyAttendanceRoutes = require("./routes/facultyAttendance.routes");
 
 // Use routes
 app.use("/api/auth", authRoutes);
@@ -131,7 +132,7 @@ app.use((err, req, res, next) => {
 });
 
 
-// Start server
+
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
@@ -140,7 +141,7 @@ app.listen(PORT, () => {
   console.log(`🧪 Body test: POST http://localhost:${PORT}/api/test-body`);
   console.log(`🔐 Auth API: http://localhost:${PORT}/api/auth`);
 
-  // Auto-archive regular-mode tests older than 7 days (soft delete only)
+  // Auto-archive regular-mode tests older than 7 days (soft delete kar raha hu taaki student results aur reports kaam karte rahe)
   testController.autoArchiveOldRegularTests();
   setInterval(testController.autoArchiveOldRegularTests, 6 * 60 * 60 * 1000);
 });
