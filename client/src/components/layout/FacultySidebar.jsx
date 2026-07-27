@@ -57,6 +57,11 @@ const FacultySidebar = () => {
       icon: <LayoutDashboard size={20} />,
     },
     {
+      path: "/faculty/leave",
+      label: "Request Leave",
+      icon: <Calendar size={20} />,
+    },
+    {
       key: "frontOffice",
       label: "Front Office",
       icon: <Building size={20} />,

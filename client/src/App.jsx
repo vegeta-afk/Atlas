@@ -99,6 +99,9 @@ import ExamInstructions from "./pages/student/ExamInstructions";
 import FacultyScanAttendance from "./pages/Faculty/FacultyScanAttendance";
 import AdminFacultyAttendance from "./pages/Faculty/AdminFacultyAttendance";
 
+import RequestLeave from "./pages/Faculty/RequestLeave";
+
+import AdminFacultyLeave from "../pages/Faculty/AdminFacultyLeave";
 
 function App() {
   return (
@@ -143,6 +146,8 @@ function App() {
           <Route path="bridge-batch" element={<BridgeBatchList />} />
           <Route path="bridge-batch/add" element={<AddBridgeBatchRequest />} />
           <Route path="admin-attendance" element={<AdminFacultyAttendance />} />
+          <Route path="admin-leave" element={<AdminFacultyLeave />} />
+
         </Route>
 
         <Route path="students">
@@ -226,6 +231,8 @@ function App() {
 
         {/* QR Attendance Scan */}
         <Route path="attendance/scan" element={<FacultyScanAttendance />} />
+
+        <Route path="leave" element={<RequestLeave />} />
 
         {/* Exam */}
         <Route path="exam">

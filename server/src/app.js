@@ -67,6 +67,8 @@ const templateRoutes = require("./routes/templateRoutes");
 const bridgeBatchRoutes = require('./routes/bridgeBatchRoutes');
 const testController = require('./controllers/testController');
 const facultyAttendanceRoutes = require("./routes/facultyAttendance.routes");
+const facultyLeaveRoutes = require("./routes/facultyLeave.routes");
+const facultyLeaveController = require("./controllers/facultyLeave.controller");
 
 // Use routes
 app.use("/api/auth", authRoutes);
@@ -93,6 +95,7 @@ app.use("/api/batch-report", batchReportRoutes);
 app.use("/api/templates", templateRoutes);
 app.use('/api/bridge-batch', bridgeBatchRoutes);
 app.use("/api/faculty-attendance", facultyAttendanceRoutes);
+app.use("/api/faculty-leaves", facultyLeaveRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
@@ -145,6 +148,9 @@ app.listen(PORT, () => {
   // Auto-archive regular-mode tests older than 7 days (soft delete kar raha hu taaki student results aur reports kaam karte rahe)
   testController.autoArchiveOldRegularTests();
   setInterval(testController.autoArchiveOldRegularTests, 6 * 60 * 60 * 1000);
+
+  facultyLeaveController.revokeExpiredLeaveCredentials();
+setInterval(facultyLeaveController.revokeExpiredLeaveCredentials, 60 * 60 * 1000); // hourly
 });
 
 console.log("\n" + "=".repeat(50));
