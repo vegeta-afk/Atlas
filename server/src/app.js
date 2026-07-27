@@ -92,6 +92,7 @@ app.use("/api/reports/birthdays", birthdayRoutes);
 app.use("/api/batch-report", batchReportRoutes);
 app.use("/api/templates", templateRoutes);
 app.use('/api/bridge-batch', bridgeBatchRoutes);
+app.use("/api/faculty-attendance", facultyAttendanceRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
