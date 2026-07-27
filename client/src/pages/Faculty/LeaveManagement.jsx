@@ -7,6 +7,11 @@ const LeaveManagement = () => {
   const [statusFilter, setStatusFilter] = useState("pending");
   const [actionLoadingId, setActionLoadingId] = useState(null);
 
+
+  const [endNowTarget, setEndNowTarget] = useState(null);
+const [extendTarget, setExtendTarget] = useState(null);
+const [newToDate, setNewToDate] = useState("");
+
   // Reject modal state
   const [rejectTarget, setRejectTarget] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -87,6 +92,51 @@ const LeaveManagement = () => {
       setActionLoadingId(null);
     }
   };
+
+  const handleEndNow = async (leave) => {
+  if (!window.confirm(`End leave for ${leave.facultyName} now and restore their original password?`)) return;
+  setActionLoadingId(leave._id);
+  try {
+    const res = await fetch(`${BASE_URL}/api/faculty-leaves/${leave._id}/end-now`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (data.success) {
+      fetchLeaves();
+    } else {
+      alert(data.message);
+    }
+  } catch (err) {
+    alert("Error: " + err.message);
+  } finally {
+    setActionLoadingId(null);
+  }
+};
+
+const handleExtend = async () => {
+  if (!extendTarget || !newToDate) return;
+  setActionLoadingId(extendTarget._id);
+  try {
+    const res = await fetch(`${BASE_URL}/api/faculty-leaves/${extendTarget._id}/extend`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ newToDate }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setExtendTarget(null);
+      setNewToDate("");
+      fetchLeaves();
+    } else {
+      alert(data.message);
+    }
+  } catch (err) {
+    alert("Error: " + err.message);
+  } finally {
+    setActionLoadingId(null);
+  }
+};
 
   const copyCredentials = () => {
     const text = `Username: ${credentialsModal.username}\nPassword: ${credentialsModal.password}`;
@@ -184,6 +234,23 @@ const LeaveManagement = () => {
                           Reject
                         </button>
                       </div>
+                    ) : l.status === "approved" && l.tempCredentials?.isActive ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setExtendTarget(l); setNewToDate(""); }}
+                          disabled={actionLoadingId === l._id}
+                          className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                        >
+                          Extend
+                        </button>
+                        <button
+                          onClick={() => handleEndNow(l)}
+                          disabled={actionLoadingId === l._id}
+                          className="px-3 py-1.5 bg-orange-600 text-white text-xs font-medium rounded-lg hover:bg-orange-700 disabled:opacity-50"
+                        >
+                          End Now
+                        </button>
+                      </div>
                     ) : (
                       <span className="text-xs text-gray-400">—</span>
                     )}
@@ -233,6 +300,47 @@ const LeaveManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Extend leave modal */}
+{extendTarget && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl p-6 w-full max-w-md">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-bold text-gray-800">Extend Leave</h3>
+        <button onClick={() => { setExtendTarget(null); setNewToDate(""); }}>
+          <X size={18} className="text-gray-400" />
+        </button>
+      </div>
+      <p className="text-sm text-gray-500 mb-3">
+        Extending leave for <span className="font-medium">{extendTarget.facultyName}</span>.
+        Current end date: <span className="font-medium">{new Date(extendTarget.toDate).toLocaleDateString("en-IN")}</span>
+      </p>
+      <label className="block text-sm text-gray-600 mb-1">New End Date</label>
+      <input
+        type="date"
+        value={newToDate}
+        min={new Date(extendTarget.toDate).toISOString().split("T")[0]}
+        onChange={(e) => setNewToDate(e.target.value)}
+        className="w-full px-3 py-2 border border-gray-200 rounded-lg mb-4"
+      />
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => { setExtendTarget(null); setNewToDate(""); }}
+          className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleExtend}
+          disabled={!newToDate || actionLoadingId === extendTarget._id}
+          className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+        >
+          Confirm Extend
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Credentials-to-share modal, shown once right after approval */}
       {credentialsModal && (

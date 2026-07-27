@@ -16,9 +16,10 @@ const facultyLeaveSchema = new mongoose.Schema({
   // Issued only on approval — lets a substitute log in as this teacher during the leave window
   tempCredentials: {
     username: { type: String },
-    passwordPlain: { type: String }, // shown once to admin; cleared once the leave ends
+    passwordPlain: { type: String },
     isActive: { type: Boolean, default: false },
-  },
+    originalPasswordHash: { type: String, select: false }, // stored so the real teacher's password can be restored
+},
 }, { timestamps: true });
 
 module.exports = mongoose.model('FacultyLeave', facultyLeaveSchema);

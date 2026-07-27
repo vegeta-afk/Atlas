@@ -89,6 +89,8 @@ exports.approveLeave = async (req, res) => {
     const user = await User.findOne({ facultyId: leave.faculty, role: 'instructor' });
     if (!user) return res.status(404).json({ success: false, message: 'Faculty login account not found' });
 
+    const originalHash = user.password; // save the real teacher's current hash before overwriting
+
     const tempPassword = generateTempPassword();
     user.password = await bcrypt.hash(tempPassword, 10);
     await user.save();
@@ -100,6 +102,7 @@ exports.approveLeave = async (req, res) => {
       username: user.email,
       passwordPlain: tempPassword,
       isActive: true,
+      originalPasswordHash: originalHash,
     };
     await leave.save();
 
@@ -146,21 +149,77 @@ exports.revokeExpiredLeaveCredentials = async () => {
       status: 'approved',
       toDate: { $lt: now },
       'tempCredentials.isActive': true,
-    });
+    }).select('+tempCredentials.originalPasswordHash');
 
     for (const leave of expiredLeaves) {
       const user = await User.findOne({ facultyId: leave.faculty, role: 'instructor' });
-      if (user) {
-        const randomLock = crypto.randomBytes(16).toString('hex');
-        user.password = await bcrypt.hash(randomLock, 10);
+      if (user && leave.tempCredentials.originalPasswordHash) {
+        user.password = leave.tempCredentials.originalPasswordHash; // restore the real teacher's original password
         await user.save();
       }
       leave.tempCredentials.isActive = false;
       leave.tempCredentials.passwordPlain = undefined;
+      leave.tempCredentials.originalPasswordHash = undefined;
       await leave.save();
-      console.log(`🔒 Revoked temp login for leave ${leave._id}`);
+      console.log(`🔓 Restored original login for leave ${leave._id}`);
     }
   } catch (error) {
     console.error('Error revoking expired leave credentials:', error);
+  }
+};
+
+// @desc  Admin manually ends an active leave early and restores original password
+// @route PUT /api/faculty-leaves/:id/end-now
+exports.endLeaveNow = async (req, res) => {
+  try {
+    const leave = await FacultyLeave.findById(req.params.id).select('+tempCredentials.originalPasswordHash');
+    if (!leave) return res.status(404).json({ success: false, message: 'Leave request not found' });
+    if (leave.status !== 'approved' || !leave.tempCredentials.isActive) {
+      return res.status(400).json({ success: false, message: 'This leave has no active temp credentials' });
+    }
+
+    const user = await User.findOne({ facultyId: leave.faculty, role: 'instructor' });
+    if (user && leave.tempCredentials.originalPasswordHash) {
+      user.password = leave.tempCredentials.originalPasswordHash;
+      await user.save();
+    }
+
+    leave.tempCredentials.isActive = false;
+    leave.tempCredentials.passwordPlain = undefined;
+    leave.tempCredentials.originalPasswordHash = undefined;
+    await leave.save();
+
+    res.json({ success: true, message: 'Leave ended, original password restored' });
+  } catch (error) {
+    console.error('End leave now error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+// @desc  Admin extends an already-approved leave's end date
+// @route PUT /api/faculty-leaves/:id/extend
+exports.extendLeave = async (req, res) => {
+  try {
+    const { newToDate } = req.body;
+    if (!newToDate) {
+      return res.status(400).json({ success: false, message: 'newToDate is required' });
+    }
+
+    const leave = await FacultyLeave.findById(req.params.id);
+    if (!leave) return res.status(404).json({ success: false, message: 'Leave request not found' });
+    if (leave.status !== 'approved' || !leave.tempCredentials.isActive) {
+      return res.status(400).json({ success: false, message: 'Only an active approved leave can be extended' });
+    }
+    if (new Date(newToDate) <= new Date(leave.toDate)) {
+      return res.status(400).json({ success: false, message: 'New end date must be after the current end date' });
+    }
+
+    leave.toDate = newToDate;
+    await leave.save();
+
+    res.json({ success: true, message: 'Leave extended', data: leave });
+  } catch (error) {
+    console.error('Extend leave error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };

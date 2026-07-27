@@ -10,5 +10,7 @@ router.get('/me', authorize('instructor'), controller.getMyLeaves);
 router.get('/', authorize('admin'), controller.getAllLeaves);
 router.put('/:id/approve', authorize('admin'), controller.approveLeave);
 router.put('/:id/reject', authorize('admin'), controller.rejectLeave);
+router.put('/:id/end-now', authorize('admin'), controller.endLeaveNow);
+router.put('/:id/extend', authorize('admin'), controller.extendLeave);
 
 module.exports = router;
