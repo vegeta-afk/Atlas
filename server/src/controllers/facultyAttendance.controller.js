@@ -117,7 +117,12 @@ exports.scanFacultyQR = async (req, res) => {
       date: { $gte: startOfDay, $lte: endOfDay },
     });
 
-    const nowTimeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const nowTimeStr = new Date().toLocaleTimeString('en-IN', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: true,
+  timeZone: 'Asia/Kolkata',
+});
     const faculty = await Faculty.findById(facultyId).select('facultyName');
 
     if (!record) {
