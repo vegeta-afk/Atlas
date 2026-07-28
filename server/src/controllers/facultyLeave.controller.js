@@ -126,12 +126,27 @@ exports.approveLeave = async (req, res) => {
     }
 
     const leave = await FacultyLeave.findById(req.params.id);
-    if (!leave) return res.status(404).json({ success: false, message: 'Leave request not found' });
-    if (leave.status !== 'pending') {
-      return res.status(400).json({ success: false, message: `Request is already ${leave.status}` });
-    }
+if (!leave) return res.status(404).json({ success: false, message: 'Leave request not found' });
+if (leave.status !== 'pending') {
+  return res.status(400).json({ success: false, message: `Request is already ${leave.status}` });
+}
 
-    const onLeaveUser = await User.findOne({ facultyId: leave.faculty, role: 'instructor' });
+// Block approving a second leave for the same faculty while one is still active
+const now = new Date();
+const existingActiveLeave = await FacultyLeave.findOne({
+  faculty: leave.faculty,
+  status: 'approved',
+  toDate: { $gte: now },
+  _id: { $ne: leave._id },
+});
+if (existingActiveLeave) {
+  return res.status(400).json({
+    success: false,
+    message: `This faculty already has an active approved leave until ${new Date(existingActiveLeave.toDate).toLocaleDateString('en-IN')}. Please end that leave first, or wait for it to complete.`,
+  });
+}
+
+const onLeaveUser = await User.findOne({ facultyId: leave.faculty, role: 'instructor' });
     if (!onLeaveUser) return res.status(404).json({ success: false, message: 'Faculty login account not found' });
 
     const subDocs = await Promise.all(assignments.map(async (a) => {
@@ -220,6 +235,11 @@ exports.endLeaveNow = async (req, res) => {
     }
 
     await BatchSubstitution.updateMany({ leave: leave._id, isActive: true }, { $set: { isActive: false } });
+
+    // Mark as ended-as-of-now so future approve-checks (existingActiveLeave) don't
+    // mistake this for a still-running leave
+    leave.toDate = new Date();
+    await leave.save();
 
     res.json({ success: true, message: 'Leave ended, substitute access revoked for all batches' });
   } catch (error) {

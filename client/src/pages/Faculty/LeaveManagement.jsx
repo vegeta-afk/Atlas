@@ -265,7 +265,7 @@ const handleExtend = async () => {
                           Reject
                         </button>
                       </div>
-                    ) : l.status === "approved" && l.tempCredentials?.isActive ? (
+                    ) : l.status === "approved" ? (
                       <div className="flex gap-2">
                         <button
                           onClick={() => { setExtendTarget(l); setNewToDate(""); }}
