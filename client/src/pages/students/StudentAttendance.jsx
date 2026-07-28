@@ -1159,6 +1159,11 @@ const handleBatchSelect = (batch) => {
       Temporary
     </span>
   )}
+  {batch.isSubstitute && (
+    <span className="text-[10px] px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full font-semibold">
+      Substitute
+    </span>
+  )}
 </h3>
                       <p className="text-sm text-gray-500">{batch.subject || 'General'}</p>
                     </div>
