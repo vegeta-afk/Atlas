@@ -236,9 +236,13 @@ exports.endLeaveNow = async (req, res) => {
 
     await BatchSubstitution.updateMany({ leave: leave._id, isActive: true }, { $set: { isActive: false } });
 
-    // Mark as ended-as-of-now so future approve-checks (existingActiveLeave) don't
-    // mistake this for a still-running leave
-    leave.toDate = new Date();
+    // Set toDate to "end of yesterday" — makes the leave read as ended IMMEDIATELY,
+    // regardless of what time of day it's ended. Setting it to right-now would still
+    // leave it "active" until midnight, since isLeaveActive treats a whole day as active.
+    const endOfYesterday = new Date();
+    endOfYesterday.setDate(endOfYesterday.getDate() - 1);
+    endOfYesterday.setHours(23, 59, 59, 999);
+    leave.toDate = endOfYesterday;
     await leave.save();
 
     res.json({ success: true, message: 'Leave ended, substitute access revoked for all batches' });
