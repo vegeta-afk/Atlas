@@ -51,6 +51,35 @@ const getEffectiveTeacherBatch = async (loggedInTeacherId, batchId) => {
   }).populate('batch', 'batchName startTime endTime displayName');
 };
 
+// Same idea as getEffectiveTeacherBatch, but when the caller already knows the exact
+// TeacherBatch doc (from the dashboard card), verify ownership/substitution against
+// THAT doc instead of blindly re-resolving — removes ambiguity when a batch slot
+// has multiple teacher/subject TeacherBatch docs.
+const resolveTeacherBatchForAction = async (loggedInTeacherId, batchId, teacherBatchId) => {
+  if (teacherBatchId) {
+    const candidate = await TeacherBatch.findOne({ _id: teacherBatchId, isActive: true })
+      .populate('batch', 'batchName startTime endTime displayName');
+    if (candidate) {
+      const isOwn = candidate.teacher.toString() === loggedInTeacherId.toString();
+      let isCoveredBySub = false;
+      if (!isOwn) {
+        const now = new Date();
+        isCoveredBySub = !!(await BatchSubstitution.findOne({
+          batch: batchId,
+          onLeaveFacultyUser: candidate.teacher,
+          substituteFacultyUser: loggedInTeacherId,
+          isActive: true,
+          fromDate: { $lte: now },
+          toDate: { $gte: now },
+        }));
+      }
+      if (isOwn || isCoveredBySub) return candidate;
+    }
+  }
+  // Fallback: old behavior, for any caller not yet passing teacherBatchId
+  return getEffectiveTeacherBatch(loggedInTeacherId, batchId);
+};
+
 exports.generateQR = async (req, res) => {
   try {
     const { batchId } = req.body;
@@ -604,12 +633,12 @@ if (student.additionalCourses?.length > 0) {
 // 3. Mark Attendance for Teacher's Batch
 exports.markTeacherAttendance = async (req, res) => {
   try {
-    const { batchId, date, attendance } = req.body;
+    const { batchId, date, attendance, teacherBatchId } = req.body;
     const teacherId = req.user.id;
     const teacherName = req.user.name || req.user.fullName;
 
     // Verify teacher has access to this batch
-    const teacherBatch = await getEffectiveTeacherBatch(teacherId, batchId);
+    const teacherBatch = await resolveTeacherBatchForAction(teacherId, batchId, teacherBatchId);
 
     if (!teacherBatch) {
       return res.status(403).json({
@@ -1507,7 +1536,7 @@ exports.getCourseTopics = async (req, res) => {
 // 7. Save which topics/subtopics were covered, per course, for a batch+date
 exports.saveTopicCompletion = async (req, res) => {
   try {
-    const { batchId, date, courseGroups } = req.body;
+    const { batchId, date, courseGroups, teacherBatchId } = req.body;
     const teacherId = req.user.id;
     const attendanceDate = new Date(date);
 
@@ -1515,7 +1544,7 @@ exports.saveTopicCompletion = async (req, res) => {
       return res.status(400).json({ success: false, message: 'courseGroups is required' });
     }
 
-    const teacherBatch = await getEffectiveTeacherBatch(teacherId, batchId);
+    const teacherBatch = await resolveTeacherBatchForAction(teacherId, batchId, teacherBatchId);
     if (!teacherBatch) {
       return res.status(403).json({ success: false, message: 'You are not assigned to this batch' });
     }
@@ -1549,14 +1578,14 @@ exports.saveTopicCompletion = async (req, res) => {
 // separate from the daily "taught today" log, using a sentinel date doc
 exports.completeSubtopic = async (req, res) => {
   try {
-    const { batchId, courseId, studentIds, subtopicKey } = req.body;
+    const { batchId, courseId, studentIds, subtopicKey, teacherBatchId } = req.body;
     const teacherId = req.user.id;
 
     if (!batchId || !courseId || !subtopicKey || !Array.isArray(studentIds) || studentIds.length === 0) {
       return res.status(400).json({ success: false, message: 'batchId, courseId, studentIds and subtopicKey are required' });
     }
 
-    const teacherBatch = await getEffectiveTeacherBatch(teacherId, batchId);
+    const teacherBatch = await resolveTeacherBatchForAction(teacherId, batchId, teacherBatchId);
     if (!teacherBatch) {
       return res.status(403).json({ success: false, message: 'You are not assigned to this batch' });
     }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, X, CheckSquare } from "lucide-react";
 
-const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved }) => {
+const TopicCompletionModal = ({ batchId, teacherBatchId, date, courseGroups, onClose, onSaved }) => {
   const [topicsByCourse, setTopicsByCourse] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -146,11 +146,12 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({
-              batchId,
-              courseId: group.courseId,
-              studentIds: group.studentIds,
-              subtopicKey: subKey,
-            })
+  batchId,
+  teacherBatchId,
+  courseId: group.courseId,
+  studentIds: group.studentIds,
+  subtopicKey: subKey,
+})
           }).then(r => r.json())
         ));
         const failed = results.find(r => !r.success);
@@ -187,7 +188,7 @@ const TopicCompletionModal = ({ batchId, date, courseGroups, onClose, onSaved })
       const response = await fetch(`${BASE_URL}/api/attendance/topics/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ batchId, date, courseGroups: payloadGroups })
+        body: JSON.stringify({ batchId, teacherBatchId, date, courseGroups: payloadGroups })
       });
       const result = await response.json();
       if (result.success) {

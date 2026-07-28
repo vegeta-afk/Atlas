@@ -1354,7 +1354,8 @@ exports.getMyBatches = async (req, res) => {
         todayAbsent: todayAbsent,
         teacherBatchId: tb._id,
         roomNumber: tb.roomNumber || "N/A",
-        subject: tb.subject || "General"
+        subject: tb.subject || "General",
+        isSubstitute: tb.isSubstitute || false
       };
     }));
     
@@ -1443,8 +1444,8 @@ exports.getMyBatches = async (req, res) => {
 exports.getMyBatchStudents = async (req, res) => {
   try {
     const { batchId } = req.params;
-    const { date } = req.query;
-    const user = req.user;
+const { date, teacherBatchId } = req.query;
+const user = req.user;
     
     console.log(`🔍 Faculty accessing batch students: ${user._id}, batch: ${batchId}`);
     
@@ -1472,33 +1473,69 @@ exports.getMyBatchStudents = async (req, res) => {
     // or an active substitution covering it during someone's leave.
     const TeacherBatch = require("../models/TeacherBatch");
     
-    let teacherBatch = await TeacherBatch.findOne({
-      teacher: user._id,
-      batch: batchId,
-      isActive: true
-    })
+    let teacherBatch = null;
+
+// Preferred path: dashboard card told us EXACTLY which TeacherBatch doc it means.
+// This resolves the ambiguity when multiple teachers/subjects share the same batch slot.
+if (teacherBatchId) {
+  const candidate = await TeacherBatch.findOne({ _id: teacherBatchId, isActive: true })
     .populate("assignedStudents.student", "studentId fullName photo mobileNumber email")
     .populate("batch", "batchName startTime endTime displayName")
     .lean();
 
-    if (!teacherBatch) {
-      const now = new Date();
-      const sub = await BatchSubstitution.findOne({
-        batch: batchId, substituteFacultyUser: user._id, isActive: true,
-        fromDate: { $lte: now }, toDate: { $gte: now },
-      }).lean();
+  if (candidate) {
+    const isOwn = candidate.teacher.toString() === user._id.toString();
+    let isCoveredBySub = false;
 
-      if (sub) {
-        teacherBatch = await TeacherBatch.findOne({
-          teacher: sub.onLeaveFacultyUser,
-          batch: batchId,
-          isActive: true,
-        })
-        .populate("assignedStudents.student", "studentId fullName photo mobileNumber email")
-        .populate("batch", "batchName startTime endTime displayName")
-        .lean();
-      }
+    if (!isOwn) {
+      const now = new Date();
+      isCoveredBySub = !!(await BatchSubstitution.findOne({
+        batch: batchId,
+        onLeaveFacultyUser: candidate.teacher,
+        substituteFacultyUser: user._id,
+        isActive: true,
+        fromDate: { $lte: now },
+        toDate: { $gte: now },
+      }).lean());
     }
+
+    // Only trust the passed teacherBatchId if it's genuinely this user's own doc,
+    // or a doc they're covering via an active substitution — never blindly.
+    if (isOwn || isCoveredBySub) teacherBatch = candidate;
+  }
+}
+
+// Fallback: old logic (own doc, else any active substitution) — kept for back-compat
+// with any caller that doesn't pass teacherBatchId yet.
+if (!teacherBatch) {
+  teacherBatch = await TeacherBatch.findOne({
+    teacher: user._id,
+    batch: batchId,
+    isActive: true
+  })
+  .populate("assignedStudents.student", "studentId fullName photo mobileNumber email")
+  .populate("batch", "batchName startTime endTime displayName")
+  .lean();
+
+  if (!teacherBatch) {
+    const now = new Date();
+    const sub = await BatchSubstitution.findOne({
+      batch: batchId, substituteFacultyUser: user._id, isActive: true,
+      fromDate: { $lte: now }, toDate: { $gte: now },
+    }).lean();
+
+    if (sub) {
+      teacherBatch = await TeacherBatch.findOne({
+        teacher: sub.onLeaveFacultyUser,
+        batch: batchId,
+        isActive: true,
+      })
+      .populate("assignedStudents.student", "studentId fullName photo mobileNumber email")
+      .populate("batch", "batchName startTime endTime displayName")
+      .lean();
+    }
+  }
+}
     
     if (!teacherBatch) {
       return res.status(404).json({

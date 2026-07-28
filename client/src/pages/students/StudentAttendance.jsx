@@ -280,7 +280,7 @@ const isEditWindowOpen = () => {
 
  // Fetch batch students (BOTH faculty and admin views use this)
 // Fetch batch students (BOTH faculty and admin views use this)
-const fetchBatchStudents = async (batchId, isBridgeParam, silent = false) => {
+const fetchBatchStudents = async (batchId, isBridgeParam, silent = false, teacherBatchId) => {
   if (!silent) setLoading(true);
   try {
     let apiUrl;
@@ -296,9 +296,12 @@ const fetchBatchStudents = async (batchId, isBridgeParam, silent = false) => {
       apiUrl = `${BASE_URL}/api/faculty/me/batches/${batchId}/students`;
     }
 
-    if (selectedDate) {
-      apiUrl += `?date=${selectedDate}`;
-    }
+    const params = new URLSearchParams();
+    if (selectedDate) params.append('date', selectedDate);
+    const tbId = teacherBatchId || selectedBatch?.teacherBatchId;
+    if (!isBridge && tbId) params.append('teacherBatchId', tbId);
+    const qs = params.toString();
+    if (qs) apiUrl += `?${qs}`;
     
     console.log(`📡 Fetching students from: ${apiUrl}`);
     
@@ -406,7 +409,7 @@ const handleBatchSelect = (batch) => {
     setView("students");
   }
 
-  fetchBatchStudents(batch._id, batch.isTemporary); // pass directly, don't rely on state
+  fetchBatchStudents(batch._id, batch.isTemporary, false, batch.teacherBatchId); // pass directly, don't rely on state
 };
 
   // Handle back navigation
@@ -582,8 +585,8 @@ const handleBatchSelect = (batch) => {
       : `${BASE_URL}/api/attendance/teacher/mark`;
 
     const body = isBridge
-      ? { bridgeBatchId: selectedBatch._id, date: selectedDate, attendance: attendanceList }
-      : { batchId: selectedBatch._id, date: selectedDate, attendance: attendanceList };
+  ? { bridgeBatchId: selectedBatch._id, date: selectedDate, attendance: attendanceList }
+  : { batchId: selectedBatch._id, date: selectedDate, attendance: attendanceList, teacherBatchId: selectedBatch?.teacherBatchId };
 
     const token = sessionStorage.getItem('token') || localStorage.getItem('token');
     const response = await fetch(url, {
@@ -1800,11 +1803,12 @@ const handleBatchSelect = (batch) => {
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       {showTopicModal && (
         <TopicCompletionModal
-          batchId={selectedBatch?._id}
-          date={selectedDate}
-          courseGroups={topicModalGroups}
-          onClose={() => setShowTopicModal(false)}
-          onSaved={() => {
+  batchId={selectedBatch?._id}
+  teacherBatchId={selectedBatch?.teacherBatchId}
+  date={selectedDate}
+  courseGroups={topicModalGroups}
+  onClose={() => setShowTopicModal(false)}
+  onSaved={() => {
             setShowTopicModal(false);
             setTopicsMarkedForToday(true);
             alert("Topics saved! You can now save attendance.");
