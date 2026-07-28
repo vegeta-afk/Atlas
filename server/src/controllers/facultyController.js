@@ -1564,21 +1564,22 @@ if (!teacherBatch) {
     console.log(`✅ Found ${students.length} student details`);
     
     // Get attendance for the date if provided
-    let attendanceData = {};
-    if (date) {
-      const Attendance = require("../models/Attendance");
-      const attendanceDate = new Date(date);
-      const startOfDay = new Date(attendanceDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(attendanceDate);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      const attendance = await Attendance.find({
-        teacher: user._id,
-        batch: batchId,
-        student: { $in: studentIds },
-        date: { $gte: startOfDay, $lte: endOfDay }
-      }).lean();
+    // Get attendance for the date if provided
+let attendanceData = {};
+if (date) {
+  const Attendance = require("../models/Attendance");
+  const attendanceDate = new Date(date);
+  const startOfDay = new Date(attendanceDate);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(attendanceDate);
+  endOfDay.setHours(23, 59, 59, 999);
+  
+  const attendance = await Attendance.find({
+    teacher: teacherBatch.teacher,   // ✅ roster owner (Sejal), jo bhi actual data owns
+    batch: batchId,
+    student: { $in: studentIds },
+    date: { $gte: startOfDay, $lte: endOfDay }
+  }).lean();
       
       attendance.forEach(att => {
         attendanceData[att.student.toString()] = att.status;
