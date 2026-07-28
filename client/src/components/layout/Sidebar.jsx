@@ -139,6 +139,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { path: "/admin/reports/batch-topic-board", label: "Batch Topic Board", icon: <BookOpen size={15} /> },
         { divider: true },
         { path: "/admin/reports/test-eligibility", label: "Test Eligibility Report", icon: <ClipboardCheck size={15} /> },
+        { path: "/admin/reports/leave-batch-report", label: "Leave Batch Report", icon: <ClipboardCheck size={15} /> },
       ],
     },
     {

@@ -103,6 +103,8 @@ import RequestLeave from "./pages/Faculty/RequestLeave";
 
 import LeaveManagement from "./pages/Faculty/LeaveManagement";
 
+import LeaveBatchReport from "./reports/LeaveBatchReport";
+
 function App() {
   return (
     <Routes>
@@ -192,6 +194,7 @@ function App() {
           <Route path="batch-course-progress/:batchTime" element={<BatchCourseProgressDetail />} />
           <Route path="batch-topic-board" element={<BatchTopicBoard />} />
           <Route path="test-eligibility" element={<TestEligibilityReport />} />
+          <Route path="leave-batch-report" element={<LeaveBatchReport />} />
         </Route>
       </Route>
 

@@ -149,8 +149,6 @@ app.listen(PORT, () => {
   testController.autoArchiveOldRegularTests();
   setInterval(testController.autoArchiveOldRegularTests, 6 * 60 * 60 * 1000);
 
-  facultyLeaveController.revokeExpiredLeaveCredentials();
-setInterval(facultyLeaveController.revokeExpiredLeaveCredentials, 60 * 60 * 1000); // hourly
 });
 
 console.log("\n" + "=".repeat(50));

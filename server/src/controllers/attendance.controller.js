@@ -19,6 +19,8 @@ const SENTINEL_COMPLETION_DATE = new Date(0);
 
 const BridgeBatch = require('../models/BridgeBatch');
 
+const BatchSubstitution = require('../models/BatchSubstitution');
+
 
 setInterval(() => {
   const now = Date.now();
@@ -27,17 +29,35 @@ setInterval(() => {
   }
 }, 30 * 60 * 1000);
 
+// Resolves the effective TeacherBatch a logged-in user can act on for a batch:
+// their own assignment, OR an active substitution covering it during someone's leave.
+// Returns the on-leave teacher's TeacherBatch doc (correct roster) either way —
+// callers must use req.user.id (not teacherBatch.teacher) for "who did this" fields.
+const getEffectiveTeacherBatch = async (loggedInTeacherId, batchId) => {
+  let teacherBatch = await TeacherBatch.findOne({
+    teacher: loggedInTeacherId, batch: batchId, isActive: true,
+  }).populate('batch', 'batchName startTime endTime displayName');
+  if (teacherBatch) return teacherBatch;
+
+  const now = new Date();
+  const sub = await BatchSubstitution.findOne({
+    batch: batchId, substituteFacultyUser: loggedInTeacherId, isActive: true,
+    fromDate: { $lte: now }, toDate: { $gte: now },
+  });
+  if (!sub) return null;
+
+  return TeacherBatch.findOne({
+    teacher: sub.onLeaveFacultyUser, batch: batchId, isActive: true,
+  }).populate('batch', 'batchName startTime endTime displayName');
+};
+
 exports.generateQR = async (req, res) => {
   try {
     const { batchId } = req.body;
     const teacherId = req.user.id;
 
     // Verify teacher owns this batch
-    const teacherBatch = await TeacherBatch.findOne({
-      teacher: teacherId,
-      batch: batchId,
-      isActive: true
-    }).populate('batch', 'batchName startTime endTime displayName');
+    const teacherBatch = await getEffectiveTeacherBatch(teacherId, batchId);
 
     if (!teacherBatch) {
       return res.status(403).json({
@@ -53,7 +73,7 @@ exports.generateQR = async (req, res) => {
     const sessionKey = `${batchId}_${today}`;
     activeQRSessions.set(sessionKey, {
       token,
-      teacherId: teacherId.toString(),
+      teacherId: teacherBatch.teacher.toString(),
       batchId: batchId.toString(),
       date: today,
       expiresAt
@@ -62,7 +82,7 @@ exports.generateQR = async (req, res) => {
     const qrPayload = JSON.stringify({
       batchId: batchId.toString(),
       date: today,
-      teacherId: teacherId.toString(),
+      teacherId: teacherBatch.teacher.toString(),
       token
     });
 
@@ -265,12 +285,28 @@ exports.getTeacherBatches = async (req, res) => {
     const currentDate = new Date();
     
     // Get all batches assigned to teacher
-    const teacherBatches = await TeacherBatch.find({
-      teacher: teacherId,
-      isActive: true
-    })
-    .populate('batch', 'batchName startTime endTime displayName')
-    .lean();
+    const ownBatches = await TeacherBatch.find({ teacher: teacherId, isActive: true })
+      .populate('batch', 'batchName startTime endTime displayName')
+      .lean();
+
+    const now = new Date();
+    const activeSubs = await BatchSubstitution.find({
+      substituteFacultyUser: teacherId, isActive: true,
+      fromDate: { $lte: now }, toDate: { $gte: now },
+    }).lean();
+
+    const subTeacherBatches = activeSubs.length > 0
+      ? await TeacherBatch.find({
+          teacher: { $in: activeSubs.map(s => s.onLeaveFacultyUser) },
+          batch: { $in: activeSubs.map(s => s.batch) },
+          isActive: true,
+        }).populate('batch', 'batchName startTime endTime displayName').lean()
+      : [];
+
+    const teacherBatches = [
+      ...ownBatches,
+      ...subTeacherBatches.map(tb => ({ ...tb, isSubstitute: true })),
+    ];
 
     if (!teacherBatches || teacherBatches.length === 0) {
       return res.status(200).json({
@@ -371,17 +407,14 @@ exports.getTeacherBatchStudents = async (req, res) => {
     console.log(`🔍 Looking for TeacherBatch with teacher: ${teacherId}, batch: ${batchId}`);
 
     // Get teacher's assigned students for this batch
-    const teacherBatch = await TeacherBatch.findOne({
-      teacher: teacherId,
-      batch: batchId,
-      isActive: true
-    })
-    .populate(
-      'assignedStudents.student',
-      'studentId fullName photo mobileNumber email fatherName enrolledBatches course'
-    )
-    .populate('batch', 'batchName startTime endTime displayName')
-    .lean();
+    let teacherBatchDoc = await getEffectiveTeacherBatch(teacherId, batchId);
+    if (teacherBatchDoc) {
+      teacherBatchDoc = await TeacherBatch.findById(teacherBatchDoc._id)
+        .populate('assignedStudents.student', 'studentId fullName photo mobileNumber email fatherName enrolledBatches course')
+        .populate('batch', 'batchName startTime endTime displayName')
+        .lean();
+    }
+    const teacherBatch = teacherBatchDoc;
 
     if (!teacherBatch) {
       console.log("❌ No TeacherBatch found!");
@@ -575,11 +608,7 @@ exports.markTeacherAttendance = async (req, res) => {
     const teacherName = req.user.name || req.user.fullName;
 
     // Verify teacher has access to this batch
-    const teacherBatch = await TeacherBatch.findOne({
-      teacher: teacherId,
-      batch: batchId,
-      isActive: true
-    }).populate('batch', 'batchName startTime endTime displayName');
+    const teacherBatch = await getEffectiveTeacherBatch(teacherId, batchId);
 
     if (!teacherBatch) {
       return res.status(403).json({
@@ -587,6 +616,10 @@ exports.markTeacherAttendance = async (req, res) => {
         message: 'You are not assigned to this batch'
       });
     }
+
+    // Attendance.teacher must match TeacherBatch.teacher (the roster owner) so existing
+    // report joins keep working; markedBy/markedByName stay as the real logged-in person.
+    const rosterOwnerId = teacherBatch.teacher;
 
     // Check if attendance already exists for this date/batch — if so, this is an EDIT,
     // and edits are only allowed within the window (batch start time + EDIT_WINDOW_MINUTES)
@@ -655,7 +688,7 @@ const attendanceRecords = await Promise.all(attendance.map(async (record) => {
 
   return {
     student: record.studentId,
-    teacher: teacherId,
+    teacher: rosterOwnerId,
     batch: batchId,
     date: attendanceDate,
     status: record.status,
@@ -1474,7 +1507,6 @@ exports.getCourseTopics = async (req, res) => {
 exports.saveTopicCompletion = async (req, res) => {
   try {
     const { batchId, date, courseGroups } = req.body;
-    // courseGroups: [{ courseId, studentIds, completedTopicKeys, completedSubtopicKeys }]
     const teacherId = req.user.id;
     const attendanceDate = new Date(date);
 
@@ -1482,6 +1514,10 @@ exports.saveTopicCompletion = async (req, res) => {
       return res.status(400).json({ success: false, message: 'courseGroups is required' });
     }
 
+    const teacherBatch = await getEffectiveTeacherBatch(teacherId, batchId);
+    if (!teacherBatch) {
+      return res.status(403).json({ success: false, message: 'You are not assigned to this batch' });
+    }
     const operations = courseGroups.map((group) => ({
       updateOne: {
         filter: { batchId, courseId: group.courseId, date: attendanceDate },
@@ -1517,6 +1553,11 @@ exports.completeSubtopic = async (req, res) => {
 
     if (!batchId || !courseId || !subtopicKey || !Array.isArray(studentIds) || studentIds.length === 0) {
       return res.status(400).json({ success: false, message: 'batchId, courseId, studentIds and subtopicKey are required' });
+    }
+
+    const teacherBatch = await getEffectiveTeacherBatch(teacherId, batchId);
+    if (!teacherBatch) {
+      return res.status(403).json({ success: false, message: 'You are not assigned to this batch' });
     }
 
     const existing = await TopicCompletion.findOne({ batchId, courseId, date: SENTINEL_COMPLETION_DATE }).lean();

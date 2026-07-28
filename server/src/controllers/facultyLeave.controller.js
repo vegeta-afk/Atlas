@@ -4,6 +4,9 @@ const FacultyLeave = require('../models/FacultyLeave');
 const Faculty = require('../models/Faculty');
 const User = require('../models/user');
 
+const BatchSubstitution = require('../models/BatchSubstitution');
+const TeacherBatch = require('../models/TeacherBatch');
+
 function generateTempPassword() {
   return crypto.randomBytes(6).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
 }
@@ -76,41 +79,81 @@ exports.getAllLeaves = async (req, res) => {
   }
 };
 
-// @desc  Admin approves — generates the temporary substitute-login password
+// @desc  Admin views the on-leave teacher's batches + faculty list, to assign substitutes
+// @route GET /api/faculty-leaves/:id/batches
+exports.getFacultyBatchesForLeave = async (req, res) => {
+  try {
+    const leave = await FacultyLeave.findById(req.params.id);
+    if (!leave) return res.status(404).json({ success: false, message: 'Leave request not found' });
+
+    const onLeaveUser = await User.findOne({ facultyId: leave.faculty, role: 'instructor' });
+    if (!onLeaveUser) return res.status(404).json({ success: false, message: 'Faculty login account not found' });
+
+    const batches = await TeacherBatch.find({ teacher: onLeaveUser._id, isActive: true })
+      .populate('batch', 'batchName displayName startTime endTime')
+      .lean();
+
+    const facultyOptions = await User.find({ role: 'instructor', _id: { $ne: onLeaveUser._id } })
+      .select('name facultyId')
+      .lean();
+
+    res.json({
+      success: true,
+      data: {
+        batches: batches.filter(tb => tb.batch).map((tb) => ({
+          batchId: tb.batch._id,
+          batchName: tb.batch.displayName || tb.batch.batchName,
+          timing: `${tb.batch.startTime} - ${tb.batch.endTime}`,
+          studentCount: tb.assignedStudents.filter(s => s.isActive).length,
+        })),
+        facultyOptions,
+      },
+    });
+  } catch (error) {
+    console.error('Get faculty batches for leave error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+// @desc  Admin approves — assigns a substitute faculty PER BATCH, no shared password anymore
 // @route PUT /api/faculty-leaves/:id/approve
+// body: { assignments: [{ batchId, substituteFacultyUserId }] }
 exports.approveLeave = async (req, res) => {
   try {
+    const { assignments } = req.body;
+    if (!Array.isArray(assignments) || assignments.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one batch assignment is required' });
+    }
+
     const leave = await FacultyLeave.findById(req.params.id);
     if (!leave) return res.status(404).json({ success: false, message: 'Leave request not found' });
     if (leave.status !== 'pending') {
       return res.status(400).json({ success: false, message: `Request is already ${leave.status}` });
     }
 
-    const user = await User.findOne({ facultyId: leave.faculty, role: 'instructor' });
-    if (!user) return res.status(404).json({ success: false, message: 'Faculty login account not found' });
+    const onLeaveUser = await User.findOne({ facultyId: leave.faculty, role: 'instructor' });
+    if (!onLeaveUser) return res.status(404).json({ success: false, message: 'Faculty login account not found' });
 
-    const originalHash = user.password; // save the real teacher's current hash before overwriting
-
-    const tempPassword = generateTempPassword();
-    user.password = await bcrypt.hash(tempPassword, 10);
-    await user.save();
+    const subDocs = await Promise.all(assignments.map(async (a) => {
+      const subUser = await User.findById(a.substituteFacultyUserId).select('name');
+      return BatchSubstitution.create({
+        leave: leave._id,
+        batch: a.batchId,
+        onLeaveFacultyUser: onLeaveUser._id,
+        substituteFacultyUser: a.substituteFacultyUserId,
+        substituteFacultyName: subUser?.name || '',
+        fromDate: leave.fromDate,
+        toDate: leave.toDate,
+        isActive: true,
+      });
+    }));
 
     leave.status = 'approved';
     leave.approvedBy = req.user.id;
     leave.approvedDate = new Date();
-    leave.tempCredentials = {
-      username: user.email,
-      passwordPlain: tempPassword,
-      isActive: true,
-      originalPasswordHash: originalHash,
-    };
     await leave.save();
 
-    res.json({
-      success: true,
-      message: 'Leave approved. Share these temporary credentials with the substitute faculty.',
-      data: { leave, credentials: { username: user.email, password: tempPassword } },
-    });
+    res.json({ success: true, message: 'Leave approved and substitutes assigned', data: { leave, substitutions: subDocs } });
   } catch (error) {
     console.error('Approve leave error:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
@@ -168,46 +211,31 @@ exports.revokeExpiredLeaveCredentials = async () => {
   }
 };
 
-// @desc  Admin manually ends an active leave early and restores original password
-// @route PUT /api/faculty-leaves/:id/end-now
 exports.endLeaveNow = async (req, res) => {
   try {
-    const leave = await FacultyLeave.findById(req.params.id).select('+tempCredentials.originalPasswordHash');
+    const leave = await FacultyLeave.findById(req.params.id);
     if (!leave) return res.status(404).json({ success: false, message: 'Leave request not found' });
-    if (leave.status !== 'approved' || !leave.tempCredentials.isActive) {
-      return res.status(400).json({ success: false, message: 'This leave has no active temp credentials' });
+    if (leave.status !== 'approved') {
+      return res.status(400).json({ success: false, message: 'This leave is not currently active' });
     }
 
-    const user = await User.findOne({ facultyId: leave.faculty, role: 'instructor' });
-    if (user && leave.tempCredentials.originalPasswordHash) {
-      user.password = leave.tempCredentials.originalPasswordHash;
-      await user.save();
-    }
+    await BatchSubstitution.updateMany({ leave: leave._id, isActive: true }, { $set: { isActive: false } });
 
-    leave.tempCredentials.isActive = false;
-    leave.tempCredentials.passwordPlain = undefined;
-    leave.tempCredentials.originalPasswordHash = undefined;
-    await leave.save();
-
-    res.json({ success: true, message: 'Leave ended, original password restored' });
+    res.json({ success: true, message: 'Leave ended, substitute access revoked for all batches' });
   } catch (error) {
     console.error('End leave now error:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
 
-// @desc  Admin extends an already-approved leave's end date
-// @route PUT /api/faculty-leaves/:id/extend
 exports.extendLeave = async (req, res) => {
   try {
     const { newToDate } = req.body;
-    if (!newToDate) {
-      return res.status(400).json({ success: false, message: 'newToDate is required' });
-    }
+    if (!newToDate) return res.status(400).json({ success: false, message: 'newToDate is required' });
 
     const leave = await FacultyLeave.findById(req.params.id);
     if (!leave) return res.status(404).json({ success: false, message: 'Leave request not found' });
-    if (leave.status !== 'approved' || !leave.tempCredentials.isActive) {
+    if (leave.status !== 'approved') {
       return res.status(400).json({ success: false, message: 'Only an active approved leave can be extended' });
     }
     if (new Date(newToDate) <= new Date(leave.toDate)) {
@@ -216,10 +244,35 @@ exports.extendLeave = async (req, res) => {
 
     leave.toDate = newToDate;
     await leave.save();
+    await BatchSubstitution.updateMany({ leave: leave._id, isActive: true }, { $set: { toDate: newToDate } });
 
     res.json({ success: true, message: 'Leave extended', data: leave });
   } catch (error) {
     console.error('Extend leave error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+// @desc  Report: every batch substitution (past + active), for the admin report page
+// @route GET /api/faculty-leaves/batch-report
+exports.getLeaveBatchReport = async (req, res) => {
+  try {
+    const { status } = req.query; // 'active' | 'ended' | undefined(all)
+    const filter = {};
+    if (status === 'active') filter.isActive = true;
+    if (status === 'ended') filter.isActive = false;
+
+    const rows = await BatchSubstitution.find(filter)
+      .populate('batch', 'batchName displayName startTime endTime')
+      .populate('onLeaveFacultyUser', 'name email')
+      .populate('substituteFacultyUser', 'name email')
+      .populate('leave', 'leaveType reason status')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Get leave batch report error:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };

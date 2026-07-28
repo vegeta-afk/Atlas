@@ -43,21 +43,52 @@ const [newToDate, setNewToDate] = useState("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
-  const handleApprove = async (leave) => {
-    if (!window.confirm(`Approve leave for ${leave.facultyName}? This will temporarily change their login password.`)) return;
-    setActionLoadingId(leave._id);
+  const [approveTarget, setApproveTarget] = useState(null);
+  const [approveBatches, setApproveBatches] = useState([]);
+  const [facultyOptions, setFacultyOptions] = useState([]);
+  const [assignments, setAssignments] = useState({}); // { batchId: substituteFacultyUserId }
+
+  const handleOpenApprove = async (leave) => {
+    setApproveTarget(leave);
+    setAssignments({});
     try {
-      const res = await fetch(`${BASE_URL}/api/faculty-leaves/${leave._id}/approve`, {
-        method: "PUT",
+      const res = await fetch(`${BASE_URL}/api/faculty-leaves/${leave._id}/batches`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (data.success) {
-        setCredentialsModal({
-          facultyName: leave.facultyName,
-          username: data.data.credentials.username,
-          password: data.data.credentials.password,
-        });
+        setApproveBatches(data.data.batches);
+        setFacultyOptions(data.data.facultyOptions);
+      } else {
+        alert(data.message);
+        setApproveTarget(null);
+      }
+    } catch (err) {
+      alert("Error: " + err.message);
+      setApproveTarget(null);
+    }
+  };
+
+  const handleConfirmApprove = async () => {
+    const assignmentList = Object.entries(assignments)
+      .filter(([, subId]) => subId)
+      .map(([batchId, substituteFacultyUserId]) => ({ batchId, substituteFacultyUserId }));
+
+    if (assignmentList.length !== approveBatches.length) {
+      alert("Please assign a substitute for every batch before approving.");
+      return;
+    }
+
+    setActionLoadingId(approveTarget._id);
+    try {
+      const res = await fetch(`${BASE_URL}/api/faculty-leaves/${approveTarget._id}/approve`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ assignments: assignmentList }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setApproveTarget(null);
         fetchLeaves();
       } else {
         alert(data.message);
@@ -343,38 +374,50 @@ const handleExtend = async () => {
 )}
 
       {/* Credentials-to-share modal, shown once right after approval */}
-      {credentialsModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-800">Substitute Login Credentials</h3>
-              <button onClick={() => setCredentialsModal(null)}>
-                <X size={18} className="text-gray-400" />
-              </button>
-            </div>
-            <p className="text-sm text-gray-500 mb-4">
-              Share these with the substitute covering for <span className="font-medium">{credentialsModal.facultyName}</span>.
-              This password will only be shown once and expires automatically when the leave ends.
-            </p>
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Username</span>
-                <span className="font-mono font-medium text-gray-800">{credentialsModal.username}</span>
+      {approveTarget && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl p-6 w-full max-w-lg">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-bold text-gray-800">Assign Substitutes — {approveTarget.facultyName}</h3>
+        <button onClick={() => setApproveTarget(null)}><X size={18} className="text-gray-400" /></button>
+      </div>
+      {approveBatches.length === 0 ? (
+        <p className="text-sm text-gray-500">No active batches found for this faculty.</p>
+      ) : (
+        <div className="space-y-3 mb-4">
+          {approveBatches.map((b) => (
+            <div key={b.batchId} className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg p-3">
+              <div>
+                <p className="text-sm font-medium text-gray-800">{b.batchName}</p>
+                <p className="text-xs text-gray-500">{b.timing} · {b.studentCount} students</p>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Password</span>
-                <span className="font-mono font-medium text-gray-800">{credentialsModal.password}</span>
-              </div>
+              <select
+                value={assignments[b.batchId] || ""}
+                onChange={(e) => setAssignments({ ...assignments, [b.batchId]: e.target.value })}
+                className="px-3 py-2 border border-gray-200 rounded-lg text-sm min-w-[160px]"
+              >
+                <option value="">Select substitute</option>
+                {facultyOptions.map((f) => (
+                  <option key={f._id} value={f._id}>{f.name}</option>
+                ))}
+              </select>
             </div>
-            <button
-              onClick={copyCredentials}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm"
-            >
-              {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? "Copied!" : "Copy Credentials"}
-            </button>
-          </div>
+          ))}
         </div>
       )}
+      <div className="flex justify-end gap-2">
+        <button onClick={() => setApproveTarget(null)} className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg">Cancel</button>
+        <button
+          onClick={handleConfirmApprove}
+          disabled={approveBatches.length === 0 || actionLoadingId === approveTarget._id}
+          className="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+        >
+          Confirm Approve
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
