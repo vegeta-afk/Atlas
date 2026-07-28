@@ -145,6 +145,12 @@ const [newToDate, setNewToDate] = useState("");
   }
 };
 
+const isLeaveActive = (l) => {
+  const end = new Date(l.toDate);
+  end.setHours(23, 59, 59, 999); // leave valid through the end of its toDate
+  return end.getTime() >= Date.now();
+};
+
 const handleExtend = async () => {
   if (!extendTarget || !newToDate) return;
   setActionLoadingId(extendTarget._id);
@@ -246,7 +252,13 @@ const handleExtend = async () => {
                   <td className="px-4 py-3 text-gray-700">{new Date(l.fromDate).toLocaleDateString("en-IN")}</td>
                   <td className="px-4 py-3 text-gray-700">{new Date(l.toDate).toLocaleDateString("en-IN")}</td>
                   <td className="px-4 py-3 text-gray-700 max-w-xs truncate" title={l.reason}>{l.reason}</td>
-                  <td className="px-4 py-3">{badge(l.status)}</td>
+                  <td className="px-4 py-3">
+  {badge(l.status)}
+  {l.status === "approved" && !isLeaveActive(l) && (
+    <span className="ml-2 text-xs text-gray-400">(Ended)</span>
+  )}
+</td>
+
                   <td className="px-4 py-3">
                     {l.status === "pending" ? (
                       <div className="flex gap-2">
@@ -265,7 +277,7 @@ const handleExtend = async () => {
                           Reject
                         </button>
                       </div>
-                    ) : l.status === "approved" ? (
+                    ) : l.status === "approved" && isLeaveActive(l) ? (
                       <div className="flex gap-2">
                         <button
                           onClick={() => { setExtendTarget(l); setNewToDate(""); }}
