@@ -2,6 +2,7 @@ const Faculty = require("../models/Faculty");
 const User = require("../models/user");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const BatchSubstitution = require("../models/BatchSubstitution");
 
 // @desc    Get all faculty
 // @route   GET /api/faculty
@@ -1255,17 +1256,40 @@ exports.getMyBatches = async (req, res) => {
     console.log(`✅ Faculty found: ${faculty.facultyName}`);
     
     // Get teacher's batches
+    // Get teacher's own batches
     const TeacherBatch = require("../models/TeacherBatch");
     
-    const teacherBatches = await TeacherBatch.find({
+    const ownTeacherBatches = await TeacherBatch.find({
       teacher: user._id,
       isActive: true
     })
     .populate("batch", "batchName startTime endTime displayName")
     .populate("assignedStudents.student", "_id")
     .lean();
+
+    // Merge in any batches this faculty is covering as a substitute (leave coverage)
+    const now = new Date();
+    const activeSubs = await BatchSubstitution.find({
+      substituteFacultyUser: user._id, isActive: true,
+      fromDate: { $lte: now }, toDate: { $gte: now },
+    }).lean();
+
+    let subTeacherBatches = [];
+    if (activeSubs.length > 0) {
+      subTeacherBatches = await TeacherBatch.find({
+        teacher: { $in: activeSubs.map(s => s.onLeaveFacultyUser) },
+        batch: { $in: activeSubs.map(s => s.batch) },
+        isActive: true,
+      })
+      .populate("batch", "batchName startTime endTime displayName")
+      .populate("assignedStudents.student", "_id")
+      .lean();
+      subTeacherBatches = subTeacherBatches.map(tb => ({ ...tb, isSubstitute: true }));
+    }
+
+    const teacherBatches = [...ownTeacherBatches, ...subTeacherBatches];
     
-    console.log(`✅ Found ${teacherBatches.length} batches for faculty`);
+    console.log(`✅ Found ${ownTeacherBatches.length} own batches + ${subTeacherBatches.length} substitute batches for faculty`);
     
     // Transform batches with today's stats
     const currentDate = new Date();
@@ -1444,9 +1468,11 @@ exports.getMyBatchStudents = async (req, res) => {
     }
     
     // Get TeacherBatch to verify faculty has this batch
+    // Get TeacherBatch to verify faculty has this batch — either their own assignment,
+    // or an active substitution covering it during someone's leave.
     const TeacherBatch = require("../models/TeacherBatch");
     
-    const teacherBatch = await TeacherBatch.findOne({
+    let teacherBatch = await TeacherBatch.findOne({
       teacher: user._id,
       batch: batchId,
       isActive: true
@@ -1454,6 +1480,25 @@ exports.getMyBatchStudents = async (req, res) => {
     .populate("assignedStudents.student", "studentId fullName photo mobileNumber email")
     .populate("batch", "batchName startTime endTime displayName")
     .lean();
+
+    if (!teacherBatch) {
+      const now = new Date();
+      const sub = await BatchSubstitution.findOne({
+        batch: batchId, substituteFacultyUser: user._id, isActive: true,
+        fromDate: { $lte: now }, toDate: { $gte: now },
+      }).lean();
+
+      if (sub) {
+        teacherBatch = await TeacherBatch.findOne({
+          teacher: sub.onLeaveFacultyUser,
+          batch: batchId,
+          isActive: true,
+        })
+        .populate("assignedStudents.student", "studentId fullName photo mobileNumber email")
+        .populate("batch", "batchName startTime endTime displayName")
+        .lean();
+      }
+    }
     
     if (!teacherBatch) {
       return res.status(404).json({
