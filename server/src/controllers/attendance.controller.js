@@ -294,6 +294,7 @@ exports.getTeacherBatches = async (req, res) => {
       substituteFacultyUser: teacherId, isActive: true,
       fromDate: { $lte: now }, toDate: { $gte: now },
     }).lean();
+    console.log('🔍 DEBUG getTeacherBatches — teacherId:', teacherId, typeof teacherId, '| now:', now.toISOString(), '| activeSubs found:', activeSubs.length, JSON.stringify(activeSubs));
 
     const subTeacherBatches = activeSubs.length > 0
       ? await TeacherBatch.find({
