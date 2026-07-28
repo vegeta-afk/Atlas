@@ -251,12 +251,12 @@ const handleExtend = async () => {
                     {l.status === "pending" ? (
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleApprove(l)}
-                          disabled={actionLoadingId === l._id}
-                          className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 disabled:opacity-50"
-                        >
-                          Approve
-                        </button>
+  onClick={() => handleOpenApprove(l)}
+  disabled={actionLoadingId === l._id}
+  className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 disabled:opacity-50"
+>
+  Approve
+</button>
                         <button
                           onClick={() => setRejectTarget(l)}
                           disabled={actionLoadingId === l._id}
