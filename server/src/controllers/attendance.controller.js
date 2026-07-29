@@ -2031,8 +2031,18 @@ exports.getBatchTopicBoard = async (req, res) => {
     const rows = [];
 
     for (const tb of teacherBatches) {
-      if (!tb.batch || !tb.teacher) continue;
-      const activeStudents = (tb.assignedStudents || []).filter((s) => s.isActive && s.student);
+  if (!tb.batch || !tb.teacher) continue;
+
+  // Check if someone is currently substituting for this teacher on this batch
+  const activeSub = await BatchSubstitution.findOne({
+    batch: tb.batch._id,
+    onLeaveFacultyUser: tb.teacher._id,
+    isActive: true,
+    fromDate: { $lte: new Date() },
+    toDate: { $gte: new Date() },
+  }).select('substituteFacultyName').lean();
+
+  const activeStudents = (tb.assignedStudents || []).filter((s) => s.isActive && s.student);
 
        // Resolve each student's ACTUAL applicable course for THIS batch —
       // prefer an additionalCourses entry scoped to this batch, else fall back to primary courseCode.
@@ -2165,6 +2175,7 @@ exports.getBatchTopicBoard = async (req, res) => {
         batchTime: tb.batch.displayName || `${tb.batch.startTime} to ${tb.batch.endTime}`,
         batchStartTime: tb.batch.startTime,
         facultyName: tb.teacher.name,
+        substituteFacultyName: activeSub?.substituteFacultyName || null,
         bsCount: activeStudents.length,
         studentList,
         courseStartDate: primary.startDate,

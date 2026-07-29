@@ -294,7 +294,55 @@ exports.getLeaveBatchReport = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
-    res.json({ success: true, data: rows });
+    const TopicCompletion = require('../models/TopicCompletion');
+    const Course = require('../models/Course');
+
+    // For each substitution, find what the substitute teacher actually taught
+    // on that batch during the leave window (fromDate–toDate)
+    const rowsWithTopics = await Promise.all(rows.map(async (r) => {
+      if (!r.batch || !r.substituteFacultyUser) return { ...r, topicsCovered: [] };
+
+      const completions = await TopicCompletion.find({
+        batchId: r.batch._id,
+        teacherId: r.substituteFacultyUser._id,
+        date: { $gte: r.fromDate, $lte: r.toDate },
+      }).select('courseId completedSubtopicKeys date').lean();
+
+      if (completions.length === 0) return { ...r, topicsCovered: [] };
+
+      const courseIds = [...new Set(completions.map((c) => c.courseId.toString()))];
+      const courses = await Course.find({ _id: { $in: courseIds } })
+        .select('courseFullName syllabus')
+        .lean();
+      const courseMap = {};
+      courses.forEach((c) => { courseMap[c._id.toString()] = c; });
+
+      const dedupMap = {};
+      completions.forEach((c) => {
+        const course = courseMap[c.courseId.toString()];
+        if (!course) return;
+        (c.completedSubtopicKeys || []).forEach((subKey) => {
+          const [sIdx, tIdx, subIdx] = subKey.split('_').map(Number);
+          const topic = course.syllabus?.[sIdx]?.topics?.[tIdx];
+          const sub = topic?.subtopics?.[subIdx];
+          if (!topic || !sub) return;
+
+          const key = `${course.courseFullName}_${topic.name}_${sub.name}`;
+          if (!dedupMap[key] || new Date(c.date) < new Date(dedupMap[key].date)) {
+            dedupMap[key] = {
+              courseName: course.courseFullName,
+              topicName: topic.name,
+              subtopicName: sub.name,
+              date: c.date,
+            };
+          }
+        });
+      });
+
+      return { ...r, topicsCovered: Object.values(dedupMap) };
+    }));
+
+    res.json({ success: true, data: rowsWithTopics });
   } catch (error) {
     console.error('Get leave batch report error:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });

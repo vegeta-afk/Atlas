@@ -26,6 +26,36 @@ const LeaveBatchReport = () => {
 
   useEffect(() => { fetchReport(); }, [statusFilter]);
 
+  const TopicsCoveredTooltip = ({ topics, children }) => {
+  const [show, setShow] = useState(false);
+
+  return (
+    <span className="relative inline-block">
+      <span
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        className="cursor-pointer"
+      >
+        {children}
+      </span>
+      {show && (
+        <div className="absolute z-20 right-0 top-6 w-64 max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs text-left">
+          {(!topics || topics.length === 0) ? (
+            <p className="text-gray-400">No topics recorded yet.</p>
+          ) : (
+            topics.map((t, i) => (
+              <div key={i} className={`py-1 ${i !== 0 ? "border-t border-gray-100" : ""}`}>
+                <div className="font-medium text-gray-700">{t.courseName}</div>
+                <div className="text-gray-500">{t.topicName} → {t.subtopicName}</div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </span>
+  );
+};
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center mb-6">
@@ -79,10 +109,12 @@ const LeaveBatchReport = () => {
                   <td className="px-4 py-3 text-gray-700">{new Date(r.fromDate).toLocaleDateString("en-IN")}</td>
                   <td className="px-4 py-3 text-gray-700">{new Date(r.toDate).toLocaleDateString("en-IN")}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${r.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
-                      <Calendar size={12} /> {r.isActive ? "Active" : "Ended"}
-                    </span>
-                  </td>
+  <TopicsCoveredTooltip topics={r.topicsCovered}>
+    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${r.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+      <Calendar size={12} /> {r.isActive ? "Active" : "Ended"}
+    </span>
+  </TopicsCoveredTooltip>
+</td>
                 </tr>
               ))
             )}

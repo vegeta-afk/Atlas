@@ -52,6 +52,30 @@ const CourseBreakdownTooltip = ({ topics }) => {
   );
 };
 
+const SubstituteTooltip = ({ name }) => {
+  const [show, setShow] = useState(false);
+  if (!name) return null;
+
+  return (
+    <span className="relative inline-block ml-1">
+      <button
+        type="button"
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-orange-100 text-orange-600 text-[10px] font-bold hover:bg-orange-200"
+      >
+        i
+      </button>
+      {show && (
+        <div className="absolute z-20 left-0 top-5 w-56 bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-xs">
+          <span className="text-gray-500">Currently being covered by:</span>
+          <div className="font-semibold text-gray-800 mt-0.5">{name}</div>
+        </div>
+      )}
+    </span>
+  );
+};
+
 
 const StudentListTooltip = ({ students, count }) => {
   const [show, setShow] = useState(false);
@@ -268,7 +292,10 @@ const BatchTopicBoard = () => {
                           <td className="px-3 py-1.5 border font-semibold" style={{ background: color }}>
                             {idx === 0 ? group.batchTime : ""}
                           </td>
-                          <td className="px-3 py-1.5 border">{r.facultyName}</td>
+                          <td className="px-3 py-1.5 border">
+  {r.facultyName}
+  <SubstituteTooltip name={r.substituteFacultyName} />
+</td>
                           <td className="px-3 py-1.5 border text-center">
                             <StudentListTooltip students={r.studentList} count={r.total} />
                           </td>
