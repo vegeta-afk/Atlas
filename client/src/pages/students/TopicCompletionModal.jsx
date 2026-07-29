@@ -5,8 +5,8 @@ const TopicCompletionModal = ({ batchId, teacherBatchId, date, courseGroups, onC
   const [topicsByCourse, setTopicsByCourse] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [completingKey, setCompletingKey] = useState(null);
   const [expandedTopics, setExpandedTopics] = useState({});
+  // Only used for topics that have ZERO subtopics — nothing to derive completion from
   const [checkedTopics, setCheckedTopics] = useState({});
   // subStatus[id] = "not_started" | "in_progress" | "completed" — what the DROPDOWN currently shows
   const [subStatus, setSubStatus] = useState({});
@@ -56,6 +56,8 @@ const TopicCompletionModal = ({ batchId, teacherBatchId, date, courseGroups, onC
     setExpandedTopics(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // Only used for topics with NO subtopics — those still need a manual checkbox
+  // since there's nothing underneath to derive completion from.
   const toggleTopic = (courseId, topicKey) => {
     const id = `${courseId}_${topicKey}`;
     setCheckedTopics(prev => ({ ...prev, [id]: !prev[id] }));
@@ -66,6 +68,16 @@ const TopicCompletionModal = ({ batchId, teacherBatchId, date, courseGroups, onC
     // Both "in_progress" and "completed" now just update local state —
     // actual persistence for either happens only when Save is clicked.
     setSubStatus(prev => ({ ...prev, [id]: newStatus }));
+  };
+
+  // A topic-with-subtopics is auto-considered "completed" once EVERY subtopic
+  // under it is either already-completed in the DB or completed this session.
+  const isTopicAutoCompleted = (group, topic) => {
+    if (!topic.subtopics || topic.subtopics.length === 0) return false;
+    return topic.subtopics.every((sub) => {
+      const id = `${group.courseId}_${sub.key}`;
+      return sub.completed || subStatus[id] === "completed";
+    });
   };
 
   // ---- Merged view: show only subtopics common (by name) to every course group ----
@@ -146,12 +158,12 @@ const TopicCompletionModal = ({ batchId, teacherBatchId, date, courseGroups, onC
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({
-  batchId,
-  teacherBatchId,
-  courseId: group.courseId,
-  studentIds: group.studentIds,
-  subtopicKey: subKey,
-})
+              batchId,
+              teacherBatchId,
+              courseId: group.courseId,
+              studentIds: group.studentIds,
+              subtopicKey: subKey,
+            })
           }).then(r => r.json())
         ));
         const failed = results.find(r => !r.success);
@@ -167,7 +179,13 @@ const TopicCompletionModal = ({ batchId, teacherBatchId, date, courseGroups, onC
         const completedTopicKeys = [];
         const completedSubtopicKeys = [];
         topics.forEach(topic => {
-          if (checkedTopics[`${group.courseId}_${topic.key}`]) {
+          if (topic.subtopics.length === 0) {
+            // No subtopics — rely on the manual checkbox
+            if (checkedTopics[`${group.courseId}_${topic.key}`]) {
+              completedTopicKeys.push(topic.key);
+            }
+          } else if (isTopicAutoCompleted(group, topic)) {
+            // Has subtopics — auto-complete once every one of them is done
             completedTopicKeys.push(topic.key);
           }
           topic.subtopics.forEach(sub => {
@@ -311,30 +329,55 @@ const TopicCompletionModal = ({ batchId, teacherBatchId, date, courseGroups, onC
                       ) : (
                         <div className="space-y-1">
                           {topics.map((topic) => {
-                            const topicChecked = !!checkedTopics[`${group.courseId}_${topic.key}`];
+                            const hasSubtopics = topic.subtopics.length > 0;
+                            const autoCompleted = hasSubtopics && isTopicAutoCompleted(group, topic);
+                            const topicChecked = hasSubtopics
+                              ? (topic.completed || autoCompleted)
+                              : !!checkedTopics[`${group.courseId}_${topic.key}`];
                             const isExpanded = !!expandedTopics[`${group.courseId}_${topic.key}`];
                             return (
                               <div key={topic.key} className="border border-gray-100 rounded-lg px-3 py-2">
                                 <div className="flex items-center justify-between">
-                                  <label className="flex items-center gap-2 cursor-pointer flex-1">
-                                    <input
-                                      type="checkbox"
-                                      checked={topicChecked}
-                                      onChange={() => toggleTopic(group.courseId, topic.key)}
-                                      className="w-5 h-5 rounded-full accent-blue-600"
-                                    />
-                                    <span className="text-sm font-medium text-gray-800">{topic.name}</span>
-                                    {topic.completed && (
-                                      <span className="text-[10px] px-2 py-0.5 bg-green-50 text-green-600 rounded-full">
-                                        ✓ Completed
-                                      </span>
-                                    )}
-                                    {topic.inProgress && (
-                                      <span className="text-[10px] px-2 py-0.5 bg-amber-50 text-amber-600 rounded-full">
-                                        In Progress
-                                      </span>
-                                    )}
-                                  </label>
+                                  {hasSubtopics ? (
+                                    <div className="flex items-center gap-2 flex-1">
+                                      <input
+                                        type="checkbox"
+                                        checked={topicChecked}
+                                        disabled
+                                        className="w-5 h-5 rounded-full accent-blue-600 cursor-not-allowed"
+                                        title="Automatically completes once every subtopic below is covered"
+                                      />
+                                      <span className="text-sm font-medium text-gray-800">{topic.name}</span>
+                                      {topic.completed ? (
+                                        <span className="text-[10px] px-2 py-0.5 bg-green-50 text-green-600 rounded-full">
+                                          ✓ Completed
+                                        </span>
+                                      ) : autoCompleted ? (
+                                        <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
+                                          will complete on save
+                                        </span>
+                                      ) : topic.inProgress ? (
+                                        <span className="text-[10px] px-2 py-0.5 bg-amber-50 text-amber-600 rounded-full">
+                                          In Progress
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  ) : (
+                                    <label className="flex items-center gap-2 cursor-pointer flex-1">
+                                      <input
+                                        type="checkbox"
+                                        checked={topicChecked}
+                                        onChange={() => toggleTopic(group.courseId, topic.key)}
+                                        className="w-5 h-5 rounded-full accent-blue-600"
+                                      />
+                                      <span className="text-sm font-medium text-gray-800">{topic.name}</span>
+                                      {topic.completed && (
+                                        <span className="text-[10px] px-2 py-0.5 bg-green-50 text-green-600 rounded-full">
+                                          ✓ Completed
+                                        </span>
+                                      )}
+                                    </label>
+                                  )}
                                   {topic.subtopics.length > 0 && (
                                     <button
                                       type="button"

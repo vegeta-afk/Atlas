@@ -303,10 +303,10 @@ exports.getLeaveBatchReport = async (req, res) => {
       if (!r.batch || !r.substituteFacultyUser) return { ...r, topicsCovered: [] };
 
       const completions = await TopicCompletion.find({
-        batchId: r.batch._id,
-        teacherId: r.substituteFacultyUser._id,
-        date: { $gte: r.fromDate, $lte: r.toDate },
-      }).select('courseId completedSubtopicKeys date').lean();
+  batchId: r.batch._id,
+  teacherId: r.substituteFacultyUser._id,
+  date: { $gte: r.fromDate, $lte: r.toDate },
+}).select('courseId completedSubtopicKeys completedTopicKeys date').lean();
 
       if (completions.length === 0) return { ...r, topicsCovered: [] };
 
@@ -319,25 +319,43 @@ exports.getLeaveBatchReport = async (req, res) => {
 
       const dedupMap = {};
       completions.forEach((c) => {
-        const course = courseMap[c.courseId.toString()];
-        if (!course) return;
-        (c.completedSubtopicKeys || []).forEach((subKey) => {
-          const [sIdx, tIdx, subIdx] = subKey.split('_').map(Number);
-          const topic = course.syllabus?.[sIdx]?.topics?.[tIdx];
-          const sub = topic?.subtopics?.[subIdx];
-          if (!topic || !sub) return;
+  const course = courseMap[c.courseId.toString()];
+  if (!course) return;
 
-          const key = `${course.courseFullName}_${topic.name}_${sub.name}`;
-          if (!dedupMap[key] || new Date(c.date) < new Date(dedupMap[key].date)) {
-            dedupMap[key] = {
-              courseName: course.courseFullName,
-              topicName: topic.name,
-              subtopicName: sub.name,
-              date: c.date,
-            };
-          }
-        });
-      });
+  (c.completedSubtopicKeys || []).forEach((subKey) => {
+    const [sIdx, tIdx, subIdx] = subKey.split('_').map(Number);
+    const topic = course.syllabus?.[sIdx]?.topics?.[tIdx];
+    const sub = topic?.subtopics?.[subIdx];
+    if (!topic || !sub) return;
+
+    const key = `${course.courseFullName}_${topic.name}_${sub.name}`;
+    if (!dedupMap[key] || new Date(c.date) < new Date(dedupMap[key].date)) {
+      dedupMap[key] = {
+        courseName: course.courseFullName,
+        topicName: topic.name,
+        subtopicName: sub.name,
+        date: c.date,
+      };
+    }
+  });
+
+  // NEW — topics marked complete via their own checkbox, with no subtopic touched
+  (c.completedTopicKeys || []).forEach((topicKey) => {
+    const [sIdx, tIdx] = topicKey.split('_').map(Number);
+    const topic = course.syllabus?.[sIdx]?.topics?.[tIdx];
+    if (!topic) return;
+
+    const key = `${course.courseFullName}_${topic.name}_(whole topic)`;
+    if (!dedupMap[key] || new Date(c.date) < new Date(dedupMap[key].date)) {
+      dedupMap[key] = {
+        courseName: course.courseFullName,
+        topicName: topic.name,
+        subtopicName: null,
+        date: c.date,
+      };
+    }
+  });
+});
 
       return { ...r, topicsCovered: Object.values(dedupMap) };
     }));

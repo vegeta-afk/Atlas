@@ -1861,10 +1861,13 @@ const getCurrentTopicForCourse = async (batchId, courseId, studentIds, course) =
 
   const completions = await TopicCompletion.find({
     batchId, courseId, studentIds: { $in: studentIds },
-  }).select('completedSubtopicKeys studentIds date').lean();
+  }).select('completedSubtopicKeys completedTopicKeys studentIds date').lean();
 
   const subtopicTaught = {}, subtopicCompleted = {}, subtopicFirstDate = {}, subtopicLastDate = {};
-  studentIds.forEach((sid) => { subtopicTaught[sid] = new Set(); subtopicCompleted[sid] = new Set(); });
+  // NEW — tracks activity on the topic ITSELF (used when a topic-with-subtopics was
+  // marked via its own checkbox without touching any subtopic dropdown)
+  const topicTaught = {}, topicFirstDate = {}, topicLastDate = {};
+  studentIds.forEach((sid) => { subtopicTaught[sid] = new Set(); subtopicCompleted[sid] = new Set(); topicTaught[sid] = new Set(); });
 
   completions.forEach((c) => {
     const isSentinel = new Date(c.date).getTime() === SENTINEL_COMPLETION_DATE.getTime();
@@ -1880,6 +1883,15 @@ const getCurrentTopicForCourse = async (batchId, courseId, studentIds, course) =
           if (!subtopicLastDate[k] || cDate > subtopicLastDate[k]) subtopicLastDate[k] = cDate;
         }
       });
+      // NEW — same tracking for topic-level keys (covers the checkbox-only case)
+      if (!isSentinel) {
+        (c.completedTopicKeys || []).forEach((tk) => {
+          topicTaught[sidStr].add(tk);
+          const cDate = new Date(c.date);
+          if (!topicFirstDate[tk] || cDate < topicFirstDate[tk]) topicFirstDate[tk] = cDate;
+          if (!topicLastDate[tk] || cDate > topicLastDate[tk]) topicLastDate[tk] = cDate;
+        });
+      }
     });
   });
 
@@ -1888,19 +1900,38 @@ const getCurrentTopicForCourse = async (batchId, courseId, studentIds, course) =
 
   (course.syllabus || []).forEach((sem, sIdx) => {
     (sem.topics || []).forEach((topic, tIdx) => {
+      const topicKey = `${sIdx}_${tIdx}`;
       const subKeys = (topic.subtopics || []).map((_, subIdx) => `${sIdx}_${tIdx}_${subIdx}`);
-      if (subKeys.length === 0) return;
+
+      // NEW — was the topic itself (not any subtopic) marked taught by anyone?
+      const topicItselfTaught = studentIds.some((sid) => topicTaught[sid]?.has(topicKey));
+
+      if (subKeys.length === 0) {
+        // Topic has no subtopics at all — its own checkbox activity IS the only signal
+        if (topicItselfTaught) {
+          const tFirst = topicFirstDate[topicKey] || null;
+          const tLast = topicLastDate[topicKey] || null;
+          if (!currentTopic || (tLast && (!currentTopic.lastActivity || tLast > currentTopic.lastActivity))) {
+            currentTopic = { topicName: topic.name, startDate: tFirst, lastActivity: tLast };
+            currentSubtopic = null;
+          }
+        }
+        return;
+      }
 
       const allCompleted = studentIds.every((sid) =>
         subKeys.every((k) => subtopicCompleted[sid]?.has(k))
       );
       const anyTaught = studentIds.some((sid) =>
         subKeys.some((k) => subtopicTaught[sid]?.has(k))
-      );
+      ) || topicItselfTaught; // NEW — checkbox-only activity also counts as "taught"
 
       if (anyTaught && !allCompleted) {
         const firstDates = subKeys.map((k) => subtopicFirstDate[k]).filter(Boolean);
         const lastDates = subKeys.map((k) => subtopicLastDate[k]).filter(Boolean);
+        // NEW — fold in the topic-level date too, so checkbox-only saves count
+        if (topicFirstDate[topicKey]) firstDates.push(topicFirstDate[topicKey]);
+        if (topicLastDate[topicKey]) lastDates.push(topicLastDate[topicKey]);
         const earliest = firstDates.length > 0 ? new Date(Math.min(...firstDates.map((d) => d.getTime()))) : null;
         const mostRecentActivity = lastDates.length > 0 ? new Date(Math.max(...lastDates.map((d) => d.getTime()))) : null;
 
