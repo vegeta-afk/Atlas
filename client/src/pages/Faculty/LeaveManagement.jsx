@@ -147,7 +147,7 @@ const [newToDate, setNewToDate] = useState("");
 
 const isLeaveActive = (l) => {
   const end = new Date(l.toDate);
-  end.setHours(23, 59, 59, 999); // leave valid through the end of its toDate
+  end.setUTCHours(23, 59, 59, 999);
   return end.getTime() >= Date.now();
 };
 

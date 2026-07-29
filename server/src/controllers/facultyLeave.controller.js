@@ -240,8 +240,8 @@ exports.endLeaveNow = async (req, res) => {
     // regardless of what time of day it's ended. Setting it to right-now would still
     // leave it "active" until midnight, since isLeaveActive treats a whole day as active.
     const endOfYesterday = new Date();
-    endOfYesterday.setDate(endOfYesterday.getDate() - 1);
-    endOfYesterday.setHours(23, 59, 59, 999);
+endOfYesterday.setUTCDate(endOfYesterday.getUTCDate() - 1);
+endOfYesterday.setUTCHours(23, 59, 59, 999);
     leave.toDate = endOfYesterday;
     await leave.save();
 
