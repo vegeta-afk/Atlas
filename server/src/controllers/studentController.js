@@ -28,15 +28,21 @@ const getAllStudents = async (req, res) => {
     const pageNum = parseInt(page) || 1;
 
     let studentsQuery = Student.find(query)
-      .sort({ createdAt: -1 })
-      .populate("admissionId", "admissionNo admissionDate")
-      .populate("courseCode", "courseFullName duration monthlyFee examFee");
+  .sort({ createdAt: -1 })
+  .select(
+    "studentId admissionNo fullName fatherName admissionDate dateOfJoining course courseCode " +
+    "batch batchTime batchName facultyAllot status monthlyFee feeAmount totalCourseFee " +
+    "admissionFee admissionFeePaid admissionFeePaidAmount feeSchedule additionalCourses"
+  )
+  .populate("admissionId", "admissionNo admissionDate")
+  .populate("courseCode", "courseFullName duration monthlyFee examFee")
+  .lean();
 
-    if (pageSize > 0) {
-      studentsQuery = studentsQuery.skip((pageNum - 1) * pageSize).limit(pageSize);
-    }
+if (pageSize > 0) {
+  studentsQuery = studentsQuery.skip((pageNum - 1) * pageSize).limit(pageSize);
+}
 
-    const students = await studentsQuery;
+const students = await studentsQuery;
 
     res.status(200).json({
       success: true,
