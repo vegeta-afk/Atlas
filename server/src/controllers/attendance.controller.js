@@ -1860,8 +1860,8 @@ const getCurrentTopicForCourse = async (batchId, courseId, studentIds, course) =
   if (!course || studentIds.length === 0) return { topicName: null, startDate: null, subtopicName: null };
 
   const completions = await TopicCompletion.find({
-    batchId, courseId, studentIds: { $in: studentIds },
-  }).select('completedSubtopicKeys completedTopicKeys studentIds date').lean();
+  batchId, courseId, studentIds: { $in: studentIds },
+}).select('completedSubtopicKeys completedTopicKeys studentIds date updatedAt').lean();
 
   const subtopicTaught = {}, subtopicCompleted = {}, subtopicFirstDate = {}, subtopicLastDate = {};
   // NEW — tracks activity on the topic ITSELF (used when a topic-with-subtopics was
@@ -1871,6 +1871,11 @@ const getCurrentTopicForCourse = async (batchId, courseId, studentIds, course) =
 
   completions.forEach((c) => {
     const isSentinel = new Date(c.date).getTime() === SENTINEL_COMPLETION_DATE.getTime();
+    // Use `date` for the DISPLAYED start-date (which day it was first taught),
+    // but use `updatedAt` (full timestamp) to figure out what's most RECENT —
+    // `date` only has day-precision, so same-day edits can't be ordered by it.
+    const cDate = new Date(c.date);
+    const cRecency = new Date(c.updatedAt || c.date);
     (c.studentIds || []).forEach((sid) => {
       const sidStr = sid.toString();
       if (!subtopicTaught[sidStr]) return;
@@ -1878,18 +1883,15 @@ const getCurrentTopicForCourse = async (batchId, courseId, studentIds, course) =
         if (isSentinel) subtopicCompleted[sidStr].add(k);
         else {
           subtopicTaught[sidStr].add(k);
-          const cDate = new Date(c.date);
           if (!subtopicFirstDate[k] || cDate < subtopicFirstDate[k]) subtopicFirstDate[k] = cDate;
-          if (!subtopicLastDate[k] || cDate > subtopicLastDate[k]) subtopicLastDate[k] = cDate;
+          if (!subtopicLastDate[k] || cRecency > subtopicLastDate[k]) subtopicLastDate[k] = cRecency;
         }
       });
-      // NEW — same tracking for topic-level keys (covers the checkbox-only case)
       if (!isSentinel) {
         (c.completedTopicKeys || []).forEach((tk) => {
           topicTaught[sidStr].add(tk);
-          const cDate = new Date(c.date);
           if (!topicFirstDate[tk] || cDate < topicFirstDate[tk]) topicFirstDate[tk] = cDate;
-          if (!topicLastDate[tk] || cDate > topicLastDate[tk]) topicLastDate[tk] = cDate;
+          if (!topicLastDate[tk] || cRecency > topicLastDate[tk]) topicLastDate[tk] = cRecency;
         });
       }
     });
