@@ -2041,7 +2041,29 @@ exports.getBatchTopicBoard = async (req, res) => {
       });
     });
 
-    const bridgeBatches = await BridgeBatch.find({ status: { $in: ['active', 'ready_to_merge'] } }).lean();
+    // Fetch these two independent things IN PARALLEL instead of sequentially
+    const [bridgeBatches, allActiveSubs] = await Promise.all([
+      BridgeBatch.find({ status: { $in: ['active', 'ready_to_merge'] } }).lean(),
+      (() => {
+        const now = new Date();
+        const teacherIds = [...new Set(teacherBatches.filter((tb) => tb.teacher).map((tb) => tb.teacher._id.toString()))];
+        return teacherIds.length > 0
+          ? BatchSubstitution.find({
+              onLeaveFacultyUser: { $in: teacherIds },
+              isActive: true,
+              fromDate: { $lte: now },
+              toDate: { $gte: now },
+            }).select('batch onLeaveFacultyUser substituteFacultyName').lean()
+          : Promise.resolve([]);
+      })(),
+    ]);
+
+    // O(1) lookup instead of one DB call per row
+    const activeSubMap = {};
+    allActiveSubs.forEach((s) => {
+      activeSubMap[`${s.batch.toString()}_${s.onLeaveFacultyUser.toString()}`] = s.substituteFacultyName;
+    });
+
     bridgeBatches.forEach((b) => allCourseIds.add(b.courseId.toString()));
 
     // Fetch names for every bridge student across all batches, once, up front
@@ -2061,23 +2083,15 @@ exports.getBatchTopicBoard = async (req, res) => {
     const courseMap = {};
     courses.forEach((c) => { courseMap[c._id.toString()] = c; });
 
-    const rows = [];
+    // Process every teacherBatch IN PARALLEL instead of one-by-one
+    const rows = (await Promise.all(teacherBatches.map(async (tb) => {
+      if (!tb.batch || !tb.teacher) return null;
 
-    for (const tb of teacherBatches) {
-  if (!tb.batch || !tb.teacher) continue;
+      const substituteFacultyName = activeSubMap[`${tb.batch._id.toString()}_${tb.teacher._id.toString()}`] || null;
 
-  // Check if someone is currently substituting for this teacher on this batch
-  const activeSub = await BatchSubstitution.findOne({
-    batch: tb.batch._id,
-    onLeaveFacultyUser: tb.teacher._id,
-    isActive: true,
-    fromDate: { $lte: new Date() },
-    toDate: { $gte: new Date() },
-  }).select('substituteFacultyName').lean();
+      const activeStudents = (tb.assignedStudents || []).filter((s) => s.isActive && s.student);
 
-  const activeStudents = (tb.assignedStudents || []).filter((s) => s.isActive && s.student);
-
-       // Resolve each student's ACTUAL applicable course for THIS batch —
+      // Resolve each student's ACTUAL applicable course for THIS batch —
       // prefer an additionalCourses entry scoped to this batch, else fall back to primary courseCode.
       const bIdStr = tb.batch._id.toString();
       const courseGroupMap = {}; // courseId -> Set of studentIds
@@ -2098,19 +2112,21 @@ exports.getBatchTopicBoard = async (req, res) => {
         studentCourseIdMap[student._id.toString()] = applicableCourseId;
       });
 
-      // Compute current topic for EVERY course present in this batch — not just the dominant one
-      const regularTopics = [];
-      for (const [cid, sidSet] of Object.entries(courseGroupMap)) {
-        const sids = [...sidSet];
-        const topicInfo = await getCurrentTopicForCourse(tb.batch._id, cid, sids, courseMap[cid]);
-        regularTopics.push({
-          courseName: courseMap[cid]?.courseFullName || 'Course',
-          studentCount: sids.length,
-          startDate: topicInfo.startDate,
-          topicName: topicInfo.topicName,
-          subtopicName: topicInfo.subtopicName,
-        });
-      }
+      // Compute current topic for EVERY course present in this batch, IN PARALLEL —
+      // not just the dominant one, and not sequentially either
+      const regularTopics = await Promise.all(
+        Object.entries(courseGroupMap).map(async ([cid, sidSet]) => {
+          const sids = [...sidSet];
+          const topicInfo = await getCurrentTopicForCourse(tb.batch._id, cid, sids, courseMap[cid]);
+          return {
+            courseName: courseMap[cid]?.courseFullName || 'Course',
+            studentCount: sids.length,
+            startDate: topicInfo.startDate,
+            topicName: topicInfo.topicName,
+            subtopicName: topicInfo.subtopicName,
+          };
+        })
+      );
       regularTopics.sort((a, b) => new Date(b.startDate || 0) - new Date(a.startDate || 0));
 
       // Detect whether every course group has actually converged on the same TOPIC *and* SUBTOPIC —
@@ -2177,7 +2193,6 @@ exports.getBatchTopicBoard = async (req, res) => {
       const primary = regularTopics[0] || { topicName: null, startDate: null, subtopicName: null };
 
       // Build the name+tag list for the Total column tooltip: regular students first, then bridge students
-      // Build the name+tag list for the Total column tooltip: regular students first, then bridge students
       const studentList = [
         ...activeStudents.map((as) => {
           const cid = studentCourseIdMap[as.student._id.toString()];
@@ -2203,12 +2218,12 @@ exports.getBatchTopicBoard = async (req, res) => {
         }),
       ];
 
-      rows.push({
+      return {
         batchId: tb.batch._id.toString(),
         batchTime: tb.batch.displayName || `${tb.batch.startTime} to ${tb.batch.endTime}`,
         batchStartTime: tb.batch.startTime,
         facultyName: tb.teacher.name,
-        substituteFacultyName: activeSub?.substituteFacultyName || null,
+        substituteFacultyName,
         bsCount: activeStudents.length,
         studentList,
         courseStartDate: primary.startDate,
@@ -2222,8 +2237,8 @@ exports.getBatchTopicBoard = async (req, res) => {
         bridgeRunningSubtopic: bridgeTopic.subtopicName,
         bridgeCompleted,
         total: activeStudents.length + doubleExtra,
-      });
-    }
+      };
+    }))).filter(Boolean);
 
     rows.sort((a, b) => (a.batchStartTime || '').localeCompare(b.batchStartTime || ''));
     res.json({ success: true, data: rows });
