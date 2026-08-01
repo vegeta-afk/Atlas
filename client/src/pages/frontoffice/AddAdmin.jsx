@@ -321,7 +321,14 @@ const AddAdmin = () => {
         </div>
 
         <div style={styles.formActions}>
-          <button type="submit" disabled={isSubmitting} style={styles.btnSubmit}>
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            style={{ ...styles.btnPrimary, opacity: isSubmitting ? 0.6 : 1 }}
+            className="aa-btn-primary"
+            type="submit"
+          >
+            <Save size={18} />
             {isSubmitting ? "Creating..." : "Create Admin"}
           </button>
         </div>
