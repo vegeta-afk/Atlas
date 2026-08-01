@@ -1,7 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminAPI } from "../../services/api";
-import { Save, X, User, Copy, Check, Eye, EyeOff } from "lucide-react";
+import {
+  Save, X, User, Copy, Check, Eye, EyeOff,
+  Mail, Phone, Calendar, ShieldCheck, RefreshCw, Search,
+} from "lucide-react";
 
 const AddAdmin = () => {
   const navigate = useNavigate();
@@ -22,6 +25,46 @@ const AddAdmin = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isPasswordCopied, setIsPasswordCopied] = useState(false);
   const [submittedPassword, setSubmittedPassword] = useState("");
+
+  // ── Admin list state ─────────────────────────────────────────────────
+  const [admins, setAdmins] = useState([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState(null);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    fetchAdmins();
+  }, []);
+
+  const fetchAdmins = async () => {
+    setListLoading(true);
+    setListError(null);
+    try {
+      const response = await adminAPI.getAdmins();
+      const data = response.data.admins || response.data.data || [];
+      setAdmins(data);
+    } catch (err) {
+      console.error("Error fetching admins:", err);
+      setListError(err.response?.data?.message || "Failed to load admins");
+    } finally {
+      setListLoading(false);
+    }
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "N/A";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  };
+
+  const filteredAdmins = admins.filter((a) => {
+    const q = search.toLowerCase();
+    return (
+      (a.name || a.fullName || "").toLowerCase().includes(q) ||
+      (a.email || "").toLowerCase().includes(q)
+    );
+  });
+  // ─────────────────────────────────────────────────────────────────────
 
   const formatName = (name) =>
     name
@@ -89,7 +132,7 @@ const AddAdmin = () => {
     setCreatedAdmin(null);
     setSubmittedPassword("");
     setIsPasswordCopied(false);
-    navigate(`${basePath}/dashboard`);
+    // stay on this page instead of navigating away, so the new admin is visible in the list
   };
 
   const handleSubmit = async (e) => {
@@ -109,6 +152,7 @@ const AddAdmin = () => {
         setShowSuccessModal(true);
         setFormData({ name: "", email: "", password: "", mobileNumber: "" });
         setErrors({});
+        fetchAdmins(); // ← refresh list so the new admin shows up immediately
       } else {
         throw new Error(response.data.message || "Failed to create admin");
       }
@@ -148,6 +192,9 @@ const AddAdmin = () => {
         .aa-btn-secondary:hover { background: #e5e7eb !important; }
         .aa-back-link:hover { color: #4f46e5 !important; }
         .aa-copy-btn:hover { background: #f3f4f6 !important; }
+        .aa-row:hover { background: #f9fafb !important; }
+        .aa-search:focus { outline: none; border-color: #4f46e5 !important; box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+        .aa-refresh:hover { background: #f3f4f6 !important; }
       `}</style>
 
       {/* Header */}
@@ -280,6 +327,95 @@ const AddAdmin = () => {
         </div>
       </form>
 
+      {/* ── Admin List — directly below the form ───────────────────────── */}
+      <div style={styles.listSection}>
+        <div style={styles.listHeader}>
+          <div>
+            <h2 style={styles.listTitle}>Existing Admins</h2>
+            <p style={styles.subtitle}>{admins.length} admin{admins.length !== 1 ? "s" : ""} with access to this system</p>
+          </div>
+          <div style={styles.toolbar}>
+            <div style={styles.searchWrapper}>
+              <Search size={16} style={styles.searchIcon} />
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="aa-search"
+                style={styles.searchInput}
+              />
+            </div>
+            <button style={styles.refreshBtn} className="aa-refresh" onClick={fetchAdmins} title="Refresh">
+              <RefreshCw size={16} />
+            </button>
+          </div>
+        </div>
+
+        {listLoading ? (
+          <div style={styles.stateBox}>Loading admins...</div>
+        ) : listError ? (
+          <div style={{ ...styles.stateBox, color: "#ef4444" }}>{listError}</div>
+        ) : filteredAdmins.length === 0 ? (
+          <div style={styles.stateBox}>
+            {search ? "No admins match your search." : "No admins found yet."}
+          </div>
+        ) : (
+          <div style={styles.tableCard}>
+            <table style={styles.table}>
+              <thead>
+                <tr style={styles.theadRow}>
+                  <th style={styles.th}>Name</th>
+                  <th style={styles.th}>Email</th>
+                  <th style={styles.th}>Mobile</th>
+                  <th style={styles.th}>Status</th>
+                  <th style={styles.th}>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAdmins.map((admin) => (
+                  <tr key={admin._id} style={styles.row} className="aa-row">
+                    <td style={styles.td}>
+                      <div style={styles.nameCell}>
+                        <div style={styles.avatar}>
+                          {(admin.name || admin.fullName || "A").charAt(0).toUpperCase()}
+                        </div>
+                        <span style={styles.nameText}>{admin.name || admin.fullName || "—"}</span>
+                      </div>
+                    </td>
+                    <td style={styles.td}>
+                      <div style={styles.iconCell}>
+                        <Mail size={14} style={styles.cellIcon} />
+                        {admin.email}
+                      </div>
+                    </td>
+                    <td style={styles.td}>
+                      <div style={styles.iconCell}>
+                        <Phone size={14} style={styles.cellIcon} />
+                        {admin.mobileNumber || "—"}
+                      </div>
+                    </td>
+                    <td style={styles.td}>
+                      <span style={{ ...styles.badge, ...(admin.isActive === false ? styles.badgeInactive : styles.badgeActive) }}>
+                        <ShieldCheck size={12} />
+                        {admin.isActive === false ? "Inactive" : "Active"}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <div style={styles.iconCell}>
+                        <Calendar size={14} style={styles.cellIcon} />
+                        {formatDate(admin.createdAt)}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      {/* ─────────────────────────────────────────────────────────────── */}
+
       {showSuccessModal && createdAdmin && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
@@ -348,7 +484,7 @@ const AddAdmin = () => {
 };
 
 const styles = {
-  container: { maxWidth: "900px", margin: "0 auto", padding: "24px", fontFamily: "inherit" },
+  container: { maxWidth: "1000px", margin: "0 auto", padding: "24px", fontFamily: "inherit" },
   pageHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" },
   headerLeft: { display: "flex", alignItems: "center", gap: "16px" },
   backLink: { display: "flex", alignItems: "center", gap: "6px", background: "none", border: "none", color: "#6b7280", cursor: "pointer", fontSize: "14px", padding: 0 },
@@ -393,6 +529,31 @@ const styles = {
   loginInstructions: { marginBottom: "4px" },
   orderedList: { margin: 0, paddingLeft: "18px", fontSize: "13px", color: "#4b5563", lineHeight: 1.8 },
   modalFooter: { display: "flex", gap: "10px", padding: "16px 20px", borderTop: "1px solid #e5e7eb" },
+
+  // ── List section styles ──
+  listSection: { marginTop: "32px" },
+  listHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" },
+  listTitle: { margin: 0, fontSize: "18px", fontWeight: 700, color: "#111827" },
+  toolbar: { display: "flex", gap: "10px" },
+  searchWrapper: { position: "relative" },
+  searchIcon: { position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#9ca3af" },
+  searchInput: { padding: "9px 12px 9px 36px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px", width: "220px", boxSizing: "border-box" },
+  refreshBtn: { padding: "0 14px", border: "1px solid #d1d5db", borderRadius: "8px", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center" },
+  stateBox: { padding: "36px", textAlign: "center", color: "#6b7280", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "10px", fontSize: "14px" },
+  tableCard: { background: "#fff", border: "1px solid #e5e7eb", borderRadius: "10px", overflow: "hidden" },
+  table: { width: "100%", borderCollapse: "collapse" },
+  theadRow: { background: "#f9fafb", borderBottom: "1px solid #e5e7eb" },
+  th: { textAlign: "left", padding: "12px 16px", fontSize: "12px", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.03em" },
+  row: { borderBottom: "1px solid #f3f4f6" },
+  td: { padding: "14px 16px", fontSize: "14px", color: "#374151" },
+  nameCell: { display: "flex", alignItems: "center", gap: "10px" },
+  avatar: { width: "32px", height: "32px", borderRadius: "50%", background: "#4f46e5", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: 700, flexShrink: 0 },
+  nameText: { fontWeight: 600, color: "#111827" },
+  iconCell: { display: "flex", alignItems: "center", gap: "6px", color: "#4b5563" },
+  cellIcon: { color: "#9ca3af", flexShrink: 0 },
+  badge: { display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: 600 },
+  badgeActive: { background: "#dcfce7", color: "#166534" },
+  badgeInactive: { background: "#fee2e2", color: "#991b1b" },
 };
 
 export default AddAdmin;
