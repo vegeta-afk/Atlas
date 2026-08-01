@@ -7,7 +7,7 @@ const {
 const { protect, authorize } = require("../middlewares/authMiddleware");
 
 // Protected routes (admin only)
-router.post("/create-admin", protect, authorize("admin"), createAdminUser);
+// router.post("/create-admin", protect, authorize("admin"), createAdminUser);
 router.get("/admins", protect, authorize("admin"), getAdminUsers);
 
 module.exports = router;
