@@ -70,8 +70,8 @@ export const enquiryAPI = {
 
 
 export const adminAPI = {
-  createAdmin: (data) => api.post("/api/admin/create-admin", data),
-  getAdmins: () => api.get("/api/admin/admins"),
+  createAdmin: (data) => api.post("/admin/create-admin", data),
+  getAdmins: () => api.get("/admin/admins"),
 };
 
 
