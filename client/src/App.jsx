@@ -102,7 +102,7 @@ import AdminFacultyAttendance from "./pages/Faculty/AdminFacultyAttendance";
 import RequestLeave from "./pages/Faculty/RequestLeave";
 
 import LeaveManagement from "./pages/Faculty/LeaveManagement";
-
+import AddAdmin from "./pages/frontoffice/AddAdmin";
 import LeaveBatchReport from "./reports/LeaveBatchReport";
 
 function App() {
@@ -125,6 +125,7 @@ function App() {
           <Route path="admissions/view/:id" element={<ViewAdmission />} />
           <Route path="calls" element={<CallLogs />} />
            <Route path="admissions/edit/:id" element={<EditAdmission />} />
+          <Route path="create-admin" element={<AddAdmin />} />
            
 
         </Route>

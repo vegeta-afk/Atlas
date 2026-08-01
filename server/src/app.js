@@ -45,6 +45,7 @@ mongoose
 
 // Import routes
 const authRoutes = require("./routes/authRoutes");
+const adminUserRoutes = require("./routes/adminUserRoutes");
 const enquiryRoutes = require("./routes/enquiryRoutes");
 const admissionRoutes = require("./routes/admissionRoutes");
 const courseRoutes = require("./routes/courseRoutes");
@@ -72,6 +73,7 @@ const facultyLeaveController = require("./controllers/facultyLeave.controller");
 
 // Use routes
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminUserRoutes);
 app.use("/api/enquiries", enquiryRoutes);
 app.use("/api/admissions", admissionRoutes);
 app.use("/api/courses", courseRoutes);

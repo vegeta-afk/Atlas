@@ -73,6 +73,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { path: "/admin/front-office/enquiries",  label: "Enquiry List",    icon: <List size={15} /> },
         { path: "/admin/front-office/admissions", label: "Admission List",  icon: <UsersIcon size={15} /> },
         { path: "/admin/front-office/calls",      label: "Call Logs",       icon: <Phone size={15} /> },
+        { path: "/admin/front-office/create-admin", label: "Create Admin", icon: <UserPlus size={15} /> },
         {
           key: "setup",
           label: "Setup",

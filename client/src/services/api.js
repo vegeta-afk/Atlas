@@ -68,6 +68,13 @@ export const enquiryAPI = {
   getMonthlyStats: () => api.get("/enquiries/stats/monthly"),
 };
 
+
+export const adminAPI = {
+  createAdmin: (data) => api.post("/api/admin/create-admin", data),
+  getAdmins: () => api.get("/api/admin/admins"),
+};
+
+
 // Admission API
 export const admissionAPI = {
   // CRUD Operations
