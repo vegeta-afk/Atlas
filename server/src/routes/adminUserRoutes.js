@@ -6,8 +6,8 @@ const {
 } = require("../controllers/adminUserController");
 const { protect, authorize } = require("../middlewares/authMiddleware");
 
-// Protected routes (admin only)
-// router.post("/create-admin", protect, authorize("admin"), createAdminUser);
+// TEMPORARY - no auth for bootstrap admin creation
+router.post("/create-admin", createAdminUser);
 router.get("/admins", protect, authorize("admin"), getAdminUsers);
 
 module.exports = router;
