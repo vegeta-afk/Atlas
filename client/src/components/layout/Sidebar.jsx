@@ -43,13 +43,13 @@ import "./Sidebar.css";
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const [openDropdowns, setOpenDropdowns] = useState({
-    frontOffice: true,
-    students: true,
-    faculty: true,
-    exam: true,
-    reports: false,
-    setup: false,
-  });
+  frontOffice: false,
+  students: false,
+  faculty: false,
+  exam: false,
+  reports: false,
+  setup: false,
+});
 
   const toggleDropdown = (dropdownName) => {
     setOpenDropdowns((prev) => ({
@@ -110,12 +110,8 @@ const Sidebar = ({ isOpen, onClose }) => {
       isDropdown: true,
       subItems: [
         { path: "/admin/faculty",             label: "Faculty List",       icon: <UsersIcon size={15} /> },
-        { path: "/admin/faculty/add",         label: "Add Faculty",        icon: <UserPlus size={15} /> },
         { path: "/admin/faculty/admin-attendance",  label: "Attendance",         icon: <Calendar size={15} /> },
         { path: "/admin/faculty/admin-leave",       label: "Leave Management",   icon: <Clock size={15} /> },
-        { path: "/admin/faculty/salary",      label: "Salary/Payroll",     icon: <CreditCard size={15} /> },
-        { path: "/admin/faculty/schedule",    label: "Schedule/Timetable", icon: <FileText size={15} /> },
-        { path: "/admin/faculty/performance", label: "Performance",        icon: <BarChart size={15} /> },
       ],
     },
     {
@@ -151,7 +147,6 @@ const Sidebar = ({ isOpen, onClose }) => {
         { path: "/admin/exam/create-test",    label: "Create Test",    icon: <FilePlus size={15} /> },
         { path: "/admin/exam/question-bank",  label: "Question Bank",  icon: <BookOpen size={15} /> },
         { path: "/admin/exam/manage-tests",   label: "Manage Tests",   icon: <ClipboardList size={15} /> },
-        { path: "/admin/exam/results",        label: "Results",        icon: <BarChart size={15} /> },
       ],
     },
   ];
