@@ -305,29 +305,25 @@ scholarship: hasScholarship && scholarshipBody
       );
     }
 
-    // 🔥🔥🔥 100% AUTO STUDENT CREATION 🔥🔥🔥
-    try {
-      // Check if status qualifies for auto-conversion
-      if (admission.status === "admitted" || admission.status === "approved") {
-        await autoCreateStudentFromAdmission(admission, req.user);
-        console.log(
-          `✅ AUTO: Student created for admission: ${admission.admissionNo}`
-        );
-      } else {
-        console.log(
-          `⚠️ Skipping auto-creation: Admission status is ${admission.status}`
-        );
-      }
-    } catch (studentError) {
-      console.error("❌ Auto student creation failed:", studentError.message);
-      // Continue even if auto-creation fails
-    }
-
+    // 🔥 Respond immediately — student/user-account/batch setup runs after this
     res.status(201).json({
       success: true,
-      message: "Admission created successfully. Student auto-generated.",
+      message: "Admission created successfully. Student account is being set up.",
       data: admission,
     });
+
+    // 🔥🔥🔥 AUTO STUDENT CREATION — fire-and-forget, after response 🔥🔥🔥
+    if (admission.status === "admitted" || admission.status === "approved") {
+      autoCreateStudentFromAdmission(admission, req.user)
+        .then(() => {
+          console.log(`✅ AUTO: Student created for admission: ${admission.admissionNo}`);
+        })
+        .catch((studentError) => {
+          console.error("❌ Auto student creation failed:", studentError.message);
+        });
+    } else {
+      console.log(`⚠️ Skipping auto-creation: Admission status is ${admission.status}`);
+    }
   } catch (error) {
     console.error("❌ Create admission error:", error);
 
@@ -1226,14 +1222,13 @@ studentData.feeSchedule = generateFeeSchedule(courseWithDiscount, studentData.ad
     const student = new Student(studentData);
     const savedStudent = await student.save();
 
-    await createStudentUserAccount(savedStudent);
-
-    // Assign to faculty-batch
-    try {
-      await assignStudentToFacultyBatch(savedStudent);
-    } catch (assignError) {
-      console.error("Failed to assign student to faculty batch:", assignError);
-    }
+    // These two are independent of each other — run in parallel instead of sequentially
+    await Promise.all([
+      createStudentUserAccount(savedStudent),
+      assignStudentToFacultyBatch(savedStudent).catch((assignError) => {
+        console.error("Failed to assign student to faculty batch:", assignError);
+      }),
+    ]);
 
     // Update admission tracking
     admission.isAutoConvertedToStudent = true;
@@ -1360,19 +1355,16 @@ const assignStudentToFacultyBatch = async (student) => {
     // 5. Find or create TeacherBatch
     const TeacherBatch = require("../models/TeacherBatch");
     
-    const otherTeacherBatches = await TeacherBatch.find({
-      "assignedStudents.student": student._id
-    });
-    
-    for (const tb of otherTeacherBatches) {
-      if (tb.teacher.toString() !== user._id.toString() || tb.batch.toString() !== batch._id.toString()) {
-        console.log(`🗑️ Removing student from incorrect TeacherBatch: ${tb._id}`);
-        tb.assignedStudents = tb.assignedStudents.filter(
-          s => s.student.toString() !== student._id.toString()
-        );
-        await tb.save();
-      }
-    }
+    await TeacherBatch.updateMany(
+      {
+        "assignedStudents.student": student._id,
+        $or: [
+          { teacher: { $ne: user._id } },
+          { batch: { $ne: batch._id } },
+        ],
+      },
+      { $pull: { assignedStudents: { student: student._id } } }
+    );
     
     let teacherBatch = await TeacherBatch.findOne({
       teacher: user._id,
@@ -1411,25 +1403,16 @@ const assignStudentToFacultyBatch = async (student) => {
     }
     
     // Final verification
-    const finalTB = await TeacherBatch.findOne({
-      "assignedStudents.student": student._id
-    }).populate('teacher').populate('batch');
-    
-    if (finalTB) {
-      const finalFaculty = await Faculty.findOne({ _id: finalTB.teacher.facultyId });
-      console.log(`✅ VERIFICATION: Student ${student.studentId} is with:`);
-      console.log(`   Faculty: ${finalFaculty.facultyName}`);
-      console.log(`   Batch: ${finalTB.batch.displayName}`);
-      
-      if (student.facultyAllot !== finalFaculty.facultyName) {
-        student.facultyAllot = finalFaculty.facultyName;
-        await student.save();
-      }
-      if (student.batchTime !== finalTB.batch.displayName) {
-        student.batchTime = finalTB.batch.displayName;
-        await student.save();
-      }
+    // Sync check using values already in memory — no re-query needed
+    if (student.facultyAllot !== faculty.facultyName) {
+      student.facultyAllot = faculty.facultyName;
+      await student.save();
     }
+    if (student.batchTime !== batch.displayName) {
+      student.batchTime = batch.displayName;
+      await student.save();
+    }
+    console.log(`✅ VERIFIED: Student ${student.studentId} → Faculty: ${faculty.facultyName}, Batch: ${batch.displayName}`);
     
   } catch (error) {
     console.error("❌ Error in assignStudentToFacultyBatch:", error);
