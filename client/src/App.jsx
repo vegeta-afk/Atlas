@@ -107,8 +107,12 @@ import LeaveBatchReport from "./reports/LeaveBatchReport";
 import AccountSettings from "./pages/frontoffice/AccountSettings";
 import VerifyEmailChange from "./pages/frontoffice/VerifyEmailChange";
 
+import PageTitleManager from "./components/PageTitleManager";
+
 function App() {
   return (
+    <>
+      <PageTitleManager />
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/verify-email-change" element={<VerifyEmailChange />} />
@@ -271,6 +275,7 @@ function App() {
       <Route path="/" element={<Navigate to="/login" />} />
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>
+  </>
   );
 }
 
