@@ -168,11 +168,11 @@ const Login = () => {
 
         {/* top: wordmark */}
         <div className="relative z-10 flex items-center gap-3">
-          <img src={iitImage} alt="IIT Computer Institute" className="w-10 h-10 rounded-lg object-cover" />
-          <span className="text-white text-sm font-semibold tracking-wider">
-            IIT COMPUTER INSTITUTE
-          </span>
-        </div>
+  <img src={iitImage} alt="IIT Computer Institute" className="h-16 w-auto object-contain" />
+  <span className="text-white text-xl font-bold tracking-wider">
+    IIT COMPUTER INSTITUTE
+  </span>
+</div>
 
         {/* middle: message */}
         <div className="relative z-10 max-w-md">
@@ -187,8 +187,7 @@ const Login = () => {
             <span style={{ color: "#3ED7C4" }}>one screen.</span>
           </h1>
           <p className="mt-5 text-sm leading-relaxed max-w-sm" style={{ color: "#AAB4C8" }}>
-            Attendance, fees, faculty and syllabus progress — sign in to run
-            the institute from a single dashboard.
+            Learn Today, Lead Tomorrow. 
           </p>
         </div>
 
