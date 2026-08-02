@@ -1,0 +1,105 @@
+/* components/layout/FlipClock.css */
+
+.flip-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  background: #f1f5f9;
+  padding: 6px 14px;
+  border-radius: 8px;
+}
+
+.flip-clock-date {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.flip-clock-dot { color: #cbd5e1; }
+
+.flip-clock-time {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.flip-clock-colon {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 1px;
+  transform: translateY(-1px);
+}
+
+.flip-clock-ampm {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #475569;
+  margin-left: 5px;
+}
+
+/* ── Flip unit — the little "page" holding one character ────────────── */
+.flip-unit {
+  position: relative;
+  display: inline-block;
+  width: 15px;
+  height: 20px;
+  perspective: 120px;
+}
+
+.flip-card-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #1e293b;
+  background: #ffffff;
+  border-radius: 3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* Bottom half sits static underneath, already showing the new value */
+.flip-card-bottom {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.flip-card-bottom .flip-card-inner {
+  align-items: flex-end;
+}
+
+/* Top half — the page that physically flips down */
+.flip-card-top {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transform-origin: bottom center;
+  backface-visibility: hidden;
+  z-index: 2;
+}
+.flip-card-top .flip-card-inner {
+  align-items: flex-start;
+}
+
+.flip-card-top.is-flipping {
+  animation: pageFlip 0.35s ease-in forwards;
+}
+
+@keyframes pageFlip {
+  0% {
+    transform: rotateX(0deg);
+  }
+  100% {
+    transform: rotateX(-180deg);
+  }
+}
