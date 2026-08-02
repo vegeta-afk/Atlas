@@ -3,13 +3,13 @@ const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false, // STARTTLS — upgrades to TLS after connecting
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  family: 4, // ← forces IPv4, avoids Render's IPv6 ENETUNREACH issue
+  family: 4,
 });
 
 const sendEmail = async ({ to, subject, html }) => {
