@@ -53,13 +53,23 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
   setup: false,
 });
 
+  // ── UPDATED: clicking a dropdown while collapsed now expands the sidebar
+  //     AND opens that specific section, instead of doing nothing ──────────
   const toggleDropdown = (dropdownName) => {
-    if (collapsed) return; // no dropdowns while collapsed
+    if (collapsed) {
+      onToggleCollapse(); // expand the sidebar
+      setOpenDropdowns((prev) => ({
+        ...prev,
+        [dropdownName]: true, // and open this section
+      }));
+      return;
+    }
     setOpenDropdowns((prev) => ({
       ...prev,
       [dropdownName]: !prev[dropdownName],
     }));
   };
+  // ──────────────────────────────────────────────────────────────────────
 
   const menuItems = [
     {
