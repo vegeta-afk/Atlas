@@ -41,8 +41,8 @@ import {
 } from "lucide-react";
 import "./Sidebar.css";
 
-// ─── Accept isOpen + onClose from AdminLayout ───────────────────────────────
-const Sidebar = ({ isOpen, onClose }) => {
+// ─── Accept isOpen + onClose from AdminLayout, plus collapsed + onToggleCollapse ──
+const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
   const location = useLocation();
   const [openDropdowns, setOpenDropdowns] = useState({
   frontOffice: false,
@@ -52,28 +52,6 @@ const Sidebar = ({ isOpen, onClose }) => {
   reports: false,
   setup: false,
 });
-
-  // ── NEW: collapse (icons-only) state ─────────────────────────────────
-  const [collapsed, setCollapsed] = useState(false);
-
-  const toggleCollapsed = () => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      // Collapsing closes any open dropdowns so the icons-only view stays clean
-      if (next) {
-        setOpenDropdowns({
-          frontOffice: false,
-          students: false,
-          faculty: false,
-          exam: false,
-          reports: false,
-          setup: false,
-        });
-      }
-      return next;
-    });
-  };
-  // ──────────────────────────────────────────────────────────────────────
 
   const toggleDropdown = (dropdownName) => {
     if (collapsed) return; // no dropdowns while collapsed
@@ -253,10 +231,10 @@ const Sidebar = ({ isOpen, onClose }) => {
       <div className="sidebar-header">
         {!collapsed && <h3>IMS Menu</h3>}
 
-        {/* NEW: Collapse/expand toggle (desktop icons-only mode) */}
+        {/* Collapse/expand toggle — controlled by AdminLayout so main content shifts too */}
         <button
           className="sidebar-collapse-btn"
-          onClick={toggleCollapsed}
+          onClick={onToggleCollapse}
           aria-label={collapsed ? "Expand menu" : "Collapse menu"}
           title={collapsed ? "Expand menu" : "Collapse menu"}
         >

@@ -10,11 +10,16 @@
 /* ─── Main content shifts right on desktop to make room for sidebar ─── */
 .main-content {
   flex: 1;
-  margin-left: 220px; /* matches new sidebar width */
+  margin-left: 220px; /* matches sidebar width */
   min-width: 0;       /* prevents flex overflow */
   display: flex;
   flex-direction: column;
   transition: margin-left 0.3s ease;
+}
+
+/* ─── NEW: when sidebar is collapsed to icons-only, shrink the margin to match ─── */
+.main-content.sidebar-collapsed {
+  margin-left: 68px; /* matches .sidebar--collapsed width in Sidebar.css */
 }
 
 .content-wrapper {
@@ -36,6 +41,10 @@
   .main-content {
     margin-left: 220px;
   }
+
+  .main-content.sidebar-collapsed {
+    margin-left: 68px;
+  }
 }
 
 /* ─────────────────────────────────────
@@ -43,8 +52,9 @@
    Sidebar becomes a slide-in drawer
 ───────────────────────────────────── */
 @media (max-width: 768px) {
-  .main-content {
-    margin-left: 0; /* full width — sidebar is off-canvas */
+  .main-content,
+  .main-content.sidebar-collapsed {
+    margin-left: 0; /* full width — sidebar is off-canvas either way on mobile */
   }
 
   /* Semi-transparent backdrop when drawer is open */
