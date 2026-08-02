@@ -331,6 +331,7 @@
   display: flex;
   align-items: center;
   padding: 10px;
+  gap: 10px;
   background: transparent;
   border: none;
   cursor: pointer;
