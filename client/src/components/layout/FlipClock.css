@@ -2,23 +2,25 @@
 
 .flip-clock {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   background: #f1f5f9;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 8px;
+  height: 32px;
 }
 
 .flip-clock-date {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11px;
+  gap: 4px;
+  font-size: 10px;
   font-weight: 600;
   color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
 .flip-clock-dot { color: #cbd5e1; }
@@ -30,27 +32,26 @@
 }
 
 .flip-clock-colon {
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 700;
   color: #1e293b;
   margin: 0 1px;
-  transform: translateY(-1px);
 }
 
 .flip-clock-ampm {
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 700;
   color: #475569;
-  margin-left: 5px;
+  margin-left: 4px;
 }
 
 /* ── Flip unit — the little "page" holding one character ────────────── */
 .flip-unit {
   position: relative;
   display: inline-block;
-  width: 15px;
-  height: 20px;
-  perspective: 120px;
+  width: 11px;
+  height: 16px;
+  perspective: 100px;
 }
 
 .flip-card-inner {
@@ -59,7 +60,7 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: #1e293b;
@@ -85,6 +86,7 @@
   overflow: hidden;
   transform-origin: bottom center;
   backface-visibility: hidden;
+  will-change: transform;
   z-index: 2;
 }
 .flip-card-top .flip-card-inner {
@@ -92,14 +94,14 @@
 }
 
 .flip-card-top.is-flipping {
-  animation: pageFlip 0.35s ease-in forwards;
+  animation: pageFlip 0.32s cubic-bezier(0.45, 0, 0.55, 1) forwards;
 }
 
 @keyframes pageFlip {
   0% {
-    transform: rotateX(0deg);
+    transform: rotateX(0deg) translateZ(0);
   }
   100% {
-    transform: rotateX(-180deg);
+    transform: rotateX(-180deg) translateZ(0);
   }
 }
