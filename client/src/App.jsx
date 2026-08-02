@@ -104,16 +104,21 @@ import RequestLeave from "./pages/Faculty/RequestLeave";
 import LeaveManagement from "./pages/Faculty/LeaveManagement";
 import AddAdmin from "./pages/frontoffice/AddAdmin";
 import LeaveBatchReport from "./reports/LeaveBatchReport";
+import AccountSettings from "./pages/frontoffice/AccountSettings";
+import VerifyEmailChange from "./pages/frontoffice/VerifyEmailChange";
 
 function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/verify-email-change" element={<VerifyEmailChange />} />
 
       {/* ========== ADMIN ROUTES ========== */}
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Navigate to="dashboard" />} />
         <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="account-settings" element={<AccountSettings />} />
+        
 
         <Route path="front-office">
           <Route path="enquiries" element={<EnquiryList />} />
@@ -126,8 +131,6 @@ function App() {
           <Route path="calls" element={<CallLogs />} />
            <Route path="admissions/edit/:id" element={<EditAdmission />} />
           <Route path="create-admin" element={<AddAdmin />} />
-           
-
         </Route>
 
         <Route path="setup">

@@ -48,6 +48,9 @@ export const authAPI = {
   register: (userData) => api.post("/auth/register", userData),
   getProfile: () => api.get("/auth/profile"),
   updateProfile: (userData) => api.put("/auth/profile", userData),
+  changePassword: (data) => api.put("/auth/change-password", data),
+  sendEmailVerification: (data) => api.post("/auth/send-email-verification", data),
+  confirmEmailChange: (data) => api.post("/auth/verify-email-change", data), // ← replaces changeEmail
 };
 
 // Enquiry API

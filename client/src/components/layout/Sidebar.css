@@ -35,6 +35,8 @@
   overflow-x: hidden;
   z-index: 999;
   transition: transform var(--transition);
+  display: flex;             /* ← add */
+  flex-direction: column;
 }
 
 /* Thin scrollbar */
@@ -312,3 +314,153 @@
 .sidebar:not(.sidebar--collapsed) {
   --current-sidebar-width: var(--sidebar-width);
 }
+
+/* =========================
+   PROFILE BAR (bottom of sidebar)
+========================= */
+.sidebar-profile {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  border-top: 1px solid var(--sidebar-border);
+  background: var(--sidebar-bg);
+}
+
+.sidebar-profile-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+.sidebar-profile-bar:hover { background: var(--hover-bg); }
+
+.sidebar-profile-avatar {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sidebar-profile-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-profile-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-profile-role {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* =========================
+   PROFILE POPUP
+========================= */
+.sidebar-profile-popup {
+  position: absolute;
+  bottom: 100%;
+  left: 8px;
+  right: 8px;
+  margin-bottom: 6px;
+  background: #fff;
+  border: 1px solid var(--sidebar-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  z-index: 1100;
+  animation: sidebarPopupIn 0.15s ease;
+}
+
+/* When sidebar is collapsed, popup can't rely on the (hidden) label width —
+   pin it to a fixed usable width and anchor left instead of stretching */
+.sidebar-profile-popup--collapsed {
+  left: 8px;
+  right: auto;
+  width: 240px;
+}
+
+@keyframes sidebarPopupIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.sidebar-profile-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+}
+
+.sidebar-profile-avatar-lg {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.sidebar-profile-popup-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sidebar-profile-popup-email {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 170px;
+}
+
+.sidebar-profile-popup-divider {
+  height: 1px;
+  background: var(--sidebar-border);
+}
+
+.sidebar-profile-popup-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-align: left;
+}
+.sidebar-profile-popup-item:hover { background: var(--hover-bg); color: var(--text-primary); }
+
+.sidebar-profile-popup-item--danger { color: #ef4444; }
+.sidebar-profile-popup-item--danger:hover { background: #fef2f2; color: #dc2626; }

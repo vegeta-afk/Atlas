@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users as UsersIcon,
@@ -38,12 +38,16 @@ import {
    GitBranch,
    PanelLeftClose,
    PanelLeftOpen,
+   KeyRound,
+   LogOut,
+   ChevronUp,
 } from "lucide-react";
 import "./Sidebar.css";
 
 // ─── Accept isOpen + onClose from AdminLayout, plus collapsed + onToggleCollapse ──
 const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [openDropdowns, setOpenDropdowns] = useState({
   frontOffice: false,
   students: false,
@@ -53,14 +57,49 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
   setup: false,
 });
 
-  // ── UPDATED: clicking a dropdown while collapsed now expands the sidebar
-  //     AND opens that specific section, instead of doing nothing ──────────
+  // ── Profile popup state ──────────────────────────────────────────────
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileRef = useRef(null);
+
+  // Close the popup on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Pull logged-in user info (saved at login, same pattern as your authController response)
+  let currentUser = null;
+  try {
+    currentUser = JSON.parse(localStorage.getItem("user"));
+  } catch (e) {
+    currentUser = null;
+  }
+  const displayName = currentUser?.name || currentUser?.fullName || "Admin";
+  const displayEmail = currentUser?.email || "";
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
+
+  const goToSettings = (tab) => {
+    setProfileMenuOpen(false);
+    navigate(`/admin/account-settings?tab=${tab}`);
+  };
+  // ─────────────────────────────────────────────────────────────────────
+
   const toggleDropdown = (dropdownName) => {
     if (collapsed) {
-      onToggleCollapse(); // expand the sidebar
+      onToggleCollapse();
       setOpenDropdowns((prev) => ({
         ...prev,
-        [dropdownName]: true, // and open this section
+        [dropdownName]: true,
       }));
       return;
     }
@@ -69,7 +108,6 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
       [dropdownName]: !prev[dropdownName],
     }));
   };
-  // ──────────────────────────────────────────────────────────────────────
 
   const menuItems = [
     {
@@ -166,7 +204,6 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
   ];
 
   const handleLinkClick = () => {
-    // Close sidebar on mobile when a link is clicked
     if (window.innerWidth <= 768 && onClose) onClose();
   };
 
@@ -241,7 +278,6 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
       <div className="sidebar-header">
         {!collapsed && <h3>IMS Menu</h3>}
 
-        {/* Collapse/expand toggle — controlled by AdminLayout so main content shifts too */}
         <button
           className="sidebar-collapse-btn"
           onClick={onToggleCollapse}
@@ -251,12 +287,59 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
           {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
         </button>
 
-        {/* Close button — only visible on mobile */}
         <button className="sidebar-close-btn" onClick={onClose} aria-label="Close menu">
           <X size={18} />
         </button>
       </div>
+
       <nav className="sidebar-nav">{renderMenuItems(menuItems)}</nav>
+
+      {/* ── Profile bar — pinned to the bottom of the sidebar ──────────── */}
+      <div className="sidebar-profile" ref={profileRef}>
+        {profileMenuOpen && (
+          <div className={`sidebar-profile-popup ${collapsed ? "sidebar-profile-popup--collapsed" : ""}`}>
+            <div className="sidebar-profile-popup-header">
+              <div className="sidebar-profile-avatar-lg">{displayName.charAt(0).toUpperCase()}</div>
+              <div>
+                <div className="sidebar-profile-popup-name">{displayName}</div>
+                {displayEmail && <div className="sidebar-profile-popup-email">{displayEmail}</div>}
+              </div>
+            </div>
+            <div className="sidebar-profile-popup-divider" />
+            <button className="sidebar-profile-popup-item" onClick={() => goToSettings("password")}>
+              <KeyRound size={16} />
+              Change Password
+            </button>
+            <button className="sidebar-profile-popup-item" onClick={() => goToSettings("email")}>
+              <Mail size={16} />
+              Change Email
+            </button>
+            <div className="sidebar-profile-popup-divider" />
+            <button className="sidebar-profile-popup-item sidebar-profile-popup-item--danger" onClick={handleLogout}>
+              <LogOut size={16} />
+              Log Out
+            </button>
+          </div>
+        )}
+
+        <button
+          className="sidebar-profile-bar"
+          onClick={() => setProfileMenuOpen((prev) => !prev)}
+          title={collapsed ? displayName : undefined}
+        >
+          <div className="sidebar-profile-avatar">{displayName.charAt(0).toUpperCase()}</div>
+          {!collapsed && (
+            <>
+              <div className="sidebar-profile-info">
+                <div className="sidebar-profile-name">{displayName}</div>
+                <div className="sidebar-profile-role">Admin</div>
+              </div>
+              {profileMenuOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+            </>
+          )}
+        </button>
+      </div>
+      {/* ─────────────────────────────────────────────────────────────── */}
     </aside>
   );
 };
