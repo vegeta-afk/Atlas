@@ -1,23 +1,15 @@
 // utils/sendEmail.js
-//
-// Simple nodemailer wrapper. Works with Gmail using an "App Password"
-// (not your normal Gmail password — generate one at
-// https://myaccount.google.com/apppasswords, requires 2FA enabled on
-// that Google account).
-//
-// Add to your server .env:
-//   EMAIL_USER=youraddress@gmail.com
-//   EMAIL_PASS=your16charapppassword
-//   CLIENT_URL=https://atlas-green-two.vercel.app   (no trailing slash)
-
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  family: 4, // ← forces IPv4, avoids Render's IPv6 ENETUNREACH issue
 });
 
 const sendEmail = async ({ to, subject, html }) => {
