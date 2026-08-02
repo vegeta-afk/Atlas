@@ -378,10 +378,11 @@
    PROFILE POPUP
 ========================= */
 .sidebar-profile-popup {
-  position: absolute;
-  bottom: 100%;
+  position: fixed;
+  bottom: 68px;              /* roughly the height of the profile bar row */
   left: 8px;
-  right: 8px;
+  width: 240px;               /* fixed width instead of left/right stretch */
+  right: auto;
   margin-bottom: 6px;
   background: #fff;
   border: 1px solid var(--sidebar-border);
@@ -392,13 +393,8 @@
   animation: sidebarPopupIn 0.15s ease;
 }
 
-/* When sidebar is collapsed, popup can't rely on the (hidden) label width —
-   pin it to a fixed usable width and anchor left instead of stretching */
-.sidebar-profile-popup--collapsed {
-  left: 8px;
-  right: auto;
-  width: 240px;
-}
+
+
 
 @keyframes sidebarPopupIn {
   from { opacity: 0; transform: translateY(4px); }
@@ -435,10 +431,8 @@
 .sidebar-profile-popup-email {
   font-size: 12px;
   color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 170px;
+  overflow-wrap: break-word;
+  max-width: 190px;   /* fits comfortably inside the 240px popup with padding */
 }
 
 .sidebar-profile-popup-divider {
