@@ -72,6 +72,7 @@ export const enquiryAPI = {
 export const adminAPI = {
   createAdmin: (data) => api.post("/admin/create-admin", data),
   getAdmins: () => api.get("/admin/admins"),
+  deleteAdmin: (id) => api.delete(`/admin/${id}`),
 };
 
 
