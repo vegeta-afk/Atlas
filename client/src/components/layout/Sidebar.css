@@ -381,14 +381,16 @@
   position: fixed;
   bottom: 68px;              /* roughly the height of the profile bar row */
   left: 8px;
-  width: 240px;               /* fixed width instead of left/right stretch */
+  width: max-content;         /* ← grows to fit content instead of fixed 240px */
+  min-width: 220px;
+  max-width: 300px;
   right: auto;
   margin-bottom: 6px;
   background: #fff;
   border: 1px solid var(--sidebar-border);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  overflow: hidden;
+  overflow: visible;          /* ← was "hidden", was clipping content on growth */
   z-index: 1100;
   animation: sidebarPopupIn 0.15s ease;
 }
@@ -438,7 +440,7 @@
   font-size: 12px;
   color: var(--text-muted);
   overflow-wrap: break-word;
-  max-width: 190px;   /* fits comfortably inside the 240px popup with padding */
+  max-width: 250px;   /* wraps within the new max-width instead of cutting off */
 }
 
 .sidebar-profile-popup-divider {
