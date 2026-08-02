@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { adminAPI } from "../../services/api";
 import {
   Save, X, User, Copy, Check, Eye, EyeOff,
-  Mail, Phone, Calendar, ShieldCheck, RefreshCw, Search,
+  Mail, Phone, Calendar, ShieldCheck, RefreshCw, Search, Trash2,
 } from "lucide-react";
 
 const AddAdmin = () => {
@@ -31,6 +31,7 @@ const AddAdmin = () => {
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState(null);
   const [search, setSearch] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     fetchAdmins();
@@ -48,6 +49,24 @@ const AddAdmin = () => {
       setListError(err.response?.data?.message || "Failed to load admins");
     } finally {
       setListLoading(false);
+    }
+  };
+
+  const handleDeleteAdmin = async (admin) => {
+    const confirmed = window.confirm(
+      `Delete admin "${admin.name || admin.fullName}"? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeletingId(admin._id);
+    try {
+      await adminAPI.deleteAdmin(admin._id);
+      setAdmins((prev) => prev.filter((a) => a._id !== admin._id));
+    } catch (err) {
+      console.error("Error deleting admin:", err);
+      alert(err.response?.data?.message || "Failed to delete admin");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -132,7 +151,6 @@ const AddAdmin = () => {
     setCreatedAdmin(null);
     setSubmittedPassword("");
     setIsPasswordCopied(false);
-    // stay on this page instead of navigating away, so the new admin is visible in the list
   };
 
   const handleSubmit = async (e) => {
@@ -152,7 +170,7 @@ const AddAdmin = () => {
         setShowSuccessModal(true);
         setFormData({ name: "", email: "", password: "", mobileNumber: "" });
         setErrors({});
-        fetchAdmins(); // ← refresh list so the new admin shows up immediately
+        fetchAdmins();
       } else {
         throw new Error(response.data.message || "Failed to create admin");
       }
@@ -195,6 +213,7 @@ const AddAdmin = () => {
         .aa-row:hover { background: #f9fafb !important; }
         .aa-search:focus { outline: none; border-color: #4f46e5 !important; box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
         .aa-refresh:hover { background: #f3f4f6 !important; }
+        .aa-delete-btn:hover { background: #fef2f2 !important; }
       `}</style>
 
       {/* Header */}
@@ -365,6 +384,7 @@ const AddAdmin = () => {
                   <th style={styles.th}>Mobile</th>
                   <th style={styles.th}>Status</th>
                   <th style={styles.th}>Created</th>
+                  <th style={styles.th}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -401,6 +421,18 @@ const AddAdmin = () => {
                         <Calendar size={14} style={styles.cellIcon} />
                         {formatDate(admin.createdAt)}
                       </div>
+                    </td>
+                    <td style={styles.td}>
+                      <button
+                        onClick={() => handleDeleteAdmin(admin)}
+                        disabled={deletingId === admin._id}
+                        style={styles.deleteBtn}
+                        className="aa-delete-btn"
+                        title="Delete admin"
+                      >
+                        <Trash2 size={14} />
+                        {deletingId === admin._id ? "Deleting..." : "Delete"}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -549,6 +581,7 @@ const styles = {
   badge: { display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: 600 },
   badgeActive: { background: "#dcfce7", color: "#166534" },
   badgeInactive: { background: "#fee2e2", color: "#991b1b" },
+  deleteBtn: { display: "flex", alignItems: "center", gap: "4px", padding: "6px 10px", background: "#fff", color: "#ef4444", border: "1px solid #fecaca", borderRadius: "6px", fontSize: "12px", fontWeight: 600, cursor: "pointer" },
 };
 
 export default AddAdmin;

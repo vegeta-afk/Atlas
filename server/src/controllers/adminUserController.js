@@ -23,7 +23,6 @@ exports.createAdminUser = async (req, res) => {
       });
     }
 
-    // Hash password — same pattern as register()
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -36,7 +35,7 @@ exports.createAdminUser = async (req, res) => {
       role: "admin",
       isVerified: true,
       isActive: true,
-      mustChangePassword: true, // force them to change temp password on first login
+      mustChangePassword: true,
     });
 
     res.status(201).json({
@@ -72,6 +71,55 @@ exports.getAdminUsers = async (req, res) => {
     });
   } catch (error) {
     console.error("Get admins error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Delete an admin user
+// @route   DELETE /api/admin/:id
+// @access  Private (admin only)
+exports.deleteAdminUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Prevent an admin from deleting their own account
+    if (req.user && req.user.id === id) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot delete your own admin account",
+      });
+    }
+
+    const admin = await User.findOne({ _id: id, role: "admin" });
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+
+    // Optional safety net: block deleting the last remaining admin
+    const adminCount = await User.countDocuments({ role: "admin" });
+    if (adminCount <= 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete the last remaining admin account",
+      });
+    }
+
+    await User.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Admin deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete admin error:", error);
     res.status(500).json({
       success: false,
       message: "Server error",
