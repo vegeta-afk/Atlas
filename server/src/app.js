@@ -28,7 +28,7 @@ app.use(
 // Request logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
-  console.log("Request body:", req.body); // Add this to see what's being received
+  console.log("Request body:", { ...req.body, password: "[REDACTED]" }); // Add this to see what's being received
   next();
 });
 
