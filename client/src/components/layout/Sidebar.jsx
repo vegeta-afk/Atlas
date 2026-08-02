@@ -36,6 +36,8 @@ import {
    LayoutTemplate,
    ClipboardCheck,
    GitBranch,
+   PanelLeftClose,
+   PanelLeftOpen,
 } from "lucide-react";
 import "./Sidebar.css";
 
@@ -51,7 +53,30 @@ const Sidebar = ({ isOpen, onClose }) => {
   setup: false,
 });
 
+  // ── NEW: collapse (icons-only) state ─────────────────────────────────
+  const [collapsed, setCollapsed] = useState(false);
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      // Collapsing closes any open dropdowns so the icons-only view stays clean
+      if (next) {
+        setOpenDropdowns({
+          frontOffice: false,
+          students: false,
+          faculty: false,
+          exam: false,
+          reports: false,
+          setup: false,
+        });
+      }
+      return next;
+    });
+  };
+  // ──────────────────────────────────────────────────────────────────────
+
   const toggleDropdown = (dropdownName) => {
+    if (collapsed) return; // no dropdowns while collapsed
     setOpenDropdowns((prev) => ({
       ...prev,
       [dropdownName]: !prev[dropdownName],
@@ -166,13 +191,18 @@ const Sidebar = ({ isOpen, onClose }) => {
             <button
               className={level === 0 ? "dropdown-toggle" : "nested-dropdown-toggle"}
               onClick={() => toggleDropdown(item.key)}
+              title={collapsed ? item.label : undefined}
             >
               <span className={level === 0 ? "nav-icon" : "sub-nav-icon"}>{item.icon}</span>
-              <span className={level === 0 ? "nav-label" : "sub-nav-label"}>{item.label}</span>
-              {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              {!collapsed && (
+                <>
+                  <span className={level === 0 ? "nav-label" : "sub-nav-label"}>{item.label}</span>
+                  {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </>
+              )}
             </button>
 
-            {isOpen && item.subItems && (
+            {!collapsed && isOpen && item.subItems && (
               <div className={level === 0 ? "sub-menu" : "nested-sub-menu"}>
                 {renderMenuItems(item.subItems, level + 1)}
               </div>
@@ -182,16 +212,22 @@ const Sidebar = ({ isOpen, onClose }) => {
       }
 
       if (item.divider) {
-        return <div key={`divider-${index}`} className="menu-divider" />;
+        return collapsed ? null : <div key={`divider-${index}`} className="menu-divider" />;
       }
 
       const isActive = location.pathname === item.path;
 
       if (level === 0) {
         return (
-          <Link key={item.path} to={item.path} className={`nav-link ${isActive ? "active" : ""}`} onClick={handleLinkClick}>
+          <Link
+            key={item.path}
+            to={item.path}
+            className={`nav-link ${isActive ? "active" : ""}`}
+            onClick={handleLinkClick}
+            title={collapsed ? item.label : undefined}
+          >
             <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
+            {!collapsed && <span className="nav-label">{item.label}</span>}
           </Link>
         );
       } else if (level === 1) {
@@ -213,9 +249,20 @@ const Sidebar = ({ isOpen, onClose }) => {
   };
 
   return (
-    <aside className={`sidebar ${isOpen ? "sidebar--open" : ""}`}>
+    <aside className={`sidebar ${isOpen ? "sidebar--open" : ""} ${collapsed ? "sidebar--collapsed" : ""}`}>
       <div className="sidebar-header">
-        <h3>IMS Menu</h3>
+        {!collapsed && <h3>IMS Menu</h3>}
+
+        {/* NEW: Collapse/expand toggle (desktop icons-only mode) */}
+        <button
+          className="sidebar-collapse-btn"
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? "Expand menu" : "Collapse menu"}
+          title={collapsed ? "Expand menu" : "Collapse menu"}
+        >
+          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
+
         {/* Close button — only visible on mobile */}
         <button className="sidebar-close-btn" onClick={onClose} aria-label="Close menu">
           <X size={18} />

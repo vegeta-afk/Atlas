@@ -250,3 +250,65 @@
     min-width: unset;
   }
 }
+
+/* =========================
+   COLLAPSE TOGGLE BUTTON
+========================= */
+.sidebar-collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 1;
+  margin-left: auto; /* pushes it to the right when title is hidden too */
+}
+.sidebar-collapse-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
+
+/* Hide the collapse toggle on mobile — mobile only uses the X close button */
+@media (max-width: 768px) {
+  .sidebar-collapse-btn { display: none; }
+}
+
+/* =========================
+   COLLAPSED STATE (icons-only)
+========================= */
+.sidebar.sidebar--collapsed {
+  width: 68px;
+  min-width: 68px;
+}
+
+.sidebar.sidebar--collapsed .sidebar-header {
+  padding: 13px 8px;
+  justify-content: center;
+}
+
+.sidebar.sidebar--collapsed .nav-link,
+.sidebar.sidebar--collapsed .dropdown-toggle {
+  justify-content: center;
+  padding: 10px 0;
+  gap: 0;
+}
+
+.sidebar.sidebar--collapsed .nav-icon {
+  min-width: unset;
+}
+
+/* When collapsed, dropdown chevrons/sub-menus are hidden entirely (handled in JSX),
+   so no extra rules needed there — just makes sure nothing overflows */
+.sidebar.sidebar--collapsed .sidebar-nav {
+  overflow: visible;
+}
+
+/* Small width shift so main content can react if AdminLayout reads a data attribute
+   or CSS var — optional hook for later, harmless if unused */
+.sidebar.sidebar--collapsed {
+  --current-sidebar-width: 68px;
+}
+.sidebar:not(.sidebar--collapsed) {
+  --current-sidebar-width: var(--sidebar-width);
+}
