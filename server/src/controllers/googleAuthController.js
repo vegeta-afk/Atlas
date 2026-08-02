@@ -16,7 +16,7 @@
 
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
-const User = require("../models/User"); // <-- adjust path to your actual User model
+const User = require("../models/user");
 
 const googleLogin = async (req, res) => {
   try {
