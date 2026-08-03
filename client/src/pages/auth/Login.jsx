@@ -233,7 +233,7 @@ const Login = () => {
       <div className="flex items-center justify-center px-6 py-10 md:px-14 bg-white">
         <div className="w-full max-w-sm" style={{ animation: "riseIn 0.5s ease" }}>
           <div className="md:hidden mb-8 text-center">
-            <img src={iitImage} alt="IIT Computer Institute" className="h-12 w-auto object-contain mx-auto mb-2" />
+            <img src="/Logo.png" alt="IIT Computer Institute" className="h-12 w-auto object-contain mx-auto mb-2" />
             <p className="text-gray-500 text-sm">Institute Management System</p>
           </div>
 
