@@ -1139,7 +1139,7 @@ const SetupList = () => {
               onChange={handleCategoryChange}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., General, OBC, SC, ST"
+              placeholder="e.g., EX - Army Men"
             />
           </div>
           {/* <div>
