@@ -125,17 +125,6 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
         { path: "/admin/front-office/admissions", label: "Admission List",  icon: <UsersIcon size={15} /> },
         { path: "/admin/front-office/calls",      label: "Call Logs",       icon: <Phone size={15} /> },
         { path: "/admin/front-office/create-admin", label: "Create Admin", icon: <UserPlus size={15} /> },
-        {
-          key: "setup",
-          label: "Setup",
-          icon: <Settings size={15} />,
-          isDropdown: true,
-          subItems: [
-            { path: "/admin/setup/courses",    label: "Course Management", icon: <GraduationCap size={13} /> },
-            { path: "/admin/setup/management", label: "Setup Management",  icon: <Briefcase size={13} /> },
-            { path: "/admin/setup/templates",  label: "Template Designer", icon: <LayoutTemplate size={13} /> },
-          ],
-        },
       ],
     },
     {
@@ -201,6 +190,18 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
         { path: "/admin/exam/manage-tests",   label: "Manage Tests",   icon: <ClipboardList size={15} /> },
       ],
     },
+
+    {
+        key: "setup",
+        label: "Setup",
+        icon: <Settings size={15} />,
+        isDropdown: true,
+        subItems: [
+          { path: "/admin/setup/courses",    label: "Course Management", icon: <GraduationCap size={13} /> },
+          { path: "/admin/setup/management", label: "Setup Management",  icon: <Briefcase size={13} /> },
+          { path: "/admin/setup/templates",  label: "Template Designer", icon: <LayoutTemplate size={13} /> },
+          ],
+        },
   ];
 
   const handleLinkClick = () => {
