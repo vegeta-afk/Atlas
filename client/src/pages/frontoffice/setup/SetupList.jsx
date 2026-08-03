@@ -92,6 +92,10 @@ const SetupList = () => {
     return value.charAt(0).toUpperCase() + value.slice(1);
   };
 
+  const capitalizeWords = (value) => {
+  return value.replace(/(^|\s)\S/g, (match) => match.toUpperCase());
+};
+
   const formatTime = (time) => {
   if (!time) return "";
   const [hours, minutes] = time.split(':');
@@ -304,7 +308,7 @@ const SetupList = () => {
     }
     setFeeForm((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : name === "feeName" || name === "description" ? capitalizeFirst(value) : value,
+      [name]: type === "checkbox" ? checked : name === "feeName" ? capitalizeWords(value) : name === "description" ? capitalizeFirst(value) : value,
     }));
   };
 
