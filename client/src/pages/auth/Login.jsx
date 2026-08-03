@@ -195,7 +195,7 @@ const Login = () => {
         </svg>
 
         <div className="relative z-10 flex items-center gap-4">
-          <img src={iitImage} alt="IIT Computer Institute" className="h-16 w-auto object-contain" />
+          <img src={Logo.png} alt="IIT Computer Institute" className="h-16 w-auto object-contain" />
           <span className="text-white text-xl font-bold tracking-wider">
             IIT COMPUTER INSTITUTE
           </span>
@@ -224,7 +224,7 @@ const Login = () => {
             <div className="text-xs mt-0.5" style={{ color: "#7C8AA5" }}>Uttarakhand</div>
           </div>
           <div>
-            <div className="text-white text-sm font-semibold">IIT Roorkee</div>
+            <div className="text-white text-sm font-semibold">ITDA-CALC Centre</div>
             <div className="text-xs mt-0.5" style={{ color: "#7C8AA5" }}>Affiliated · ITDA-CALC</div>
           </div>
         </div>
