@@ -195,7 +195,7 @@ const Login = () => {
 
         <div className="relative z-10 flex items-center gap-4">
           <img src="/Logo2.png" alt="IIT Computer Institute" className="h-16 w-auto object-contain" />
-          <span className="text-white text-xl font-bold tracking-wider">
+          <span className="color: rgb(62, 215, 196); text-xl font-bold tracking-wider">
             IIT COMPUTER INSTITUTE
           </span>
         </div>
