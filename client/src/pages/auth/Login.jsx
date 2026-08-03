@@ -257,20 +257,20 @@ const Login = () => {
             </div>
           )}
 
-          <button
+          {/* <button
             onClick={() => handleGoogleSignIn()}
             disabled={anyLoading}
             className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 font-semibold py-2.5 px-4 rounded-lg hover:bg-gray-50 transition-colors mb-5 disabled:opacity-50 text-sm"
           >
             <FaGoogle className="text-blue-500" size={16} />
             {googleLoading ? "Signing in..." : "Sign in with Google"}
-          </button>
+          </button> */}
 
-          <div className="flex items-center mb-5">
+          {/* <div className="flex items-center mb-5">
             <div className="grow border-t border-gray-300"></div>
             <span className="mx-3 text-gray-400 text-xs uppercase tracking-wide">or</span>
             <div className="grow border-t border-gray-300"></div>
-          </div>
+          </div> */}
 
           <form onSubmit={handleSubmit}>
             <label className="block text-xs font-semibold text-gray-800 mb-2 tracking-wide">
@@ -366,12 +366,12 @@ const Login = () => {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
+          {/* <p className="mt-6 text-center text-sm text-gray-600">
             Don't have an account?{" "}
             <a href="/register" className="text-blue-600 hover:text-blue-800 font-medium transition-colors">
               Sign up here
             </a>
-          </p>
+          </p> */}
         </div>
       </div>
     </div>
