@@ -3,7 +3,6 @@ import { useGoogleLogin } from "@react-oauth/google";
 import { FaGoogle, FaUser, FaLock, FaEye, FaEyeSlash, FaArrowRight } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import iitImage from "../../assets/iit.png";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -195,7 +194,7 @@ const Login = () => {
         </svg>
 
         <div className="relative z-10 flex items-center gap-4">
-          <img src={Logo.png} alt="IIT Computer Institute" className="h-16 w-auto object-contain" />
+          <img src="/Logo.png" alt="IIT Computer Institute" className="h-16 w-auto object-contain" />
           <span className="text-white text-xl font-bold tracking-wider">
             IIT COMPUTER INSTITUTE
           </span>
