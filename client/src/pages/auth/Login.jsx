@@ -224,7 +224,7 @@ const Login = () => {
           </div>
           <div>
             <div className="text-white text-sm font-semibold">ITDA-CALC Centre</div>
-            <div className="text-xs mt-0.5" style={{ color: "#7C8AA5" }}>Affiliated · ITDA-CALC</div>
+            <div className="text-xs mt-0.5" style={{ color: "#7C8AA5" }}>Affiliated by Uttarakhand Government</div>
           </div>
         </div>
       </div>
