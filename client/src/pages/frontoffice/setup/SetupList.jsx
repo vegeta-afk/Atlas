@@ -1514,12 +1514,12 @@ const SetupList = () => {
             >
               Call Reasons
             </button>
-            <button
+            {/* <button
               onClick={() => { setCallLogSubTab("next-actions"); setShowForm(false); setEditingId(null); setSearchTerm(""); }}
               className={`px-3 py-1 text-sm rounded ${callLogSubTab === "next-actions" ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"}`}
             >
               Next Actions
-            </button>
+            </button> */}
           </div>
         )}
       </div>
