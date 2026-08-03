@@ -556,16 +556,16 @@ const SetupList = () => {
         }
       } else if (activeTab === "call-log") {
         if (callLogSubTab === "call-status") {
-          if (!callStatusForm.name || !callStatusForm.value) {
-            toast.error("Name and value are required");
-            return;
-          }
-          const submitData = {
-            name: callStatusForm.name.trim(),
-            value: callStatusForm.value.trim(),
-            description: callStatusForm.description.trim(),
-            order: parseInt(callStatusForm.order) || 0,
-          };
+  if (!callStatusForm.name.trim()) {
+    toast.error("Name is required");
+    return;
+  }
+  const submitData = {
+    name: callStatusForm.name.trim(),
+    value: callStatusForm.name.trim().toLowerCase().replace(/\s+/g, "-"),
+    description: callStatusForm.description.trim(),
+    order: parseInt(callStatusForm.order) || 0,
+  };
           if (editingId) {
             await setupAPI.updateCallStatus(editingId, submitData);
             toast.success("Call status updated");
@@ -574,16 +574,16 @@ const SetupList = () => {
             toast.success("Call status added");
           }
         } else if (callLogSubTab === "call-reasons") {
-          if (!callReasonForm.name || !callReasonForm.value) {
-            toast.error("Name and value are required");
-            return;
-          }
-          const submitData = {
-            name: callReasonForm.name.trim(),
-            value: callReasonForm.value.trim(),
-            description: callReasonForm.description.trim(),
-            order: parseInt(callReasonForm.order) || 0,
-          };
+  if (!callReasonForm.name.trim()) {
+    toast.error("Name is required");
+    return;
+  }
+  const submitData = {
+    name: callReasonForm.name.trim(),
+    value: callReasonForm.name.trim().toLowerCase().replace(/\s+/g, "-"),
+    description: callReasonForm.description.trim(),
+    order: parseInt(callReasonForm.order) || 0,
+  };
           if (editingId) {
             await setupAPI.updateCallReason(editingId, submitData);
             toast.success("Call reason updated");
@@ -592,16 +592,16 @@ const SetupList = () => {
             toast.success("Call reason added");
           }
         } else if (callLogSubTab === "next-actions") {
-          if (!nextActionForm.name || !nextActionForm.value) {
-            toast.error("Name and value are required");
-            return;
-          }
-          const submitData = {
-            name: nextActionForm.name.trim(),
-            value: nextActionForm.value.trim(),
-            description: nextActionForm.description.trim(),
-            order: parseInt(nextActionForm.order) || 0,
-          };
+  if (!nextActionForm.name.trim()) {
+    toast.error("Name is required");
+    return;
+  }
+  const submitData = {
+    name: nextActionForm.name.trim(),
+    value: nextActionForm.name.trim().toLowerCase().replace(/\s+/g, "-"),
+    description: nextActionForm.description.trim(),
+    order: parseInt(nextActionForm.order) || 0,
+  };
           if (editingId) {
             await setupAPI.updateNextAction(editingId, submitData);
             toast.success("Next action updated");
