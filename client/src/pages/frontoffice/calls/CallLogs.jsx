@@ -31,6 +31,8 @@ import "./CallLogs.css";
 const CallLogs = () => {
   const [activeTab, setActiveTab] = useState("enquiry");
 
+  const loggedInUser = JSON.parse(localStorage.getItem("user"));
+
   const [admissions, setAdmissions] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
 
@@ -207,10 +209,15 @@ const CallLogs = () => {
 
   // ── modal ──────────────────────────────────────────────────────
   const handleOpenCallModal = (item, type) => {
-    setSelectedStudent(item); setSelectedType(type);
-    setCallForm({ callStatus: "", callReason: "", callDuration: "", followUpDate: "", notes: "", counselorId: "", nextAction: "" });
-    setShowCallModal(true);
-  };
+  setSelectedStudent(item); setSelectedType(type);
+  setCallForm({
+    callStatus: "", callReason: "", callDuration: "",
+    followUpDate: "", notes: "",
+    counselorId: loggedInUser?.id || loggedInUser?._id || "",
+    nextAction: "",
+  });
+  setShowCallModal(true);
+};
 
   const handleCallFormChange = (e) => {
     const { name, value } = e.target;
@@ -218,9 +225,9 @@ const CallLogs = () => {
   };
 
   const handleSubmitCallLog = async () => {
-    if (!callForm.callStatus) { toast.error("Please select call status"); return; }
-    if (!callForm.counselorId) { toast.error("Please select counselor"); return; }
-    setSubmitting(true);
+  if (!callForm.callStatus) { toast.error("Please select call status"); return; }
+  if (!loggedInUser?.id && !loggedInUser?._id) { toast.error("Unable to identify logged-in user. Please log in again."); return; }
+  setSubmitting(true);
     try {
       const user = JSON.parse(localStorage.getItem("user"));
       await callLogAPI.create({
@@ -600,12 +607,14 @@ const CallLogs = () => {
                   <input type="date" name="followUpDate" value={callForm.followUpDate} onChange={handleCallFormChange} />
                 </div>
                 <div className="form-group full-width">
-                  <label>Assigned Counselor <span className="required">*</span></label>
-                  <select name="counselorId" value={callForm.counselorId} onChange={handleCallFormChange}>
-                    <option value="">Select Counselor</option>
-                    {counselors.map((c) => <option key={c._id} value={c._id}>{getCounselorName(c)}</option>)}
-                  </select>
-                </div>
+  <label>Assigned Counselor</label>
+  <input
+    type="text"
+    value={loggedInUser?.name || loggedInUser?.fullName || loggedInUser?.username || "Unknown"}
+    readOnly
+    className="readonly-input"
+  />
+</div>
                 {/* <div className="form-group full-width">
                   <label>Next Action</label>
                   <select name="nextAction" value={callForm.nextAction} onChange={handleCallFormChange}>
