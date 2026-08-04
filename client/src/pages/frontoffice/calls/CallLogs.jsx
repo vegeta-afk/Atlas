@@ -308,8 +308,8 @@ const CallLogs = () => {
       {/* Tabs */}
       <div className="tab-bar">
         {[
-          { key: "admission", icon: <Users size={16} />, label: "Admissions", count: admissionCount },
           { key: "enquiry",   icon: <MessageCircle size={16} />, label: "Enquiries",  count: enquiryCount },
+          { key: "admission", icon: <Users size={16} />, label: "Admissions", count: admissionCount },
         ].map(({ key, icon, label, count }) => (
           <button
             key={key}
