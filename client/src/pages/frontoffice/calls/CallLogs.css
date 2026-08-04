@@ -325,4 +325,14 @@
   color: #4f46e5; /* or whatever your theme's primary/link color is */
 }
 
+.call-link-inline {
+  color: #4f46e5; /* match your theme's primary color */
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.call-link-inline:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 480px) { .stats-cards { grid-template-columns: 1fr; } }

@@ -606,16 +606,44 @@ const CallLogs = () => {
             <div className="modal-body">
               <div className="caller-info">
   <p><strong>📞 Student:</strong> {selectedStudent?.fullName || selectedStudent?.applicantName}</p>
-  <p><strong>📱 Phone:</strong> {selectedStudent?.mobileNumber || selectedStudent?.contactNo}</p>
+  <p>
+    <strong>📱 Phone:</strong>{" "}
+    {(selectedStudent?.mobileNumber || selectedStudent?.contactNo) ? (
+      <a href={`tel:${selectedStudent.mobileNumber || selectedStudent.contactNo}`} className="call-link-inline">
+        {selectedStudent.mobileNumber || selectedStudent.contactNo}
+      </a>
+    ) : "N/A"}
+  </p>
   <p><strong>📚 Course:</strong> {selectedStudent?.course || selectedStudent?.courseInterested}</p>
 
   {selectedType === "admission" ? (
     <>
-      <p><strong>👨 Father's No:</strong> {selectedStudent?.fatherNumber || "N/A"}</p>
-      <p><strong>👩 Mother's No:</strong> {selectedStudent?.motherNumber || "N/A"}</p>
+      <p>
+        <strong>👨 Father's No:</strong>{" "}
+        {selectedStudent?.fatherNumber ? (
+          <a href={`tel:${selectedStudent.fatherNumber}`} className="call-link-inline">
+            {selectedStudent.fatherNumber}
+          </a>
+        ) : "N/A"}
+      </p>
+      <p>
+        <strong>👩 Mother's No:</strong>{" "}
+        {selectedStudent?.motherNumber ? (
+          <a href={`tel:${selectedStudent.motherNumber}`} className="call-link-inline">
+            {selectedStudent.motherNumber}
+          </a>
+        ) : "N/A"}
+      </p>
     </>
   ) : (
-    <p><strong>👨‍👩 Guardian's No:</strong> {selectedStudent?.guardianContact || "N/A"}</p>
+    <p>
+      <strong>👨‍👩 Guardian's No:</strong>{" "}
+      {selectedStudent?.guardianContact ? (
+        <a href={`tel:${selectedStudent.guardianContact}`} className="call-link-inline">
+          {selectedStudent.guardianContact}
+        </a>
+      ) : "N/A"}
+    </p>
   )}
 </div>
               <div className="form-grid-modal">
