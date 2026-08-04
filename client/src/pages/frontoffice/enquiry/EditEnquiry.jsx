@@ -531,13 +531,13 @@ const EditEnquiry = () => {
                 <label>Remark</label>
                 <textarea name="remark" value={formData.remark} onChange={handleChange} rows="3" placeholder="Any additional remarks..." />
               </div>
-              <div className="form-group">
+              {/* <div className="form-group">
                 <label>Prospectus Fees Submit</label>
                 <div className="radio-group">
                   <label><input type="radio" name="prospectusFees" value="yes" checked={formData.prospectusFees === "yes"} onChange={handleChange} /> Yes</label>
                   <label><input type="radio" name="prospectusFees" value="no"  checked={formData.prospectusFees === "no"}  onChange={handleChange} /> No</label>
                 </div>
-              </div>
+              </div> */}
               {formData.prospectusFees === "yes" && (
                 <div className="form-group">
                   <label>Amount</label>
