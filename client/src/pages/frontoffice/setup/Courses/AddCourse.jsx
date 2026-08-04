@@ -14,7 +14,10 @@ import {
   Award,
   Info,
   Keyboard,
+  Upload,
 } from "lucide-react";
+import * as XLSX from "xlsx";
+
 import { courseAPI } from "../../../../services/api";
 import toast from "react-hot-toast";
 
@@ -127,6 +130,8 @@ const AddCourse = () => {
   useEffect(() => {
     semestersRef.current = semesters;
   }, [semesters]);
+
+  const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     courseCode: "",
@@ -354,6 +359,65 @@ const AddCourse = () => {
           : s
       )
     );
+
+  const handleExcelImport = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+      if (rows.length === 0) {
+        toast.error("Excel sheet is empty");
+        return;
+      }
+
+      const semesterMap = new Map();
+
+      rows.forEach((row) => {
+        const semName = String(row["Semester"] || "").trim();
+        const topicName = String(row["Topic"] || "").trim();
+        const subName = String(row["Subtopic"] || "").trim();
+        if (!semName || !topicName) return;
+
+        if (!semesterMap.has(semName)) semesterMap.set(semName, new Map());
+        const topicMap = semesterMap.get(semName);
+
+        if (!topicMap.has(topicName)) topicMap.set(topicName, []);
+        if (subName) topicMap.get(topicName).push(subName);
+      });
+
+      const builtSemesters = Array.from(semesterMap.entries()).map(([semName, topicMap], sIdx) => ({
+        id: Date.now() + sIdx,
+        name: semName,
+        isExpanded: true,
+        topics: Array.from(topicMap.entries()).map(([topicName, subs], tIdx) => ({
+          id: Date.now() + sIdx * 1000 + tIdx,
+          name: topicName,
+          isExpanded: true,
+          subtopics: subs.map((subName, subIdx) => ({
+            id: Date.now() + sIdx * 100000 + tIdx * 1000 + subIdx,
+            name: subName,
+          })),
+        })),
+      }));
+
+      setSemesters(builtSemesters);
+      toast.success(`Imported ${builtSemesters.length} semesters from Excel!`);
+    } catch (err) {
+      console.error("Excel import error:", err);
+      toast.error("Failed to parse Excel file. Check column headers: Semester, Topic, Subtopic");
+    } finally {
+      e.target.value = "";
+    }
+  };
+  reader.readAsArrayBuffer(file);
+};  
 
   // ─── ✨ Keyboard Shortcuts ────────────────────────────────────────────────
   useEffect(() => {
@@ -913,6 +977,23 @@ const AddCourse = () => {
                 {/* ✨ Add Semester button + ⓘ shortcut info popover */}
                 <div className="flex items-center gap-2">
                   <ShortcutInfoPopover />
+
+                  <input
+    type="file"
+    ref={fileInputRef}
+    accept=".xlsx,.xls"
+    onChange={handleExcelImport}
+    className="hidden"
+  />
+  <button
+    type="button"
+    onClick={() => fileInputRef.current?.click()}
+    className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm"
+  >
+    <Upload size={16} />
+    Import Excel
+  </button>
+
                   <button
                     type="button"
                     onClick={addSemester}
