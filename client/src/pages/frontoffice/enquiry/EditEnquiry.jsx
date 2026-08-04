@@ -468,14 +468,14 @@ const EditEnquiry = () => {
                     </select>
                     {errors.courseId && <span className="error-text">{errors.courseId}</span>}
                     {formData.courseId && (
-    <div className="course-info">
-      <small>
-        Selected:{" "}
-        {courses.find((c) => c._id === formData.courseId)?.courseFullName ||
-          formData.courseInterested}
-      </small>
-    </div>
-  )}
+  <div className="course-info">
+    <span style={{ fontSize: "14px" }}>
+      Selected:{" "}
+      {courses.find((c) => c._id === formData.courseId)?.courseFullName ||
+        formData.courseInterested}
+    </span>
+  </div>
+)}
                   </div>
                   <div className="form-group">
                     <label>Batch Time *</label>
