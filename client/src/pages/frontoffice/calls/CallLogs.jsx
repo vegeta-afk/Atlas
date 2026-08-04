@@ -479,7 +479,7 @@ const CallLogs = () => {
                               </button>
                             )}
 
-                            <div className="dropdown-container">
+                            {/* <div className="dropdown-container">
                               <button className="action-btn more" onClick={(e) => { e.stopPropagation(); toggleDropdown(item._id); }}>
                                 <MoreVertical size={15} />
                               </button>
@@ -493,7 +493,7 @@ const CallLogs = () => {
                                   </button>
                                 </div>
                               )}
-                            </div>
+                            </div> */}
                           </div>
                         </td>
                       </tr>
