@@ -134,7 +134,6 @@ function App() {
           <Route path="admissions/view/:id" element={<ViewAdmission />} />
           <Route path="calls" element={<CallLogs />} />
            <Route path="admissions/edit/:id" element={<EditAdmission />} />
-          <Route path="create-admin" element={<AddAdmin />} />
         </Route>
 
         <Route path="setup">
@@ -146,6 +145,7 @@ function App() {
           <Route path="templates" element={<TemplateList />} />
           <Route path="templates/new" element={<TemplateEditPage />} />
           <Route path="templates/edit/:id" element={<TemplateEditPage />} />
+          <Route path="create-admin" element={<AddAdmin />} />
         </Route>
 
         <Route path="faculty">
