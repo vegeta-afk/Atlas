@@ -606,13 +606,13 @@ const CallLogs = () => {
                     {counselors.map((c) => <option key={c._id} value={c._id}>{getCounselorName(c)}</option>)}
                   </select>
                 </div>
-                <div className="form-group full-width">
+                {/* <div className="form-group full-width">
                   <label>Next Action</label>
                   <select name="nextAction" value={callForm.nextAction} onChange={handleCallFormChange}>
                     <option value="">Select Next Action</option>
                     {nextActionOptions.map((o) => <option key={o._id} value={o.value}>{o.name}</option>)}
                   </select>
-                </div>
+                </div> */}
                 <div className="form-group full-width">
                   <label>Notes / Remarks</label>
                   <textarea name="notes" value={callForm.notes} onChange={handleCallFormChange} rows="3" placeholder="Enter call summary, student feedback, etc..." />
