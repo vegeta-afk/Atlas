@@ -423,14 +423,14 @@ const ViewEnquiry = () => {
             {e.prospectusFees && (
               <>
                 <div className="va-divider" />
-                <div className="va-field-row">
+                {/* <div className="va-field-row">
                   <span className="va-field-label">Prospectus Fees</span>
                   <span className="va-field-value" style={{ color: e.prospectusFees === "yes" ? "#15803d" : "#dc2626", fontWeight: 600 }}>
                     {e.prospectusFees === "yes"
                       ? `Paid — ₹${e.prospectusAmount || 0}`
                       : "Not Paid"}
                   </span>
-                </div>
+                </div> */}
               </>
             )}
 
