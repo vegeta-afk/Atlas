@@ -400,9 +400,9 @@ const CallLogs = () => {
                 <th style={{ textAlign: "left" }}>Name</th>
                 <th>Contact</th>
                 <th>Course</th>
-                <th>Last Call Status</th>
-                <th>Last Call Date</th>
                 <th>Assigned To</th>
+                <th>Last Call Date</th>
+                <th>Last Call Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -458,21 +458,21 @@ const CallLogs = () => {
 
                         <td>{item.course || item.courseInterested || "N/A"}</td>
 
-                        <td>
-                          {lastCall
-                            ? <span className={`call-status-badge ${getStatusBadgeClass(lastCall.callStatus)}`}>{getStatusLabel(lastCall.callStatus)}</span>
-                            : <span className="no-call-text">No calls yet</span>
-                          }
-                        </td>
+<td><span className="counselor-name">{lastCall?.counselorName || "Not assigned"}</span></td>
 
-                        <td>
-                          <div className="date-info">
-                            <Calendar size={13} />
-                            {lastCall ? formatDate(lastCall.createdAt) : "N/A"}
-                          </div>
-                        </td>
+<td>
+  <div className="date-info">
+    <Calendar size={13} />
+    {lastCall ? formatDate(lastCall.createdAt) : "N/A"}
+  </div>
+</td>
 
-                        <td><span className="counselor-name">{lastCall?.counselorName || "Not assigned"}</span></td>
+<td>
+  {lastCall
+    ? <span className={`call-status-badge ${getStatusBadgeClass(lastCall.callStatus)}`}>{getStatusLabel(lastCall.callStatus)}</span>
+    : <span className="no-call-text">No calls yet</span>
+  }
+</td>
 
                         <td>
                           <div className="action-buttons">
