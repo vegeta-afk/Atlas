@@ -469,7 +469,7 @@ const EditEnquiry = () => {
                     {errors.courseId && <span className="error-text">{errors.courseId}</span>}
                     {formData.courseId && (
   <div className="course-info">
-    <span style={{ fontSize: "14px" }}>
+    <span style={{ fontSize: "13px" }}>
       Selected:{" "}
       {courses.find((c) => c._id === formData.courseId)?.courseFullName ||
         formData.courseInterested}
