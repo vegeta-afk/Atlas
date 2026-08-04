@@ -690,7 +690,7 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
 </th>
 <th>Enquiry Details</th>
 <th>Status</th>
-<th>Prospectus</th>
+{/* <th>Prospectus</th> */}
 <th>Actions</th>
                 </tr>
               </thead>
@@ -764,7 +764,7 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
 <td>{getStatusBadge(enquiry.status)}</td>
 
 {/* PROSPECTUS */}
-<td>
+{/* <td>
   {enquiry.prospectusFees === "yes" ? (
     <div className="prospectus-paid">
       <CheckCircle size={14} />
@@ -773,7 +773,7 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
   ) : (
     <span className="prospectus-not-paid">Not Paid</span>
   )}
-</td>
+</td> */}
                       <td>
                         <div className="action-buttons">
   {/* View Button */}
