@@ -124,7 +124,6 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
         { path: "/admin/front-office/enquiries",  label: "Enquiry List",    icon: <List size={15} /> },
         { path: "/admin/front-office/admissions", label: "Admission List",  icon: <UsersIcon size={15} /> },
         { path: "/admin/front-office/calls",      label: "Call Logs",       icon: <Phone size={15} /> },
-        { path: "/admin/front-office/create-admin", label: "Create Admin", icon: <UserPlus size={15} /> },
       ],
     },
     {
@@ -200,6 +199,7 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
           { path: "/admin/setup/courses",    label: "Course Management", icon: <GraduationCap size={13} /> },
           { path: "/admin/setup/management", label: "Setup Management",  icon: <Briefcase size={13} /> },
           { path: "/admin/setup/templates",  label: "Template Designer", icon: <LayoutTemplate size={13} /> },
+          { path: "/admin/setup/create-admin", label: "Create Admin", icon: <UserPlus size={15} /> },
           ],
         },
   ];
