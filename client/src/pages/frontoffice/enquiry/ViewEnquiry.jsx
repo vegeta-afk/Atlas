@@ -225,12 +225,12 @@ const ViewEnquiry = () => {
 
         {/* Quick Actions */}
         <div className="va-quick-actions">
-          {e.contactNo && (
+          {/* {e.contactNo && (
             <a href={`tel:${e.contactNo}`} className="va-quick-btn va-quick-call">
               <Phone size={18} />
               <span>Call</span>
             </a>
-          )}
+          )} */}
           {e.email && (
             <a href={`mailto:${e.email}`} className="va-quick-btn va-quick-mail">
               <Mail size={18} />
