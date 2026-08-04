@@ -25,6 +25,7 @@ import {
   facultyAPI,
   admissionAPI,
   enquiryAPI,
+  adminAPI,
 } from "../../../services/api";
 import "./CallLogs.css";
 
@@ -183,11 +184,23 @@ const CallLogs = () => {
   };
 
   const fetchCounselors = async () => {
+  try {
+    const facultyRes = await facultyAPI.getFaculty();
+    const facultyList = facultyRes.data.success ? (facultyRes.data.data || []) : [];
+
+    let adminList = [];
     try {
-      const res = await facultyAPI.getFaculty();
-      if (res.data.success) setCounselors(res.data.data || []);
-    } catch (err) { console.error("Counselors error:", err); }
-  };
+      const adminRes = await adminAPI.getAdmins(); // ← need correct method name
+      adminList = adminRes.data.success ? (adminRes.data.data || []) : [];
+    } catch (err) {
+      console.error("Admins fetch failed:", err);
+    }
+
+    setCounselors([...adminList, ...facultyList]);
+  } catch (err) {
+    console.error("Counselors error:", err);
+  }
+};
 
   // ── initial load: everything in parallel, no flash ─────────────
   useEffect(() => {
