@@ -29,7 +29,7 @@ import {
 import "./CallLogs.css";
 
 const CallLogs = () => {
-  const [activeTab, setActiveTab] = useState("admission");
+  const [activeTab, setActiveTab] = useState("enquiry");
 
   const [admissions, setAdmissions] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
