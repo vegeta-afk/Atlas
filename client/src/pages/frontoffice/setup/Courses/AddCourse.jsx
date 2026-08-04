@@ -370,7 +370,9 @@ const AddCourse = () => {
       const data = new Uint8Array(evt.target.result);
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+      // range: 1 skips the first row (course title row), so row 2 becomes the header row
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: "", range: 1 });
 
       if (rows.length === 0) {
         toast.error("Excel sheet is empty");
@@ -379,11 +381,24 @@ const AddCourse = () => {
 
       const semesterMap = new Map();
 
+      // Forward-fill trackers for merged/blank cells
+      let lastSemName = "";
+      let lastTopicName = "";
+
       rows.forEach((row) => {
-        const semName = String(row["Semester"] || "").trim();
-        const topicName = String(row["Topic"] || "").trim();
-        const subName = String(row["Subtopic"] || "").trim();
-        if (!semName || !topicName) return;
+        const rawSem = String(row["Semester"] || "").trim();
+        const rawTopic = String(row["Topic"] || "").trim();
+        // handles both "Subtopic" and "Sub Topic" header spellings
+        const subName = String(row["Subtopic"] ?? row["Sub Topic"] ?? "").trim();
+
+        // Carry forward the last non-blank Semester/Topic
+        const semName = rawSem || lastSemName;
+        const topicName = rawTopic || lastTopicName;
+
+        if (rawSem) lastSemName = rawSem;
+        if (rawTopic) lastTopicName = rawTopic;
+
+        if (!semName || !topicName) return; // truly empty row, skip
 
         if (!semesterMap.has(semName)) semesterMap.set(semName, new Map());
         const topicMap = semesterMap.get(semName);
@@ -411,13 +426,13 @@ const AddCourse = () => {
       toast.success(`Imported ${builtSemesters.length} semesters from Excel!`);
     } catch (err) {
       console.error("Excel import error:", err);
-      toast.error("Failed to parse Excel file. Check column headers: Semester, Topic, Subtopic");
+      toast.error("Failed to parse Excel file. Check column headers: Semester, Topic, Sub Topic");
     } finally {
       e.target.value = "";
     }
   };
   reader.readAsArrayBuffer(file);
-};  
+};
 
   // ─── ✨ Keyboard Shortcuts ────────────────────────────────────────────────
   useEffect(() => {
