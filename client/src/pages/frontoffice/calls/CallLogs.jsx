@@ -599,10 +599,19 @@ const CallLogs = () => {
             </div>
             <div className="modal-body">
               <div className="caller-info">
-                <p><strong>📞 Student:</strong> {selectedStudent?.fullName || selectedStudent?.applicantName}</p>
-                <p><strong>📱 Phone:</strong> {selectedStudent?.mobileNumber || selectedStudent?.contactNo}</p>
-                <p><strong>📚 Course:</strong> {selectedStudent?.course || selectedStudent?.courseInterested}</p>
-              </div>
+  <p><strong>📞 Student:</strong> {selectedStudent?.fullName || selectedStudent?.applicantName}</p>
+  <p><strong>📱 Phone:</strong> {selectedStudent?.mobileNumber || selectedStudent?.contactNo}</p>
+  <p><strong>📚 Course:</strong> {selectedStudent?.course || selectedStudent?.courseInterested}</p>
+
+  {selectedType === "admission" ? (
+    <>
+      <p><strong>👨 Father's No:</strong> {selectedStudent?.fatherNumber || "N/A"}</p>
+      <p><strong>👩 Mother's No:</strong> {selectedStudent?.motherNumber || "N/A"}</p>
+    </>
+  ) : (
+    <p><strong>👨‍👩 Guardian's No:</strong> {selectedStudent?.guardianContact || "N/A"}</p>
+  )}
+</div>
               <div className="form-grid-modal">
                 <div className="form-group full-width">
                   <label>Call Status <span className="required">*</span></label>
