@@ -185,18 +185,25 @@ const CallLogs = () => {
 
   const fetchCounselors = async () => {
   try {
-    const facultyRes = await facultyAPI.getFaculty();
-    const facultyList = facultyRes.data.success ? (facultyRes.data.data || []) : [];
+    const [facultyRes, adminRes] = await Promise.allSettled([
+      facultyAPI.getFaculty(),
+      adminAPI.getAdmins(),
+    ]);
 
-    let adminList = [];
-    try {
-      const adminRes = await adminAPI.getAdmins(); // ← need correct method name
-      adminList = adminRes.data.success ? (adminRes.data.data || []) : [];
-    } catch (err) {
-      console.error("Admins fetch failed:", err);
-    }
+    const facultyList =
+      facultyRes.status === "fulfilled" && facultyRes.value.data.success
+        ? facultyRes.value.data.data || []
+        : [];
 
-    setCounselors([...adminList, ...facultyList]);
+    const adminList =
+      adminRes.status === "fulfilled"
+        ? adminRes.value.data.admins || adminRes.value.data.data || []
+        : [];
+
+    const taggedAdmins = adminList.map((a) => ({ ...a, _role: "admin" }));
+    const taggedFaculty = facultyList.map((f) => ({ ...f, _role: "faculty" }));
+
+    setCounselors([...taggedAdmins, ...taggedFaculty]);
   } catch (err) {
     console.error("Counselors error:", err);
   }
