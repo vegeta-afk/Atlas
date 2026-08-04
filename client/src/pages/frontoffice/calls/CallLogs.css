@@ -311,4 +311,18 @@
   .history-item { grid-template-columns: 1fr; }
 }
 
+.call-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.call-link:hover {
+  text-decoration: underline;
+  color: #4f46e5; /* or whatever your theme's primary/link color is */
+}
+
 @media (max-width: 480px) { .stats-cards { grid-template-columns: 1fr; } }

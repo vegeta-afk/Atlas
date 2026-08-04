@@ -468,13 +468,19 @@ const CallLogs = () => {
                         </td>
 
                         <td>
-                          <div className="contact-info">
-                            <div><Phone size={13} />{item.mobileNumber || item.contactNo || "N/A"}</div>
-                            <button className="whatsapp-link" onClick={() => openWhatsApp(item.mobileNumber || item.contactNo)}>
-                              <MessageCircle size={13} /> WhatsApp
-                            </button>
-                          </div>
-                        </td>
+  <div className="contact-info">
+    {(item.mobileNumber || item.contactNo) ? (
+      <a href={`tel:${item.mobileNumber || item.contactNo}`} className="call-link">
+        <Phone size={13} />{item.mobileNumber || item.contactNo}
+      </a>
+    ) : (
+      <div><Phone size={13} />N/A</div>
+    )}
+    <button className="whatsapp-link" onClick={() => openWhatsApp(item.mobileNumber || item.contactNo)}>
+      <MessageCircle size={13} /> WhatsApp
+    </button>
+  </div>
+</td>
 
                         <td>{item.course || item.courseInterested || "N/A"}</td>
 
@@ -627,14 +633,14 @@ const CallLogs = () => {
                     {callReasonOptions.map((o) => <option key={o._id} value={o.value}>{o.name}</option>)}
                   </select>
                 </div>
-                <div className="form-group">
+                {/* <div className="form-group">
                   <label>Duration (seconds)</label>
                   <input type="number" name="callDuration" value={callForm.callDuration} onChange={handleCallFormChange} placeholder="e.g. 120" />
                 </div>
                 <div className="form-group">
                   <label>Follow-up Date</label>
                   <input type="date" name="followUpDate" value={callForm.followUpDate} onChange={handleCallFormChange} />
-                </div>
+                </div> */}
                 <div className="form-group full-width">
   <label>Assigned Counselor</label>
   <input
