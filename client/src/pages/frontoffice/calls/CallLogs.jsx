@@ -88,6 +88,23 @@ const CallLogs = () => {
   }
 }, [location.state]);
 
+
+// Hardcoded enquiry call reasons
+const enquiryCallReasons = [
+  { value: "thinking", name: "अभी सोच रहा हूँ" },
+  { value: "fees_high", name: "Fees ज़्यादा है" },
+  { value: "ask_family", name: "घर वालों से पूछना है" },
+  { value: "no_time", name: "अभी time नहीं है" },
+  { value: "enquiry_elsewhere", name: "कहीं और enquiry की है" },
+  { value: "online_learning", name: "Online सीख लेंगे" },
+  { value: "got_job", name: "Job लग गई है" },
+  { value: "no_money", name: "अभी पैसे नहीं हैं" },
+  { value: "no_interest", name: "Interest नहीं रहा" },
+  { value: "later", name: "बाद में करेंगे" },
+  { value: "location_far", name: "Location दूर है" },
+  { value: "certificate_validity", name: "Certificate मान्य है या नहीं?" },
+];
+
   const getStatusLabel = (s) => ({
     interested: "Interested", not_interested: "Not Interested",
     call_later: "Call Later", wrong_number: "Wrong Number",
@@ -680,12 +697,15 @@ const CallLogs = () => {
                   </select>
                 </div>
                 <div className="form-group full-width">
-                  <label>Call Reason</label>
-                  <select name="callReason" value={callForm.callReason} onChange={handleCallFormChange}>
-                    <option value="">Select Reason</option>
-                    {callReasonOptions.map((o) => <option key={o._id} value={o.value}>{o.name}</option>)}
-                  </select>
-                </div>
+  <label>Call Reason</label>
+  <select name="callReason" value={callForm.callReason} onChange={handleCallFormChange}>
+    <option value="">Select Reason</option>
+    {selectedType === "enquiry" 
+      ? enquiryCallReasons.map((o) => <option key={o.value} value={o.value}>{o.name}</option>)
+      : callReasonOptions.map((o) => <option key={o._id} value={o.value}>{o.name}</option>)
+    }
+  </select>
+</div>
                 {/* <div className="form-group">
                   <label>Duration (seconds)</label>
                   <input type="number" name="callDuration" value={callForm.callDuration} onChange={handleCallFormChange} placeholder="e.g. 120" />
