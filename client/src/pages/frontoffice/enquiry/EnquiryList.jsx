@@ -26,7 +26,7 @@ import {
 import { Link , useNavigate , useLocation } from "react-router-dom";
 import "./EnquiryList.css";
 import { enquiryAPI } from "../../../services/api";
-import CallLogModal from "../../../components/CallLogModal"; 
+
 
 
 const EnquiryList = () => {
