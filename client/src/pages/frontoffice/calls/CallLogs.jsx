@@ -58,7 +58,7 @@ const CallLogs = () => {
 
   const [callForm, setCallForm] = useState({
     callStatus: "", callReason: "", callDuration: "",
-    followUpDate: "", notes: "", counselorId: "", nextAction: "",
+    followUpDate: "", notes: "", counselorId: "", nextAction: "",enquiryAction: "",
   });
 
   const [callStatusOptions, setCallStatusOptions] = useState([]);
@@ -255,7 +255,7 @@ const CallLogs = () => {
     setCallForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmitCallLog = async (enquiryStatusUpdate = null) => {
+  const handleSubmitCallLog = async () => {
   if (!callForm.callStatus) { toast.error("Please select call status"); return; }
   if (!loggedInUser?.id && !loggedInUser?._id) { toast.error("Unable to identify logged-in user. Please log in again."); return; }
   setSubmitting(true);
@@ -280,9 +280,12 @@ const CallLogs = () => {
       calledBy: loggedInUser?.id || loggedInUser?._id || null,
     });
 
-    // If from enquiry list and status update is requested
-    if (selectedType === "enquiry" && enquiryStatusUpdate) {
-      await enquiryAPI.updateEnquiry(selectedStudent._id, enquiryStatusUpdate);
+    // If enquiry action dropdown selected, update enquiry status
+    if (selectedType === "enquiry" && callForm.enquiryAction) {
+      await enquiryAPI.updateEnquiry(selectedStudent._id, { 
+        status: callForm.enquiryAction,
+        followUpDate: callForm.enquiryAction === "follow_up" ? callForm.followUpDate : null
+      });
     }
 
     toast.success("Call logged successfully!");
@@ -717,40 +720,28 @@ const CallLogs = () => {
   <button type="button" onClick={() => setShowCallModal(false)} className="btn-secondary">
     Cancel
   </button>
-  
-  {selectedType === "enquiry" && (
-    <>
-      <button
-        type="button"
-        onClick={() => handleSubmitCallLog({ status: "rejected" })}
-        className="btn-danger"
-        disabled={submitting}
-      >
-        Reject Enquiry
-      </button>
-      <button
-        type="button"
-        onClick={() => handleSubmitCallLog({ status: "follow_up", followUpDate: callForm.followUpDate })}
-        className="btn-warning"
-        disabled={submitting}
-      >
-        Mark for Follow Up
-      </button>
-    </>
-  )}
-  
-  <button 
-    type="button" 
-    onClick={() => handleSubmitCallLog()} 
-    className="btn-primary"
-    disabled={submitting}
-  >
-    {submitting ? "Saving..." : "Save Call Log"}
+  <button type="button" onClick={handleSubmitCallLog} className="btn-primary">
+    Save Call Log
   </button>
 </div>
           </div>
         </div>
       )}
+      {selectedType === "enquiry" && (
+  <div className="form-group full-width">
+    <label>Enquiry Action</label>
+    <select 
+      name="enquiryAction" 
+      value={callForm.enquiryAction} 
+      onChange={handleCallFormChange}
+      className="form-control"
+    >
+      <option value="">No Action</option>
+      <option value="follow_up">Mark for Follow Up</option>
+      <option value="rejected">Reject Enquiry</option>
+    </select>
+  </div>
+)}
     </div>
   );
 };
