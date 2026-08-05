@@ -271,9 +271,9 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
   const updateEnquiryStatus = async (enquiryId, newStatus) => {
     try {
       setLoading(true);
-      const response = await enquiryAPI.updateEnquiryStatus(enquiryId, {
-        status: newStatus,
-      });
+      const response = await enquiryAPI.updateStatus(enquiryId, {
+  status: newStatus,
+});
 
       if (response.data.success) {
         alert(`Status updated to ${newStatus.replace("_", " ")} successfully!`);
@@ -310,9 +310,7 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
     }
   };
 
-  // UPDATED: Handle Convert to Admission - Include father number and DOB
-  // UPDATED: Handle Convert to Admission - Include father number and DOB
-  // UPDATED: Handle Convert to Admission - Include father number, DOB, AND COURSE ID
+  
 const handleConvertToAdmission = (enquiry) => {
   // Store enquiry data with father's number, DOB, and COURSE ID
   const enquiryData = {
