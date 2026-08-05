@@ -494,14 +494,14 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
       {!loading && !error && (
         <div className="stats-cards">
           <div className="stat-card">
-            <div className="stat-icon bg-blue-100 text-blue-600">
-              <UserPlus size={24} />
-            </div>
-            <div>
-              <h3>{stats.total}</h3>
-              <p>Total Enquiries</p>
-            </div>
-          </div>
+  <div className="stat-icon bg-blue-100 text-blue-600">
+    <UserPlus size={24} />
+  </div>
+  <div>
+    <h3>{pagination.total}</h3>
+    <p>Total Enquiries</p>
+  </div>
+</div>
           <div className="stat-card">
             <div className="stat-icon bg-green-100 text-green-600">
               <CheckCircle size={24} />
@@ -892,17 +892,6 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
   <span>Chat on WhatsApp</span>
 </button>
 
-<button
-  className="dropdown-item"
-  onClick={() => {
-    setSelectedEnquiryForWhatsApp(enquiry);
-    setShowWhatsAppModal(true);
-    setOpenDropdown(null);
-  }}
->
-  <MessageCircle size={14} />
-  <span>Chat on WhatsApp</span>
-</button>
         <button
           className="dropdown-item delete-option"
           onClick={() => handleDeleteEnquiry(enquiry._id)}
