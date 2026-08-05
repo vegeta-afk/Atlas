@@ -48,6 +48,9 @@ const EnquiryList = () => {
   const [showCallModal, setShowCallModal] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
 
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+const [selectedEnquiryForWhatsApp, setSelectedEnquiryForWhatsApp] = useState(null);
+
  
   const location = useLocation();
 const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
@@ -877,18 +880,17 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
           <Edit size={14} />
           <span>Edit Enquiry</span>
         </button>
-        {enquiry.contactNo && (
-  <button
-    className="dropdown-item"
-    onClick={() => {
-      openWhatsApp(enquiry.contactNo);
-      setOpenDropdown(null);
-    }}
-  >
-    <MessageCircle size={14} />
-    <span>WhatsApp - Contact: {enquiry.contactNo}</span>
-  </button>
-)}
+        <button
+  className="dropdown-item"
+  onClick={() => {
+    setSelectedEnquiryForWhatsApp(enquiry);
+    setShowWhatsAppModal(true);
+    setOpenDropdown(null);
+  }}
+>
+  <MessageCircle size={14} />
+  <span>Chat on WhatsApp</span>
+</button>
 
 {enquiry.whatsappNo && (
   <button
@@ -979,6 +981,69 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
           </div>
         </>
       )}
+
+
+      {showWhatsAppModal && selectedEnquiryForWhatsApp && (
+  <div className="modal-overlay" onClick={() => setShowWhatsAppModal(false)}>
+    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-header">
+        <h3>Select WhatsApp Number</h3>
+        <button className="close-btn" onClick={() => setShowWhatsAppModal(false)}>×</button>
+      </div>
+      <div className="modal-body">
+        <div className="whatsapp-options">
+          {selectedEnquiryForWhatsApp.contactNo && (
+            <button
+              className="whatsapp-option-btn"
+              onClick={() => {
+                openWhatsApp(selectedEnquiryForWhatsApp.contactNo);
+                setShowWhatsAppModal(false);
+              }}
+            >
+              <MessageCircle size={18} />
+              <div>
+                <strong>Contact Number</strong>
+                <p>{selectedEnquiryForWhatsApp.contactNo}</p>
+              </div>
+            </button>
+          )}
+          
+          {selectedEnquiryForWhatsApp.whatsappNo && (
+            <button
+              className="whatsapp-option-btn"
+              onClick={() => {
+                openWhatsApp(selectedEnquiryForWhatsApp.whatsappNo);
+                setShowWhatsAppModal(false);
+              }}
+            >
+              <MessageCircle size={18} />
+              <div>
+                <strong>Applicant WhatsApp</strong>
+                <p>{selectedEnquiryForWhatsApp.whatsappNo}</p>
+              </div>
+            </button>
+          )}
+          
+          {selectedEnquiryForWhatsApp.guardianContact && (
+            <button
+              className="whatsapp-option-btn"
+              onClick={() => {
+                openWhatsApp(selectedEnquiryForWhatsApp.guardianContact);
+                setShowWhatsAppModal(false);
+              }}
+            >
+              <MessageCircle size={18} />
+              <div>
+                <strong>Guardian Number</strong>
+                <p>{selectedEnquiryForWhatsApp.guardianContact}</p>
+              </div>
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
       {showCallModal && selectedEnquiry && (
   <CallLogModal
