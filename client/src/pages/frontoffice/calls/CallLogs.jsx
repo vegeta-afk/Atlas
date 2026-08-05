@@ -703,6 +703,24 @@ const CallLogs = () => {
     className="readonly-input"
   />
 </div>
+
+{selectedType === "enquiry" && (
+  <div className="form-group full-width">
+    <label>Enquiry Action</label>
+    <select 
+      name="enquiryAction" 
+      value={callForm.enquiryAction} 
+      onChange={handleCallFormChange}
+      className="form-control"
+    >
+      <option value="">No Action</option>
+      <option value="follow_up">Mark for Follow Up</option>
+      <option value="rejected">Reject Enquiry</option>
+    </select>
+  </div>
+)}
+
+
                 {/* <div className="form-group full-width">
                   <label>Next Action</label>
                   <select name="nextAction" value={callForm.nextAction} onChange={handleCallFormChange}>
@@ -727,21 +745,7 @@ const CallLogs = () => {
           </div>
         </div>
       )}
-      {selectedType === "enquiry" && (
-  <div className="form-group full-width">
-    <label>Enquiry Action</label>
-    <select 
-      name="enquiryAction" 
-      value={callForm.enquiryAction} 
-      onChange={handleCallFormChange}
-      className="form-control"
-    >
-      <option value="">No Action</option>
-      <option value="follow_up">Mark for Follow Up</option>
-      <option value="rejected">Reject Enquiry</option>
-    </select>
-  </div>
-)}
+      
     </div>
   );
 };
