@@ -837,7 +837,7 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
   </button>
 )}
 
-        {enquiry.status !== "rejected" &&
+        {/* {enquiry.status !== "rejected" &&
           enquiry.status !== "converted" &&
           enquiry.status !== "lost" && (
             <button
@@ -850,7 +850,7 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
               <XCircle size={14} />
               <span>Reject Enquiry</span>
             </button>
-          )}
+          )} */}
 
         {/* Reset to New Button — left as-is, still standalone-style logic, now in dropdown too */}
         {enquiry.status !== "new" &&
@@ -877,15 +877,44 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
           <Edit size={14} />
           <span>Edit Enquiry</span>
         </button>
-        <button
-          className="dropdown-item"
-          onClick={() =>
-            openWhatsApp(enquiry.whatsappNo || enquiry.contactNo)
-          }
-        >
-          <MessageCircle size={14} />
-          <span>Chat on WhatsApp</span>
-        </button>
+        {enquiry.contactNo && (
+  <button
+    className="dropdown-item"
+    onClick={() => {
+      openWhatsApp(enquiry.contactNo);
+      setOpenDropdown(null);
+    }}
+  >
+    <MessageCircle size={14} />
+    <span>WhatsApp - Contact: {enquiry.contactNo}</span>
+  </button>
+)}
+
+{enquiry.whatsappNo && (
+  <button
+    className="dropdown-item"
+    onClick={() => {
+      openWhatsApp(enquiry.whatsappNo);
+      setOpenDropdown(null);
+    }}
+  >
+    <MessageCircle size={14} />
+    <span>WhatsApp - Applicant: {enquiry.whatsappNo}</span>
+  </button>
+)}
+
+{enquiry.guardianContact && (
+  <button
+    className="dropdown-item"
+    onClick={() => {
+      openWhatsApp(enquiry.guardianContact);
+      setOpenDropdown(null);
+    }}
+  >
+    <MessageCircle size={14} />
+    <span>WhatsApp - Guardian: {enquiry.guardianContact}</span>
+  </button>
+)}
         <button
           className="dropdown-item delete-option"
           onClick={() => handleDeleteEnquiry(enquiry._id)}
