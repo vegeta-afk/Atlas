@@ -28,7 +28,6 @@ import {
   adminAPI,
 } from "../../../services/api";
 import "./CallLogs.css";
-import { enquiryAPI } from "../../../services/api";
 import { useLocation } from "react-router-dom";
 
 const CallLogs = () => {
