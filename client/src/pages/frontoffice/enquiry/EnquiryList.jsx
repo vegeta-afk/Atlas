@@ -26,6 +26,8 @@ import {
 import { Link , useNavigate , useLocation } from "react-router-dom";
 import "./EnquiryList.css";
 import { enquiryAPI } from "../../../services/api";
+import CallLogModal from "../../../components/CallLogModal"; 
+import { useNavigate } from "react-router-dom";
 
 const EnquiryList = () => {
   const [enquiries, setEnquiries] = useState([]);
@@ -39,6 +41,12 @@ const EnquiryList = () => {
     new: 0,
     rejectedLost: 0,
   });
+
+
+  const navigate = useNavigate();
+
+  const [showCallModal, setShowCallModal] = useState(false);
+  const [selectedEnquiry, setSelectedEnquiry] = useState(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -816,21 +824,20 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
           </button>
         )}
 
-        {enquiry.status !== "follow_up" &&
-          enquiry.status !== "converted" &&
-          enquiry.status !== "rejected" &&
-          enquiry.status !== "lost" && (
-            <button
-  className="dropdown-item followup-option"
-  onClick={() => {
-    handleFollowUpEnquiry(enquiry);
-    setOpenDropdown(null);
-  }}
->
-              <Bell size={14} />
-              <span>Mark for Follow Up</span>
-            </button>
-          )}
+        {enquiry.status !== "converted" && (
+  <button
+    className="dropdown-item"
+    onClick={() => {
+      navigate("/admin/front-office/calls", {
+        state: { openCallModalFor: enquiry }
+      });
+      setOpenDropdown(null);
+    }}
+  >
+    <Phone size={14} />
+    <span>Log Call</span>
+  </button>
+)}
 
         {enquiry.status !== "rejected" &&
           enquiry.status !== "converted" &&
@@ -945,6 +952,20 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
           </div>
         </>
       )}
+
+      {showCallModal && selectedEnquiry && (
+  <CallLogModal
+    item={selectedEnquiry}
+    type="enquiry"
+    enquiryId={selectedEnquiry._id}
+    isOpen={showCallModal}
+    onClose={() => {
+      setShowCallModal(false);
+      setSelectedEnquiry(null);
+      fetchEnquiries(); // Refresh the list after call log
+    }}
+  />
+)}
     </div>
   );
 };

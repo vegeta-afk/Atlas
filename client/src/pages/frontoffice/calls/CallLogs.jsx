@@ -28,6 +28,8 @@ import {
   adminAPI,
 } from "../../../services/api";
 import "./CallLogs.css";
+import { enquiryAPI } from "../../../services/api";
+import { useLocation } from "react-router-dom";
 
 const CallLogs = () => {
   const [activeTab, setActiveTab] = useState("enquiry");
@@ -76,6 +78,16 @@ const CallLogs = () => {
 
   // ── helpers ────────────────────────────────────────────────────
   const getCounselorName = (c) => c.name || c.facultyName || c.fullName || "Unknown";
+
+  const location = useLocation();
+
+  useEffect(() => {
+  if (location.state?.openCallModalFor) {
+    setSelectedStudent(location.state.openCallModalFor);
+    setSelectedType("enquiry");
+    setShowCallModal(true);
+  }
+}, [location.state]);
 
   const getStatusLabel = (s) => ({
     interested: "Interested", not_interested: "Not Interested",
@@ -244,35 +256,46 @@ const CallLogs = () => {
     setCallForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmitCallLog = async () => {
+  const handleSubmitCallLog = async (enquiryStatusUpdate = null) => {
   if (!callForm.callStatus) { toast.error("Please select call status"); return; }
   if (!loggedInUser?.id && !loggedInUser?._id) { toast.error("Unable to identify logged-in user. Please log in again."); return; }
   setSubmitting(true);
-    try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      await callLogAPI.create({
-        studentId: selectedStudent._id,
-        studentType: selectedType,
-        studentName: selectedStudent.fullName || selectedStudent.applicantName,
-        studentContact: selectedStudent.mobileNumber || selectedStudent.contactNo,
-        studentEmail: selectedStudent.email,
-        studentCourse: selectedStudent.course || selectedStudent.courseInterested,
-        callStatus: callForm.callStatus,
-        callReason: callForm.callReason,
-        callDuration: parseInt(callForm.callDuration) || 0,
-        followUpDate: callForm.followUpDate || null,
-        notes: callForm.notes,
-        counselorId: callForm.counselorId,
-        nextAction: callForm.nextAction,
-        calledBy: user?.id || null,
-      });
-      toast.success("Call log saved successfully!");
-      setShowCallModal(false);
-      fetchCallLogs(); // refresh silently
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to save call log");
-    } finally { setSubmitting(false); }
-  };
+
+  try {
+    // Log the call
+    await callLogAPI.create({
+      studentId: selectedStudent._id,
+      studentType: selectedType,
+      studentName: selectedStudent.fullName || selectedStudent.applicantName,
+      studentContact: selectedStudent.mobileNumber || selectedStudent.contactNo,
+      studentEmail: selectedStudent.email,
+      studentCourse: selectedStudent.course || selectedStudent.courseInterested,
+      callStatus: callForm.callStatus,
+      callReason: callForm.callReason,
+      callDuration: parseInt(callForm.callDuration) || 0,
+      followUpDate: callForm.followUpDate || null,
+      notes: callForm.notes,
+      counselorId: callForm.counselorId,
+      counselorName: loggedInUser?.name || loggedInUser?.fullName || loggedInUser?.username || "Unknown",
+      nextAction: callForm.nextAction,
+      calledBy: loggedInUser?.id || loggedInUser?._id || null,
+    });
+
+    // If from enquiry list and status update is requested
+    if (selectedType === "enquiry" && enquiryStatusUpdate) {
+      await enquiryAPI.updateEnquiry(selectedStudent._id, enquiryStatusUpdate);
+    }
+
+    toast.success("Call logged successfully!");
+    setShowCallModal(false);
+    fetchCallLogs();
+  } catch (err) {
+    console.error("Call log error:", err);
+    toast.error("Failed to log call");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   // ── misc ───────────────────────────────────────────────────────
   const toggleDropdown = (id) => setOpenDropdown(openDropdown === id ? null : id);
@@ -691,10 +714,41 @@ const CallLogs = () => {
                 </div>
               </div>
             </div>
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setShowCallModal(false)}>Cancel</button>
-              <button className="btn-save" onClick={handleSubmitCallLog} disabled={submitting}>{submitting ? "Saving..." : "Save Call Log"}</button>
-            </div>
+            <div className="modal-actions">
+  <button type="button" onClick={() => setShowCallModal(false)} className="btn-secondary">
+    Cancel
+  </button>
+  
+  {selectedType === "enquiry" && (
+    <>
+      <button
+        type="button"
+        onClick={() => handleSubmitCallLog({ status: "rejected" })}
+        className="btn-danger"
+        disabled={submitting}
+      >
+        Reject Enquiry
+      </button>
+      <button
+        type="button"
+        onClick={() => handleSubmitCallLog({ status: "follow_up", followUpDate: callForm.followUpDate })}
+        className="btn-warning"
+        disabled={submitting}
+      >
+        Mark for Follow Up
+      </button>
+    </>
+  )}
+  
+  <button 
+    type="button" 
+    onClick={() => handleSubmitCallLog()} 
+    className="btn-primary"
+    disabled={submitting}
+  >
+    {submitting ? "Saving..." : "Save Call Log"}
+  </button>
+</div>
           </div>
         </div>
       )}
