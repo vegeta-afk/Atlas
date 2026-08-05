@@ -892,31 +892,17 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
   <span>Chat on WhatsApp</span>
 </button>
 
-{enquiry.whatsappNo && (
-  <button
-    className="dropdown-item"
-    onClick={() => {
-      openWhatsApp(enquiry.whatsappNo);
-      setOpenDropdown(null);
-    }}
-  >
-    <MessageCircle size={14} />
-    <span>WhatsApp - Applicant: {enquiry.whatsappNo}</span>
-  </button>
-)}
-
-{enquiry.guardianContact && (
-  <button
-    className="dropdown-item"
-    onClick={() => {
-      openWhatsApp(enquiry.guardianContact);
-      setOpenDropdown(null);
-    }}
-  >
-    <MessageCircle size={14} />
-    <span>WhatsApp - Guardian: {enquiry.guardianContact}</span>
-  </button>
-)}
+<button
+  className="dropdown-item"
+  onClick={() => {
+    setSelectedEnquiryForWhatsApp(enquiry);
+    setShowWhatsAppModal(true);
+    setOpenDropdown(null);
+  }}
+>
+  <MessageCircle size={14} />
+  <span>Chat on WhatsApp</span>
+</button>
         <button
           className="dropdown-item delete-option"
           onClick={() => handleDeleteEnquiry(enquiry._id)}
