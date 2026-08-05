@@ -28,7 +28,7 @@ import {
   adminAPI,
 } from "../../../services/api";
 import "./CallLogs.css";
-import { useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const CallLogs = () => {
   const [activeTab, setActiveTab] = useState("enquiry");
