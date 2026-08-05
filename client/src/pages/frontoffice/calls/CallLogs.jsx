@@ -98,7 +98,7 @@ const CallLogs = () => {
     interested: "badge-green", not_interested: "badge-red",
     call_later: "badge-yellow", wrong_number: "badge-gray",
     not_reachable: "badge-orange", already_enrolled: "badge-blue",
-  }[s] || "badge-gray");
+  }[s] || "badge-gray"); 
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-GB") : "N/A";
 

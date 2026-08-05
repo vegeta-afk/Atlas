@@ -27,7 +27,7 @@ import { Link , useNavigate , useLocation } from "react-router-dom";
 import "./EnquiryList.css";
 import { enquiryAPI } from "../../../services/api";
 import CallLogModal from "../../../components/CallLogModal"; 
-import { useNavigate } from "react-router-dom";
+
 
 const EnquiryList = () => {
   const [enquiries, setEnquiries] = useState([]);
@@ -48,7 +48,7 @@ const EnquiryList = () => {
   const [showCallModal, setShowCallModal] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
 
-  const navigate = useNavigate();
+ 
   const location = useLocation();
 const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
 
