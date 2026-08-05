@@ -48,6 +48,7 @@ const CallLogs = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCounselor, setSelectedCounselor] = useState("all");
+  const [selectedCallReason, setSelectedCallReason] = useState("all"); // NEW: Call reason filter
   const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
   const [showDateFilter, setShowDateFilter] = useState(false);
 
@@ -81,29 +82,29 @@ const CallLogs = () => {
   const location = useLocation();
 
   useEffect(() => {
-  if (location.state?.openCallModalFor) {
-    setSelectedStudent(location.state.openCallModalFor);
-    setSelectedType("enquiry");
-    setShowCallModal(true);
-  }
-}, [location.state]);
+    if (location.state?.openCallModalFor) {
+      setSelectedStudent(location.state.openCallModalFor);
+      setSelectedType("enquiry");
+      setShowCallModal(true);
+    }
+  }, [location.state]);
 
 
-// Hardcoded enquiry call reasons
-const enquiryCallReasons = [
-  { value: "thinking", name: "अभी सोच रहा हूँ" },
-  { value: "fees_high", name: "Fees ज़्यादा है" },
-  { value: "ask_family", name: "घर वालों से पूछना है" },
-  { value: "no_time", name: "अभी time नहीं है" },
-  { value: "enquiry_elsewhere", name: "कहीं और enquiry की है" },
-  { value: "online_learning", name: "Online सीख लेंगे" },
-  { value: "got_job", name: "Job लग गई है" },
-  { value: "no_money", name: "अभी पैसे नहीं हैं" },
-  { value: "no_interest", name: "Interest नहीं रहा" },
-  { value: "later", name: "बाद में करेंगे" },
-  { value: "location_far", name: "Location दूर है" },
-  { value: "certificate_validity", name: "Certificate मान्य है या नहीं?" },
-];
+  // Hardcoded enquiry call reasons
+  const enquiryCallReasons = [
+    { value: "अभी सोच रहा हूँ", name: "अभी सोच रहा हूँ" },
+    { value: "Fees ज़्यादा है", name: "Fees ज़्यादा है" },
+    { value: "घर वालों से पूछना है", name: "घर वालों से पूछना है" },
+    { value: "अभी time नहीं है", name: "अभी time नहीं है" },
+    { value: "कहीं और enquiry की है", name: "कहीं और enquiry की है" },
+    { value: "Online सीख लेंगे", name: "Online सीख लेंगे" },
+    { value: "Job लग गई है", name: "Job लग गई है" },
+    { value: "अभी पैसे नहीं हैं", name: "अभी पैसे नहीं हैं" },
+    { value: "Interest नहीं रहा", name: "Interest नहीं रहा" },
+    { value: "बाद में करेंगे", name: "बाद में करेंगे" },
+    { value: "Location दूर है", name: "Location दूर है" },
+    { value: "Certificate मान्य है या नहीं", name: "Certificate मान्य है या नहीं?" },
+  ];
 
   const getStatusLabel = (s) => ({
     interested: "Interested", not_interested: "Not Interested",
@@ -212,30 +213,30 @@ const enquiryCallReasons = [
   };
 
   const fetchCounselors = async () => {
-  try {
-    const [facultyRes, adminRes] = await Promise.allSettled([
-      facultyAPI.getFaculty(),
-      adminAPI.getAdmins(),
-    ]);
+    try {
+      const [facultyRes, adminRes] = await Promise.allSettled([
+        facultyAPI.getFaculty(),
+        adminAPI.getAdmins(),
+      ]);
 
-    const facultyList =
-      facultyRes.status === "fulfilled" && facultyRes.value.data.success
-        ? facultyRes.value.data.data || []
-        : [];
+      const facultyList =
+        facultyRes.status === "fulfilled" && facultyRes.value.data.success
+          ? facultyRes.value.data.data || []
+          : [];
 
-    const adminList =
-      adminRes.status === "fulfilled"
-        ? adminRes.value.data.admins || adminRes.value.data.data || []
-        : [];
+      const adminList =
+        adminRes.status === "fulfilled"
+          ? adminRes.value.data.admins || adminRes.value.data.data || []
+          : [];
 
-    const taggedAdmins = adminList.map((a) => ({ ...a, _role: "admin" }));
-    const taggedFaculty = facultyList.map((f) => ({ ...f, _role: "faculty" }));
+      const taggedAdmins = adminList.map((a) => ({ ...a, _role: "admin" }));
+      const taggedFaculty = facultyList.map((f) => ({ ...f, _role: "faculty" }));
 
-    setCounselors([...taggedAdmins, ...taggedFaculty]);
-  } catch (err) {
-    console.error("Counselors error:", err);
-  }
-};
+      setCounselors([...taggedAdmins, ...taggedFaculty]);
+    } catch (err) {
+      console.error("Counselors error:", err);
+    }
+  };
 
   // ── initial load: everything in parallel, no flash ─────────────
   useEffect(() => {
@@ -257,15 +258,16 @@ const enquiryCallReasons = [
 
   // ── modal ──────────────────────────────────────────────────────
   const handleOpenCallModal = (item, type) => {
-  setSelectedStudent(item); setSelectedType(type);
-  setCallForm({
-    callStatus: "", callReason: "", callDuration: "",
-    followUpDate: "", notes: "",
-    counselorId: loggedInUser?.id || loggedInUser?._id || "",
-    nextAction: "",
-  });
-  setShowCallModal(true);
-};
+    setSelectedStudent(item); 
+    setSelectedType(type);
+    setCallForm({
+      callStatus: "", callReason: "", callDuration: "",
+      followUpDate: "", notes: "",
+      counselorId: loggedInUser?.id || loggedInUser?._id || "",
+      nextAction: "",
+    });
+    setShowCallModal(true);
+  };
 
   const handleCallFormChange = (e) => {
     const { name, value } = e.target;
@@ -273,48 +275,51 @@ const enquiryCallReasons = [
   };
 
   const handleSubmitCallLog = async () => {
-  if (!callForm.callStatus) { toast.error("Please select call status"); return; }
-  if (!loggedInUser?.id && !loggedInUser?._id) { toast.error("Unable to identify logged-in user. Please log in again."); return; }
-  setSubmitting(true);
+    if (!callForm.callStatus) { toast.error("Please select call status"); return; }
+    if (!loggedInUser?.id && !loggedInUser?._id) { toast.error("Unable to identify logged-in user. Please log in again."); return; }
+    setSubmitting(true);
 
-  try {
-    // Log the call
-    await callLogAPI.create({
-      studentId: selectedStudent._id,
-      studentType: selectedType,
-      studentName: selectedStudent.fullName || selectedStudent.applicantName,
-      studentContact: selectedStudent.mobileNumber || selectedStudent.contactNo,
-      studentEmail: selectedStudent.email,
-      studentCourse: selectedStudent.course || selectedStudent.courseInterested,
-      callStatus: callForm.callStatus,
-      callReason: callForm.callReason,
-      callDuration: parseInt(callForm.callDuration) || 0,
-      followUpDate: callForm.followUpDate || null,
-      notes: callForm.notes,
-      counselorId: callForm.counselorId,
-      counselorName: loggedInUser?.name || loggedInUser?.fullName || loggedInUser?.username || "Unknown",
-      nextAction: callForm.nextAction,
-      calledBy: loggedInUser?.id || loggedInUser?._id || null,
-    });
-
-    // If enquiry action dropdown selected, update enquiry status
-    if (selectedType === "enquiry" && callForm.enquiryAction) {
-      await enquiryAPI.updateEnquiry(selectedStudent._id, { 
-        status: callForm.enquiryAction,
-        followUpDate: callForm.enquiryAction === "follow_up" ? callForm.followUpDate : null
+    try {
+      // FIX: Ensure counselor name is extracted correctly
+      const counselorName = loggedInUser?.name || loggedInUser?.fullName || loggedInUser?.username || "Unknown";
+      
+      // Log the call
+      await callLogAPI.create({
+        studentId: selectedStudent._id,
+        studentType: selectedType,
+        studentName: selectedStudent.fullName || selectedStudent.applicantName,
+        studentContact: selectedStudent.mobileNumber || selectedStudent.contactNo,
+        studentEmail: selectedStudent.email,
+        studentCourse: selectedStudent.course || selectedStudent.courseInterested,
+        callStatus: callForm.callStatus,
+        callReason: callForm.callReason,
+        callDuration: parseInt(callForm.callDuration) || 0,
+        followUpDate: callForm.followUpDate || null,
+        notes: callForm.notes,
+        counselorId: loggedInUser?.id || loggedInUser?._id || null,
+        counselorName: counselorName, // FIX: Ensure this is properly set
+        nextAction: callForm.nextAction,
+        calledBy: loggedInUser?.id || loggedInUser?._id || null,
       });
-    }
 
-    toast.success("Call logged successfully!");
-    setShowCallModal(false);
-    fetchCallLogs();
-  } catch (err) {
-    console.error("Call log error:", err);
-    toast.error("Failed to log call");
-  } finally {
-    setSubmitting(false);
-  }
-};
+      // If enquiry action dropdown selected, update enquiry status
+      if (selectedType === "enquiry" && callForm.enquiryAction) {
+        await enquiryAPI.updateEnquiry(selectedStudent._id, { 
+          status: callForm.enquiryAction,
+          followUpDate: callForm.enquiryAction === "follow_up" ? callForm.followUpDate : null
+        });
+      }
+
+      toast.success("Call logged successfully!");
+      setShowCallModal(false);
+      fetchCallLogs();
+    } catch (err) {
+      console.error("Call log error:", err);
+      toast.error("Failed to log call");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // ── misc ───────────────────────────────────────────────────────
   const toggleDropdown = (id) => setOpenDropdown(openDropdown === id ? null : id);
@@ -326,7 +331,20 @@ const enquiryCallReasons = [
     return () => document.removeEventListener("click", close);
   }, []);
 
-  const getDisplayData = () => activeTab === "admission" ? admissions : enquiries;
+  const getDisplayData = () => {
+    let data = activeTab === "admission" ? admissions : enquiries;
+    
+    // FIX: Apply call reason filter only for enquiry tab
+    if (activeTab === "enquiry" && selectedCallReason !== "all") {
+      data = data.filter((item) => {
+        const logs = callLogsMap[item._id] || [];
+        const lastCall = logs[0];
+        return lastCall?.callReason === selectedCallReason;
+      });
+    }
+    
+    return data;
+  };
 
   const handleRefresh = () => {
     fetchAdmissions(false);
@@ -383,7 +401,11 @@ const enquiryCallReasons = [
           <button
             key={key}
             className={`tab-btn ${activeTab === key ? "active" : ""}`}
-            onClick={() => { setActiveTab(key); setPagination((p) => ({ ...p, page: 1 })); }}
+            onClick={() => { 
+              setActiveTab(key); 
+              setPagination((p) => ({ ...p, page: 1 })); 
+              setSelectedCallReason("all"); // Reset call reason filter on tab change
+            }}
           >
             {icon} {label} <span className="tab-count">{count}</span>
           </button>
@@ -434,6 +456,22 @@ const enquiryCallReasons = [
           )}
         </div>
 
+        {/* Call Reason Filter - NEW: Only shows for enquiry tab */}
+        {activeTab === "enquiry" && (
+          <div className="filter-select-horizontal">
+            <MessageCircle size={15} className="filter-icon" />
+            <select value={selectedCallReason} onChange={(e) => {
+              setSelectedCallReason(e.target.value);
+              setPagination((p) => ({ ...p, page: 1 }));
+            }}>
+              <option value="all">All Call Reasons</option>
+              {enquiryCallReasons.map((reason) => (
+                <option key={reason.value} value={reason.value}>{reason.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* All Counselors Filter - NOW SECOND */}
         <div className="filter-select-horizontal">
           <UserCheck size={15} className="filter-icon" />
@@ -477,8 +515,8 @@ const enquiryCallReasons = [
                       <h3>No records found</h3>
                       <p>Try adjusting your search or filter criteria.</p>
                     </div>
-                   </td>
-                 </tr>
+                  </td>
+                </tr>
               ) : (
                 getDisplayData().map((item) => {
                   const logs = callLogsMap[item._id] || [];
@@ -510,37 +548,43 @@ const enquiryCallReasons = [
                         </td>
 
                         <td>
-  <div className="contact-info">
-    {(item.mobileNumber || item.contactNo) ? (
-      <a href={`tel:${item.mobileNumber || item.contactNo}`} className="call-link">
-        <Phone size={13} />{item.mobileNumber || item.contactNo}
-      </a>
-    ) : (
-      <div><Phone size={13} />N/A</div>
-    )}
-    <button className="whatsapp-link" onClick={() => openWhatsApp(item.mobileNumber || item.contactNo)}>
-      <MessageCircle size={13} /> WhatsApp
-    </button>
-  </div>
-</td>
+                          <div className="contact-info">
+                            {(item.mobileNumber || item.contactNo) ? (
+                              <a href={`tel:${item.mobileNumber || item.contactNo}`} className="call-link">
+                                <Phone size={13} />{item.mobileNumber || item.contactNo}
+                              </a>
+                            ) : (
+                              <div><Phone size={13} />N/A</div>
+                            )}
+                            <button className="whatsapp-link" onClick={() => openWhatsApp(item.mobileNumber || item.contactNo)}>
+                              <MessageCircle size={13} /> WhatsApp
+                            </button>
+                          </div>
+                        </td>
 
                         <td>{item.course || item.courseInterested || "N/A"}</td>
 
-<td><span className="counselor-name">{lastCall?.counselorName || "Not assigned"}</span></td>
+                        <td>
+                          <span className="counselor-name">
+                            {lastCall?.counselorName && lastCall.counselorName !== "Unknown" 
+                              ? lastCall.counselorName 
+                              : "Not assigned"}
+                          </span>
+                        </td>
 
-<td>
-  <div className="date-info">
-    <Calendar size={13} />
-    {lastCall ? formatDate(lastCall.createdAt) : "N/A"}
-  </div>
-</td>
+                        <td>
+                          <div className="date-info">
+                            <Calendar size={13} />
+                            {lastCall ? formatDate(lastCall.createdAt) : "N/A"}
+                          </div>
+                        </td>
 
-<td>
-  {lastCall
-    ? <span className={`call-status-badge ${getStatusBadgeClass(lastCall.callStatus)}`}>{getStatusLabel(lastCall.callStatus)}</span>
-    : <span className="no-call-text">No calls yet</span>
-  }
-</td>
+                        <td>
+                          {lastCall
+                            ? <span className={`call-status-badge ${getStatusBadgeClass(lastCall.callStatus)}`}>{getStatusLabel(lastCall.callStatus)}</span>
+                            : <span className="no-call-text">No calls yet</span>
+                          }
+                        </td>
 
                         <td>
                           <div className="action-buttons">
@@ -553,22 +597,6 @@ const enquiryCallReasons = [
                                 <History size={15} />
                               </button>
                             )}
-
-                            {/* <div className="dropdown-container">
-                              <button className="action-btn more" onClick={(e) => { e.stopPropagation(); toggleDropdown(item._id); }}>
-                                <MoreVertical size={15} />
-                              </button>
-                              {openDropdown === item._id && (
-                                <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
-                                  <Link to={`${basePath}/front-office/${activeTab === "admission" ? "admissions/view" : "enquiries/view"}/${item._id}`} className="dropdown-item">
-                                    <Eye size={14} /> View Details
-                                  </Link>
-                                  <button className="dropdown-item" onClick={() => openWhatsApp(item.mobileNumber || item.contactNo)}>
-                                    <MessageCircle size={14} /> WhatsApp
-                                  </button>
-                                </div>
-                              )}
-                            </div> */}
                           </div>
                         </td>
                       </tr>
@@ -595,7 +623,7 @@ const enquiryCallReasons = [
                                       {log.nextAction && <span className="history-action">→ {log.nextAction}</span>}
                                     </div>
                                     <div className="history-item-right">
-                                      <span className="history-counselor">👤 {log.counselorName || "Unknown"}</span>
+                                      <span className="history-counselor">👤 {log.counselorName && log.counselorName !== "Unknown" ? log.counselorName : "Unknown"}</span>
                                       {log.callDuration > 0 && <span className="history-duration"><Clock size={11} />{formatDuration(log.callDuration)}</span>}
                                       {log.followUpDate && <span className="history-followup">📅 Follow-up: {formatDate(log.followUpDate)}</span>}
                                       <span className="history-date">{formatDate(log.createdAt)}</span>
@@ -647,47 +675,47 @@ const enquiryCallReasons = [
             </div>
             <div className="modal-body">
               <div className="caller-info">
-  <p><strong>📞 Student:</strong> {selectedStudent?.fullName || selectedStudent?.applicantName}</p>
-  <p>
-    <strong>📱 Phone:</strong>{" "}
-    {(selectedStudent?.mobileNumber || selectedStudent?.contactNo) ? (
-      <a href={`tel:${selectedStudent.mobileNumber || selectedStudent.contactNo}`} className="call-link-inline">
-        {selectedStudent.mobileNumber || selectedStudent.contactNo}
-      </a>
-    ) : "N/A"}
-  </p>
-  <p><strong>📚 Course:</strong> {selectedStudent?.course || selectedStudent?.courseInterested}</p>
+                <p><strong>📞 Student:</strong> {selectedStudent?.fullName || selectedStudent?.applicantName}</p>
+                <p>
+                  <strong>📱 Phone:</strong>{" "}
+                  {(selectedStudent?.mobileNumber || selectedStudent?.contactNo) ? (
+                    <a href={`tel:${selectedStudent.mobileNumber || selectedStudent.contactNo}`} className="call-link-inline">
+                      {selectedStudent.mobileNumber || selectedStudent.contactNo}
+                    </a>
+                  ) : "N/A"}
+                </p>
+                <p><strong>📚 Course:</strong> {selectedStudent?.course || selectedStudent?.courseInterested}</p>
 
-  {selectedType === "admission" ? (
-    <>
-      <p>
-        <strong>👨 Father's No:</strong>{" "}
-        {selectedStudent?.fatherNumber ? (
-          <a href={`tel:${selectedStudent.fatherNumber}`} className="call-link-inline">
-            {selectedStudent.fatherNumber}
-          </a>
-        ) : "N/A"}
-      </p>
-      <p>
-        <strong>👩 Mother's No:</strong>{" "}
-        {selectedStudent?.motherNumber ? (
-          <a href={`tel:${selectedStudent.motherNumber}`} className="call-link-inline">
-            {selectedStudent.motherNumber}
-          </a>
-        ) : "N/A"}
-      </p>
-    </>
-  ) : (
-    <p>
-      <strong>👨‍👩 Guardian's No:</strong>{" "}
-      {selectedStudent?.guardianContact ? (
-        <a href={`tel:${selectedStudent.guardianContact}`} className="call-link-inline">
-          {selectedStudent.guardianContact}
-        </a>
-      ) : "N/A"}
-    </p>
-  )}
-</div>
+                {selectedType === "admission" ? (
+                  <>
+                    <p>
+                      <strong>👨 Father's No:</strong>{" "}
+                      {selectedStudent?.fatherNumber ? (
+                        <a href={`tel:${selectedStudent.fatherNumber}`} className="call-link-inline">
+                          {selectedStudent.fatherNumber}
+                        </a>
+                      ) : "N/A"}
+                    </p>
+                    <p>
+                      <strong>👩 Mother's No:</strong>{" "}
+                      {selectedStudent?.motherNumber ? (
+                        <a href={`tel:${selectedStudent.motherNumber}`} className="call-link-inline">
+                          {selectedStudent.motherNumber}
+                        </a>
+                      ) : "N/A"}
+                    </p>
+                  </>
+                ) : (
+                  <p>
+                    <strong>👨‍👩 Guardian's No:</strong>{" "}
+                    {selectedStudent?.guardianContact ? (
+                      <a href={`tel:${selectedStudent.guardianContact}`} className="call-link-inline">
+                        {selectedStudent.guardianContact}
+                      </a>
+                    ) : "N/A"}
+                  </p>
+                )}
+              </div>
               <div className="form-grid-modal">
                 <div className="form-group full-width">
                   <label>Call Status <span className="required">*</span></label>
@@ -697,57 +725,41 @@ const enquiryCallReasons = [
                   </select>
                 </div>
                 <div className="form-group full-width">
-  <label>Call Reason</label>
-  <select name="callReason" value={callForm.callReason} onChange={handleCallFormChange}>
-    <option value="">Select Reason</option>
-    {selectedType === "enquiry" 
-      ? enquiryCallReasons.map((o) => <option key={o.value} value={o.value}>{o.name}</option>)
-      : callReasonOptions.map((o) => <option key={o._id} value={o.value}>{o.name}</option>)
-    }
-  </select>
-</div>
-                {/* <div className="form-group">
-                  <label>Duration (seconds)</label>
-                  <input type="number" name="callDuration" value={callForm.callDuration} onChange={handleCallFormChange} placeholder="e.g. 120" />
-                </div>
-                <div className="form-group">
-                  <label>Follow-up Date</label>
-                  <input type="date" name="followUpDate" value={callForm.followUpDate} onChange={handleCallFormChange} />
-                </div> */}
-                <div className="form-group full-width">
-  <label>Assigned Counselor</label>
-  <input
-    type="text"
-    value={loggedInUser?.name || loggedInUser?.fullName || loggedInUser?.username || "Unknown"}
-    readOnly
-    className="readonly-input"
-  />
-</div>
-
-{selectedType === "enquiry" && (
-  <div className="form-group full-width">
-    <label>Enquiry Action</label>
-    <select 
-      name="enquiryAction" 
-      value={callForm.enquiryAction} 
-      onChange={handleCallFormChange}
-      className="form-control"
-    >
-      <option value="">No Action</option>
-      <option value="follow_up">Mark for Follow Up</option>
-      <option value="rejected">Reject Enquiry</option>
-    </select>
-  </div>
-)}
-
-
-                {/* <div className="form-group full-width">
-                  <label>Next Action</label>
-                  <select name="nextAction" value={callForm.nextAction} onChange={handleCallFormChange}>
-                    <option value="">Select Next Action</option>
-                    {nextActionOptions.map((o) => <option key={o._id} value={o.value}>{o.name}</option>)}
+                  <label>Call Reason</label>
+                  <select name="callReason" value={callForm.callReason} onChange={handleCallFormChange}>
+                    <option value="">Select Reason</option>
+                    {selectedType === "enquiry" 
+                      ? enquiryCallReasons.map((o) => <option key={o.value} value={o.value}>{o.name}</option>)
+                      : callReasonOptions.map((o) => <option key={o._id} value={o.value}>{o.name}</option>)
+                    }
                   </select>
-                </div> */}
+                </div>
+                <div className="form-group full-width">
+                  <label>Assigned Counselor</label>
+                  <input
+                    type="text"
+                    value={loggedInUser?.name || loggedInUser?.fullName || loggedInUser?.username || "Unknown"}
+                    readOnly
+                    className="readonly-input"
+                  />
+                </div>
+
+                {selectedType === "enquiry" && (
+                  <div className="form-group full-width">
+                    <label>Enquiry Action</label>
+                    <select 
+                      name="enquiryAction" 
+                      value={callForm.enquiryAction} 
+                      onChange={handleCallFormChange}
+                      className="form-control"
+                    >
+                      <option value="">No Action</option>
+                      <option value="follow_up">Mark for Follow Up</option>
+                      <option value="rejected">Reject Enquiry</option>
+                    </select>
+                  </div>
+                )}
+
                 <div className="form-group full-width">
                   <label>Notes / Remarks</label>
                   <textarea name="notes" value={callForm.notes} onChange={handleCallFormChange} rows="3" placeholder="Enter call summary, student feedback, etc..." />
@@ -755,13 +767,13 @@ const enquiryCallReasons = [
               </div>
             </div>
             <div className="modal-actions">
-  <button type="button" onClick={() => setShowCallModal(false)} className="btn-secondary">
-    Cancel
-  </button>
-  <button type="button" onClick={handleSubmitCallLog} className="btn-primary">
-    Save Call Log
-  </button>
-</div>
+              <button type="button" onClick={() => setShowCallModal(false)} className="btn-secondary">
+                Cancel
+              </button>
+              <button type="button" onClick={handleSubmitCallLog} className="btn-primary">
+                Save Call Log
+              </button>
+            </div>
           </div>
         </div>
       )}
