@@ -125,7 +125,7 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
         });
 
         // Calculate stats
-        calculateStats(response.data.data || []);
+        
       } else {
         throw new Error(response.data.message || "Failed to fetch enquiries");
       }
@@ -138,6 +138,24 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
       setFilteredEnquiries([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const response = await enquiryAPI.getDashboardStats();
+      if (response.data.success) {
+        const { byStatus } = response.data.data;
+        setStats({
+          total: response.data.data.total,
+          new: byStatus.new || 0,
+          followUp: byStatus.follow_up || 0,
+          converted: byStatus.converted || 0,
+          rejectedLost: byStatus.rejected || 0,
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching dashboard stats:", err);
     }
   };
 
@@ -159,17 +177,7 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
   };
 
   // Calculate statistics
-  const calculateStats = (data) => {
-    const total = data.length;
-    const converted = data.filter((e) => e.status === "converted").length;
-    const followUp = data.filter((e) => e.status === "follow_up").length;
-    const newCount = data.filter((e) => e.status === "new").length;
-    const rejectedLost = data.filter(
-      (e) => e.status === "rejected" || e.status === "lost"
-    ).length;
-
-    setStats({ total, converted, followUp, new: newCount, rejectedLost });
-  };
+  
 
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   useEffect(() => {
@@ -189,6 +197,10 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
   useEffect(() => {
     setPagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
   }, [debouncedSearchTerm, selectedStatus, selectedMethod, appliedDateRange, sortConfig]);
+
+  useEffect(() => {
+  fetchStats();
+}, []);
 
   useEffect(() => {
     fetchEnquiries();
