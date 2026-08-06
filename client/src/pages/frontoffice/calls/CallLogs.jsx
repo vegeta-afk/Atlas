@@ -165,17 +165,14 @@ const CallLogs = () => {
   const fetchAdmissions = useCallback(async (showLoader = true) => {
     if (showLoader) setTableLoading(true);
     try {
-      const params = { page: admissionPagination.page, limit: admissionPagination.limit };
+      const params = { limit: 10000 }; // NEW: fetch all, paginate client-side for global sort
       if (searchTerm) params.search = searchTerm;
       const res = await admissionAPI.getAdmissions(params);
       if (res.data && res.data.success !== false) {
         const data = res.data.data || res.data;
         const arr = Array.isArray(data) ? data : [];
         setAdmissions(arr);
-        const totalCount = res.data.total ?? arr.length;
-        const totalPages = res.data.totalPages ?? Math.max(1, Math.ceil(totalCount / admissionPagination.limit));
-        setAdmissionCount(totalCount);
-        setAdmissionPagination((p) => ({ ...p, total: totalCount, totalPages }));
+        setAdmissionCount(arr.length);
       } else { setAdmissions([]); }
       setError(null);
     } catch (err) {
@@ -183,23 +180,20 @@ const CallLogs = () => {
     } finally {
       setTableLoading(false); setInitialLoaded(true);
     }
-    }, [admissionPagination.page, admissionPagination.limit, searchTerm]);
+  }, [searchTerm]);
 
   // ── fetch enquiries ────────────────────────────────────────────
   const fetchEnquiries = useCallback(async (showLoader = true) => {
     if (showLoader) setTableLoading(true);
     try {
-      const params = { page: enquiryPagination.page, limit: enquiryPagination.limit };
+      const params = { limit: 10000 }; // NEW: fetch all, paginate client-side for global sort
       if (searchTerm) params.search = searchTerm;
       const res = await enquiryAPI.getEnquiries(params);
       if (res.data && res.data.success !== false) {
         const data = res.data.data || res.data;
         const arr = Array.isArray(data) ? data : [];
         setEnquiries(arr);
-        const totalCount = res.data.total ?? arr.length;
-        const totalPages = res.data.totalPages ?? Math.max(1, Math.ceil(totalCount / enquiryPagination.limit));
-        setEnquiryCount(totalCount);
-        setEnquiryPagination((p) => ({ ...p, total: totalCount, totalPages }));
+        setEnquiryCount(arr.length);
       } else { setEnquiries([]); }
       setError(null);
     } catch (err) {
@@ -207,7 +201,7 @@ const CallLogs = () => {
     } finally {
       setTableLoading(false); setInitialLoaded(true);
     }
-  }, [enquiryPagination.page, enquiryPagination.limit, searchTerm]);
+  }, [searchTerm]);
 
   const fetchSetupOptions = async () => {
     try {
@@ -258,12 +252,19 @@ const CallLogs = () => {
     ]);
   }, []); // eslint-disable-line
 
+  // NEW: recompute pagination totals whenever the filtered/sorted set changes
+  useEffect(() => {
+    const filteredCount = getFilteredSortedData().length;
+    const totalPages = Math.max(1, Math.ceil(filteredCount / pagination.limit));
+    setPagination((p) => ({ ...p, total: filteredCount, totalPages }));
+  }, [admissions, enquiries, callLogsMap, activeTab, selectedCallReason, selectedCallStatus]); // eslint-disable-line
+
   // ── tab / page / search changes ────────────────────────────────
   useEffect(() => {
-    if (!initialLoaded) return;
+    if (!initialLoaded || forcedStudent) return;
     if (activeTab === "admission") fetchAdmissions(true);
     else fetchEnquiries(true);
-  }, [activeTab, pagination.page, searchTerm]); // eslint-disable-line
+  }, [activeTab, searchTerm]); // eslint-disable-line — removed pagination.page, no longer needs a refetch
 
   // ── modal ──────────────────────────────────────────────────────
   const handleOpenCallModal = (item, type) => {
@@ -345,34 +346,44 @@ const CallLogs = () => {
     return () => document.removeEventListener("click", close);
   }, []);
 
-  const getDisplayData = () => {
+  const getFilteredSortedData = () => {
     let data = activeTab === "admission" ? admissions : enquiries;
 
-    // NEW: Hide converted enquiries — they're already admissions now
     if (activeTab === "enquiry") {
       data = data.filter((item) => item.status !== "converted");
     }
-    
-    // FIX: Apply call reason filter only for enquiry tab
+
+    data = data.filter((item) => (callLogsMap[item._id] || []).length > 0);
+
     if (activeTab === "enquiry" && selectedCallReason !== "all") {
       data = data.filter((item) => {
-        const logs = callLogsMap[item._id] || [];
-        const lastCall = logs[0];
+        const lastCall = (callLogsMap[item._id] || [])[0];
         return lastCall?.callReason === selectedCallReason;
       });
     }
 
-    // NEW: Last Call Status filter (applies to both tabs)
     if (selectedCallStatus !== "all") {
       data = data.filter((item) => {
-        const logs = callLogsMap[item._id] || [];
-        const lastCall = logs[0];
+        const lastCall = (callLogsMap[item._id] || [])[0];
         if (selectedCallStatus === "no_calls") return !lastCall;
         return lastCall?.callStatus === selectedCallStatus;
       });
     }
-    
+
+    // Global sort — most recently called first, across the entire dataset
+    data = [...data].sort((a, b) => {
+      const aDate = callLogsMap[a._id]?.[0]?.createdAt;
+      const bDate = callLogsMap[b._id]?.[0]?.createdAt;
+      return new Date(bDate) - new Date(aDate);
+    });
+
     return data;
+  };
+
+  const getDisplayData = () => {
+    const filtered = getFilteredSortedData();
+    const start = (pagination.page - 1) * pagination.limit;
+    return filtered.slice(start, start + pagination.limit);
   };
 
   const handleRefresh = () => {
