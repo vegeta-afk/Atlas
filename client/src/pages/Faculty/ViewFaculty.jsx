@@ -420,6 +420,21 @@ const ViewFaculty = () => {
             </div>
           </div>
         </div>
+        {/* Remark */}
+        {faculty.remark && faculty.remark.trim() && (
+          <div className="vf-card vf-card-full">
+            <div className="vf-card-header">
+              <User size={18} />
+              <h3>Remark</h3>
+            </div>
+            <div className="vf-card-body">
+              <p style={{ margin: 0, lineHeight: 1.6, color: "#374151", whiteSpace: "pre-wrap" }}>
+                {faculty.remark}
+              </p>
+            </div>
+          </div>
+        )}
+
 
       </div>
 
@@ -438,53 +453,7 @@ const ViewFaculty = () => {
       </div>
 
       
-    {/* Joining / Leaving Dates */}
-        <div className="vf-card vf-card-full">
-          <div className="vf-card-header">
-            <Calendar size={18} />
-            <h3>Employment Timeline</h3>
-          </div>
-          <div className="vf-card-body vf-timeline">
-            <div className="vf-timeline-item vf-timeline-join">
-              <div className="vf-timeline-dot"></div>
-              <div>
-                <p className="vf-timeline-label">Date of Joining</p>
-                <p className="vf-timeline-date">{formatDate(faculty.dateOfJoining)}</p>
-              </div>
-            </div>
-
-            <div className="vf-timeline-line"></div>
-
-            <div className={`vf-timeline-item ${faculty.dateOfLeaving ? "vf-timeline-leave" : "vf-timeline-present"}`}>
-              <div className="vf-timeline-dot"></div>
-              <div>
-                <p className="vf-timeline-label">
-                  {faculty.dateOfLeaving ? "Date of Leaving" : "Currently Working"}
-                </p>
-                <p className="vf-timeline-date">
-                  {faculty.dateOfLeaving ? formatDate(faculty.dateOfLeaving) : "Present"}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Remark */}
-        {faculty.remark && faculty.remark.trim() && (
-          <div className="vf-card vf-card-full">
-            <div className="vf-card-header">
-              <User size={18} />
-              <h3>Remark</h3>
-            </div>
-            <div className="vf-card-body">
-              <p style={{ margin: 0, lineHeight: 1.6, color: "#374151", whiteSpace: "pre-wrap" }}>
-                {faculty.remark}
-              </p>
-            </div>
-          </div>
-        )}
-
-      </div>
+    </div>
   );
 };
 
