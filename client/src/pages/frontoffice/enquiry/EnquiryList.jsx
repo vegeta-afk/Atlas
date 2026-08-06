@@ -962,7 +962,12 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
   <div className="modal-overlay" onClick={() => setShowWhatsAppModal(false)}>
     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
       <div className="modal-header">
-        <h3>Select WhatsApp Number</h3>
+        <div>
+          <h3>Select WhatsApp Number</h3>
+          <p style={{ margin: "4px 0 0", fontSize: "14px", color: "#666" }}>
+            {selectedEnquiryForWhatsApp.applicantName || "N/A"}
+          </p>
+        </div>
         <button className="close-btn" onClick={() => setShowWhatsAppModal(false)}>×</button>
       </div>
       <div className="modal-body">
