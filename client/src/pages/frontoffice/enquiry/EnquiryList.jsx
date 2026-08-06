@@ -103,11 +103,11 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
         limit: pagination.limit,
       };
 
-      if (searchTerm) params.search = searchTerm;
+      if (debouncedSearchTerm) params.search = debouncedSearchTerm;
       if (selectedStatus !== "all") params.status = selectedStatus;
       if (selectedMethod !== "all") params.method = selectedMethod;
-      if (dateRange.startDate) params.startDate = dateRange.startDate;
-      if (dateRange.endDate) params.endDate = dateRange.endDate;
+      if (debouncedDateRange.startDate) params.startDate = debouncedDateRange.startDate;
+      if (debouncedDateRange.endDate) params.endDate = debouncedDateRange.endDate;
       if (sortConfig.key) params.sortBy = sortConfig.key;
       if (sortConfig.direction) params.sortOrder = sortConfig.direction;
 
@@ -171,36 +171,40 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
     setStats({ total, converted, followUp, new: newCount, rejectedLost });
   };
 
-  // Initial fetch
-  // Initial fetch
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const [debouncedDateRange, setDebouncedDateRange] = useState(dateRange);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedDateRange(dateRange);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [dateRange]);
+
+  useEffect(() => {
+    setPagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+  }, [debouncedSearchTerm, selectedStatus, selectedMethod, debouncedDateRange, sortConfig]);
+
   useEffect(() => {
     fetchEnquiries();
-  }, [pagination.page, selectedStatus, selectedMethod, dateRange, sortConfig]);
+  }, [
+    pagination.page,
+    selectedStatus,
+    selectedMethod,
+    debouncedDateRange,
+    sortConfig,
+    debouncedSearchTerm,
+  ]);
 
   useEffect(() => {
     fetchEnquiryMethods();
   }, []);
-
-  // Local search/filter
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredEnquiries(enquiries);
-      return;
-    }
-
-    const filtered = enquiries.filter(
-      (enquiry) =>
-        enquiry.applicantName
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        enquiry.contactNo?.includes(searchTerm) ||
-        enquiry.enquiryNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        enquiry.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        enquiry.whatsappNo?.includes(searchTerm)
-    );
-    setFilteredEnquiries(filtered);
-    calculateStats(filtered);
-  }, [searchTerm, enquiries]);
 
   const handleSort = (key) => {
     setSortConfig({
