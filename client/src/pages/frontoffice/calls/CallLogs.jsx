@@ -70,7 +70,10 @@ const CallLogs = () => {
   const [submitting, setSubmitting] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
 
-  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
+  const [admissionPagination, setAdmissionPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
+  const [enquiryPagination, setEnquiryPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
+  const pagination = activeTab === "admission" ? admissionPagination : enquiryPagination;
+  const setPagination = activeTab === "admission" ? setAdmissionPagination : setEnquiryPagination;
 
   // persisted counts so stats cards never flash to 0
   const [admissionCount, setAdmissionCount] = useState(0);
@@ -162,7 +165,7 @@ const CallLogs = () => {
   const fetchAdmissions = useCallback(async (showLoader = true) => {
     if (showLoader) setTableLoading(true);
     try {
-      const params = { page: pagination.page, limit: pagination.limit };
+      const params = { page: admissionPagination.page, limit: admissionPagination.limit };
       if (searchTerm) params.search = searchTerm;
       const res = await admissionAPI.getAdmissions(params);
       if (res.data && res.data.success !== false) {
@@ -170,9 +173,9 @@ const CallLogs = () => {
         const arr = Array.isArray(data) ? data : [];
         setAdmissions(arr);
         const totalCount = res.data.total ?? arr.length;
-        const totalPages = res.data.totalPages ?? Math.max(1, Math.ceil(totalCount / pagination.limit));
+        const totalPages = res.data.totalPages ?? Math.max(1, Math.ceil(totalCount / admissionPagination.limit));
         setAdmissionCount(totalCount);
-        setPagination((p) => ({ ...p, total: totalCount, totalPages }));
+        setAdmissionPagination((p) => ({ ...p, total: totalCount, totalPages }));
       } else { setAdmissions([]); }
       setError(null);
     } catch (err) {
@@ -180,13 +183,13 @@ const CallLogs = () => {
     } finally {
       setTableLoading(false); setInitialLoaded(true);
     }
-  }, [pagination.page, pagination.limit, searchTerm]);
+    }, [admissionPagination.page, admissionPagination.limit, searchTerm]);
 
   // ── fetch enquiries ────────────────────────────────────────────
   const fetchEnquiries = useCallback(async (showLoader = true) => {
     if (showLoader) setTableLoading(true);
     try {
-      const params = { page: pagination.page, limit: pagination.limit };
+      const params = { page: enquiryPagination.page, limit: enquiryPagination.limit };
       if (searchTerm) params.search = searchTerm;
       const res = await enquiryAPI.getEnquiries(params);
       if (res.data && res.data.success !== false) {
@@ -194,9 +197,9 @@ const CallLogs = () => {
         const arr = Array.isArray(data) ? data : [];
         setEnquiries(arr);
         const totalCount = res.data.total ?? arr.length;
-        const totalPages = res.data.totalPages ?? Math.max(1, Math.ceil(totalCount / pagination.limit));
+        const totalPages = res.data.totalPages ?? Math.max(1, Math.ceil(totalCount / enquiryPagination.limit));
         setEnquiryCount(totalCount);
-        setPagination((p) => ({ ...p, total: totalCount, totalPages }));
+        setEnquiryPagination((p) => ({ ...p, total: totalCount, totalPages }));
       } else { setEnquiries([]); }
       setError(null);
     } catch (err) {
@@ -204,7 +207,7 @@ const CallLogs = () => {
     } finally {
       setTableLoading(false); setInitialLoaded(true);
     }
-  }, [pagination.page, pagination.limit, searchTerm]);
+  }, [enquiryPagination.page, enquiryPagination.limit, searchTerm]);
 
   const fetchSetupOptions = async () => {
     try {
