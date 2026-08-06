@@ -301,11 +301,12 @@ const CallLogs = () => {
         followUpDate: callForm.followUpDate || null,
         notes: callForm.notes,
         counselorId: loggedInUser?.id || loggedInUser?._id || null,
-        counselorName: counselorName, // FIX: Ensure this is properly set
+        counselorName: counselorName,
         nextAction: callForm.nextAction,
+        enquiryAction: callForm.enquiryAction, // FIX: was missing entirely, backend requires it for enquiries
         calledBy: loggedInUser?.id || loggedInUser?._id || null,
       });
-
+      
       // If enquiry action dropdown selected, update enquiry status
       if (selectedType === "enquiry" && callForm.enquiryAction) {
         await enquiryAPI.updateEnquiry(selectedStudent._id, { 
