@@ -261,10 +261,10 @@ const CallLogs = () => {
 
   // ── tab / page / search changes ────────────────────────────────
   useEffect(() => {
-    if (!initialLoaded || forcedStudent) return;
-    if (activeTab === "admission") fetchAdmissions(true);
-    else fetchEnquiries(true);
-  }, [activeTab, searchTerm]); // eslint-disable-line — removed pagination.page, no longer needs a refetch
+  if (!initialLoaded) return;
+  if (activeTab === "admission") fetchAdmissions(true);
+  else fetchEnquiries(true);
+}, [activeTab, searchTerm]); // eslint-disable-line; // eslint-disable-line — removed pagination.page, no longer needs a refetch
 
   // ── modal ──────────────────────────────────────────────────────
   const handleOpenCallModal = (item, type) => {
