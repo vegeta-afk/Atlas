@@ -515,14 +515,15 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
   </div>
 </div>
           <div className="stat-card">
-            <div className="stat-icon bg-green-100 text-green-600">
-              <CheckCircle size={24} />
+            <div className="stat-icon bg-blue-100 text-blue-600">
+              <Clock size={24} />
             </div>
             <div>
-              <h3>{stats.converted}</h3>
-              <p>Converted</p>
+              <h3>{stats.new}</h3>
+              <p>New</p>
             </div>
           </div>
+
           <div className="stat-card">
             <div className="stat-icon bg-orange-100 text-orange-600">
               <Bell size={24} />
@@ -532,15 +533,17 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
               <p>Follow Up</p>
             </div>
           </div>
+          
           <div className="stat-card">
-            <div className="stat-icon bg-blue-100 text-blue-600">
-              <Clock size={24} />
+            <div className="stat-icon bg-green-100 text-green-600">
+              <CheckCircle size={24} />
             </div>
             <div>
-              <h3>{stats.new}</h3>
-              <p>New</p>
+              <h3>{stats.converted}</h3>
+              <p>Converted</p>
             </div>
           </div>
+          
           <div className="stat-card">
             <div className="stat-icon bg-red-100 text-red-600">
               <XCircle size={24} />
