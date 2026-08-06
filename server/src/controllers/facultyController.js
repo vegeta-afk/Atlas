@@ -223,6 +223,7 @@ exports.createFaculty = async (req, res) => {
       dateOfLeaving:  req.body.dateOfLeaving || null,
       createdBy:      req.user ? req.user.id : null,
       photo:          photoUrl || "",   // ← NEW
+      remark:         req.body.remark || "", 
     };
  
     if (req.body.facultyNo) {

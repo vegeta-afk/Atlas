@@ -40,6 +40,7 @@ const AddFaculty = () => {
     fatherContactNo: "",
     motherContactNo: "",
     courseAllotted: "",
+    remark: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -278,6 +279,7 @@ const AddFaculty = () => {
         basicStipend: parseFloat(formData.basicStipend) || 0,
         status: "active",
         courseAssigned: formData.courseAllotted,
+        remark: formData.remark || "",
       };
 
       // ── NEW: Use FormData if photo selected, else plain JSON ──────────────
@@ -328,6 +330,7 @@ const AddFaculty = () => {
           fatherContactNo: "",
           motherContactNo: "",
           courseAllotted: "",
+          remark: "",
         });
         setFacultyPhoto(null);     // ← NEW
         setPhotoPreview(null);     // ← NEW
@@ -817,6 +820,21 @@ const AddFaculty = () => {
                     />
                     {errors.address && (
                       <span className="error-text">{errors.address}</span>
+                    )}
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label>Remark</label>
+                    <textarea
+                      name="remark"
+                      value={formData.remark}
+                      onChange={handleInputChange}
+                      rows="3"
+                      placeholder="Any additional notes about this faculty member (optional)"
+                      className={errors.remark ? "error-field" : ""}
+                    />
+                    {errors.remark && (
+                      <span className="error-text">{errors.remark}</span>
                     )}
                   </div>
                 </div>

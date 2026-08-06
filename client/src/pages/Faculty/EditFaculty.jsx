@@ -41,6 +41,7 @@ const EditFaculty = () => {
     fatherContactNo: "",
     motherContactNo: "",
     courseAllotted: "",
+    remark: "",
   });
 
   const [facultyNo, setFacultyNo] = useState("");
@@ -153,6 +154,7 @@ const EditFaculty = () => {
             fatherContactNo: f.fatherContactNo || "",
             motherContactNo: f.motherContactNo || "",
             courseAllotted: f.courseAssigned || f.courseAllotted || "",
+            remark: f.remark || "",
           });
         } else {
           throw new Error(response.data.message || "Failed to fetch faculty");
@@ -342,6 +344,7 @@ const EditFaculty = () => {
         motherContactNo: formData.motherContactNo,
         basicStipend: parseFloat(formData.basicStipend) || 0,
         courseAssigned: formData.courseAllotted,
+        remark: formData.remark || "",
       };
 
       // ── NEW: Use FormData if new photo selected, else plain JSON ──────────
@@ -795,6 +798,33 @@ const EditFaculty = () => {
                       className={errors.address ? "error-field" : ""}
                     />
                     {errors.address && <span className="error-text">{errors.address}</span>}
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label>Address <span className="required-star">*</span></label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Complete address"
+                      className={errors.address ? "error-field" : ""}
+                    />
+                    {errors.address && <span className="error-text">{errors.address}</span>}
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label>Remark</label>
+                    <textarea
+                      name="remark"
+                      value={formData.remark}
+                      onChange={handleInputChange}
+                      rows="3"
+                      placeholder="Any additional notes about this faculty member (optional)"
+                      className={errors.remark ? "error-field" : ""}
+                    />
+                    {errors.remark && <span className="error-text">{errors.remark}</span>}
                   </div>
                 </div>
               </div>

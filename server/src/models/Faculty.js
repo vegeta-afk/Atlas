@@ -102,6 +102,12 @@ const facultySchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+
+    remark: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     // ─────────────────────────────────────────────────────────────────────
 
     status: {
