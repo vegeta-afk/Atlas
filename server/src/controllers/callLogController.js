@@ -1,26 +1,28 @@
 // controllers/callLogController.js
 const CallLog = require("../models/CallLog");
-const Faculty = require("../models/Faculty"); // adjust path if needed
+const Faculty = require("../models/Faculty");
+const User = require("../models/user"); 
 
 // ── Create a call log ──────────────────────────────────────────
 exports.createCallLog = async (req, res) => {
   try {
     const {
-      studentId,
-      studentType,
-      studentName,
-      studentContact,
-      studentEmail,
-      studentCourse,
-      callStatus,
-      callReason,
-      callDuration,
-      followUpDate,
-      notes,
-      nextAction,
-      counselorId,
-      calledBy,
-    } = req.body;
+  studentId,
+  studentType,
+  studentName,
+  studentContact,
+  studentEmail,
+  studentCourse,
+  callStatus,
+  callReason,
+  callDuration,
+  followUpDate,
+  notes,
+  nextAction,
+  counselorId,
+  counselorName: counselorNameFromClient,
+  calledBy,
+} = req.body;
 
     if (!studentId || !studentType || !callStatus) {
       return res.status(400).json({
@@ -30,37 +32,44 @@ exports.createCallLog = async (req, res) => {
     }
 
     // Resolve counselor name from Faculty collection
-    let counselorName = "";
-    if (counselorId) {
-      try {
-        const faculty = await Faculty.findById(counselorId);
-        if (faculty) {
-          counselorName =
-            faculty.name || faculty.facultyName || faculty.fullName || "";
-        }
-      } catch (_) {
-        // non-fatal — name stays empty
-      }
+    // Trust the name already sent by the frontend. Only fall back to a
+// DB lookup if it wasn't sent — counselor can be Faculty or an admin User.
+let counselorName = counselorNameFromClient || "";
+let counselorModel = null;
+
+if (!counselorName && counselorId) {
+  const faculty = await Faculty.findById(counselorId).catch(() => null);
+  if (faculty) {
+    counselorName = faculty.name || faculty.facultyName || faculty.fullName || "";
+    counselorModel = "Faculty";
+  } else {
+    const admin = await User.findOne({ _id: counselorId, role: "admin" }).catch(() => null);
+    if (admin) {
+      counselorName = admin.fullName || admin.name || "";
+      counselorModel = "User";
     }
+  }
+}
 
     const callLog = await CallLog.create({
-      studentId,
-      studentModel: studentType === "admission" ? "Admission" : "Enquiry",
-      studentType,
-      studentName,
-      studentContact,
-      studentEmail,
-      studentCourse,
-      callStatus,
-      callReason: callReason || "",
-      callDuration: Number(callDuration) || 0,
-      followUpDate: followUpDate || null,
-      notes: notes || "",
-      nextAction: nextAction || "",
-      counselorId: counselorId || null,
-      counselorName,
-      calledBy: req.user?.id || calledBy || null,
-    });
+  studentId,
+  studentModel: studentType === "admission" ? "Admission" : "Enquiry",
+  studentType,
+  studentName,
+  studentContact,
+  studentEmail,
+  studentCourse,
+  callStatus,
+  callReason: callReason || "",
+  callDuration: Number(callDuration) || 0,
+  followUpDate: followUpDate || null,
+  notes: notes || "",
+  nextAction: nextAction || "",
+  counselorId: counselorId || null,
+  counselorModel,
+  counselorName: counselorName || "Unknown",
+  calledBy: req.user?.id || calledBy || null,
+});
 
     res.status(201).json({
       success: true,
@@ -112,7 +121,7 @@ exports.getAllCallLogs = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit))
-      .populate("counselorId", "name facultyName fullName")
+      .populate("counselorId", "name facultyName fullName username")
       .populate("calledBy", "name email");
 
     res.json({
@@ -138,7 +147,7 @@ exports.getCallLogsByStudent = async (req, res) => {
 
     const callLogs = await CallLog.find(filter)
       .sort({ createdAt: -1 })
-      .populate("counselorId", "name facultyName fullName");
+      .populate("counselorId", "name facultyName fullName username");
 
     res.json({ success: true, data: callLogs });
   } catch (error) {
@@ -151,7 +160,7 @@ exports.getCallLogsByStudent = async (req, res) => {
 exports.getCallLog = async (req, res) => {
   try {
     const callLog = await CallLog.findById(req.params.id)
-      .populate("counselorId", "name facultyName fullName")
+      .populate("counselorId", "name facultyName fullName username")
       .populate("calledBy", "name email");
 
     if (!callLog) {

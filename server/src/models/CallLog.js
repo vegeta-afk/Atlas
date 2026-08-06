@@ -58,10 +58,15 @@ const callLogSchema = new mongoose.Schema(
 
     // Who made the call
     counselorId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Faculty",
-      default: null,
-    },
+  type: mongoose.Schema.Types.ObjectId,
+  refPath: "counselorModel",
+  default: null,
+},
+counselorModel: {
+  type: String,
+  enum: ["Faculty", "User"],
+  default: null,
+},
     counselorName: {
       type: String,
       trim: true,
