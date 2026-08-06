@@ -562,7 +562,7 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
               <Search size={20} />
               <input
                 type="text"
-                placeholder="Search by name, phone, enquiry no or WhatsApp no..."
+                placeholder="           Search by name, phone, enquiry no or WhatsApp no..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 disabled={loading}
