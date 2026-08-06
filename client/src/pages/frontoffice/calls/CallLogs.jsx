@@ -169,8 +169,10 @@ const CallLogs = () => {
         const data = res.data.data || res.data;
         const arr = Array.isArray(data) ? data : [];
         setAdmissions(arr);
-        setAdmissionCount(res.data.total || arr.length);
-        setPagination((p) => ({ ...p, total: res.data.total || arr.length, totalPages: res.data.totalPages || 1 }));
+        const totalCount = res.data.total ?? arr.length;
+        const totalPages = res.data.totalPages ?? Math.max(1, Math.ceil(totalCount / pagination.limit));
+        setAdmissionCount(totalCount);
+        setPagination((p) => ({ ...p, total: totalCount, totalPages }));
       } else { setAdmissions([]); }
       setError(null);
     } catch (err) {
@@ -191,8 +193,10 @@ const CallLogs = () => {
         const data = res.data.data || res.data;
         const arr = Array.isArray(data) ? data : [];
         setEnquiries(arr);
-        setEnquiryCount(res.data.total || arr.length);
-        setPagination((p) => ({ ...p, total: res.data.total || arr.length, totalPages: res.data.totalPages || 1 }));
+        const totalCount = res.data.total ?? arr.length;
+        const totalPages = res.data.totalPages ?? Math.max(1, Math.ceil(totalCount / pagination.limit));
+        setEnquiryCount(totalCount);
+        setPagination((p) => ({ ...p, total: totalCount, totalPages }));
       } else { setEnquiries([]); }
       setError(null);
     } catch (err) {
@@ -340,6 +344,11 @@ const CallLogs = () => {
 
   const getDisplayData = () => {
     let data = activeTab === "admission" ? admissions : enquiries;
+
+    // NEW: Hide converted enquiries — they're already admissions now
+    if (activeTab === "enquiry") {
+      data = data.filter((item) => item.status !== "converted");
+    }
     
     // FIX: Apply call reason filter only for enquiry tab
     if (activeTab === "enquiry" && selectedCallReason !== "all") {
