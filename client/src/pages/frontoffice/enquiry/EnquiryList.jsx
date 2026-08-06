@@ -106,8 +106,8 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
       if (debouncedSearchTerm) params.search = debouncedSearchTerm;
       if (selectedStatus !== "all") params.status = selectedStatus;
       if (selectedMethod !== "all") params.method = selectedMethod;
-      if (debouncedDateRange.startDate) params.startDate = debouncedDateRange.startDate;
-      if (debouncedDateRange.endDate) params.endDate = debouncedDateRange.endDate;
+      if (appliedDateRange.startDate) params.startDate = appliedDateRange.startDate;
+      if (appliedDateRange.endDate) params.endDate = appliedDateRange.endDate;
       if (sortConfig.key) params.sortBy = sortConfig.key;
       if (sortConfig.direction) params.sortOrder = sortConfig.direction;
 
@@ -179,17 +179,16 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const [debouncedDateRange, setDebouncedDateRange] = useState(dateRange);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedDateRange(dateRange);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [dateRange]);
+  const [appliedDateRange, setAppliedDateRange] = useState({ startDate: "", endDate: "" });
+
+  const applyDateFilter = () => {
+    setAppliedDateRange(dateRange);
+    setShowDateFilter(false);
+  };
 
   useEffect(() => {
     setPagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
-  }, [debouncedSearchTerm, selectedStatus, selectedMethod, debouncedDateRange, sortConfig]);
+  }, [debouncedSearchTerm, selectedStatus, selectedMethod, appliedDateRange, sortConfig]);
 
   useEffect(() => {
     fetchEnquiries();
@@ -197,7 +196,7 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
     pagination.page,
     selectedStatus,
     selectedMethod,
-    debouncedDateRange,
+    appliedDateRange,
     sortConfig,
     debouncedSearchTerm,
   ]);
@@ -225,23 +224,28 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
   };
 
   const clearDateFilter = () => {
-    setDateRange({ startDate: "", endDate: "" });
+    const range = { startDate: "", endDate: "" };
+    setDateRange(range);
+    setAppliedDateRange(range);
   };
 
   const applyThisMonthFilter = () => {
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
-    setDateRange({
+    const range = {
       startDate: firstDay.toISOString().split("T")[0],
       endDate: lastDay.toISOString().split("T")[0],
-    });
+    };
+    setDateRange(range);
+    setAppliedDateRange(range);
   };
 
   const applyTodayFilter = () => {
     const today = new Date().toISOString().split("T")[0];
-    setDateRange({ startDate: today, endDate: today });
+    const range = { startDate: today, endDate: today };
+    setDateRange(range);
+    setAppliedDateRange(range);
   };
 
   const getStatusBadge = (status) => {
@@ -655,6 +659,12 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
                       className="quick-date-btn clear"
                     >
                       Clear
+                    </button>
+                    <button
+                      onClick={applyDateFilter}
+                      className="quick-date-btn apply"
+                    >
+                      Apply
                     </button>
                   </div>
                 </div>
