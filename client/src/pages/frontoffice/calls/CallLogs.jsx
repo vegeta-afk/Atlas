@@ -318,8 +318,8 @@ const CallLogs = () => {
       setShowCallModal(false);
       fetchCallLogs();
     } catch (err) {
-      console.error("Call log error:", err);
-      toast.error("Failed to log call");
+      console.error("Call log error:", err.response?.data || err);
+      toast.error(err.response?.data?.message || "Failed to log call");
     } finally {
       setSubmitting(false);
     }
