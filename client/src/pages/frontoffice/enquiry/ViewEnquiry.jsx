@@ -268,13 +268,6 @@ const ViewEnquiry = () => {
               <span className="va-field-value va-capitalize">{e.gender || "N/A"}</span>
             </div>
             <div className="va-field-row">
-              <span className="va-field-label">Date of Birth</span>
-              <span className="va-field-value">
-                <Calendar size={14} style={{ marginRight: 6, opacity: 0.6 }} />
-                {formatDate(e.dateOfBirth)}
-              </span>
-            </div>
-            <div className="va-field-row">
               <span className="va-field-label">Guardian Name</span>
               <span className="va-field-value">{e.guardianName || e.fatherName || "N/A"}</span>
             </div>
