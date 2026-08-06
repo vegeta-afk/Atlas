@@ -489,17 +489,7 @@ const CallLogs = () => {
           </div>
         )}
 
-        {/* All Counselors Filter - NOW SECOND */}
-        {/* All Counselors Filter - NOW SECOND */}
-        <div className="filter-select-horizontal">
-          <UserCheck size={15} className="filter-icon" />
-          <select value={selectedCounselor} onChange={(e) => setSelectedCounselor(e.target.value)}>
-            <option value="all">All Counselors</option>
-            {counselors.map((c) => (
-              <option key={c._id} value={c._id}>{getCounselorName(c)}</option>
-            ))}
-          </select>
-        </div>
+        
 
         {/* Last Call Status Filter - NEW */}
         <div className="filter-select-horizontal">
@@ -512,6 +502,18 @@ const CallLogs = () => {
             <option value="no_calls">No Calls Yet</option>
             {callStatusOptions.map((o) => (
               <option key={o._id} value={o.value}>{o.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* All Counselors Filter - NOW SECOND */}
+        {/* All Counselors Filter - NOW SECOND */}
+        <div className="filter-select-horizontal">
+          <UserCheck size={15} className="filter-icon" />
+          <select value={selectedCounselor} onChange={(e) => setSelectedCounselor(e.target.value)}>
+            <option value="all">All Counselors</option>
+            {counselors.map((c) => (
+              <option key={c._id} value={c._id}>{getCounselorName(c)}</option>
             ))}
           </select>
         </div>
