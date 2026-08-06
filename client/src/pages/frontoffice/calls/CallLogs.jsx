@@ -689,22 +689,34 @@ const CallLogs = () => {
       </div>
 
       {/* Pagination */}
-      {!tableLoading && pagination.totalPages > 1 && (
-        <div className="pagination">
-          <div className="pagination-info">
+      {!tableLoading && pagination.total > 0 && (
+        <div className="enquiry-pagination">
+          <div className="enquiry-pagination-info">
             Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-            {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
-            {pagination.total} records
+            {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+            of {pagination.total} records
           </div>
-          <div className="pagination-controls">
-            <button className="pagination-btn" onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))} disabled={pagination.page === 1}>Previous</button>
-            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-              .filter((p) => p === 1 || p === pagination.totalPages || Math.abs(p - pagination.page) <= 1)
-              .reduce((acc, p, idx, arr) => { if (idx > 0 && p - arr[idx - 1] > 1) acc.push("..."); acc.push(p); return acc; }, [])
-              .map((p, idx) => p === "..." ? <span key={`e-${idx}`} className="ellipsis">…</span> : (
-                <button key={p} className={`pagination-btn ${pagination.page === p ? "active" : ""}`} onClick={() => setPagination((prev) => ({ ...prev, page: p }))}>{p}</button>
-              ))}
-            <button className="pagination-btn" onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))} disabled={pagination.page === pagination.totalPages}>Next</button>
+          <div className="enquiry-pagination-controls">
+            <button
+              className="enquiry-pagination-btn prev"
+              onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
+              disabled={pagination.page === 1}
+            >
+              Previous
+            </button>
+
+            <div className="enquiry-page-number">
+              <span className="enquiry-current-page">{pagination.page}</span>
+              <span className="enquiry-total-pages">of {pagination.totalPages}</span>
+            </div>
+
+            <button
+              className="enquiry-pagination-btn next"
+              onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
+              disabled={pagination.page >= pagination.totalPages}
+            >
+              Next
+            </button>
           </div>
         </div>
       )}

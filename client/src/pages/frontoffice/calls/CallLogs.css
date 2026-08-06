@@ -336,3 +336,72 @@
 }
 
 @media (max-width: 480px) { .stats-cards { grid-template-columns: 1fr; } }
+
+/* Enquiry-style pagination (matches EnquiryList.jsx), renamed for CallLogs.css */
+.call-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  margin-top: 0;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.call-pagination-info {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.call-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.call-page-number {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #374151;
+  order: 2;
+}
+
+.call-current-page {
+  font-weight: 600;
+  color: #111827;
+}
+
+.call-total-pages {
+  color: #6b7280;
+}
+
+.call-pagination-btn {
+  padding: 7px 14px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #475569;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 80px;
+}
+
+.call-pagination-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.call-pagination-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.call-pagination-btn.prev { order: 1; }
+.call-pagination-btn.next { order: 3; }
