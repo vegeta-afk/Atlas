@@ -261,11 +261,12 @@ const CallLogs = () => {
     setSelectedStudent(item); 
     setSelectedType(type);
     setCallForm({
-      callStatus: "", callReason: "", callDuration: "",
-      followUpDate: "", notes: "",
-      counselorId: loggedInUser?.id || loggedInUser?._id || "",
-      nextAction: "",
-    });
+  callStatus: "", callReason: "", callDuration: "",
+  followUpDate: "", notes: "",
+  counselorId: loggedInUser?.id || loggedInUser?._id || "",
+  nextAction: "",
+  enquiryAction: "",
+});
     setShowCallModal(true);
   };
 
