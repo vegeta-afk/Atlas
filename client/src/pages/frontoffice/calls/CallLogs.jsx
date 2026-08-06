@@ -49,6 +49,7 @@ const CallLogs = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCounselor, setSelectedCounselor] = useState("all");
   const [selectedCallReason, setSelectedCallReason] = useState("all"); // NEW: Call reason filter
+  const [selectedCallStatus, setSelectedCallStatus] = useState("all"); // NEW: Last call status filter
   const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
   const [showDateFilter, setShowDateFilter] = useState(false);
 
@@ -92,6 +93,7 @@ const CallLogs = () => {
 
   // Hardcoded enquiry call reasons
   const enquiryCallReasons = [
+    { value: "call not picked", name: "call not picked" },
     { value: "अभी सोच रहा हूँ", name: "अभी सोच रहा हूँ" },
     { value: "Fees ज़्यादा है", name: "Fees ज़्यादा है" },
     { value: "घर वालों से पूछना है", name: "घर वालों से पूछना है" },
@@ -347,6 +349,16 @@ const CallLogs = () => {
         return lastCall?.callReason === selectedCallReason;
       });
     }
+
+    // NEW: Last Call Status filter (applies to both tabs)
+    if (selectedCallStatus !== "all") {
+      data = data.filter((item) => {
+        const logs = callLogsMap[item._id] || [];
+        const lastCall = logs[0];
+        if (selectedCallStatus === "no_calls") return !lastCall;
+        return lastCall?.callStatus === selectedCallStatus;
+      });
+    }
     
     return data;
   };
@@ -478,12 +490,28 @@ const CallLogs = () => {
         )}
 
         {/* All Counselors Filter - NOW SECOND */}
+        {/* All Counselors Filter - NOW SECOND */}
         <div className="filter-select-horizontal">
           <UserCheck size={15} className="filter-icon" />
           <select value={selectedCounselor} onChange={(e) => setSelectedCounselor(e.target.value)}>
             <option value="all">All Counselors</option>
             {counselors.map((c) => (
               <option key={c._id} value={c._id}>{getCounselorName(c)}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Last Call Status Filter - NEW */}
+        <div className="filter-select-horizontal">
+          <PhoneCall size={15} className="filter-icon" />
+          <select value={selectedCallStatus} onChange={(e) => {
+            setSelectedCallStatus(e.target.value);
+            setPagination((p) => ({ ...p, page: 1 }));
+          }}>
+            <option value="all">All Call Statuses</option>
+            <option value="no_calls">No Calls Yet</option>
+            {callStatusOptions.map((o) => (
+              <option key={o._id} value={o.value}>{o.name}</option>
             ))}
           </select>
         </div>

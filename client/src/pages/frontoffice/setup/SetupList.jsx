@@ -690,7 +690,7 @@ const SetupList = () => {
     const newBatches = [...batches];
     const newOrder = direction === "up" ? batchIndex - 1 : batchIndex + 1;
     [newBatches[batchIndex], newBatches[newOrder]] = [newBatches[newOrder], newBatches[batchIndex]];
-    const updatedBatches = newBatches.map((batch, index) => ({ id: batch._id, order: index }));
+    const updatedBatches = newBatches.map((batch, index) => ({ id: batch._id, order: index + 1 }));
     try {
       await setupAPI.updateBatchOrder({ batches: updatedBatches });
       setBatches(newBatches);
@@ -706,7 +706,7 @@ const SetupList = () => {
     const newMethods = [...enquiryMethods];
     const newOrder = direction === "up" ? methodIndex - 1 : methodIndex + 1;
     [newMethods[methodIndex], newMethods[newOrder]] = [newMethods[newOrder], newMethods[methodIndex]];
-    const updatedMethods = newMethods.map((method, index) => ({ id: method._id, order: index }));
+    const updatedMethods = newMethods.map((method, index) => ({ id: method._id, order: index + 1 }));
     try {
       await setupAPI.updateEnquiryMethodOrder({ enquiryMethods: updatedMethods });
       setEnquiryMethods(newMethods);
@@ -722,7 +722,7 @@ const SetupList = () => {
     const newQualifications = [...qualifications];
     const newOrder = direction === "up" ? qualIndex - 1 : qualIndex + 1;
     [newQualifications[qualIndex], newQualifications[newOrder]] = [newQualifications[newOrder], newQualifications[qualIndex]];
-    const updatedQualifications = newQualifications.map((qual, index) => ({ id: qual._id, order: index }));
+    const updatedQualifications = newQualifications.map((qual, index) => ({ id: qual._id, order: index + 1 }));
     try {
       await setupAPI.updateQualificationOrder({ qualifications: updatedQualifications });
       setQualifications(newQualifications);
