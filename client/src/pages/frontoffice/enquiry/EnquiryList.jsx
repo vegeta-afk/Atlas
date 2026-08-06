@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { Link , useNavigate , useLocation } from "react-router-dom";
 import "./EnquiryList.css";
-import { enquiryAPI } from "../../../services/api";
+import { enquiryAPI, setupAPI } from "../../../services/api";
 
 
 
@@ -76,30 +76,20 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
   });
 
   // State for dropdown menu
-  const [openDropdown, setOpenDropdown] = useState(null);
+    const [openDropdown, setOpenDropdown] = useState(null);
+  const [enquiryMethodOptions, setEnquiryMethodOptions] = useState([]);
+  const [loadingMethods, setLoadingMethods] = useState(false);
 
   // Status options
   const statusOptions = [
     { value: "all", label: "All Status" },
     { value: "new", label: "New" },
-    { value: "contacted", label: "Contacted" },
     { value: "follow_up", label: "Follow Up" },
     { value: "converted", label: "Converted" },
     { value: "rejected", label: "Rejected" },
-    { value: "lost", label: "Lost" },
   ];
 
-  const enquiryMethods = [
-    "All Methods",
-    "walkin",
-    "phone_call",
-    "website",
-    "reference",
-    "social_media",
-    "newspaper",
-    "seminar",
-    "other",
-  ];
+  
 
   // Fetch enquiries from backend
   const fetchEnquiries = async () => {
@@ -152,6 +142,23 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
   };
 
   // Calculate statistics
+  // Fetch enquiry methods from Setup (same source as NewEnquiry.jsx)
+  const fetchEnquiryMethods = async () => {
+    try {
+      setLoadingMethods(true);
+      const response = await setupAPI.getAll();
+      if (response.data.success) {
+        setEnquiryMethodOptions(response.data.data.enquiryMethods || []);
+      }
+    } catch (err) {
+      console.error("Failed to load enquiry methods:", err);
+      setEnquiryMethodOptions([]);
+    } finally {
+      setLoadingMethods(false);
+    }
+  };
+
+  // Calculate statistics
   const calculateStats = (data) => {
     const total = data.length;
     const converted = data.filter((e) => e.status === "converted").length;
@@ -165,9 +172,14 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
   };
 
   // Initial fetch
+  // Initial fetch
   useEffect(() => {
     fetchEnquiries();
   }, [pagination.page, selectedStatus, selectedMethod, dateRange, sortConfig]);
+
+  useEffect(() => {
+    fetchEnquiryMethods();
+  }, []);
 
   // Local search/filter
   useEffect(() => {
@@ -664,14 +676,17 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
               <select
                 value={selectedMethod}
                 onChange={(e) => setSelectedMethod(e.target.value)}
-                disabled={loading}
+                disabled={loading || loadingMethods}
               >
-                {enquiryMethods.map((method) => (
+                <option value="all">
+                  {loadingMethods ? "Loading methods..." : "All Methods"}
+                </option>
+                {enquiryMethodOptions.map((method) => (
                   <option
-                    key={method}
-                    value={method === "All Methods" ? "all" : method}
+                    key={method._id}
+                    value={method.methodName.toLowerCase().replace(/ /g, "_")}
                   >
-                    {method === "All Methods" ? method : formatMethod(method)}
+                    {method.methodName}
                   </option>
                 ))}
               </select>
