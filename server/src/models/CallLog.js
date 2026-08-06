@@ -33,10 +33,10 @@ const callLogSchema = new mongoose.Schema(
       trim: true,
     },
     callReason: {
-      type: String,
-      trim: true,
-      default: "",
-    },
+  type: String,
+  required: true,
+  trim: true,
+},
     callDuration: {
       type: Number, // seconds
       default: 0,
@@ -46,10 +46,10 @@ const callLogSchema = new mongoose.Schema(
       default: null,
     },
     notes: {
-      type: String,
-      trim: true,
-      default: "",
-    },
+  type: String,
+  required: true,
+  trim: true,
+},
     nextAction: {
       type: String,
       trim: true,
@@ -64,7 +64,7 @@ const callLogSchema = new mongoose.Schema(
 },
 counselorModel: {
   type: String,
-  enum: ["Faculty", "User"],
+  enum: ["Faculty", "User", null],
   default: null,
 },
     counselorName: {

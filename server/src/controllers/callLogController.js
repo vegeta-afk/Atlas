@@ -24,12 +24,19 @@ exports.createCallLog = async (req, res) => {
   calledBy,
 } = req.body;
 
-    if (!studentId || !studentType || !callStatus) {
-      return res.status(400).json({
-        success: false,
-        message: "studentId, studentType and callStatus are required",
-      });
-    }
+    if (!studentId || !studentType || !callStatus || !callReason || !notes) {
+  return res.status(400).json({
+    success: false,
+    message: "studentId, studentType, callStatus, callReason and notes are required",
+  });
+}
+
+if (studentType === "enquiry" && !req.body.enquiryAction) {
+  return res.status(400).json({
+    success: false,
+    message: "enquiryAction is required for enquiry calls",
+  });
+}
 
     // Resolve counselor name from Faculty collection
     // Trust the name already sent by the frontend. Only fall back to a

@@ -275,9 +275,12 @@ const CallLogs = () => {
   };
 
   const handleSubmitCallLog = async () => {
-    if (!callForm.callStatus) { toast.error("Please select call status"); return; }
-    if (!loggedInUser?.id && !loggedInUser?._id) { toast.error("Unable to identify logged-in user. Please log in again."); return; }
-    setSubmitting(true);
+  if (!callForm.callStatus) { toast.error("Please select call status"); return; }
+  if (!callForm.callReason) { toast.error("Please select call reason"); return; }
+  if (selectedType === "enquiry" && !callForm.enquiryAction) { toast.error("Please select an enquiry action"); return; }
+  if (!callForm.notes || !callForm.notes.trim()) { toast.error("Please enter notes / remarks"); return; }
+  if (!loggedInUser?.id && !loggedInUser?._id) { toast.error("Unable to identify logged-in user. Please log in again."); return; }
+  setSubmitting(true);
 
     try {
       // FIX: Ensure counselor name is extracted correctly
@@ -725,7 +728,7 @@ const CallLogs = () => {
                   </select>
                 </div>
                 <div className="form-group full-width">
-                  <label>Call Reason</label>
+  <label>Call Reason <span className="required">*</span></label>
                   <select name="callReason" value={callForm.callReason} onChange={handleCallFormChange}>
                     <option value="">Select Reason</option>
                     {selectedType === "enquiry" 
@@ -745,23 +748,23 @@ const CallLogs = () => {
                 </div>
 
                 {selectedType === "enquiry" && (
-                  <div className="form-group full-width">
-                    <label>Enquiry Action</label>
+  <div className="form-group full-width">
+    <label>Enquiry Action <span className="required">*</span></label>
                     <select 
                       name="enquiryAction" 
                       value={callForm.enquiryAction} 
                       onChange={handleCallFormChange}
                       className="form-control"
                     >
-                      <option value="">No Action</option>
-                      <option value="follow_up">Mark for Follow Up</option>
-                      <option value="rejected">Reject Enquiry</option>
+                      <option value="">Select Action</option>
+<option value="follow_up">Mark for Follow Up</option>
+<option value="rejected">Reject Enquiry</option>
                     </select>
                   </div>
                 )}
 
                 <div className="form-group full-width">
-                  <label>Notes / Remarks</label>
+  <label>Notes / Remarks <span className="required">*</span></label>
                   <textarea name="notes" value={callForm.notes} onChange={handleCallFormChange} rows="3" placeholder="Enter call summary, student feedback, etc..." />
                 </div>
               </div>
