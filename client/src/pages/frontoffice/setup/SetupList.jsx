@@ -1538,14 +1538,16 @@ const SetupList = () => {
         </div>
         <button
   onClick={() => {
-  if (activeTab === "categories") setCategoryForm({ categoryName: "", description: "", order: categories.length });
-  if (activeTab === "qualifications") setQualificationForm({ qualificationName: "", description: "", order: qualifications.length });
-  if (activeTab === "batches") setBatchForm({ batchName: "", startTime: "", endTime: "", order: batches.length });
-  if (activeTab === "enquiry-methods") setEnquiryMethodForm({ methodName: "", description: "", order: enquiryMethods.length });
+  const nextOrder = (list) => Math.max(0, ...list.map((item) => item.order || 0)) + 1;
+
+  if (activeTab === "categories") setCategoryForm({ categoryName: "", description: "", order: nextOrder(categories) });
+  if (activeTab === "qualifications") setQualificationForm({ qualificationName: "", description: "", order: nextOrder(qualifications) });
+  if (activeTab === "batches") setBatchForm({ batchName: "", startTime: "", endTime: "", order: nextOrder(batches) });
+  if (activeTab === "enquiry-methods") setEnquiryMethodForm({ methodName: "", description: "", order: nextOrder(enquiryMethods) });
   if (activeTab === "call-log") {
-    if (callLogSubTab === "call-status") setCallStatusForm({ name: "", value: "", description: "", order: callStatuses.length });
-    else if (callLogSubTab === "call-reasons") setCallReasonForm({ name: "", value: "", description: "", order: callReasons.length });
-    else if (callLogSubTab === "next-actions") setNextActionForm({ name: "", value: "", description: "", order: nextActions.length });
+    if (callLogSubTab === "call-status") setCallStatusForm({ name: "", value: "", description: "", order: nextOrder(callStatuses) });
+    else if (callLogSubTab === "call-reasons") setCallReasonForm({ name: "", value: "", description: "", order: nextOrder(callReasons) });
+    else if (callLogSubTab === "next-actions") setNextActionForm({ name: "", value: "", description: "", order: nextOrder(nextActions) });
   }
   setShowForm(true);
 }}
