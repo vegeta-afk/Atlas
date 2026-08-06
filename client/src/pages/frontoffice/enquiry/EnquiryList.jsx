@@ -871,7 +871,7 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
   </button>
 )}
 
-        {/* {enquiry.status !== "rejected" &&
+        {enquiry.status !== "rejected" &&
           enquiry.status !== "converted" &&
           enquiry.status !== "lost" && (
             <button
@@ -884,7 +884,7 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
               <XCircle size={14} />
               <span>Reject Enquiry</span>
             </button>
-          )} */}
+          )}
 
         {/* Reset to New Button — left as-is, still standalone-style logic, now in dropdown too */}
         {enquiry.status !== "new" &&
