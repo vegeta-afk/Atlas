@@ -76,6 +76,7 @@ const FacultyList = () => {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedShift, setSelectedShift] = useState("all");
   const [dateRange, setDateRange] = useState({ startDate: "", endDate: "" });
+  const [appliedDateRange, setAppliedDateRange] = useState({ startDate: "", endDate: "" });
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: "dateOfJoining", direction: "desc" });
   const [pagination, setPagination] = useState({
@@ -142,8 +143,8 @@ const FacultyList = () => {
       if (searchTerm) params.search = searchTerm;
       if (selectedStatus !== "all") params.status = selectedStatus;
       if (selectedShift !== "all") params.shift = selectedShift;
-      if (dateRange.startDate) params.startDate = dateRange.startDate;
-      if (dateRange.endDate) params.endDate = dateRange.endDate;
+      if (appliedDateRange.startDate) params.startDate = appliedDateRange.startDate;
+      if (appliedDateRange.endDate) params.endDate = appliedDateRange.endDate;
       if (sortConfig.key) params.sortBy = sortConfig.key;
       if (sortConfig.direction) params.sortOrder = sortConfig.direction;
 
@@ -340,8 +341,12 @@ const fetchFreeBatches = async (facultyList) => {
   };
 
   useEffect(() => {
+    setPagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+  }, [selectedStatus, selectedShift, appliedDateRange, sortConfig]);
+
+  useEffect(() => {
     fetchFaculty();
-  }, [pagination.page, selectedStatus, selectedShift, dateRange, sortConfig]);
+  }, [pagination.page, selectedStatus, selectedShift, appliedDateRange, sortConfig]);
 
   useEffect(() => {
     if (!searchTerm) {
@@ -373,21 +378,34 @@ const fetchFreeBatches = async (facultyList) => {
     setDateRange((prev) => ({ ...prev, [name]: value }));
   };
 
-  const clearDateFilter = () => setDateRange({ startDate: "", endDate: "" });
+  const clearDateFilter = () => {
+    const range = { startDate: "", endDate: "" };
+    setDateRange(range);
+    setAppliedDateRange(range);
+  };
 
   const applyThisMonthFilter = () => {
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    setDateRange({
+    const range = {
       startDate: firstDay.toISOString().split("T")[0],
       endDate: lastDay.toISOString().split("T")[0],
-    });
+    };
+    setDateRange(range);
+    setAppliedDateRange(range);
   };
 
   const applyTodayFilter = () => {
     const today = new Date().toISOString().split("T")[0];
-    setDateRange({ startDate: today, endDate: today });
+    const range = { startDate: today, endDate: today };
+    setDateRange(range);
+    setAppliedDateRange(range);
+  };
+
+  const applyDateFilter = () => {
+    setAppliedDateRange(dateRange);
+    setShowDateFilter(false);
   };
 
   const getStatusBadge = (status) => {
@@ -783,6 +801,7 @@ const handleBulkTransferSubmit = async () => {
                   <button onClick={applyTodayFilter} className="quick-date-btn">Today</button>
                   <button onClick={applyThisMonthFilter} className="quick-date-btn">This Month</button>
                   <button onClick={clearDateFilter} className="quick-date-btn clear">Clear</button>
+                  <button onClick={applyDateFilter} className="quick-date-btn apply">Apply</button>
                 </div>
               </div>
             )}
