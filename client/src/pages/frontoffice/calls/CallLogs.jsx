@@ -522,7 +522,6 @@ const CallLogs = () => {
             setPagination((p) => ({ ...p, page: 1 }));
           }}>
             <option value="all">All Call Statuses</option>
-            <option value="no_calls">No Calls Yet</option>
             {callStatusOptions.map((o) => (
               <option key={o._id} value={o.value}>{o.name}</option>
             ))}
