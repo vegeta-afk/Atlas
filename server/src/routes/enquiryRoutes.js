@@ -11,15 +11,7 @@ router.use(protect);
 const ENQUIRY_ROLES = ["admin", "front_office", "counsellor", "instructor", "faculty"];
 
 // ── Stats routes FIRST (before /:id so they don't get treated as IDs) ────
-router.get("/stats/dashboard", authorize(...ENQUIRY_ROLES), async (req, res) => {
-  try {
-    // If enquiryController.getDashboardStats exists, swap to:
-    // return enquiryController.getDashboardStats(req, res);
-    res.status(200).json({ success: true, message: "Dashboard stats endpoint working" });
-  } catch (err) {
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-});
+router.get("/stats/dashboard", authorize(...ENQUIRY_ROLES), enquiryController.getDashboardStats);
 
 router.get("/stats/monthly", authorize(...ENQUIRY_ROLES), async (req, res) => {
   try {
