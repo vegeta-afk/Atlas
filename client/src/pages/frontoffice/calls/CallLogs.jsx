@@ -557,7 +557,7 @@ const CallLogs = () => {
                 <th style={{ textAlign: "left" }}>Name</th>
                 <th>Contact</th>
                 <th>Course</th>
-                <th>Assigned To</th>
+                <th>Last Call By</th>
                 <th>Last Call Date</th>
                 <th>Last Call Status</th>
                 <th>Actions</th>
