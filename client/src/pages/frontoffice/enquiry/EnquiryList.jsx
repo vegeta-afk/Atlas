@@ -668,7 +668,6 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
                   </option>
                 ))}
               </select>
-              <ChevronDown size={16} />
             </div>
 
             {/* Method Filter */}
