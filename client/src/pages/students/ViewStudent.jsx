@@ -28,6 +28,7 @@ import {
   Plus,
   Layers,
   Package,
+  Award,
 } from "lucide-react";
 
 const ViewStudent = () => {
@@ -501,7 +502,7 @@ const activeBalanceAmount = activeTotalFee - activePaidAmount;
                     <ClockIcon size={16} />
                     {student.batchTime || "08:00 to 09:00"}
                   </span>
-                  <span
+                                    <span
                     className={`px-3 py-1 rounded-full text-sm font-medium ${
                       student.status === "active"
                         ? "bg-green-100 text-green-800"
@@ -512,6 +513,15 @@ const activeBalanceAmount = activeTotalFee - activePaidAmount;
                   >
                     {student.status || "active"}
                   </span>
+
+                  {/* Scholarship Badge */}
+                  {student.hasScholarship && (
+                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 flex items-center gap-1">
+                      <Award size={14} />
+                      Scholarship Applied
+                    </span>
+                  )}
+
                   
                   {/* Additional Courses Badge */}
                   {hasAdditionalCourses && (
