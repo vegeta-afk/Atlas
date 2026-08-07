@@ -168,9 +168,13 @@ const [courses, setCourses] = useState([]);
           studentId:
             admission.admissionNo || `ADM${admission._id.substring(0, 8)}`,
           name: admission.fullName || admission.applicantName,
+          fullName: admission.fullName || admission.applicantName,
           photo: admission.photo || null,
           mobileNumber: admission.mobileNumber || admission.contactNo,
+          contactNo: admission.mobileNumber || admission.contactNo,
           whatsappNumber: admission.mobileNumber || admission.contactNo,
+          fatherNumber: admission.fatherNumber || "",
+          motherNumber: admission.motherNumber || "",
           course: admission.course || admission.courseInterested,
           admissionDate: admission.admissionDate || admission.createdAt,
           batch: admission.batchTime || admission.batch || "Not specified",
