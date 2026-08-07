@@ -24,10 +24,11 @@ import {
   ArrowLeftRight,
   Package,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./AdmissionList.css";
 
 const AdmissionList = () => {
+  const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem("user"));
   const basePath = user?.role === "faculty" || user?.role === "instructor"
@@ -863,6 +864,22 @@ setFilteredAdmissions(activeAdmissions);
                               <Edit size={14} />
                               <span>Edit Admission</span>
                             </Link>
+
+                            <button
+                              className="dropdown-item"
+                              onClick={() => {
+                                navigate(`${basePath}/front-office/calls`, {
+                                  state: {
+                                    openCallModalFor: admission,
+                                    openCallModalType: "admission",
+                                  }
+                                });
+                                setOpenDropdown(null);
+                              }}
+                            >
+                              <Phone size={14} />
+                              <span>Log Call</span>
+                            </button>
 
                             <Link
                               to={`${basePath}/students/batch-transfer/add?admissionId=${admission.id}`}

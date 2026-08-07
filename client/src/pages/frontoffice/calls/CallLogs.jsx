@@ -88,7 +88,8 @@ const CallLogs = () => {
   useEffect(() => {
     if (location.state?.openCallModalFor) {
       setSelectedStudent(location.state.openCallModalFor);
-      setSelectedType("enquiry");
+      setSelectedType(location.state.openCallModalType || "enquiry");
+      setActiveTab(location.state.openCallModalType || "enquiry");
       setShowCallModal(true);
     }
   }, [location.state]);
