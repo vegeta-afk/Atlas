@@ -55,8 +55,9 @@ exports.getAdmissions = async (req, res) => {
     
 
     // Batch filter
+    // Batch filter
     if (batch && batch !== "all") {
-      filter.batchTime = batch.toLowerCase().trim();
+      filter.batchTime = { $regex: `^${batch.trim()}$`, $options: "i" };
     }
 
     // Faculty filter
