@@ -874,7 +874,7 @@ setFilteredAdmissions(activeAdmissions);
                               onClick={() => {
                                 navigate(`${basePath}/front-office/calls`, {
                                   state: {
-                                    openCallModalFor: admission,
+                                    openCallModalFor: { ...admission, _id: admission.id },
                                     openCallModalType: "admission",
                                   }
                                 });
