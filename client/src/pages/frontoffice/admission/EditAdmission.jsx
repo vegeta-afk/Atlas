@@ -363,8 +363,8 @@ setCategories(categories || []);
     const required = [
       "fullName","dateOfBirth","gender","fatherName","motherName",
       "mobileNumber","fatherNumber","motherNumber","aadharNumber",
-      "place","address","city","state","pincode",
-      "lastQualification","yearOfPassing","interestedCourse",
+      "place","address","city","state",
+      "lastQualification","interestedCourse",
       "preferredBatch","facultyAllot","cast",
     ];
     required.forEach((f) => {
@@ -377,7 +377,7 @@ setCategories(categories || []);
     if (formData.fatherNumber?.length !== 10) formErrors.fatherNumber = "Must be 10 digits";
     if (formData.motherNumber?.length !== 10) formErrors.motherNumber = "Must be 10 digits";
     if (formData.aadharNumber?.length !== 12) formErrors.aadharNumber = "Must be 12 digits";
-    if (formData.pincode?.length !== 6)       formErrors.pincode = "Must be 6 digits";
+    if (formData.pincode && formData.pincode.length !== 6) formErrors.pincode = "Must be 6 digits";
 
     if (Object.keys(formErrors).length > 0) {
       setErrors(formErrors);
@@ -430,7 +430,8 @@ const updateData = {
   aadharNumber: formData.aadharNumber,
   place: formData.place,
   address: formData.address, city: formData.city, state: formData.state, pincode: formData.pincode,
-  lastQualification: formData.lastQualification, yearOfPassing: formData.yearOfPassing,
+  lastQualification: formData.lastQualification,
+  yearOfPassing: formData.yearOfPassing ? Number(formData.yearOfPassing) : null,
   course: formData.interestedCourse, courseId: formData.courseId,
   specialization: formData.specialization || "",
   batchTime: formData.preferredBatch, facultyAllot: formData.facultyAllot,
@@ -781,25 +782,38 @@ const updateData = {
 
             <div className="form-group">
               <label>Batch *</label>
-              <select name="preferredBatch" value={formData.preferredBatch} onChange={handleChange} className={errors.preferredBatch ? "error-field" : ""} disabled={loadingSetup}>
-                <option value="">{loadingSetup ? "Loading..." : "Select Batch"}</option>
-                {/* Fallback for saved batch */}
+              <select
+                name="preferredBatch"
+                value={formData.preferredBatch}
+                onChange={handleChange}
+                disabled={true}
+                className={`${errors.preferredBatch ? "error-field" : ""} readonly-input`}
+              >
+                <option value="">Select Batch</option>
                 {formData.preferredBatch && !batches.find(b => (b.displayName || `${b.startTime} to ${b.endTime}`) === formData.preferredBatch) && (
                   <option value={formData.preferredBatch}>{formData.preferredBatch}</option>
                 )}
                 {batches.map((b) => {
-const display = `${formatTime(b.startTime)} to ${formatTime(b.endTime)}`;
-  return <option key={b._id} value={display}>{b.batchName} ({display})</option>;
-})}
+                  const display = `${formatTime(b.startTime)} to ${formatTime(b.endTime)}`;
+                  return <option key={b._id} value={display}>{b.batchName} ({display})</option>;
+                })}
               </select>
+              <p style={{ fontSize: "11px", color: "#6b7280", marginTop: "4px" }}>
+                🔒 Use <strong>Batch Transfer</strong> to change batch.
+              </p>
               {errors.preferredBatch && <span className="error-text">{errors.preferredBatch}</span>}
             </div>
 
             <div className="form-group">
               <label>Faculty Allotment *</label>
-              <select name="facultyAllot" value={formData.facultyAllot} onChange={handleChange} className={errors.facultyAllot ? "error-field" : ""} disabled={loadingFaculty}>
-                <option value="">{loadingFaculty ? "Loading..." : "Select Faculty"}</option>
-                {/* Fallback for saved faculty */}
+              <select
+                name="facultyAllot"
+                value={formData.facultyAllot}
+                onChange={handleChange}
+                disabled={true}
+                className={`${errors.facultyAllot ? "error-field" : ""} readonly-input`}
+              >
+                <option value="">Select Faculty</option>
                 {formData.facultyAllot && formData.facultyAllot !== "not_allotted" && !facultyMembers.find(f => f.facultyName === formData.facultyAllot) && (
                   <option value={formData.facultyAllot}>{formData.facultyAllot}</option>
                 )}
@@ -810,7 +824,9 @@ const display = `${formatTime(b.startTime)} to ${formatTime(b.endTime)}`;
                 ))}
                 <option value="not_allotted">Not Allotted</option>
               </select>
-              {facultyError && !loadingFaculty && <span className="error-text" style={{ color: "orange" }}>⚠️ {facultyError}</span>}
+              <p style={{ fontSize: "11px", color: "#6b7280", marginTop: "4px" }}>
+                🔒 Use <strong>Batch Transfer</strong> to change faculty.
+              </p>
               {errors.facultyAllot && <span className="error-text">{errors.facultyAllot}</span>}
             </div>
           </div>

@@ -847,7 +847,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
 
         // Academic Information
         lastQualification: formData.lastQualification,
-        yearOfPassing: formData.yearOfPassing,
+        yearOfPassing: formData.yearOfPassing ? Number(formData.yearOfPassing) : null,
 
         // Course Information
         course: formData.interestedCourse,
@@ -1457,7 +1457,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
                 value={formData.yearOfPassing}
                 onChange={handleChange}
                 placeholder="2023"
-                min="n/a"
+                min="2000"
                 max={new Date().getFullYear()}
                 className={errors.yearOfPassing ? "error-field" : ""}
               />
