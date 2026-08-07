@@ -792,3 +792,83 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Scholarship Button */
+.scholarship-action {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.btn-scholarship {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+}
+
+.btn-scholarship:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  box-shadow: 0 4px 10px rgba(217, 119, 6, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-scholarship:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-scholarship.error-field {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: 2px solid #ef4444;
+  animation: shake 0.5s ease-in-out;
+}
+
+.scholarship-applied {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.scholarship-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  color: #166534;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.btn-remove-scholarship {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: white;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-remove-scholarship:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
