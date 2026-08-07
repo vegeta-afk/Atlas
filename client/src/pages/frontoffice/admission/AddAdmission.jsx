@@ -636,6 +636,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
     }));
     
     setShowScholarshipModal(false);
+    setErrors((prev) => ({ ...prev, scholarship: "" }));
     alert(`✅ Scholarship applied! Final fee: ₹${calculatedFees.finalTotal}`);
   };
 
@@ -695,6 +696,11 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
     // Validate Admission Date
     if (!formData.admissionDate || formData.admissionDate.trim() === "") {
       newErrors.admissionDate = "Admission date is required";
+    }
+
+    // Scholarship is mandatory for scholarship-eligible courses
+    if (isCourseScholarshipEligible && !formData.hasScholarship) {
+      newErrors.scholarship = "This course requires a scholarship to be applied before submitting";
     }
 
     // Email is OPTIONAL but validate format if provided
@@ -1489,15 +1495,20 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
             {formData.courseId && isCourseScholarshipEligible && (
               <div className="form-group scholarship-action">
                 {!formData.hasScholarship ? (
-                  <button
-                    type="button"
-                    onClick={openScholarshipModal}
-                    className="btn-scholarship"
-                    disabled={loadingScholarships}
-                  >
-                    <Gift size={16} />
-                    {loadingScholarships ? "Loading Scholarships..." : "Apply Scholarship"}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={openScholarshipModal}
+                      className={`btn-scholarship ${errors.scholarship ? "error-field" : ""}`}
+                      disabled={loadingScholarships}
+                    >
+                      <Gift size={16} />
+                      {loadingScholarships ? "Loading Scholarships..." : "Apply Scholarship *"}
+                    </button>
+                    {errors.scholarship && (
+                      <span className="error-text">{errors.scholarship}</span>
+                    )}
+                  </>
                 ) : (
                   <div className="scholarship-applied">
                     <div className="scholarship-badge">
@@ -1799,6 +1810,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
                 scholarshipDocuments: []
               }));
               setShowScholarshipModal(false);
+              setErrors((prev) => ({ ...prev, scholarship: "" }));
               alert(`✅ ${calculatedFees.percent}% scholarship applied! Final fee: ₹${calculatedFees.finalTotal.toFixed(2)}`);
             } else {
               alert("Please enter a valid scholarship percentage");
