@@ -794,32 +794,32 @@
 }
 
 /* Scholarship Button */
+/* Scholarship Button */
 .scholarship-action {
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  flex-direction: column;
 }
 
 .btn-scholarship {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 20px;
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: white;
-  border: none;
+  width: 100%;
+  padding: 10px 14px;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
 }
 
 .btn-scholarship:hover:not(:disabled) {
-  background: linear-gradient(135deg, #d97706, #b45309);
-  box-shadow: 0 4px 10px rgba(217, 119, 6, 0.4);
-  transform: translateY(-1px);
+  background: #dbeafe;
+  border-color: #93c5fd;
 }
 
 .btn-scholarship:disabled {
@@ -828,8 +828,8 @@
 }
 
 .btn-scholarship.error-field {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  border: 2px solid #ef4444;
+  background: #eff6ff;
+  border: 1px solid #ef4444 !important;
   animation: shake 0.5s ease-in-out;
 }
 
