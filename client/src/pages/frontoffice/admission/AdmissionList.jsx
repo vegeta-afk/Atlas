@@ -674,7 +674,6 @@ setFilteredAdmissions(activeAdmissions);
           </div>
 
           {/* Course Filter */}
-          {/* Course Filter */}
           <div className="filter-select-horizontal">
             <Filter size={16} />
             <select
@@ -691,6 +690,7 @@ setFilteredAdmissions(activeAdmissions);
                 </option>
               ))}
             </select>
+            <ChevronDown size={16} className="filter-chevron" />
           </div>
 
           {/* Batch Filter */}
@@ -712,6 +712,7 @@ setFilteredAdmissions(activeAdmissions);
                 );
               })}
             </select>
+            <ChevronDown size={16} className="filter-chevron" />
           </div>
 
           {/* Faculty Filter */}
@@ -731,6 +732,7 @@ setFilteredAdmissions(activeAdmissions);
               ))}
               <option value="Not Allotted">Not Allotted</option>
             </select>
+            <ChevronDown size={16} className="filter-chevron" />
           </div>
         </div>
       )}
