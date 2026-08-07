@@ -1492,8 +1492,9 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
             </div>
             
             {/* ========== NEW SCHOLARSHIP BUTTON ========== */}
-            {formData.courseId && isCourseScholarshipEligible && (
+           {formData.courseId && isCourseScholarshipEligible && (
               <div className="form-group scholarship-action">
+                <label style={{ visibility: "hidden" }}>Scholarship</label>
                 {!formData.hasScholarship ? (
                   <>
                     <button
