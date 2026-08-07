@@ -125,6 +125,7 @@ export const admissionAPI = {
     api.put(`/admissions/${id}/hold`, { reason }),
 
   getCertificateNo: (id) => api.get(`/admissions/${id}/certificate-no`),
+  getStudentStatus: (id) => api.get(`/admissions/${id}/student-status`),
   
   // Mark admission as complete (manual)
   completeAdmission: (id, reason) => 

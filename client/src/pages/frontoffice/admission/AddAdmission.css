@@ -873,3 +873,23 @@
   background: #fef2f2;
   border-color: #ef4444;
 }
+
+.filter-select-horizontal {
+  position: relative;
+}
+
+.filter-select-horizontal select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 32px;
+}
+
+.filter-select-horizontal .filter-chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #64748b;
+}

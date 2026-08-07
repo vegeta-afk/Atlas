@@ -35,6 +35,7 @@ const ViewAdmission = () => {
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
   const [photoError, setPhotoError] = useState(false);
+  const [linkedStudent, setLinkedStudent] = useState(null);
 
   useEffect(() => {
     if (id) fetchAdmission();
@@ -50,6 +51,19 @@ const ViewAdmission = () => {
         setAdmission(response.data.data);
       } else {
         throw new Error(response.data.message || "Failed to fetch admission");
+      }
+
+      // Fetch linked student (if converted) for accurate, live fee figures
+      try {
+        const statusRes = await admissionAPI.getStudentStatus(id);
+        if (statusRes.data.success && statusRes.data.isConverted) {
+          setLinkedStudent(statusRes.data.studentData);
+        } else {
+          setLinkedStudent(null);
+        }
+      } catch (statusErr) {
+        console.error("Failed to fetch linked student:", statusErr);
+        setLinkedStudent(null);
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Failed to load admission");
@@ -136,6 +150,40 @@ const ViewAdmission = () => {
   }
 
   const d = admission;
+
+  // Prefer live student fee data (feeSchedule-based, same calc as ViewStudent)
+  // over the Admission's own stored totals, which go stale after edits/scholarship.
+  let displayTotalFees = d.totalFees;
+  let displayPaidFees = d.paidFees;
+  let displayBalanceFees = d.balanceFees;
+
+  if (linkedStudent) {
+    const activeFeeSchedule = (linkedStudent.feeSchedule || []).filter(
+      (f) => f.status !== "suspended"
+    );
+    let additionalTotalFee = 0;
+    let additionalPaid = 0;
+    if (linkedStudent.additionalCourses && linkedStudent.additionalCourses.length > 0) {
+      linkedStudent.additionalCourses.forEach((course) => {
+        const fees = (course.feeSchedule || []).filter((f) => f.status !== "suspended");
+        additionalTotalFee += fees.reduce((s, f) => s + (f.totalFee || 0), 0);
+        additionalPaid += fees.reduce((s, f) => s + (f.paidAmount || 0), 0);
+      });
+    }
+    const activeTotalFee =
+      activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0) +
+      (linkedStudent.admissionFee || 0) +
+      additionalTotalFee;
+
+    const monthlyPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
+    const admissionPaid = linkedStudent.admissionFeePaidAmount || 0;
+    const activePaidAmount = monthlyPaid + admissionPaid + additionalPaid;
+
+    displayTotalFees = activeTotalFee;
+    displayPaidFees = activePaidAmount;
+    displayBalanceFees = activeTotalFee - activePaidAmount;
+  }
+
   const statusConfig = getStatusConfig(d.status);
   const StatusIcon = statusConfig.Icon;
   const hasReference = d.referenceName || d.referenceContact || d.referenceRelation;
@@ -209,7 +257,7 @@ const ViewAdmission = () => {
 
         {/* Quick Actions */}
         <div className="va-quick-actions">
-          {d.mobileNumber && (
+          {/* {d.mobileNumber && (
             <a href={`tel:${d.mobileNumber}`} className="va-quick-btn va-quick-call">
               <Phone size={18} />
               <span>Call</span>
@@ -220,7 +268,7 @@ const ViewAdmission = () => {
               <Mail size={18} />
               <span>Email</span>
             </a>
-          )}
+          )} */}
           {d.mobileNumber && (
             <button
               onClick={() => openWhatsApp(d.mobileNumber)}
@@ -274,10 +322,10 @@ const ViewAdmission = () => {
               <span className="va-field-label">Category</span>
               <span className="va-field-value">{d.category || "N/A"}</span>
             </div>
-            <div className="va-field-row">
+            {/* <div className="va-field-row">
               <span className="va-field-label">Specially Abled</span>
               <span className="va-field-value">{d.speciallyAbled ? "Yes" : "No"}</span>
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -413,15 +461,15 @@ const ViewAdmission = () => {
           <div className="va-card-body">
             <div className="va-field-row">
               <span className="va-field-label">Total Fees</span>
-              <span className="va-field-value va-fee-total">{formatCurrency(d.totalFees)}</span>
+              <span className="va-field-value va-fee-total">{formatCurrency(displayTotalFees)}</span>
             </div>
             <div className="va-field-row">
               <span className="va-field-label">Paid Amount</span>
-              <span className="va-field-value va-fee-paid">{formatCurrency(d.paidFees)}</span>
+              <span className="va-field-value va-fee-paid">{formatCurrency(displayPaidFees)}</span>
             </div>
             <div className="va-field-row">
               <span className="va-field-label">Balance Amount</span>
-              <span className="va-field-value va-fee-balance">{formatCurrency(d.balanceFees)}</span>
+              <span className="va-field-value va-fee-balance">{formatCurrency(displayBalanceFees)}</span>
             </div>
 
             {/* Scholarship section inside fee card */}
