@@ -783,19 +783,20 @@ exports.updateFees = async (req, res) => {
 // @access  Private (Admin, Front Office, Accountant)
 exports.getDashboardStats = async (req, res) => {
   try {
-    const totalAdmissions = await Admission.countDocuments();
+    const ACTIVE_STATUSES = ["admitted", "confirmed", "pending", "provisional", "new", "under_process", "approved"];
+
+    const totalAdmissions = await Admission.countDocuments({ status: { $in: ACTIVE_STATUSES } });
     const facultyAllotted = await Admission.countDocuments({
+      status: { $in: ACTIVE_STATUSES },
       facultyAllot: { $ne: "Not Allotted" },
     });
-    const activeStudents = await Admission.countDocuments({ status: "active" });
+    const activeStudents = await Admission.countDocuments({
+      status: { $in: ["admitted", "confirmed"] },
+    });
 
     const courseStats = await Admission.aggregate([
-      {
-        $group: {
-          _id: "$course",
-          count: { $sum: 1 },
-        },
-      },
+      { $match: { status: { $in: ACTIVE_STATUSES } } },
+      { $group: { _id: "$course", count: { $sum: 1 } } },
       { $sort: { count: -1 } },
     ]);
 
@@ -811,11 +812,7 @@ exports.getDashboardStats = async (req, res) => {
     });
   } catch (error) {
     console.error("Dashboard stats error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: error.message,
-    });
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
 

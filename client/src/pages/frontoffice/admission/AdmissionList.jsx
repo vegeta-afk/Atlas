@@ -66,6 +66,15 @@ const AdmissionList = () => {
     totalPages: 1,
   });
 
+  const [dashboardStats, setDashboardStats] = useState({
+    totalAdmissions: 0,
+    facultyAllotted: 0,
+    activeStudents: 0,
+    differentCourses: 0,
+  });
+
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
   const [facultyMembers, setFacultyMembers] = useState([]);
   const [loadingFaculty, setLoadingFaculty] = useState(false);
 
@@ -122,7 +131,7 @@ const AdmissionList = () => {
       };
 
       // Add search if available
-      if (searchTerm) params.search = searchTerm;
+      if (debouncedSearchTerm) params.search = debouncedSearchTerm;
 
       // Add filters
       if (selectedCourse !== "all") params.course = selectedCourse;
@@ -194,6 +203,30 @@ setFilteredAdmissions(activeAdmissions);
   };
 
   useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setPagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+  }, [debouncedSearchTerm, selectedCourse, selectedBatch, selectedFaculty, dateRange]);
+
+  const fetchStats = async () => {
+    try {
+      const response = await admissionAPI.getDashboardStats();
+      if (response.data.success) {
+        setDashboardStats(response.data.data);
+      }
+    } catch (err) {
+      console.error("Error fetching dashboard stats:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
     fetchAdmissions();
   }, [
     pagination.page,
@@ -203,26 +236,11 @@ setFilteredAdmissions(activeAdmissions);
     dateRange,
     sortConfig.key,
     sortConfig.direction,
+    debouncedSearchTerm,
   ]);
 
-  // Local filtering for search
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredAdmissions(admissions);
-      return;
-    }
-
-    const filtered = admissions.filter(
-      (admission) =>
-        admission.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        admission.mobileNumber.includes(searchTerm) ||
-        admission.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        admission.aadharNumber.includes(searchTerm) ||
-        admission.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    setFilteredAdmissions(filtered);
-  }, [searchTerm, admissions]);
+  
+  
 
   const handleSort = (frontendKey) => {
     // Use frontend key for comparison, but map when sending to backend
@@ -259,11 +277,11 @@ setFilteredAdmissions(activeAdmissions);
       }
       
       if (response.data.success) {
-  // Instantly remove from UI without waiting for refetch
   setAdmissions(prev => prev.filter(a => a.id !== selectedStudent.id));
   setFilteredAdmissions(prev => prev.filter(a => a.id !== selectedStudent.id));
   setShowStatusModal(false);
-  fetchAdmissions(); // still refresh for accurate counts
+  fetchAdmissions();
+  fetchStats();
 }
     } catch (error) {
       console.error(`Error ${statusAction}ing student:`, error);
@@ -380,6 +398,7 @@ setFilteredAdmissions(activeAdmissions);
           setFilteredAdmissions(
             filteredAdmissions.filter((admission) => admission.id !== id)
           );
+          fetchStats();
         } else {
           throw new Error(
             response.data.message || "Failed to delete admission"
@@ -484,7 +503,7 @@ setFilteredAdmissions(activeAdmissions);
               <UserCheck size={24} />
             </div>
             <div>
-              <h3>{admissions.length}</h3>
+              <h3>{dashboardStats.totalAdmissions}</h3>
               <p>Total Admissions</p>
             </div>
           </div>
@@ -493,12 +512,7 @@ setFilteredAdmissions(activeAdmissions);
               <CheckCircle size={24} />
             </div>
             <div>
-              <h3>
-                {
-                  admissions.filter((a) => a.facultyAllot !== "Not Allotted")
-                    .length
-                }
-              </h3>
+              <h3>{dashboardStats.facultyAllotted}</h3>
               <p>Faculty Allotted</p>
             </div>
           </div>
@@ -507,7 +521,7 @@ setFilteredAdmissions(activeAdmissions);
               <Calendar size={24} />
             </div>
             <div>
-              <h3>{new Set(admissions.map((a) => a.course)).size}</h3>
+              <h3>{dashboardStats.differentCourses}</h3>
               <p>Different Courses</p>
             </div>
           </div>
@@ -516,15 +530,7 @@ setFilteredAdmissions(activeAdmissions);
               <UserCheck size={24} />
             </div>
             <div>
-              <h3>
-                {
-                  admissions.filter(
-                    (a) =>
-                      a.admissionStatus === "admitted" ||
-                      a.admissionStatus === "confirmed"
-                  ).length
-                }
-              </h3>
+              <h3>{dashboardStats.activeStudents}</h3>
               <p>Active Students</p>
             </div>
           </div>
