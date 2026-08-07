@@ -461,8 +461,9 @@ const ViewAdmission = () => {
           <div className="va-card-body">
             <div className="va-field-row">
               <span className="va-field-label">Total Fees</span>
-              <span className="va-field-value va-fee-total">{formatCurrency(displayTotalFees)}</span>
+              <span className="va-field-value va-fee-total">{formatCurrency(d.totalFees)}</span>
             </div>
+            <p className="va-fee-note">Includes Monthly Fee + Exam Fee + Registration Fee</p>
             <div className="va-field-row">
               <span className="va-field-label">Paid Amount</span>
               <span className="va-field-value va-fee-paid">{formatCurrency(displayPaidFees)}</span>

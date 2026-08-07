@@ -473,3 +473,10 @@
 
   .va-field-value { max-width: 60%; }
 }
+
+.va-fee-note {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: -8px 0 8px 0;
+  font-style: italic;
+}
