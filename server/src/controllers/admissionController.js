@@ -54,7 +54,7 @@ exports.getAdmissions = async (req, res) => {
 
     
 
-    // Batch filter
+
     // Batch filter
     if (batch && batch !== "all") {
       filter.batchTime = { $regex: `^${batch.trim()}$`, $options: "i" };
@@ -241,7 +241,7 @@ const hasScholarship = req.body.hasScholarship === true || req.body.hasScholarsh
       place: req.body.place || "",
       lastQualification: req.body.lastQualification,
       percentage: req.body.percentage || "",
-      yearOfPassing: req.body.yearOfPassing,
+      yearOfPassing: req.body.yearOfPassing && req.body.yearOfPassing !== "" ? req.body.yearOfPassing : null,
       schoolCollege: req.body.schoolCollege || "",
       course: req.body.course || req.body.interestedCourse,
       courseId: req.body.courseId || null,
@@ -398,6 +398,10 @@ console.log("🔍 BACKEND totalFees received:", req.body.totalFees);
 
     if (!bodyToApply.email?.trim()) {
       bodyToApply.email = "";
+    }
+
+    if (bodyToApply.yearOfPassing === "" || bodyToApply.yearOfPassing === "null") {
+      bodyToApply.yearOfPassing = null;
     }
 
     Object.assign(admission, bodyToApply);

@@ -431,7 +431,7 @@ const updateData = {
   place: formData.place,
   address: formData.address, city: formData.city, state: formData.state, pincode: formData.pincode,
   lastQualification: formData.lastQualification,
-  yearOfPassing: formData.yearOfPassing ? Number(formData.yearOfPassing) : null,
+  yearOfPassing: formData.yearOfPassing ? Number(formData.yearOfPassing) : "",
   course: formData.interestedCourse, courseId: formData.courseId,
   specialization: formData.specialization || "",
   batchTime: formData.preferredBatch, facultyAllot: formData.facultyAllot,
