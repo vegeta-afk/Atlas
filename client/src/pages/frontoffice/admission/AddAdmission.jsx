@@ -1457,7 +1457,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
                 value={formData.yearOfPassing}
                 onChange={handleChange}
                 placeholder="2023"
-                min="2000"
+                min="n/a"
                 max={new Date().getFullYear()}
                 className={errors.yearOfPassing ? "error-field" : ""}
               />
