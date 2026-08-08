@@ -556,6 +556,7 @@ const handleDelete = async (id) => {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Request Date</th>
+                <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Requested By</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Student Details</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Previous Batch</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Previous Teacher</th>
@@ -614,6 +615,11 @@ const handleDelete = async (id) => {
                   <tr key={transfer._id} className="hover:bg-gray-50 transition-colors">
   <td className="px-4 py-4 text-center">
     <span className="text-sm text-gray-700">{formatDate(transfer.requestDate)}</span>
+  </td>
+  <td className="px-4 py-4 text-center">
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+      {transfer.requestedByName || transfer.requestedBy?.name || transfer.requestedBy?.username || "N/A"}
+    </span>
   </td>
   <td className="px-4 py-4 text-left">
     <div className="flex items-center gap-3">
@@ -781,15 +787,21 @@ const handleDelete = async (id) => {
           <span className="font-medium text-gray-800">{viewTransfer.rollNo}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-500">Request Date</span>
-          <span className="font-medium text-gray-800">{formatDate(viewTransfer.requestDate)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-500">Status</span>
-          {getStatusBadge(viewTransfer.status)}
-        </div>
+  <span className="text-gray-500">Request Date</span>
+  <span className="font-medium text-gray-800">{formatDate(viewTransfer.requestDate)}</span>
+</div>
+<div className="flex justify-between">
+  <span className="text-gray-500">Requested By</span>
+  <span className="font-medium text-gray-800">
+    {viewTransfer.requestedByName || viewTransfer.requestedBy?.name || viewTransfer.requestedBy?.username || "N/A"}
+  </span>
+</div>
+<div className="flex justify-between">
+  <span className="text-gray-500">Status</span>
+  {getStatusBadge(viewTransfer.status)}
+</div>
 
-        <hr className="my-2 border-gray-100" />
+<hr className="my-2 border-gray-100" />
 
         <div className="flex justify-between">
           <span className="text-gray-500">Previous Batch</span>

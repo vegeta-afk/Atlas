@@ -836,7 +836,9 @@ setFilteredAdmissions(activeAdmissions);
                       {admission.facultyAllot}
                     </span>
                   </td>
-                  <td>{admission.admissionBy}</td>
+                  <td>
+  <span className="admitted-by-badge">{admission.admissionBy}</span>
+</td>
                   <td>
                     <div className="action-buttons">
                       <Link

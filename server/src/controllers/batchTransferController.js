@@ -52,6 +52,7 @@ exports.getTransfers = async (req, res) => {
       .populate('previousTeacherId', 'facultyName facultyNo')
       .populate('newTeacherId', 'facultyName facultyNo')
       .populate('approvedBy', 'username name')
+      .populate('requestedBy', 'username name fullName')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum);
@@ -99,6 +100,7 @@ exports.getTransferById = async (req, res) => {
       .populate('previousTeacherId')
       .populate('newTeacherId')
       .populate('approvedBy', 'username name');
+      .populate('requestedBy', 'username name fullName');
 
     if (!transfer) {
       return res.status(404).json({
@@ -196,6 +198,8 @@ exports.createTransfer = async (req, res) => {
       remarks: remarks || '',
       requestDate: requestDate ? new Date(requestDate) : new Date(),
       status: 'pending',
+      requestedBy: req.user?.id || null,
+      requestedByName: req.user?.name || req.user?.fullName || req.user?.username || 'Unknown',
     };
 
     // Only set requestId if provided, otherwise let pre-save hook generate it

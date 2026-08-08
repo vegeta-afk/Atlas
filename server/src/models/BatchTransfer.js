@@ -20,6 +20,15 @@ const batchTransferSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  requestedBy: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'User',
+  default: null,
+},
+requestedByName: {
+  type: String,
+  default: '',
+},
   previousBatch: {
     type: String,
     required: true,
