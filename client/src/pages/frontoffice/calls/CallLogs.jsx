@@ -126,6 +126,15 @@ const CallLogs = () => {
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-GB") : "N/A";
 
+  const formatTime = (d) =>
+  d
+    ? new Date(d).toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : "";
+
   const formatDuration = (secs) => {
     if (!secs) return "—";
     const m = Math.floor(secs / 60), s = secs % 60;
@@ -684,7 +693,10 @@ const CallLogs = () => {
                                       <span className="history-counselor">👤 {log.counselorName && log.counselorName !== "Unknown" ? log.counselorName : "Unknown"}</span>
                                       {log.callDuration > 0 && <span className="history-duration"><Clock size={11} />{formatDuration(log.callDuration)}</span>}
                                       {log.followUpDate && <span className="history-followup">📅 Follow-up: {formatDate(log.followUpDate)}</span>}
-                                      <span className="history-date">{formatDate(log.createdAt)}</span>
+                                      <div className="history-date-wrap">
+  <span className="history-date">{formatDate(log.createdAt)}</span>
+  <span className="history-time">{formatTime(log.createdAt)}</span>
+</div>
                                     </div>
                                   </div>
                                 ))}

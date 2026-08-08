@@ -362,7 +362,7 @@ setCategories(categories || []);
     const formErrors = {};
     const required = [
       "fullName","dateOfBirth","gender","fatherName","motherName",
-      "mobileNumber","fatherNumber","motherNumber","aadharNumber",
+      "mobileNumber","fatherNumber","motherNumber",
       "place","address","city","state",
       "lastQualification","interestedCourse",
       "preferredBatch","facultyAllot","cast",
@@ -657,7 +657,7 @@ const updateData = {
               {errors.motherNumber && <span className="error-text">{errors.motherNumber}</span>}
             </div>
             <div className="form-group">
-              <label>Aadhar Number *</label>
+              <label>Aadhar Number (optional)</label>
               <input type="tel" name="aadharNumber" value={formData.aadharNumber} onChange={handleChange} maxLength="12" className={errors.aadharNumber ? "error-field" : ""} />
               {errors.aadharNumber && <span className="error-text">{errors.aadharNumber}</span>}
             </div>

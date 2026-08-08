@@ -673,7 +673,6 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
       "mobileNumber",
       "fatherNumber",
       "motherNumber",
-      "aadharNumber",
       "place",
       "address",
       "city",
@@ -735,9 +734,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
     }
 
     // Aadhar validation
-    if (formData.aadharNumber && formData.aadharNumber.length !== 12) {
-      newErrors.aadharNumber = "Aadhar number must be 12 digits";
-    }
+    if (formData.aadharNumber?.length !== 12) formErrors.aadharNumber = "Must be 12 digits";
 
     // Year of passing validation
     if (formData.yearOfPassing) {
@@ -1313,7 +1310,7 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
               )}
             </div>
             <div className="form-group">
-              <label>Aadhar Number *</label>
+              <label>Aadhar Number (optional)</label>
               <input
                 type="tel"
                 name="aadharNumber"

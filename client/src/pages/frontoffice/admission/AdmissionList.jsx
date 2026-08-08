@@ -896,12 +896,12 @@ setFilteredAdmissions(activeAdmissions);
                             </Link>
 
                             <Link
-                              to={`${basePath}/students/material-issue?search=${encodeURIComponent(admission.name)}`}
-                              className="dropdown-item"
-                          >
-                              <Package size={14} />
-                              <span>Issue Material</span>
-                            </Link>
+  to={`${basePath}/students/material-issue?search=${encodeURIComponent(admission.name)}&tab=issue`}
+  className="dropdown-item"
+>
+  <Package size={14} />
+  <span>Issue Material</span>
+</Link>
                             
                             {/* Cancel Option - Only show if not already cancelled */}
                             {admission.admissionStatus !== "cancelled" && (

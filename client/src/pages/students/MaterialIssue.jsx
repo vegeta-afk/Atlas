@@ -17,7 +17,7 @@ const MaterialIssue = () => {
   const [newMaterialName, setNewMaterialName] = useState("");
   const [savingMaterial, setSavingMaterial] = useState(false);
   const [togglingKey, setTogglingKey] = useState(null);
-const [activeTab, setActiveTab] = useState("inventory");
+const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "inventory");
 const [newMaterialUnit, setNewMaterialUnit] = useState("pcs");
 const [newMaterialQty, setNewMaterialQty] = useState(0);
 const [newMaterialDesc, setNewMaterialDesc] = useState("");
