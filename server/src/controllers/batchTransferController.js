@@ -99,7 +99,7 @@ exports.getTransferById = async (req, res) => {
       .populate('studentId')
       .populate('previousTeacherId')
       .populate('newTeacherId')
-      .populate('approvedBy', 'username name');
+      .populate('approvedBy', 'username name')
       .populate('requestedBy', 'username name fullName');
 
     if (!transfer) {
