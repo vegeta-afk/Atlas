@@ -181,6 +181,7 @@ const [courses, setCourses] = useState([]);
           facultyAllot: admission.facultyAllot || "Not Allotted",
           aadharNumber: admission.aadharNumber || "Not provided",
           admissionStatus: admission.status || "confirmed",
+          admissionBy: admission.admissionBy || "N/A",
           email: admission.email,
         }));
 
@@ -760,7 +761,7 @@ setFilteredAdmissions(activeAdmissions);
               </th>
               <th>Batch</th>
               <th>Faculty Allot</th>
-              <th>Status</th>
+              <th>Admitted By</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -835,7 +836,7 @@ setFilteredAdmissions(activeAdmissions);
                       {admission.facultyAllot}
                     </span>
                   </td>
-                  <td>{getAdmissionStatusBadge(admission.admissionStatus)}</td>
+                  <td>{admission.admissionBy}</td>
                   <td>
                     <div className="action-buttons">
                       <Link
