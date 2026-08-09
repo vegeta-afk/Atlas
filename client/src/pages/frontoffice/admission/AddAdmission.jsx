@@ -82,9 +82,9 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
 
   const [formData, setFormData] = useState({
     // Admission Details
-    admissionNo: `ADM${new Date().getFullYear()}${Math.floor(
-      1000 + Math.random() * 9000
-    )}`,
+    admissionNo: `${new Date().getFullYear()}${Math.floor(
+  1000 + Math.random() * 9000
+)}`,
     admissionBy: loggedInUser?.name || "Admin",
     admissionDate: new Date().toISOString().split("T")[0],
     enquiryNo: "",
@@ -993,9 +993,9 @@ if (formData.aadharNumber && formData.aadharNumber.length !== 12) {
 
   const handleReset = () => {
     setFormData({
-      admissionNo: `ADM${new Date().getFullYear()}${Math.floor(
-        1000 + Math.random() * 9000
-      )}`,
+      admissionNo: `${new Date().getFullYear()}${Math.floor(
+  1000 + Math.random() * 9000
+)}`,
       admissionBy: loggedInUser?.name || "Admin",
       admissionDate: new Date().toISOString().split("T")[0],
       enquiryNo: "",

@@ -322,7 +322,7 @@ admissionSchema.pre("save", async function (next) {
   if (this.isNew) {
     const year = new Date().getFullYear();
     const lastAdmission = await this.constructor.findOne(
-      { admissionNo: new RegExp(`ADM${year}`) },
+      { admissionNo: new RegExp(`^${year}`) },
       { admissionNo: 1 },
       { sort: { admissionNo: -1 } }
     );
@@ -333,7 +333,7 @@ admissionSchema.pre("save", async function (next) {
       nextNumber = lastNumber + 1;
     }
 
-    this.admissionNo = `ADM${year}${nextNumber.toString().padStart(4, "0")}`;
+    this.admissionNo = `${year}${nextNumber.toString().padStart(4, "0")}`;
   }
   next();
 });

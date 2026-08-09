@@ -362,7 +362,7 @@ studentSchema.pre("save", async function (next) {
   if (this.isNew) {
     const year = new Date().getFullYear();
     const lastStudent = await this.constructor.findOne(
-      { studentId: new RegExp(`STU${year}`) },
+      { studentId: new RegExp(`^${year}`) },
       { studentId: 1 },
       { sort: { studentId: -1 } }
     );
@@ -373,7 +373,7 @@ studentSchema.pre("save", async function (next) {
       nextNumber = lastNumber + 1;
     }
 
-    this.studentId = `STU${year}${nextNumber.toString().padStart(4, "0")}`;
+    this.studentId = `${year}${nextNumber.toString().padStart(4, "0")}`;
   }
   next();
 });
