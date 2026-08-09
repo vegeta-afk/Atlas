@@ -734,7 +734,10 @@ const loggedInUser = JSON.parse(localStorage.getItem("user"));
     }
 
     // Aadhar validation
-    if (formData.aadharNumber?.length !== 12) formErrors.aadharNumber = "Must be 12 digits";
+    // Aadhar validation (optional — only validate format if provided)
+if (formData.aadharNumber && formData.aadharNumber.length !== 12) {
+  newErrors.aadharNumber = "Aadhar number must be 12 digits";
+}
 
     // Year of passing validation
     if (formData.yearOfPassing) {

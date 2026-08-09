@@ -376,7 +376,7 @@ setCategories(categories || []);
     if (formData.mobileNumber?.length !== 10) formErrors.mobileNumber = "Must be 10 digits";
     if (formData.fatherNumber?.length !== 10) formErrors.fatherNumber = "Must be 10 digits";
     if (formData.motherNumber?.length !== 10) formErrors.motherNumber = "Must be 10 digits";
-    if (formData.aadharNumber?.length !== 12) formErrors.aadharNumber = "Must be 12 digits";
+    if (formData.aadharNumber && formData.aadharNumber.length !== 12) formErrors.aadharNumber = "Aadhar number must be 12 digits";
     if (formData.pincode && formData.pincode.length !== 6) formErrors.pincode = "Must be 6 digits";
 
     if (Object.keys(formErrors).length > 0) {

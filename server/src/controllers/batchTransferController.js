@@ -180,6 +180,14 @@ exports.createTransfer = async (req, res) => {
       });
     }
 
+    let requestedByName = 'Unknown';
+    if (req.user?.id) {
+      const requestingUser = await User.findById(req.user.id).select('name fullName');
+      if (requestingUser) {
+        requestedByName = requestingUser.name || requestingUser.fullName || 'Unknown';
+      }
+    }
+
     // Prepare transfer data - handle empty previousTeacherId
     const transferData = {
       studentId,
@@ -199,7 +207,7 @@ exports.createTransfer = async (req, res) => {
       requestDate: requestDate ? new Date(requestDate) : new Date(),
       status: 'pending',
       requestedBy: req.user?.id || null,
-      requestedByName: req.user?.name || req.user?.fullName || req.user?.username || 'Unknown',
+      requestedByName,
     };
 
     // Only set requestId if provided, otherwise let pre-save hook generate it
