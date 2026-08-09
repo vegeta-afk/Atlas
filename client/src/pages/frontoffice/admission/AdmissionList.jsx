@@ -801,7 +801,7 @@ setFilteredAdmissions(activeAdmissions);
     </div>
     <div>
       <strong>{admission.name || "N/A"}</strong>
-      <small>Aadhar: {admission.aadharNumber}</small>
+      <small>Father: {admission.fatherName || "N/A"}</small>
     </div>
   </div>
 </td>
