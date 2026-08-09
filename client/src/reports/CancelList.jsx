@@ -17,13 +17,15 @@ import {
   MessageCircle,
   AlertCircle,
   RotateCcw,
-  XCircle
+  XCircle,
+  Phone
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import "./ReportList.css";
 import { admissionAPI } from "../services/api";
 
 const CancelList = () => {
+  const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
   const basePath = user?.role === "faculty" || user?.role === "instructor"
     ? "/faculty"
@@ -653,6 +655,21 @@ const CancelList = () => {
                             >
                               <RotateCcw size={14} color="#3b82f6" />
                               <span>Reactivate Student</span>
+                            </button>
+                            <button
+                              className="dropdown-item"
+                              onClick={() => {
+                                navigate(`${basePath}/front-office/calls`, {
+                                  state: {
+                                    openCallModalFor: { ...admission, _id: admission.id },
+                                    openCallModalType: "cancel",
+                                  }
+                                });
+                                setOpenDropdown(null);
+                              }}
+                            >
+                              <Phone size={14} />
+                              <span>Log Call</span>
                             </button>
                             <button
   className="dropdown-item"
