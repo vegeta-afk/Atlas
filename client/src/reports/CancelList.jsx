@@ -24,6 +24,11 @@ import "./ReportList.css";
 import { admissionAPI } from "../services/api";
 
 const CancelList = () => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const basePath = user?.role === "faculty" || user?.role === "instructor"
+    ? "/faculty"
+    : "/admin";
+
   // State variables
   const [admissions, setAdmissions] = useState([]);
   const [filteredAdmissions, setFilteredAdmissions] = useState([]);
