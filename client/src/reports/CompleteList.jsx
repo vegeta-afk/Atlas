@@ -36,6 +36,9 @@ const CompleteList = () => {
     totalPages: 1,
   });
 
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [selectedAdmissionForWhatsApp, setSelectedAdmissionForWhatsApp] = useState(null);
+
   const [marksheetModal, setMarksheetModal] = useState(null);
   const [certModal, setCertModal] = useState(null);
   const [certTemplateId, setCertTemplateId] = useState(null);
@@ -122,6 +125,8 @@ const CompleteList = () => {
           fatherName: admission.fatherName,
           mobileNumber: admission.mobileNumber || admission.contactNo,
           whatsappNumber: admission.mobileNumber || admission.contactNo,
+          fatherNumber: admission.fatherNumber || "",
+          motherNumber: admission.motherNumber || "",
           course: admission.course || admission.courseInterested,
           admissionDate: admission.admissionDate || admission.createdAt,
           batch: admission.batchTime || admission.batch || "Not specified",
@@ -664,12 +669,16 @@ const CompleteList = () => {
                         {openDropdown === admission.id && (
                           <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
                             <button
-                              className="dropdown-item"
-                              onClick={() => openWhatsApp(admission.whatsappNumber || admission.mobileNumber)}
-                            >
-                              <MessageCircle size={14} />
-                              <span>Chat on WhatsApp</span>
-                            </button>
+  className="dropdown-item"
+  onClick={() => {
+    setSelectedAdmissionForWhatsApp(admission);
+    setShowWhatsAppModal(true);
+    setOpenDropdown(null);
+  }}
+>
+  <MessageCircle size={14} />
+  <span>Chat on WhatsApp</span>
+</button>
 
                             <button
       className="dropdown-item"
@@ -767,6 +776,73 @@ const CompleteList = () => {
     studentName={marksheetModal.name}
     onClose={() => setMarksheetModal(null)}
   />
+)}
+
+{showWhatsAppModal && selectedAdmissionForWhatsApp && (
+  <div className="modal-overlay" onClick={() => setShowWhatsAppModal(false)}>
+    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-header">
+        <div>
+          <h3>Select WhatsApp Number</h3>
+          <p style={{ margin: "4px 0 0", fontSize: "14px", color: "#666" }}>
+            {selectedAdmissionForWhatsApp.name || "N/A"}
+          </p>
+        </div>
+        <button className="close-btn" onClick={() => setShowWhatsAppModal(false)}>×</button>
+      </div>
+      <div className="modal-body">
+        <div className="whatsapp-options">
+          {selectedAdmissionForWhatsApp.mobileNumber && (
+            <button
+              className="whatsapp-option-btn"
+              onClick={() => {
+                openWhatsApp(selectedAdmissionForWhatsApp.mobileNumber);
+                setShowWhatsAppModal(false);
+              }}
+            >
+              <MessageCircle size={18} />
+              <div>
+                <strong>Student Number</strong>
+                <p>{selectedAdmissionForWhatsApp.mobileNumber}</p>
+              </div>
+            </button>
+          )}
+
+          {selectedAdmissionForWhatsApp.fatherNumber && (
+            <button
+              className="whatsapp-option-btn"
+              onClick={() => {
+                openWhatsApp(selectedAdmissionForWhatsApp.fatherNumber);
+                setShowWhatsAppModal(false);
+              }}
+            >
+              <MessageCircle size={18} />
+              <div>
+                <strong>Father's Number</strong>
+                <p>{selectedAdmissionForWhatsApp.fatherNumber}</p>
+              </div>
+            </button>
+          )}
+
+          {selectedAdmissionForWhatsApp.motherNumber && (
+            <button
+              className="whatsapp-option-btn"
+              onClick={() => {
+                openWhatsApp(selectedAdmissionForWhatsApp.motherNumber);
+                setShowWhatsAppModal(false);
+              }}
+            >
+              <MessageCircle size={18} />
+              <div>
+                <strong>Mother's Number</strong>
+                <p>{selectedAdmissionForWhatsApp.motherNumber}</p>
+              </div>
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
 )}
 
       
