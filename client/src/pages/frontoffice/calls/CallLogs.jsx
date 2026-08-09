@@ -360,8 +360,8 @@ const CallLogs = () => {
     let data = activeTab === "admission" ? admissions : enquiries;
 
     if (activeTab === "enquiry") {
-      data = data.filter((item) => item.status !== "converted");
-    }
+  data = data.filter((item) => item.status !== "converted" || (callLogsMap[item._id] || []).length > 0);
+}
 
     data = data.filter((item) => (callLogsMap[item._id] || []).length > 0);
 
