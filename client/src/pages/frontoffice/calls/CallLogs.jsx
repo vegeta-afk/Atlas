@@ -72,12 +72,22 @@ const CallLogs = () => {
 
   const [admissionPagination, setAdmissionPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
   const [enquiryPagination, setEnquiryPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
-  const pagination = activeTab === "admission" ? admissionPagination : enquiryPagination;
-  const setPagination = activeTab === "admission" ? setAdmissionPagination : setEnquiryPagination;
+  const [holdPagination, setHoldPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
+  const [cancelPagination, setCancelPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
+
+  const paginationMap = {
+    admission: [admissionPagination, setAdmissionPagination],
+    enquiry: [enquiryPagination, setEnquiryPagination],
+    hold: [holdPagination, setHoldPagination],
+    cancel: [cancelPagination, setCancelPagination],
+  };
+  const [pagination, setPagination] = paginationMap[activeTab];
 
   // persisted counts so stats cards never flash to 0
   const [admissionCount, setAdmissionCount] = useState(0);
   const [enquiryCount, setEnquiryCount] = useState(0);
+  const [holdCount, setHoldCount] = useState(0);
+  const [cancelCount, setCancelCount] = useState(0);
   const [todayCallCount, setTodayCallCount] = useState(0);
 
   // ── helpers ────────────────────────────────────────────────────
@@ -112,6 +122,34 @@ const CallLogs = () => {
     { value: "Certificate मान्य है या नहीं", name: "Certificate मान्य है या नहीं?" },
   ];
 
+  // Hardcoded cancel call reasons
+  const cancelCallReasons = [
+    { value: "Fees की problem हो गई है", name: "Fees की problem हो गई है" },
+    { value: "घर में कोई समस्या है", name: "घर में कोई समस्या है" },
+    { value: "स्वास्थ्य ठीक नहीं है", name: "स्वास्थ्य ठीक नहीं है" },
+    { value: "Job लग गई है, इसलिए course नहीं कर पाऊँगा", name: "Job लग गई है, इसलिए course नहीं कर पाऊँगा" },
+    { value: "Course के लिए time नहीं मिल रहा", name: "Course के लिए time नहीं मिल रहा" },
+    { value: "School/College/Exam की वजह से course रोकना है", name: "School/College/Exam की वजह से course रोकना है" },
+    { value: "दूसरे शहर/स्थान पर जाना पड़ रहा है", name: "दूसरे शहर/स्थान पर जाना पड़ रहा है" },
+    { value: "Institute आने-जाने में परेशानी है, बहुत दूर है", name: "Institute आने-जाने में परेशानी है, बहुत दूर है" },
+    { value: "Current batch की timing suit नहीं कर रही", name: "Current batch की timing suit नहीं कर रही" },
+    { value: "Course मेरी requirement के अनुसार नहीं है", name: "Course मेरी requirement के अनुसार नहीं है" },
+    { value: "दूसरा course करना चाहता हूँ", name: "दूसरा course करना चाहता हूँ" },
+    { value: "किसी दूसरे institute में admission ले लिया है", name: "किसी दूसरे institute में admission ले लिया है" },
+    { value: "अब online course करना चाहता हूँ", name: "अब online course करना चाहता हूँ" },
+    { value: "अब computer course करने में interest नहीं है", name: "अब computer course करने में interest नहीं है" },
+    { value: "Parents ने course continue करने से मना कर दिया", name: "Parents ने course continue करने से मना कर दिया" },
+    { value: "Personal कारण से course छोड़ना है", name: "Personal कारण से course छोड़ना है" },
+    { value: "आगे की पढ़ाई के लिए जाना है", name: "आगे की पढ़ाई के लिए जाना है" },
+    { value: "Family responsibility बढ़ गई है", name: "Family responsibility बढ़ गई है" },
+    { value: "Teaching से संतुष्ट नहीं है", name: "Teaching से संतुष्ट नहीं है" },
+    { value: "उपलब्ध timings convenient नहीं हैं", name: "उपलब्ध timings convenient नहीं हैं" },
+    { value: "अभी कुछ समय का break चाहिए", name: "अभी कुछ समय का break चाहिए" },
+    { value: "कोई अन्य कारण", name: "कोई अन्य कारण" },
+  ];
+
+  const ACTIVE_ADMISSION_STATUSES = ["admitted", "confirmed", "pending", "provisional", "new", "under_process", "approved"];
+
   const getStatusLabel = (s) => ({
     interested: "Interested", not_interested: "Not Interested",
     call_later: "Call Later", wrong_number: "Wrong Number",
@@ -123,8 +161,6 @@ const CallLogs = () => {
     call_later: "badge-yellow", wrong_number: "badge-gray",
     not_reachable: "badge-orange", already_enrolled: "badge-blue",
   }[s] || "badge-gray"); 
-
-  
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-GB") : "N/A";
 
@@ -184,7 +220,9 @@ const CallLogs = () => {
         const data = res.data.data || res.data;
         const arr = Array.isArray(data) ? data : [];
         setAdmissions(arr);
-        setAdmissionCount(arr.length);
+        setAdmissionCount(arr.filter((a) => ACTIVE_ADMISSION_STATUSES.includes(a.status)).length);
+        setHoldCount(arr.filter((a) => a.status === "on_hold").length);
+        setCancelCount(arr.filter((a) => a.status === "cancelled").length);
       } else { setAdmissions([]); }
       setError(null);
     } catch (err) {
@@ -274,8 +312,8 @@ const CallLogs = () => {
   // ── tab / page / search changes ────────────────────────────────
   useEffect(() => {
   if (!initialLoaded) return;
-  if (activeTab === "admission") fetchAdmissions(true);
-  else fetchEnquiries(true);
+  if (activeTab === "enquiry") fetchEnquiries(true);
+  else fetchAdmissions(true); // admission, hold, cancel all read from the same admissions dataset
 }, [activeTab, searchTerm]); // eslint-disable-line; // eslint-disable-line — removed pagination.page, no longer needs a refetch
 
   // ── modal ──────────────────────────────────────────────────────
@@ -312,7 +350,7 @@ const CallLogs = () => {
       // Log the call
       await callLogAPI.create({
         studentId: selectedStudent._id,
-        studentType: selectedType,
+        studentType: selectedType === "enquiry" ? "enquiry" : "admission",
         studentName: selectedStudent.fullName || selectedStudent.applicantName,
         studentContact: selectedStudent.mobileNumber || selectedStudent.contactNo,
         studentEmail: selectedStudent.email,
@@ -359,15 +397,24 @@ const CallLogs = () => {
   }, []);
 
   const getFilteredSortedData = () => {
-    let data = activeTab === "admission" ? admissions : enquiries;
+    let data = activeTab === "enquiry" ? enquiries : admissions;
 
     if (activeTab === "enquiry") {
   data = data.filter((item) => item.status !== "converted" || (callLogsMap[item._id] || []).length > 0);
 }
+    if (activeTab === "admission") {
+      data = data.filter((item) => ACTIVE_ADMISSION_STATUSES.includes(item.status));
+    }
+    if (activeTab === "hold") {
+      data = data.filter((item) => item.status === "on_hold");
+    }
+    if (activeTab === "cancel") {
+      data = data.filter((item) => item.status === "cancelled");
+    }
 
     data = data.filter((item) => (callLogsMap[item._id] || []).length > 0);
 
-    if (activeTab === "enquiry" && selectedCallReason !== "all") {
+    if ((activeTab === "enquiry" || activeTab === "cancel") && selectedCallReason !== "all") {
       data = data.filter((item) => {
         const lastCall = (callLogsMap[item._id] || [])[0];
         return lastCall?.callReason === selectedCallReason;
@@ -449,6 +496,8 @@ const CallLogs = () => {
         {[
           { key: "enquiry",   icon: <MessageCircle size={16} />, label: "Enquiries",  count: enquiryCount },
           { key: "admission", icon: <Users size={16} />, label: "Admissions", count: admissionCount },
+          { key: "hold",      icon: <PhoneCall size={16} />, label: "Hold",       count: holdCount },
+          { key: "cancel",    icon: <AlertCircle size={16} />, label: "Cancelled",  count: cancelCount },
         ].map(({ key, icon, label, count }) => (
           <button
             key={key}
@@ -509,7 +558,7 @@ const CallLogs = () => {
         </div>
 
         {/* Call Reason Filter - NEW: Only shows for enquiry tab */}
-        {activeTab === "enquiry" && (
+        {(activeTab === "enquiry" || activeTab === "cancel") && (
           <div className="filter-select-horizontal">
             <MessageCircle size={15} className="filter-icon" />
             <select value={selectedCallReason} onChange={(e) => {
@@ -517,7 +566,7 @@ const CallLogs = () => {
               setPagination((p) => ({ ...p, page: 1 }));
             }}>
               <option value="all">All Call Reasons</option>
-              {enquiryCallReasons.map((reason) => (
+              {(activeTab === "enquiry" ? enquiryCallReasons : cancelCallReasons).map((reason) => (
                 <option key={reason.value} value={reason.value}>{reason.name}</option>
               ))}
             </select>
@@ -770,7 +819,7 @@ const CallLogs = () => {
                 </p>
                 <p><strong>📚 Course:</strong> {selectedStudent?.course || selectedStudent?.courseInterested}</p>
 
-                {selectedType === "admission" ? (
+                {selectedType !== "enquiry" ? (
                   <>
                     <p>
                       <strong>👨 Father's No:</strong>{" "}
@@ -814,6 +863,8 @@ const CallLogs = () => {
                     <option value="">Select Reason</option>
                     {selectedType === "enquiry" 
                       ? enquiryCallReasons.map((o) => <option key={o.value} value={o.value}>{o.name}</option>)
+                      : selectedType === "cancel"
+                      ? cancelCallReasons.map((o) => <option key={o.value} value={o.value}>{o.name}</option>)
                       : callReasonOptions.map((o) => <option key={o._id} value={o.value}>{o.name}</option>)
                     }
                   </select>
