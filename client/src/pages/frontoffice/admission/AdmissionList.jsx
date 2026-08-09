@@ -108,32 +108,33 @@ const [courses, setCourses] = useState([]);
   };
 
  const fetchFilterData = async () => {
-    try {
-      setLoadingFilters(true);
-      setLoadingFaculty(true);
+  try {
+    setLoadingFilters(true);
+    setLoadingFaculty(true);
 
-      const [courseRes, setupRes, facultyRes] = await Promise.all([
-        courseAPI.getActiveCourses(),
-        setupAPI.getAll(),
-        facultyAPI.getFaculty({ limit: 100, status: "active" }),
-      ]);
+    const [courseRes, setupRes, facultyRes] = await Promise.all([
+      courseAPI.getActiveCourses(),
+      setupAPI.getAll(),
+      facultyAPI.getFaculty({ limit: 100, status: "active" }),
+    ]);
 
-      if (courseRes.data.success) {
-        setCourses(courseRes.data.data || []);
-      }
-      if (setupRes.data.success) {
-        setBatches(setupRes.data.data.batches || []);
-      }
-      if (facultyRes.data.success) {
-        setFacultyMembers(facultyRes.data.data || []);
-      }
-    } catch (err) {
-      console.error("Failed to load filter data:", err);
-    } finally {
-      setLoadingFilters(false);
-      setLoadingFaculty(false);
+    if (courseRes.data.success) {
+      setCourses(courseRes.data.data || []);
     }
-  };
+    if (setupRes.data.success) {
+      setBatches(setupRes.data.data.batches || []);
+      setHoldReasonOptions(setupRes.data.data.holdReasons || []);
+    }
+    if (facultyRes.data.success) {
+      setFacultyMembers(facultyRes.data.data || []);
+    }
+  } catch (err) {
+    console.error("Failed to load filter data:", err);
+  } finally {
+    setLoadingFilters(false);
+    setLoadingFaculty(false);
+  }
+};
  
  
   const fetchAdmissions = async () => {
@@ -1058,20 +1059,49 @@ setFilteredAdmissions(activeAdmissions);
             </p>
             
             <div className="form-group">
-              <label>Reason {statusAction !== 'reactivate' ? '(required)' : '(optional)'}</label>
-              <textarea
-                value={statusReason}
-                onChange={(e) => setStatusReason(e.target.value)}
-                placeholder={
-                  statusAction === 'cancel' ? 'Why is this admission being cancelled?' :
-                  statusAction === 'hold' ? 'Reason for putting on hold' :
-                  statusAction === 'complete' ? 'Completion remarks (optional)' :
-                  'Reason for reactivation (optional)'
-                }
-                rows="3"
-                required={statusAction !== 'reactivate'}
-              />
-            </div>
+  <label>Reason {statusAction !== 'reactivate' ? '(required)' : '(optional)'}</label>
+
+  {statusAction === 'cancel' && (
+    <select
+      value={statusReason}
+      onChange={(e) => setStatusReason(e.target.value)}
+    >
+      <option value="">Select Reason</option>
+      {cancelReasons.map((reason) => (
+        <option key={reason} value={reason}>{reason}</option>
+      ))}
+    </select>
+  )}
+
+  {statusAction === 'hold' && (
+    <select
+      value={statusReason}
+      onChange={(e) => setStatusReason(e.target.value)}
+      disabled={loadingFilters}
+    >
+      <option value="">
+        {loadingFilters ? "Loading reasons..." : "Select Reason"}
+      </option>
+      {holdReasonOptions.map((r) => (
+        <option key={r._id} value={r.reasonName || r.name}>
+          {r.reasonName || r.name}
+        </option>
+      ))}
+    </select>
+  )}
+
+  {(statusAction === 'complete' || statusAction === 'reactivate') && (
+    <textarea
+      value={statusReason}
+      onChange={(e) => setStatusReason(e.target.value)}
+      placeholder={
+        statusAction === 'complete' ? 'Completion remarks (optional)' :
+        'Reason for reactivation (optional)'
+      }
+      rows="3"
+    />
+  )}
+</div>
             
             <div className="modal-actions">
               <button 
