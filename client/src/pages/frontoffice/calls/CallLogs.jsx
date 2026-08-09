@@ -124,34 +124,9 @@ const CallLogs = () => {
     not_reachable: "badge-orange", already_enrolled: "badge-blue",
   }[s] || "badge-gray"); 
 
-  const cancelReasons = [
-  "Fees की problem हो गई है।",
-  "घर में कोई समस्या है।",
-  "स्वास्थ्य ठीक नहीं है।",
-  "Job लग गई है, इसलिए course नहीं कर पाऊँगा।",
-  "Course के लिए time नहीं मिल रहा।",
-  "School/College/Exam की वजह से course रोकना है।",
-  "दूसरे शहर/स्थान पर जाना पड़ रहा है।",
-  "Institute आने-जाने में परेशानी है, बहुत दूर है।",
-  "Current batch की timing suit नहीं कर रही।",
-  "Course मेरी requirement के अनुसार नहीं है।",
-  "दूसरा course करना चाहता हूँ।",
-  "किसी दूसरे institute में admission ले लिया है।",
-  "अब online course करना चाहता हूँ।",
-  "अब computer course करने में interest नहीं है।",
-  "Parents ने course continue करने से मना कर दिया।",
-  "Personal कारण से course छोड़ना है।",
-  "आगे की पढ़ाई के लिए जाना है।",
-  "Family responsibility बढ़ गई है।",
-  "Teaching से संतुष्ट नहीं है।",
-  "उपलब्ध timings convenient नहीं हैं।",
-  "अभी कुछ समय का break चाहिए।",
-  "कोई अन्य कारण।",
-];
+  
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString("en-GB") : "N/A";
-
-  const [holdReasonOptions, setHoldReasonOptions] = useState([]);
 
   const formatTime = (d) =>
   d
