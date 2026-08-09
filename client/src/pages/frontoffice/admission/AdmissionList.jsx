@@ -172,6 +172,7 @@ const [courses, setCourses] = useState([]);
             admission.admissionNo || `ADM${admission._id.substring(0, 8)}`,
           name: admission.fullName || admission.applicantName,
           fullName: admission.fullName || admission.applicantName,
+          fatherName: admission.fatherName || "",
           photo: admission.photo || null,
           mobileNumber: admission.mobileNumber || admission.contactNo,
           contactNo: admission.mobileNumber || admission.contactNo,
