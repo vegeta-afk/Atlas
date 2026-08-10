@@ -18,7 +18,6 @@ import {
   AlertCircle,
   RotateCcw,
   XCircle,
-  Phone
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import "./ReportList.css";
