@@ -595,6 +595,7 @@ const CompleteList = () => {
               <th onClick={() => handleSort("course")} className="sortable">
                 Course {getSortIndicator("course")}
               </th>
+              <th>Faculty</th>
               <th>Completion Date</th>
               <th>Remarks</th>
               <th>Status</th>
@@ -629,6 +630,15 @@ const CompleteList = () => {
                     </div>
                   </td>
                   <td>{admission.course || "N/A"}</td>
+                  <td>
+                    <span
+                      className={`faculty-badge ${
+                        admission.facultyAllot === "Not Allotted" ? "not-allotted" : ""
+                      }`}
+                    >
+                      {admission.facultyAllot}
+                    </span>
+                  </td>
                   <td>
                     <div className="date-info">
                       <Calendar size={14} />
@@ -723,7 +733,7 @@ const CompleteList = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="8" className="empty-row">
+                <td colSpan="9" className="empty-row">
                   <div className="empty-state">
                     <Award size={48} />
                     <h3>No completed students found</h3>

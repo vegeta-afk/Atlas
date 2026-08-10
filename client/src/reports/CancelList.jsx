@@ -593,6 +593,7 @@ const CancelList = () => {
               <th onClick={() => handleSort("course")} className="sortable">
                 Course {getSortIndicator("course")}
               </th>
+              <th>Faculty</th>
               <th>Cancelled Date</th>
               <th>Reason</th>
               <th>Status</th>
@@ -627,6 +628,15 @@ const CancelList = () => {
                     </div>
                   </td>
                   <td>{admission.course || "N/A"}</td>
+                  <td>
+                    <span
+                      className={`faculty-badge ${
+                        admission.facultyAllot === "Not Allotted" ? "not-allotted" : ""
+                      }`}
+                    >
+                      {admission.facultyAllot}
+                    </span>
+                  </td>
                   <td>
                     <div className="date-info">
                       <Calendar size={14} />
@@ -712,7 +722,7 @@ const CancelList = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="8" className="empty-row">
+                <td colSpan="9" className="empty-row">
                   <div className="empty-state">
                     <XCircle size={48} />
                     <h3>No cancelled admissions found</h3>

@@ -162,11 +162,9 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
       subItems: [
         { path: "/admin/reports/countdown",      label: "Course Countdown", icon: <TrendingUp size={15} /> },
         { path: "/admin/reports/exams/upcoming", label: "Upcoming Exams",   icon: <Calendar size={15} /> },
-        { divider: true },
         { path: "/admin/reports/cancel-list",    label: "Cancel List",      icon: <XCircle size={15} /> },
         { path: "/admin/reports/hold-list",      label: "Hold List",        icon: <PauseCircle size={15} /> },
         { path: "/admin/reports/complete-list",  label: "Complete List",    icon: <CheckCircle size={15} /> },
-        { divider: true },
         { path: "/admin/reports/birthdays",      label: "Birthday Report",  icon: <Cake size={15} /> },
         { path: "/admin/reports/batch-report",   label: "Batch Report",     icon: <Users size={15} /> },
         { path: "/admin/reports/attendance",     label: "Attendance Report", icon: <ClipboardCheck size={15} /> },

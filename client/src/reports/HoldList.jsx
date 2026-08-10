@@ -647,6 +647,7 @@ const handleDirectComplete = async (admission) => {
               <th onClick={() => handleSort("course")} className="sortable">
                 Course {getSortIndicator("course")}
               </th>
+              <th>Faculty</th>
               <th>Hold Date</th>
               <th>Reason</th>
               <th>Status</th>
@@ -681,6 +682,15 @@ const handleDirectComplete = async (admission) => {
                     </div>
                   </td>
                   <td>{admission.course || "N/A"}</td>
+                  <td>
+                    <span
+                      className={`faculty-badge ${
+                        admission.facultyAllot === "Not Allotted" ? "not-allotted" : ""
+                      }`}
+                    >
+                      {admission.facultyAllot}
+                    </span>
+                  </td>
                   <td>
                     <div className="date-info">
                       <Calendar size={14} />
@@ -780,7 +790,7 @@ const handleDirectComplete = async (admission) => {
               ))
             ) : (
               <tr>
-                <td colSpan="8" className="empty-row">
+                <td colSpan="9" className="empty-row">
                   <div className="empty-state">
                     <PauseCircle size={48} />
                     <h3>No students on hold</h3>

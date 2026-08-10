@@ -1561,7 +1561,7 @@ exports.holdAdmission = async (req, res) => {
     
     // Update admission status
     admission.status = "on_hold";
-    admission.remarks = `[ON HOLD] ${reason || 'No reason provided'} | Previous: ${oldStatus}`;
+    admission.remarks = `${reason || 'No reason provided'} | Previous: ${oldStatus}`;
     admission.updatedBy = req.user?.id;
     
     await admission.save();
