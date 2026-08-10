@@ -1493,7 +1493,7 @@ exports.cancelAdmission = async (req, res) => {
     
     // Update admission status
     admission.status = "cancelled";
-    admission.remarks = `${reason || 'No reason provided'} | Previous: ${oldStatus}`;
+    admission.remarks = `${reason || 'No reason provided'} `;
     admission.updatedBy = req.user?.id;
     
     await admission.save();
@@ -1561,7 +1561,7 @@ exports.holdAdmission = async (req, res) => {
     
     // Update admission status
     admission.status = "on_hold";
-    admission.remarks = `${reason || 'No reason provided'} | Previous: ${oldStatus}`;
+    admission.remarks = `${reason || 'No reason provided'}`;
     admission.updatedBy = req.user?.id;
     
     await admission.save();
@@ -1629,7 +1629,7 @@ exports.completeAdmission = async (req, res) => {
 
     const oldStatus = admission.status;
     admission.status = "completed";
-    admission.remarks = `${reason || 'Manually completed'} | Previous: ${oldStatus}`;
+    admission.remarks = `${reason || 'Manually completed'}`;
     admission.updatedBy = req.user?.id;
 
     await admission.save();
@@ -1678,7 +1678,7 @@ exports.reactivateAdmission = async (req, res) => {
     
     // Update admission status back to admitted
     admission.status = "admitted";
-    admission.remarks = `${reason || 'Reactivated'} | Previous: ${oldStatus}`;
+    admission.remarks = `${reason || 'Reactivated'}`;
     admission.updatedBy = req.user?.id;
     
     await admission.save();
