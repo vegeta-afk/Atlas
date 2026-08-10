@@ -706,9 +706,9 @@ const CallLogs = () => {
 
                         <td>
                           <div className="action-buttons">
-                            <button className="action-btn call-btn" onClick={() => handleOpenCallModal(item, activeTab)} title="Log a Call">
+                            {/* <button className="action-btn call-btn" onClick={() => handleOpenCallModal(item, activeTab)} title="Log a Call">
                               <PhoneCall size={15} />
-                            </button>
+                            </button> */}
 
                             {logs.length > 0 && (
                               <button className={`action-btn history-btn ${isExpanded ? "active" : ""}`} onClick={() => toggleHistory(item._id)} title={`${logs.length} call(s)`}>
