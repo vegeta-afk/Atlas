@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import "./ReportList.css";
-import { admissionAPI } from "../services/api";
+import { admissionAPI, facultyAPI, courseAPI, setupAPI } from "../services/api";
 
 const HoldList = () => {
   const navigate = useNavigate();
@@ -67,38 +67,40 @@ const HoldList = () => {
 
   const [pendingFeeModal, setPendingFeeModal] = useState(null);
 
-  // Course options
-  const courseOptions = [
-    "All Courses",
-    "B.Tech Computer Science",
-    "MBA",
-    "MCA",
-    "BBA",
-    "BCA",
-    "M.Tech",
-    "Ph.D",
-  ];
+  const [courses, setCourses] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [facultyMembers, setFacultyMembers] = useState([]);
+  const [loadingFilters, setLoadingFilters] = useState(false);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [appliedDateRange, setAppliedDateRange] = useState({ startDate: "", endDate: "" });
 
-  const batchOptions = [
-    "All Batches",
-    "Morning",
-    "Afternoon",
-    "Evening",
-    "Weekend",
-  ];
+  const formatTime = (time) => {
+    if (!time) return "";
+    const [hours, minutes] = time.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutes} ${ampm}`;
+  };
 
-  const facultyOptions = [
-    "All Faculty",
-    "Dr. Sharma",
-    "Prof. Gupta",
-    "Dr. Singh",
-    "Prof. Patel",
-    "Dr. Kumar",
-    "Prof. Reddy",
-    "Dr. Joshi",
-    "Prof. Mishra",
-    "Not Allotted",
-  ];
+  const fetchFilterData = async () => {
+    try {
+      setLoadingFilters(true);
+      const [courseRes, setupRes, facultyRes] = await Promise.all([
+        courseAPI.getActiveCourses(),
+        setupAPI.getAll(),
+        facultyAPI.getFaculty({ limit: 100, status: "active" }),
+      ]);
+      if (courseRes.data.success) setCourses(courseRes.data.data || []);
+      if (setupRes.data.success) setBatches(setupRes.data.data.batches || []);
+      if (facultyRes.data.success) setFacultyMembers(facultyRes.data.data || []);
+    } catch (err) {
+      console.error("Failed to load filter data:", err);
+    } finally {
+      setLoadingFilters(false);
+    }
+  };
+
 
   // Field mapping for sorting
   const fieldMapping = {
@@ -119,12 +121,12 @@ const HoldList = () => {
         status: "on_hold", // Filter by on_hold status
       };
 
-      if (searchTerm) params.search = searchTerm;
+      if (debouncedSearchTerm) params.search = debouncedSearchTerm;
       if (selectedCourse !== "all") params.course = selectedCourse;
       if (selectedBatch !== "all") params.batch = selectedBatch;
       if (selectedFaculty !== "all") params.faculty = selectedFaculty;
-      if (dateRange.startDate) params.startDate = dateRange.startDate;
-      if (dateRange.endDate) params.endDate = dateRange.endDate;
+      if (appliedDateRange.startDate) params.startDate = appliedDateRange.startDate;
+      if (appliedDateRange.endDate) params.endDate = appliedDateRange.endDate;
 
       const backendSortField = fieldMapping[sortConfig.key] || sortConfig.key;
       if (backendSortField) params.sortBy = backendSortField;
@@ -172,35 +174,30 @@ const HoldList = () => {
   };
 
   useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setPagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+  }, [debouncedSearchTerm, selectedCourse, selectedBatch, selectedFaculty, appliedDateRange]);
+
+  useEffect(() => {
+    fetchFilterData();
+  }, []);
+
+  useEffect(() => {
     fetchHoldAdmissions();
   }, [
     pagination.page,
     selectedCourse,
     selectedBatch,
     selectedFaculty,
-    dateRange,
+    appliedDateRange,
     sortConfig.key,
     sortConfig.direction,
+    debouncedSearchTerm,
   ]);
-
-  // Local filtering for search
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredAdmissions(admissions);
-      return;
-    }
-
-    const filtered = admissions.filter(
-      (admission) =>
-        admission.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        admission.mobileNumber.includes(searchTerm) ||
-        admission.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        admission.aadharNumber.includes(searchTerm) ||
-        admission.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    setFilteredAdmissions(filtered);
-  }, [searchTerm, admissions]);
 
   const handleSort = (frontendKey) => {
     setSortConfig({
@@ -293,7 +290,15 @@ const handleDirectComplete = async (admission) => {
   };
 
   const clearDateFilter = () => {
-    setDateRange({ startDate: "", endDate: "" });
+    const empty = { startDate: "", endDate: "" };
+    setDateRange(empty);
+    setAppliedDateRange(empty);
+    setPagination({ ...pagination, page: 1 });
+  };
+
+  const applyDateFilter = () => {
+    setAppliedDateRange(dateRange);
+    setShowDateFilter(false);
     setPagination({ ...pagination, page: 1 });
   };
 
@@ -301,20 +306,20 @@ const handleDirectComplete = async (admission) => {
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
-    setDateRange({
+    const range = {
       startDate: firstDay.toISOString().split("T")[0],
       endDate: lastDay.toISOString().split("T")[0],
-    });
+    };
+    setDateRange(range);
+    setAppliedDateRange(range);
     setPagination({ ...pagination, page: 1 });
   };
 
   const applyTodayFilter = () => {
     const today = new Date().toISOString().split("T")[0];
-    setDateRange({
-      startDate: today,
-      endDate: today,
-    });
+    const range = { startDate: today, endDate: today };
+    setDateRange(range);
+    setAppliedDateRange(range);
     setPagination({ ...pagination, page: 1 });
   };
 
@@ -500,9 +505,9 @@ const handleDirectComplete = async (admission) => {
               disabled={loading}
             >
               <CalendarDays size={18} />
-              {dateRange.startDate && dateRange.endDate ? (
+              {appliedDateRange.startDate && appliedDateRange.endDate ? (
                 <span>
-                  {formatDate(dateRange.startDate)} - {formatDate(dateRange.endDate)}
+                  {formatDate(appliedDateRange.startDate)} - {formatDate(appliedDateRange.endDate)}
                 </span>
               ) : (
                 <span>Hold Date</span>
@@ -556,6 +561,9 @@ const handleDirectComplete = async (admission) => {
                   <button onClick={clearDateFilter} className="quick-date-btn clear">
                     Clear
                   </button>
+                  <button onClick={applyDateFilter} className="quick-date-btn apply">
+                    Apply
+                  </button>
                 </div>
               </div>
             )}
@@ -567,11 +575,14 @@ const handleDirectComplete = async (admission) => {
             <select
               value={selectedCourse}
               onChange={(e) => handleFilterChange("course", e.target.value)}
-              disabled={loading}
+              disabled={loading || loadingFilters}
             >
-              {courseOptions.map((course) => (
-                <option key={course} value={course === "All Courses" ? "all" : course}>
-                  {course}
+              <option value="all">
+                {loadingFilters ? "Loading courses..." : "All Courses"}
+              </option>
+              {courses.map((course) => (
+                <option key={course._id} value={course.courseFullName}>
+                  {course.courseFullName}
                 </option>
               ))}
             </select>
@@ -582,13 +593,19 @@ const handleDirectComplete = async (admission) => {
             <select
               value={selectedBatch}
               onChange={(e) => handleFilterChange("batch", e.target.value)}
-              disabled={loading}
+              disabled={loading || loadingFilters}
             >
-              {batchOptions.map((batch) => (
-                <option key={batch} value={batch === "All Batches" ? "all" : batch}>
-                  {batch}
-                </option>
-              ))}
+              <option value="all">
+                {loadingFilters ? "Loading batches..." : "All Batches"}
+              </option>
+              {batches.map((batch) => {
+                const displayName = `${formatTime(batch.startTime)} to ${formatTime(batch.endTime)}`;
+                return (
+                  <option key={batch._id} value={displayName}>
+                    {batch.batchName} ({displayName})
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -597,13 +614,17 @@ const handleDirectComplete = async (admission) => {
             <select
               value={selectedFaculty}
               onChange={(e) => handleFilterChange("faculty", e.target.value)}
-              disabled={loading}
+              disabled={loading || loadingFilters}
             >
-              {facultyOptions.map((faculty) => (
-                <option key={faculty} value={faculty === "All Faculty" ? "all" : faculty}>
-                  {faculty}
+              <option value="all">
+                {loadingFilters ? "Loading faculty..." : "All Faculty"}
+              </option>
+              {facultyMembers.map((faculty) => (
+                <option key={faculty._id} value={faculty.facultyName}>
+                  {faculty.facultyName} ({faculty.facultyNo})
                 </option>
               ))}
+              <option value="Not Allotted">Not Allotted</option>
             </select>
           </div>
         </div>
