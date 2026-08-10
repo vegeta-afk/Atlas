@@ -37,6 +37,19 @@ const authFetch = (url, options = {}) => {
   });
 };
 
+const SingleFeeRow = ({ fee, allCourseFeeSchedules, setAllCourseFeeSchedules, toggleFeeSelection, handleAmountChange, formatCurrency }) => {
+  const courseIdx = fee.courseIndex ?? 0;
+
+  const updateFee = (updater) => {
+    setAllCourseFeeSchedules(prev => prev.map((schedule, idx) => {
+      if (idx !== courseIdx) return schedule;
+      return {
+        ...schedule,
+        fees: schedule.fees.map(f => f.id === fee.id ? updater(f) : f)
+      };
+    }));
+  };
+
 const StudentFees = () => {
   const [activeTab, setActiveTab] = useState("payFees");
   const [searchTerm, setSearchTerm] = useState("");
@@ -511,7 +524,40 @@ return sorted;
       }
 
       setAllCourseFeeSchedules(schedules);
-      setSelectedStudent({ ...student, batch: student.batch || fullStudent.batch || fullStudent.batchName || "N/A", feeSchedule: primaryFees || [] });
+
+      // ✅ Recompute paid/balance off the FULL record, same logic as fetchStudents
+      const activeFeeSchedule = (fullStudent.feeSchedule || []).filter(f => f.status !== "suspended");
+      const scheduleFees = activeFeeSchedule.length > 0
+        ? activeFeeSchedule.reduce((s, f) => s + (f.totalFee || 0), 0)
+        : (fullStudent.totalCourseFee || 0);
+      let additionalTotalFee = 0, additionalPaid = 0;
+      (fullStudent.additionalCourses || []).forEach(course => {
+        const fees = (course.feeSchedule || []).filter(f => f.status !== "suspended");
+        additionalTotalFee += fees.reduce((s, f) => s + (f.totalFee || 0), 0);
+        additionalPaid += fees.reduce((s, f) => s + (f.paidAmount || 0), 0);
+      });
+      const activeTotalFee = scheduleFees + (fullStudent.admissionFee || 0) + additionalTotalFee;
+      const schedulesPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
+      const admissionPaid = fullStudent.admissionFeePaidAmount || 0;
+      const totalPaid = schedulesPaid + admissionPaid + additionalPaid;
+      const activeBalance = Math.max(0, activeTotalFee - totalPaid);
+
+      setSelectedStudent({
+        _id: fullStudent._id,
+        studentId: fullStudent.studentId,
+        admissionNo: fullStudent.admissionNo,
+        fullName: fullStudent.fullName,
+        fatherName: fullStudent.fatherName || "N/A",
+        dateOfJoining: fullStudent.admissionDate || fullStudent.dateOfJoining,
+        course: fullStudent.course || fullStudent.courseName || "N/A",
+        batch: fullStudent.batch || fullStudent.batchName || fullStudent.batchTime || "N/A",
+        status: fullStudent.status || "Active",
+        monthlyFee: fullStudent.monthlyFee || fullStudent.feeAmount || 0,
+        paidAmount: totalPaid,
+        balanceAmount: activeBalance,
+        feeSchedule: primaryFees || [],
+        originalData: fullStudent
+      });
       setReceiptNo(generateReceiptNo());
     } catch (error) {
       console.error("Error selecting student:", error);
@@ -854,18 +900,7 @@ const activeBalance = activeTotalFee - totalPaid;
   ? defaulterStudents
   : defaulterStudents.filter(s => getOverdueMonths(s).length === defaulterMonthFilter);
 
-  const SingleFeeRow = ({ fee, allCourseFeeSchedules, setAllCourseFeeSchedules, toggleFeeSelection, handleAmountChange, formatCurrency }) => {
-  const courseIdx = fee.courseIndex ?? 0;
-
-  const updateFee = (updater) => {
-    setAllCourseFeeSchedules(prev => prev.map((schedule, idx) => {
-      if (idx !== courseIdx) return schedule;
-      return {
-        ...schedule,
-        fees: schedule.fees.map(f => f.id === fee.id ? updater(f) : f)
-      };
-    }));
-  };
+  
 
   return (
     <div className={`p-4 hover:bg-gray-50 ${
