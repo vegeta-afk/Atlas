@@ -490,8 +490,10 @@ const MaterialIssue = () => {
                               checked={!!localChecks[m._id]}
                               onChange={() => handleLocalCheck(m._id)}
                             />
-                            <Package size={14} />
-                            <span>{m.name}</span>
+                            <span className="item-checkbox-label">
+                              <Package size={14} />
+                              <span>{m.name}</span>
+                            </span>
                           </label>
                         ))
                       )}
