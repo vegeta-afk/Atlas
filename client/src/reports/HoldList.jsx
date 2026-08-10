@@ -143,6 +143,7 @@ const HoldList = () => {
           whatsappNumber: admission.mobileNumber || admission.contactNo,
           fatherNumber: admission.fatherNumber || "",
           motherNumber: admission.motherNumber || "",
+          fatherName: admission.fatherName || "",
           course: admission.course || admission.courseInterested,
           admissionDate: admission.admissionDate || admission.createdAt,
           batch: admission.batchTime || admission.batch || "Not specified",
@@ -666,7 +667,7 @@ const handleDirectComplete = async (admission) => {
                       </div>
                       <div>
                         <strong>{admission.name || "N/A"}</strong>
-                        <small>Aadhar: {admission.aadharNumber}</small>
+                        <small>Father: {admission.fatherName || "N/A"}</small>
                       </div>
                     </div>
                   </td>
