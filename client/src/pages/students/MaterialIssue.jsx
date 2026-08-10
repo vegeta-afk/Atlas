@@ -220,6 +220,29 @@ const MaterialIssue = () => {
     return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   };
 
+  const formatTime = (time) => {
+    if (!time) return "";
+    const [hours, minutes] = time.split(":");
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? "PM" : "AM";
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutes} ${ampm}`;
+  };
+
+  const getBatchDisplay = (student) => {
+    const b = student?.batchTime || student?.batch;
+    if (!b) return "—";
+    if (typeof b === "string") return b;
+    if (typeof b === "object") {
+      const name = b.batchName || b.name || "";
+      if (b.startTime && b.endTime) {
+        return `${name} (${formatTime(b.startTime)} to ${formatTime(b.endTime)})`.trim();
+      }
+      return name || "—";
+    }
+    return String(b);
+  };
+
   return (
     <div className="material-issue-container">
       <div className="page-header">
@@ -417,7 +440,7 @@ const MaterialIssue = () => {
                     </div>
                     <div className="issue-form-field">
                       <label>Batch</label>
-                      <div className="static-value">{selectedStudent.batch || "—"}</div>
+                      <div className="static-value">{getBatchDisplay(selectedStudent)}</div>
                     </div>
                   </div>
 

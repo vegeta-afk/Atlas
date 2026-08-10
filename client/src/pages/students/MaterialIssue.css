@@ -6,6 +6,10 @@
 .checkbox-cell input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
 .modal-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 
+/* ── Add these to your existing MaterialIssue.css ── */
+/* (your current rules — sticky-col, checkbox-cell, modal-header-row, etc. — stay as-is) */
+
+/* Student picker list (replaces the big matrix on the Issue Materials tab) */
 .student-picker-list {
   border: 1px solid #e5e7eb;
   border-radius: 10px;
@@ -42,6 +46,7 @@
   border-radius: 12px;
   padding: 28px 32px;
   max-width: 720px;
+  margin: 0 auto;
 }
 
 .issue-back-btn {
