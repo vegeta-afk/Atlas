@@ -18,7 +18,7 @@ import {
   RotateCcw,
   PauseCircle,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import "./ReportList.css";
 import { admissionAPI } from "../services/api";
 
