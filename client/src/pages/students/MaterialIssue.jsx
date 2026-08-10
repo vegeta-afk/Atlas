@@ -32,7 +32,14 @@ const MaterialIssue = () => {
   // ── New: student-form style issue flow ──
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [userName, setUserName] = useState(() => localStorage.getItem("userName") || "");
+  const [userName, setUserName] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("user") || "null");
+      return stored?.name || stored?.fullName || stored?.username || stored?.email || "";
+    } catch {
+      return "";
+    }
+  });
   const [localChecks, setLocalChecks] = useState({});
   const [submittingIssue, setSubmittingIssue] = useState(false);
 
@@ -139,7 +146,6 @@ const MaterialIssue = () => {
         await handleToggle(selectedStudent._id, m._id, !!localChecks[m._id]);
       }
 
-      if (userName) localStorage.setItem("userName", userName);
       setSelectedStudentId(null);
       setSearchTerm("");
     } catch (err) {
