@@ -5,3 +5,144 @@
 .checkbox-cell { text-align: center; }
 .checkbox-cell input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
 .modal-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+
+.student-picker-list {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.student-pick-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: #fff;
+  border: none;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.student-pick-row:last-child { border-bottom: none; }
+.student-pick-row:hover { background: #f9fafb; }
+
+.pick-arrow {
+  color: #9ca3af;
+  font-size: 20px;
+}
+
+/* New Material Issue form card */
+.issue-form-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 28px 32px;
+  max-width: 720px;
+}
+
+.issue-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 0 16px;
+}
+
+.issue-form-title {
+  color: #1d4ed8;
+  margin: 0 0 20px;
+  font-size: 20px;
+}
+
+.issue-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.issue-form-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.issue-form-field .static-value {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #f9fafb;
+  color: #111827;
+}
+
+.issue-input {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.issue-input-username {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+/* Item Details checklist — same checkbox styling as checkbox-cell, laid out as rows */
+.item-checklist {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 16px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.item-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.item-checkbox-row:last-child { border-bottom: none; }
+
+.item-checkbox-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.item-checkbox-row svg { color: #6b7280; }
+
+.issue-submit-btn {
+  width: 100%;
+  margin-top: 24px;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background: #22c55e;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.issue-submit-btn:hover { background: #16a34a; }
+.issue-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
