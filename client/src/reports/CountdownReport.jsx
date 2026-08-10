@@ -321,22 +321,7 @@ const CountdownReport = () => {
             />
           </div>
 
-          {/* Course Type Filter */}
-          <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg min-w-[150px]">
-            <Filter size={16} className="text-gray-400" />
-            <select
-              value={selectedCourseType}
-              onChange={(e) => {
-                setSelectedCourseType(e.target.value);
-                setPagination({ ...pagination, page: 1 });
-              }}
-              className="w-full bg-transparent outline-none text-sm text-gray-700"
-            >
-              <option value="all">All Courses</option>
-              <option value="primary">Primary Only</option>
-              <option value="additional">Additional Only</option>
-            </select>
-          </div>
+          
 
           {/* Course Filter */}
           <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg min-w-[150px]">

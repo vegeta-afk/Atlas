@@ -555,6 +555,7 @@ const CompleteList = () => {
                 );
               })}
             </select>
+            <ChevronDown size={16} className="filter-chevron" />
           </div>
 
           {/* Faculty Filter */}
@@ -574,6 +575,7 @@ const CompleteList = () => {
               ))}
               <option value="Not Allotted">Not Allotted</option>
             </select>
+            <ChevronDown size={16} className="filter-chevron" />
           </div>
         </div>
       )}

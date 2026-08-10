@@ -553,6 +553,7 @@ const CancelList = () => {
                 );
               })}
             </select>
+            <ChevronDown size={16} className="filter-chevron" />
           </div>
 
           {/* Faculty Filter */}
@@ -572,6 +573,7 @@ const CancelList = () => {
               ))}
               <option value="Not Allotted">Not Allotted</option>
             </select>
+            <ChevronDown size={16} className="filter-chevron" />
           </div>
         </div>
       )}
