@@ -453,6 +453,8 @@ const cleanFeeForBackend = (fee) => ({
   isExamMonth: fee.isExamMonth || false,
   examFee: fee.examFee || 0,
   paymentMode: fee.paymentMode || "",
+  paymentId: fee.paymentId || "",
+  submittedByName: fee.submittedByName || "",
   remarks: fee.remarks || ""
 });
 

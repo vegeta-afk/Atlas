@@ -1090,6 +1090,8 @@ router.post("/:id/fees/pay", async (req, res) => {
     fee.paymentDate = new Date(paymentDate || new Date());
     fee.receiptNo = receiptNo || `RC${Date.now()}`;
     fee.paymentMode = paymentMode || "cash";
+    fee.paymentId = paymentMode && paymentMode !== "cash" ? (req.body.paymentId || "") : "";
+    fee.submittedByName = req.user?.fullName || req.user?.email || "N/A";
     fee.remarks = remarks || "";
 
     student.feeSchedule[feeIndex] = fee;
@@ -1174,6 +1176,13 @@ router.put("/:id/fees/schedule", async (req, res) => {
         message: "Fee schedule must be an array",
       });
     }
+
+    // Stamp submittedByName server-side for any month that has a fresh paymentId/paymentMode but no name yet
+    feeSchedule.forEach(fee => {
+      if ((fee.paidAmount || 0) > 0 && !fee.submittedByName) {
+        fee.submittedByName = req.user?.fullName || req.user?.email || "N/A";
+      }
+    });
 
     // Update fee schedule
     student.feeSchedule = feeSchedule;
