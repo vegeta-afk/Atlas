@@ -310,6 +310,7 @@ router.get('/fee-register', async (req, res) => {
         course:      courseName || 'N/A',
         batchTime:   batchTime  || 'N/A',
         faculty:     faculty    || 'N/A',
+        submittedBy: fee.submittedByName || 'N/A',
         feeType,
         amount
       });
@@ -380,6 +381,7 @@ for (const ph of (student.paymentHistory || [])) {
       course:      student.course       || 'N/A',
       batchTime:   student.batchTime    || 'N/A',
       faculty:     student.facultyAllot || 'N/A',
+      submittedBy: ph.collectedByName || 'N/A',
       feeType:     'Admission Fee',
       amount:      admissionAmount
     });
@@ -405,6 +407,7 @@ for (const ph of (student.paymentHistory || [])) {
               course:      student.course    || 'N/A',
               batchTime:   student.batchTime || 'N/A',
               faculty:     student.facultyAllot || 'N/A',
+              submittedBy: ph.collectedByName || 'N/A',
               feeType:     of_.feeName || 'Other Fee',
               amount:      of_.amount
             });

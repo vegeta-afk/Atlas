@@ -2080,6 +2080,7 @@ const feeRegisterRows = useMemo(() => {
           amount:      fee.monthlyPaid,
           paymentMode: fee.paymentMode,
           paymentId:   fee.paymentId,
+          submittedBy: fee.submittedByName,
         });
       }
       if ((fee.examPaid || 0) > 0) {
@@ -2095,6 +2096,7 @@ const feeRegisterRows = useMemo(() => {
           amount:      fee.examPaid,
           paymentMode: fee.paymentMode,
           paymentId:   fee.paymentId,
+          submittedBy: fee.submittedByName,
         });
       }
     } else {
@@ -2110,6 +2112,7 @@ const feeRegisterRows = useMemo(() => {
         amount:      fee.paidAmount,
         paymentMode: fee.paymentMode,
         paymentId:   fee.paymentId,
+        submittedBy: fee.submittedByName,
       });
     }
   }
@@ -2129,6 +2132,7 @@ const feeRegisterRows = useMemo(() => {
         faculty:     student?.facultyAllot || '—',
         feeType:     of_.feeName || 'Other Fee',
         amount:      of_.amount,
+        submittedBy: ph.collectedByName,
       });
     }
   }
@@ -2148,6 +2152,7 @@ for (const ph of (admStudent?.paymentHistory || [])) {
     faculty:     student?.facultyAllot || '—',
     feeType:     'Admission Fee',
     amount:      ph.admissionFeeAmount,
+    submittedBy: ph.collectedByName,
   });
 }
 
@@ -2380,7 +2385,7 @@ for (const ph of (admStudent?.paymentHistory || [])) {
       <table className="min-w-full">
         <thead>
           <tr style={{ backgroundColor: '#7B1C1C' }}>
-            {['Date', 'Receipt No', 'Roll No', 'Student Name', 'Payment Mode', 'Batch Time', 'Faculty', 'Fee Type', 'Amount'].map(h => (
+            {['Date', 'Receipt No', 'Roll No', 'Student Name', 'Course', 'Batch Time', 'Submitted By', 'Fee Type', 'Amount'].map(h => (
               <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
                 {h}
               </th>
@@ -2442,8 +2447,8 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                   {record.batchTime}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
-                  {record.faculty}
-                </td>
+  {record.submittedBy || '—'}
+</td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     record.feeType === 'Exam Fee'    ? 'bg-yellow-100 text-yellow-800' :

@@ -2254,7 +2254,7 @@ const activeBalance = activeTotalFee - totalPaid;
       <table className="min-w-full">
         <thead>
           <tr style={{ backgroundColor: '#7B1C1C' }}>
-            {['Date', 'Receipt No', 'Roll No', 'Student Name', 'Payment Mode', 'Batch Time', 'Faculty', 'Fee Type', 'Amount' , 'Actions'].map(h => (
+            {['Date', 'Receipt No', 'Roll No', 'Student Name', 'Payment Mode', 'Batch Time', 'Submitted By', 'Fee Type', 'Amount' , 'Actions'].map(h => (
               <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
                 {h}
               </th>
@@ -2302,8 +2302,8 @@ const activeBalance = activeTotalFee - totalPaid;
                   {record.batchTime}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
-                  {record.faculty}
-                </td>
+  {record.submittedBy || '—'}
+</td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     record.feeType === 'Exam Fee'      ? 'bg-yellow-100 text-yellow-800' :
