@@ -61,6 +61,8 @@ const FeeManagement = ({ studentId, student, course, additionalCourseIndex }) =>
 
   const [showFeeRegister, setShowFeeRegister] = useState(false);
 
+  const [verifiedPayments, setVerifiedPayments] = useState({});
+
   useEffect(() => {
   if (studentId) {
     fetchStudentFees();
@@ -469,6 +471,15 @@ const calcTotals = (schedule) => ({
       fetchStudentFees();
     }
   }, [studentId, student?.admissionDate]);
+
+  useEffect(() => {
+  if (studentId) {
+    try {
+      const saved = localStorage.getItem(`verifiedPayments_${studentId}`);
+      if (saved) setVerifiedPayments(JSON.parse(saved));
+    } catch {}
+  }
+}, [studentId]);
 
  const fetchStudentFees = async () => {
   try {
@@ -2015,6 +2026,16 @@ const deletePaymentLocally = (fee) => {
       minimumFractionDigits: 0,
     }).format(amount);
   };
+
+  const toggleVerified = (key) => {
+  setVerifiedPayments(prev => {
+    const updated = { ...prev, [key]: !prev[key] };
+    try {
+      localStorage.setItem(`verifiedPayments_${studentId}`, JSON.stringify(updated));
+    } catch {}
+    return updated;
+  });
+};
 
   const getCourseShortName = (fee) => {
   const conversionHistory = feeData?.student?.conversionHistory || [];

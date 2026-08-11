@@ -147,6 +147,8 @@ scholarship: {
             paymentDate: Date,
             receiptNo: String,
             paymentMode: String,
+            paymentId: String,
+            submittedByName: String,
             isExamMonth: { type: Boolean, default: false },
             remarks: String
           }
@@ -199,6 +201,7 @@ scholarship: {
     admissionFeePaidDate: Date,
     admissionFeeReceiptNo: String,
     admissionFeePaymentMode: String,
+    admissionFeePaymentId: String,
     paidAmount: {
       type: Number,
       default: 0,
@@ -268,6 +271,8 @@ scholarship: {
           default: 0,
         },
         paymentMode: String,
+        paymentId: String,
+        submittedByName: String,
         remarks: String
       }
     ],
@@ -286,9 +291,12 @@ scholarship: {
         months: [Number],
         receiptNo: String,
         collectedBy: String,
+        collectedByName: String,
+        paymentMode: String,
+        paymentId: String,
         remarks: String,
         admissionFeeAmount: { type: Number, default: 0 },
-        otherFees: [{        // ← ADD THIS
+        otherFees: [{
       feeName: String,
       amount: Number,
       description: String

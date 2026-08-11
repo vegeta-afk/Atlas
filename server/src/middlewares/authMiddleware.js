@@ -39,6 +39,7 @@ const protect = async (req, res, next) => {
       id: user._id.toString(),
       userId: user._id.toString(),
       email: user.email,
+      fullName: user.fullName || user.name || null,
       role: user.role,
       facultyId: facultyId, // ✅ This should now have the correct facultyId
       studentId: decoded.studentId || user.studentId || null

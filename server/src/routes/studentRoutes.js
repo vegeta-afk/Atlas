@@ -311,6 +311,8 @@ router.get('/fee-register', async (req, res) => {
         batchTime:   batchTime  || 'N/A',
         faculty:     faculty    || 'N/A',
         submittedBy: fee.submittedByName || 'N/A',
+        paymentMode: fee.paymentMode || 'N/A',
+        paymentId:   fee.paymentId   || '',
         feeType,
         amount
       });
@@ -382,6 +384,8 @@ for (const ph of (student.paymentHistory || [])) {
       batchTime:   student.batchTime    || 'N/A',
       faculty:     student.facultyAllot || 'N/A',
       submittedBy: ph.collectedByName || 'N/A',
+      paymentMode: student.admissionFeePaymentMode || 'N/A',
+      paymentId:   student.admissionFeePaymentId   || '',
       feeType:     'Admission Fee',
       amount:      admissionAmount
     });
@@ -408,6 +412,8 @@ for (const ph of (student.paymentHistory || [])) {
               batchTime:   student.batchTime || 'N/A',
               faculty:     student.facultyAllot || 'N/A',
               submittedBy: ph.collectedByName || 'N/A',
+              paymentMode: ph.paymentMode || 'N/A',
+              paymentId:   ph.paymentId   || '',
               feeType:     of_.feeName || 'Other Fee',
               amount:      of_.amount
             });
@@ -663,6 +669,7 @@ router.post("/payment", async (req, res) => {
       paymentDate,
       receiptNo,
       paymentMode,
+      paymentId,
       remarks,
       isPartial,
       partialAmount,
@@ -705,6 +712,7 @@ if (admissionFeePayment && admissionFeePayment.amount > 0) {
     student.admissionFeePaidDate = new Date(admissionFeePayment.paymentDate || paymentDate || Date.now());
     student.admissionFeeReceiptNo = admissionFeePayment.receiptNo || receiptNo;
     student.admissionFeePaymentMode = admissionFeePayment.paymentMode || paymentMode;
+    student.admissionFeePaymentId = admissionFeePayment.paymentId || paymentId || "";
     student.paidAmount = (student.paidAmount || 0) + paying;
     student.balanceAmount = Math.max(0, (student.totalCourseFee || 0) - student.paidAmount);
     console.log(`✅ Admission fee payment: ₹${paying} | Total paid: ₹${newAdmissionPaid}/${admissionTotal} | Fully paid: ${student.admissionFeePaid}`);
@@ -782,6 +790,8 @@ fee.status = newBalance === 0 ? "paid" : "partial";
 fee.paymentDate = new Date(paymentDate);
 fee.receiptNo = receiptNo;
 fee.paymentMode = paymentMode;
+fee.paymentId = paymentMode !== "cash" ? (paymentId || "") : "";
+fee.submittedByName = req.user?.fullName || req.user?.email || "N/A";
 fee.remarks = remarks || "";
 
 // ✅ Save split payment amounts for exam months
@@ -867,6 +877,8 @@ fee.status = newBalance === 0 ? "paid" : "partial";
 fee.paymentDate = new Date(paymentDate);
 fee.receiptNo = receiptNo;
 fee.paymentMode = paymentMode;
+fee.paymentId = paymentMode !== "cash" ? (paymentId || "") : "";
+fee.submittedByName = req.user?.fullName || req.user?.email || "N/A";
 fee.remarks = remarks || "";
 
 // ✅ Save split payment amounts for exam months (single month)
@@ -922,6 +934,9 @@ student.markModified("feeSchedule");
       months: updatedMonths,
       receiptNo: receiptNo,
       collectedBy: req.user?.id || "admin",
+      collectedByName: req.user?.fullName || req.user?.email || "admin",
+      paymentMode: paymentMode,
+      paymentId: paymentMode !== "cash" ? (paymentId || "") : "",
       remarks: remarks || "",
       paymentType: paymentType,
       fineAmount: fineAmount || 0,
@@ -942,6 +957,7 @@ student.markModified("feeSchedule");
     admissionFeePaidDate: student.admissionFeePaidDate,
     admissionFeeReceiptNo: student.admissionFeeReceiptNo,
     admissionFeePaymentMode: student.admissionFeePaymentMode,
+    admissionFeePaymentId: student.admissionFeePaymentId,
   },
   { new: true }
 );

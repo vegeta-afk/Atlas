@@ -910,6 +910,9 @@ console.log("🔍 Payment data:", JSON.stringify({
           setFineReason("");
           setRemarks("");
           setPaymentId("");
+          setSelectedStudent(null);
+setAllCourseFeeSchedules([]);
+setSelectedCourseTab(0);
         } else {
           alert(`Payment failed: ${result.message || "Unknown error"}`);
         }
