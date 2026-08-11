@@ -1478,6 +1478,7 @@ const response = await fetch(endpoint, {
             paymentDate: new Date(paymentData.paymentDate),
             receiptNo: paymentData.receiptNo,
             paymentMode: paymentData.paymentMode,
+            paymentId: paymentData.paymentId,
             remarks: paymentData.remarks,
           };
         }
@@ -1565,6 +1566,7 @@ const response = await fetch(endpoint, {
             paymentDate: new Date(paymentData.paymentDate),
             receiptNo: paymentData.receiptNo,
             paymentMode: paymentData.paymentMode,
+            paymentId: paymentData.paymentId,
             remarks: paymentData.remarks,
           };
         }
@@ -1670,6 +1672,7 @@ const response = await fetch(endpoint, {
           paymentDate: new Date(paymentData.paymentDate),
           receiptNo: paymentData.receiptNo,
           paymentMode: paymentData.paymentMode,
+          paymentId: paymentData.paymentId,
           remarks: paymentData.remarks,
           paidAmount: paymentAmount,
           balanceAmount: monthFee - paymentAmount,
@@ -2075,6 +2078,8 @@ const feeRegisterRows = useMemo(() => {
           faculty:     student?.facultyAllot || '—',
           feeType:     'Monthly Fee',
           amount:      fee.monthlyPaid,
+          paymentMode: fee.paymentMode,
+          paymentId:   fee.paymentId,
         });
       }
       if ((fee.examPaid || 0) > 0) {
@@ -2088,6 +2093,8 @@ const feeRegisterRows = useMemo(() => {
           faculty:     student?.facultyAllot || '—',
           feeType:     'Exam Fee',
           amount:      fee.examPaid,
+          paymentMode: fee.paymentMode,
+          paymentId:   fee.paymentId,
         });
       }
     } else {
@@ -2101,6 +2108,8 @@ const feeRegisterRows = useMemo(() => {
         faculty:     student?.facultyAllot || '—',
         feeType:     fee.isExamMonth ? 'Exam Fee' : 'Monthly Fee',
         amount:      fee.paidAmount,
+        paymentMode: fee.paymentMode,
+        paymentId:   fee.paymentId,
       });
     }
   }
@@ -2371,7 +2380,7 @@ for (const ph of (admStudent?.paymentHistory || [])) {
       <table className="min-w-full">
         <thead>
           <tr style={{ backgroundColor: '#7B1C1C' }}>
-            {['Date', 'Receipt No', 'Roll No', 'Student Name', 'Course', 'Batch Time', 'Faculty', 'Fee Type', 'Amount'].map(h => (
+            {['Date', 'Receipt No', 'Roll No', 'Student Name', 'Payment Mode', 'Batch Time', 'Faculty', 'Fee Type', 'Amount'].map(h => (
               <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
                 {h}
               </th>
@@ -2402,10 +2411,33 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                   {record.studentName}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
-                  <span className="px-2 py-1 rounded text-xs font-bold bg-purple-100 text-purple-700">
-                    {record.course}
-                  </span>
-                </td>
+  {(() => {
+    const key = `${record.receiptNo}_${record.feeType}`;
+    const isVerified = verifiedPayments[key];
+    const hasId = record.paymentMode && record.paymentMode !== 'cash' && record.paymentId;
+    return (
+      <div
+        onClick={() => hasId && toggleVerified(key)}
+        className={hasId ? "inline-flex flex-col items-start gap-0.5 cursor-pointer" : "inline-flex flex-col items-start gap-0.5"}
+        title={hasId ? (isVerified ? "Click to mark as unverified" : "Click to confirm amount credited") : ""}
+      >
+        <span className={`px-2 py-1 rounded text-xs font-bold border transition-colors ${
+          isVerified
+            ? "bg-green-100 text-green-700 border-green-300"
+            : "bg-purple-100 text-purple-700 border-purple-200"
+        }`}>
+          {formatPaymentMode(record.paymentMode)}
+          {isVerified && " ✓"}
+        </span>
+        {hasId && (
+          <span className="text-[11px] text-gray-500 truncate max-w-[120px]" title={record.paymentId}>
+            {record.paymentId}
+          </span>
+        )}
+      </div>
+    );
+  })()}
+</td>
                 <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                   {record.batchTime}
                 </td>
@@ -3108,6 +3140,21 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                   ))}
                 </div>
               </div>
+              
+              {paymentData.paymentMode !== "cash" && (
+  <div>
+    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+      {paymentData.paymentMode === "cheque" ? "Cheque No" : paymentData.paymentMode === "bank_transfer" ? "Bank Transaction No" : "UPI / Transaction ID"}
+    </label>
+    <input
+      type="text"
+      value={paymentData.paymentId}
+      onChange={(e) => setPaymentData({ ...paymentData, paymentId: e.target.value })}
+      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+      placeholder="Enter reference / UPI ID"
+    />
+  </div>
+)}
 
               {/* Remarks */}
               <div>

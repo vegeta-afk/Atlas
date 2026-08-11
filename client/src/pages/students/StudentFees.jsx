@@ -239,6 +239,7 @@ const StudentFees = () => {
   const [receiptNo, setReceiptNo] = useState("");
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
   const [paymentMode, setPaymentMode] = useState("cash");
+  const [paymentId, setPaymentId] = useState("");
   const [remarks, setRemarks] = useState("");
   const [fineAmount, setFineAmount] = useState(0);
   const [fineReason, setFineReason] = useState("");
@@ -831,12 +832,14 @@ const paymentData = {
     amount: admissionFeeEntry.payingAmount,
     paymentDate,
     receiptNo,
-    paymentMode
+    paymentMode,
+    paymentId: paymentMode !== "cash" ? paymentId : ""
   } : null,
   paymentType: "multiple",
   paymentDate,
   receiptNo,
   paymentMode,
+  paymentId: paymentMode !== "cash" ? paymentId : "",
   remarks: remarks || "",
   otherFees: otherFeesList
     .filter(f => parseFloat(f.amount) > 0)
@@ -906,6 +909,7 @@ console.log("🔍 Payment data:", JSON.stringify({
           setFineAmount(0);
           setFineReason("");
           setRemarks("");
+          setPaymentId("");
         } else {
           alert(`Payment failed: ${result.message || "Unknown error"}`);
         }
@@ -1001,6 +1005,16 @@ const activeBalance = activeTotalFee - totalPaid;
       return new Date(dateString).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     } catch {
       return dateString;
+    }
+  };
+
+  const formatPaymentMode = (mode) => {
+    switch (mode) {
+      case "cash": return "Cash";
+      case "cheque": return "Cheque";
+      case "bank_transfer": return "Bank Transfer";
+      case "online": return "Online";
+      default: return mode || "—";
     }
   };
 
@@ -1319,7 +1333,11 @@ const activeBalance = activeTotalFee - totalPaid;
                         <label className="block text-sm font-medium mb-2 text-gray-700">Payment Mode</label>
                         <select
                           value={paymentMode}
-                          onChange={(e) => setPaymentMode(e.target.value)}
+                          onChange={(e) => {
+                            const mode = e.target.value;
+                            setPaymentMode(mode);
+                            if (mode === "cash") setPaymentId("");
+                          }}
                           className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value="cash">Cash</option>
@@ -1328,6 +1346,32 @@ const activeBalance = activeTotalFee - totalPaid;
                           <option value="online">Online Payment</option>
                         </select>
                       </div>
+
+                      {/* Payment ID - only for non-cash modes */}
+                      {paymentMode !== "cash" && (
+                        <div>
+                          <label className="block text-sm font-medium mb-2 text-gray-700">
+                            {paymentMode === "cheque" ? "Cheque No" : paymentMode === "bank_transfer" ? "Bank Transaction No" : "UPI / Transaction ID"}
+                          </label>
+                          <div className="relative">
+                            <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                            <input
+                              type="text"
+                              value={paymentId}
+                              onChange={(e) => setPaymentId(e.target.value)}
+                              placeholder={
+                                paymentMode === "cheque"
+                                  ? "Enter cheque number"
+                                  : paymentMode === "bank_transfer"
+                                  ? "Enter bank reference / transaction no"
+                                  : "Enter UPI ID / transaction ID"
+                              }
+                              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              required
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Fee Table - separate bordered box */}
@@ -2210,7 +2254,7 @@ const activeBalance = activeTotalFee - totalPaid;
       <table className="min-w-full">
         <thead>
           <tr style={{ backgroundColor: '#7B1C1C' }}>
-            {['Date', 'Receipt No', 'Roll No', 'Student Name', 'Course', 'Batch Time', 'Faculty', 'Fee Type', 'Amount' , 'Actions'].map(h => (
+            {['Date', 'Receipt No', 'Roll No', 'Student Name', 'Payment Mode', 'Batch Time', 'Faculty', 'Fee Type', 'Amount' , 'Actions'].map(h => (
               <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">
                 {h}
               </th>
@@ -2246,8 +2290,13 @@ const activeBalance = activeTotalFee - totalPaid;
                 <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
                   {record.studentName}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600 max-w-[140px]">
-                  <div className="truncate" title={record.course}>{record.course}</div>
+                <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  <div className="font-medium text-gray-900">{formatPaymentMode(record.paymentMode)}</div>
+                  {record.paymentMode && record.paymentMode !== "cash" && record.paymentId && (
+                    <div className="text-xs text-gray-500 mt-0.5 truncate max-w-[160px]" title={record.paymentId}>
+                      {record.paymentId}
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                   {record.batchTime}
