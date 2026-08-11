@@ -2027,6 +2027,16 @@ const deletePaymentLocally = (fee) => {
     }).format(amount);
   };
 
+  const formatPaymentMode = (mode) => {
+    switch (mode) {
+      case "cash": return "Cash";
+      case "cheque": return "Cheque";
+      case "bank_transfer": return "Bank Transfer";
+      case "online": return "Online";
+      default: return mode || "—";
+    }
+  };
+
   const toggleVerified = (key) => {
   setVerifiedPayments(prev => {
     const updated = { ...prev, [key]: !prev[key] };
