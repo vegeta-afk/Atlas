@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Search, 
   DollarSign, 
@@ -19,6 +20,7 @@ import {
   Minus,
   Trash2
 } from "lucide-react";
+import * as XLSX from "xlsx";
 
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -256,6 +258,7 @@ const StudentFees = () => {
   const [regSearchName, setRegSearchName] = useState('');
   const [regSearchReceipt, setRegSearchReceipt] = useState('');
 const [regPaymentMode, setRegPaymentMode] = useState('all');
+const [regFeeType, setRegFeeType] = useState('all');
   const [regPage, setRegPage] = useState(1);
   const REG_PAGE_SIZE = 15;
   const [defaulterMonthFilter, setDefaulterMonthFilter] = useState(6);
@@ -472,7 +475,7 @@ const handleRegisterDelete = async (receiptNo, studentId) => {
 
   useEffect(() => {
   setRegPage(1);
-}, [regPaymentMode]);
+}, [regPaymentMode, regFeeType]);
 
   const fetchStudents = async () => {
     try {
@@ -1084,6 +1087,69 @@ const activeBalance = activeTotalFee - totalPaid;
     return { badgeBg: 'bg-red-100', badgeText: 'text-red-700', rowBg: 'bg-red-50' };
   };
 
+  // One row per (student, due month) — same student repeats once per overdue month/admission fee
+  const buildPendingFeesExportRows = (studentsList) => {
+    const rows = [];
+
+    studentsList.forEach(student => {
+      const overdueList = getOverdueMonths(student);
+      const overdueAmt  = getOverdueAmount(overdueList);
+
+      const admissionFeeTotal = student.originalData?.admissionFee || 0;
+      const admissionFeePaid  = student.originalData?.admissionFeePaidAmount || 0;
+      const admissionFeeDue   = Math.max(0, admissionFeeTotal - admissionFeePaid);
+
+      const totalDue = overdueAmt + admissionFeeDue;
+
+      const baseInfo = {
+        'Date of Admission': formatDate(student.dateOfJoining),
+        'Student Name':      student.fullName,
+        'Batch':              student.batch || student.originalData?.batch || student.originalData?.batchTime || '—',
+        'Faculty':            student.faculty || student.originalData?.facultyAllot || '—',
+        'Course Name':        student.course,
+        'Total Due':          totalDue,
+      };
+
+      if (admissionFeeDue > 0) {
+        rows.push({
+          ...baseInfo,
+          'Month With Date': `Admission Fee (Due: ${formatDate(student.dateOfJoining)})`,
+          'Fee Type':         'Admission Fee',
+        });
+      }
+
+      overdueList.forEach(fee => {
+        const dueDateFormatted = fee.dueDate ? formatDate(fee.dueDate) : '—';
+        rows.push({
+          ...baseInfo,
+          'Month With Date': `${fee.month || `Month ${fee.monthNumber}`} (Due: ${dueDateFormatted})`,
+          'Fee Type':         fee.isExamMonth ? 'Exam Fee' : 'Monthly Fee',
+        });
+      });
+    });
+
+    return rows;
+  };
+
+  const exportPendingFeesToExcel = () => {
+    const rows = buildPendingFeesExportRows(displayedDefaulters);
+
+    if (rows.length === 0) {
+      alert('No pending fee data to export for the current filter.');
+      return;
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(rows, {
+      header: ['Date of Admission', 'Student Name', 'Batch', 'Faculty', 'Course Name', 'Total Due', 'Month With Date', 'Fee Type']
+    });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Pending Fees');
+
+    const filterLabel = defaulterMonthFilter >= 6 ? 'All' : `${defaulterMonthFilter}M`;
+    const fileName = `Pending_Fees_${filterLabel}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
    const pendingStudents = students.filter(s => s.balanceAmount > 0);
   const paidStudents = students.filter(s => s.balanceAmount === 0);
 
@@ -1096,9 +1162,9 @@ const activeBalance = activeTotalFee - totalPaid;
 
 
 
-  const filteredRegisterData = regPaymentMode === 'all'
-  ? feeRegisterData
-  : feeRegisterData.filter(r => r.paymentMode === regPaymentMode);
+  const filteredRegisterData = feeRegisterData
+  .filter(r => regPaymentMode === 'all' || r.paymentMode === regPaymentMode)
+  .filter(r => regFeeType === 'all' || r.feeType === regFeeType);
 
 const totalRegPages   = Math.max(1, Math.ceil(filteredRegisterData.length / REG_PAGE_SIZE));
 const paginatedRegister = filteredRegisterData.slice((regPage - 1) * REG_PAGE_SIZE, regPage * REG_PAGE_SIZE);
@@ -1687,22 +1753,31 @@ const paginatedRegister = filteredRegisterData.slice((regPage - 1) * REG_PAGE_SI
     </h2>
     <p className="text-gray-600 mt-1">Students who have unpaid fee installments</p>
   </div>
-  <div className="flex items-center gap-3 self-start sm:self-center bg-gray-100 rounded-xl px-4 py-2">
-    <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Filter Months:</span>
-    <input
-      type="range"
-      min={1}
-      max={6}
-      step={1}
-      value={defaulterMonthFilter}
-      onChange={e => setDefaulterMonthFilter(Number(e.target.value))}
-      className="w-32 accent-red-600 cursor-pointer"
-    />
-    <span className={`text-sm font-bold min-w-[36px] text-center ${
-      defaulterMonthFilter >= 6 ? 'text-gray-700' : 'text-red-600'
-    }`}>
-      {defaulterMonthFilter >= 6 ? 'All' : `${defaulterMonthFilter}M`}
-    </span>
+  <div className="flex items-center gap-3 self-start sm:self-center flex-wrap">
+    <div className="flex items-center gap-3 bg-gray-100 rounded-xl px-4 py-2">
+      <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Filter Months:</span>
+      <input
+        type="range"
+        min={1}
+        max={6}
+        step={1}
+        value={defaulterMonthFilter}
+        onChange={e => setDefaulterMonthFilter(Number(e.target.value))}
+        className="w-32 accent-red-600 cursor-pointer"
+      />
+      <span className={`text-sm font-bold min-w-[36px] text-center ${
+        defaulterMonthFilter >= 6 ? 'text-gray-700' : 'text-red-600'
+      }`}>
+        {defaulterMonthFilter >= 6 ? 'All' : `${defaulterMonthFilter}M`}
+      </span>
+    </div>
+    <button
+      onClick={exportPendingFeesToExcel}
+      className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors"
+    >
+      <Download className="h-4 w-4" />
+      Export to Excel
+    </button>
   </div>
 </div>
  
@@ -2264,6 +2339,20 @@ const paginatedRegister = filteredRegisterData.slice((regPage - 1) * REG_PAGE_SI
           <option value="cheque">Cheque</option>
           <option value="bank_transfer">Bank Transfer</option>
           <option value="online">Online</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="text-xs font-medium text-gray-500 block mb-1">Fee Type</label>
+        <select
+          value={regFeeType}
+          onChange={e => setRegFeeType(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        >
+          <option value="all">All Fee Types</option>
+          {feeTypeOptions.map(type => (
+            <option key={type} value={type}>{type}</option>
+          ))}
         </select>
       </div>
 
