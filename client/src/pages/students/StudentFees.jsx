@@ -263,6 +263,7 @@ const [regFeeType, setRegFeeType] = useState('all');
   const [defaulterMonthFilter, setDefaulterMonthFilter] = useState(6);
 const [pendingFromDate, setPendingFromDate] = useState('');
 const [pendingToDate, setPendingToDate] = useState('');
+const [pendingSearchTerm, setPendingSearchTerm] = useState('');
 
 
   // ✅ NEW: Course tab states
@@ -1201,11 +1202,18 @@ const paginatedRegister = filteredRegisterData.slice((regPage - 1) * REG_PAGE_SI
   : defaulterStudents.filter(s => getOverdueMonths(s).length === defaulterMonthFilter);
 
 const displayedDefaulters = monthFilteredDefaulters.filter(s => {
-  if (!pendingFromDate && !pendingToDate) return true;
-  const doj = s.dateOfJoining ? new Date(s.dateOfJoining) : null;
-  if (!doj || isNaN(doj)) return false;
-  if (pendingFromDate && doj < new Date(pendingFromDate)) return false;
-  if (pendingToDate && doj > new Date(pendingToDate + 'T23:59:59')) return false;
+  if (pendingFromDate || pendingToDate) {
+    const doj = s.dateOfJoining ? new Date(s.dateOfJoining) : null;
+    if (!doj || isNaN(doj)) return false;
+    if (pendingFromDate && doj < new Date(pendingFromDate)) return false;
+    if (pendingToDate && doj > new Date(pendingToDate + 'T23:59:59')) return false;
+  }
+  if (pendingSearchTerm.trim()) {
+    const term = pendingSearchTerm.trim().toLowerCase();
+    const nameMatch = (s.fullName || '').toLowerCase().includes(term);
+    const rollMatch = (s.admissionNo || '').toLowerCase().includes(term);
+    if (!nameMatch && !rollMatch) return false;
+  }
   return true;
 });
 
@@ -1790,6 +1798,16 @@ const displayedDefaulters = monthFilteredDefaulters.filter(s => {
     <p className="text-gray-600 mt-1">Students who have unpaid fee installments</p>
   </div>
   <div className="flex items-center gap-3 self-start sm:self-center flex-wrap">
+    <div>
+      <label className="text-xs font-medium text-gray-500 block mb-1">Search Name / Roll No</label>
+      <input
+        type="text"
+        value={pendingSearchTerm}
+        onChange={e => setPendingSearchTerm(e.target.value)}
+        placeholder="Search.."
+        className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-44 focus:ring-2 focus:ring-red-500 focus:outline-none"
+      />
+    </div>
     <div className="flex items-end gap-2">
       <div>
         <label className="text-xs font-medium text-gray-500 block mb-1">From</label>
@@ -1858,8 +1876,6 @@ const displayedDefaulters = monthFilteredDefaulters.filter(s => {
     <th style={{ minWidth: '120px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Faculty</th>
     <th style={{ minWidth: '150px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Batch</th>
     <th style={{ minWidth: '150px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Course</th>
-    <th style={{ minWidth: '100px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Monthly Fee</th>
-    <th style={{ minWidth: '110px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Paid (Monthly)</th>
     <th style={{ minWidth: '170px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Overdue Months</th>
     <th style={{ minWidth: '110px' }} className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap">Action</th>
   </tr>
@@ -1947,19 +1963,6 @@ const displayedDefaulters = monthFilteredDefaulters.filter(s => {
                     </div>
                   </td>
  
-                  {/* Monthly Fee */}
-                  <td className="px-4 py-4">
-                    <div className="text-sm font-medium text-gray-900">
-                      {formatCurrency(student.monthlyFee)}
-                    </div>
-                  </td>
- 
-                  {/* Paid (Monthly only) */}
-                  <td className="px-4 py-4">
-                    <div className="text-sm font-semibold text-green-600">
-                      {formatCurrency(monthlyPaidAmount)}
-                    </div>
-                  </td>
  
  
                   {/* Overdue Months — clickable badge opens modal */}
