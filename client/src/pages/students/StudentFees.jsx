@@ -1100,7 +1100,7 @@ const activeBalance = activeTotalFee - totalPaid;
   // One row per (student, due month) — same student repeats once per overdue month/admission fee
   const buildPendingFeesExportRows = (studentsList) => {
     const rows = [];
-    const EXPORT_HEADERS = ['Date of Admission', 'Student Name', 'Batch', 'Faculty', 'Course Name', 'Due Date', 'Fee Type', 'Monthly Due', 'Status', 'Month'];
+    const EXPORT_HEADERS = ['Date of Admission', 'Student Name', 'Batch', 'Faculty', 'Course Name', 'Due Date', 'Fee Type', 'Monthly Due', 'Status'];
     studentsList.forEach(student => {
       const rawStatus = (student.status || student.originalData?.status || 'Active').toString();
       const overdueList = getOverdueMonths(student);
@@ -1122,7 +1122,6 @@ const activeBalance = activeTotalFee - totalPaid;
         rows.push({
           ...baseInfo,
           'Due Date':    formatDate(student.dateOfJoining),
-          'Month':       'Admission Fee',
           'Fee Type':    'Admission Fee',
           'Monthly Due': admissionFeeDue,
         });
@@ -1143,7 +1142,6 @@ const activeBalance = activeTotalFee - totalPaid;
             rows.push({
               ...baseInfo,
               'Due Date':    dueDateLabel,
-              'Month':       monthLabel,
               'Fee Type':    'Monthly Fee',
               'Monthly Due': monthlyRemaining,
             });
@@ -1152,7 +1150,6 @@ const activeBalance = activeTotalFee - totalPaid;
             rows.push({
               ...baseInfo,
               'Due Date':    dueDateLabel,
-              'Month':       monthLabel,
               'Fee Type':    'Exam Fee',
               'Monthly Due': examRemaining,
             });
@@ -1161,7 +1158,6 @@ const activeBalance = activeTotalFee - totalPaid;
           rows.push({
             ...baseInfo,
             'Due Date':    dueDateLabel,
-            'Month':       monthLabel,
             'Fee Type':    'Monthly Fee',
             'Monthly Due': balance,
           });
