@@ -63,6 +63,9 @@ router.post("/check-bulk-conversion", authorize(...READ_ROLES), async (req, res)
 router.route("/stats/dashboard")
   .get(authorize(...READ_ROLES), admissionController.getDashboardStats);
 
+// ── Bulk delete (MUST come before /:id) ────────────────────────────────────
+router.delete("/bulk-delete", authorize(...ADMIN_ONLY), admissionController.bulkDeleteAdmissions);
+
 // ── Main CRUD ─────────────────────────────────────────────────────────────
 router.route("/")
   .get(authorize(...READ_ROLES), admissionController.getAdmissions)

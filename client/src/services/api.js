@@ -101,6 +101,7 @@ export const admissionAPI = {
   return api.put(`/admissions/${id}`, data);
 },
   deleteAdmission: (id) => api.delete(`/admissions/${id}`),
+  bulkDeleteAdmissions: (ids) => api.delete("/admissions/bulk-delete", { data: { ids } }),
 
   // Special Operations
   updateStatus: (id, data) => api.put(`/admissions/${id}/status`, data),

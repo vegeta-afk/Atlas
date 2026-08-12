@@ -545,6 +545,60 @@ console.log("🔍 BACKEND totalFees received:", req.body.totalFees);
   }
 };
 
+// @desc    Bulk delete admissions (+ linked students, users, batch assignments)
+// @route   DELETE /api/admissions/bulk-delete
+// @access  Private (Admin)
+exports.bulkDeleteAdmissions = async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "ids array is required",
+      });
+    }
+
+    const User = require("../models/user");
+    const TeacherBatch = require("../models/TeacherBatch");
+
+    // Find all linked students for these admissions
+    const students = await Student.find({ admissionId: { $in: ids } });
+    const studentIds = students.map((s) => s._id);
+    const studentCodeIds = students.map((s) => s.studentId);
+
+    if (studentIds.length > 0) {
+      // Delete linked login accounts
+      await User.deleteMany({ studentId: { $in: studentCodeIds } });
+
+      // Remove from any TeacherBatch assignments
+      await TeacherBatch.updateMany(
+        { "assignedStudents.student": { $in: studentIds } },
+        { $pull: { assignedStudents: { student: { $in: studentIds } } } }
+      );
+
+      // Delete student documents
+      await Student.deleteMany({ _id: { $in: studentIds } });
+    }
+
+    // Delete the admissions themselves
+    const result = await Admission.deleteMany({ _id: { $in: ids } });
+
+    res.json({
+      success: true,
+      message: `${result.deletedCount} admission(s) deleted successfully`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    console.error("Bulk delete admissions error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};
+
 // @desc    Delete admission
 // @route   DELETE /api/admissions/:id
 // @access  Private (Admin)

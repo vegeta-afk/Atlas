@@ -62,6 +62,8 @@ const CancelList = () => {
 
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [selectedAdmissionForWhatsApp, setSelectedAdmissionForWhatsApp] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const [courses, setCourses] = useState([]);
   const [batches, setBatches] = useState([]);
@@ -228,6 +230,77 @@ const CancelList = () => {
     }
   };
 
+  const handleDeleteAdmission = async (id, name) => {
+    if (
+      window.confirm(`Are you sure you want to PERMANENTLY delete admission for ${name}? This cannot be undone.`)
+    ) {
+      try {
+        const response = await admissionAPI.deleteAdmission(id);
+
+        if (response.data.success) {
+          alert("Admission deleted successfully!");
+          setAdmissions((prev) => prev.filter((a) => a.id !== id));
+          setFilteredAdmissions((prev) => prev.filter((a) => a.id !== id));
+          setSelectedIds((prev) => prev.filter((sid) => sid !== id));
+        } else {
+          throw new Error(response.data.message || "Failed to delete admission");
+        }
+      } catch (err) {
+        console.error("Error deleting admission:", err);
+        alert(err.response?.data?.message || err.message || "Failed to delete admission");
+      }
+    }
+  };
+
+  const toggleSelectOne = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredAdmissions.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredAdmissions.map((a) => a.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (
+      !window.confirm(
+        `Are you sure you want to PERMANENTLY delete ${selectedIds.length} selected admission(s)? This cannot be undone.`
+      )
+    )
+      return;
+
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.allSettled(
+        selectedIds.map((id) => admissionAPI.deleteAdmission(id))
+      );
+
+      const succeededIds = selectedIds.filter((id, i) => results[i].status === "fulfilled" && results[i].value?.data?.success);
+      const failedCount = selectedIds.length - succeededIds.length;
+
+      setAdmissions((prev) => prev.filter((a) => !succeededIds.includes(a.id)));
+      setFilteredAdmissions((prev) => prev.filter((a) => !succeededIds.includes(a.id)));
+      setSelectedIds([]);
+
+      if (failedCount > 0) {
+        alert(`${succeededIds.length} deleted successfully. ${failedCount} failed — please retry those.`);
+      } else {
+        alert(`${succeededIds.length} admission(s) deleted successfully!`);
+      }
+    } catch (err) {
+      console.error("Bulk delete error:", err);
+      alert("Bulk delete failed: " + (err.message || "Unknown error"));
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   const handleDateRangeChange = (e) => {
     const { name, value } = e.target;
     setDateRange((prev) => ({
@@ -352,6 +425,17 @@ const CancelList = () => {
           <p>View all cancelled student admissions</p>
         </div>
         <div className="header-actions">
+          {selectedIds.length > 0 && (
+            <button
+              className="btn-secondary"
+              style={{ background: "#dc2626", color: "#fff" }}
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+            >
+              <Trash2 size={18} />
+              {bulkDeleting ? "Deleting..." : `Delete Selected (${selectedIds.length})`}
+            </button>
+          )}
           <button className="btn-secondary" onClick={handleExport}>
             <Download size={18} />
             Export List
@@ -584,6 +668,13 @@ const CancelList = () => {
         <table className="data-table">
           <thead>
             <tr>
+              <th style={{ width: "36px" }}>
+                <input
+                  type="checkbox"
+                  checked={filteredAdmissions.length > 0 && selectedIds.length === filteredAdmissions.length}
+                  onChange={toggleSelectAll}
+                />
+              </th>
               <th onClick={() => handleSort("studentId")} className="sortable">
                 Student ID {getSortIndicator("studentId")}
               </th>
@@ -605,6 +696,13 @@ const CancelList = () => {
             {!loading && !error && filteredAdmissions.length > 0 ? (
               filteredAdmissions.map((admission) => (
                 <tr key={admission.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(admission.id)}
+                      onChange={() => toggleSelectOne(admission.id)}
+                    />
+                  </td>
                   <td className="student-id">{admission.studentId}</td>
                   <td>
                     <div className="student-info">
@@ -714,6 +812,16 @@ const CancelList = () => {
   <MessageCircle size={14} />
   <span>Chat on WhatsApp</span>
 </button>
+                            <button
+                              className="dropdown-item delete-option"
+                              onClick={() => {
+                                setOpenDropdown(null);
+                                handleDeleteAdmission(admission.id, admission.name);
+                              }}
+                            >
+                              <Trash2 size={14} />
+                              <span>Delete Permanently</span>
+                            </button>
                           </div>
                         )}
                       </div>
@@ -723,7 +831,7 @@ const CancelList = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="9" className="empty-row">
+                <td colSpan="10" className="empty-row">
                   <div className="empty-state">
                     <XCircle size={48} />
                     <h3>No cancelled admissions found</h3>
