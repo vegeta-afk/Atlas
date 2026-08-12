@@ -1789,7 +1789,7 @@ const displayedDefaulters = monthFilteredDefaulters.filter(s => {
     <div className="bg-white rounded-xl shadow-lg overflow-hidden">
  
       {/* Header + Filter Toggle */}
-      <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-6 border-b border-gray-200">
   <div>
     <h2 className="text-xl font-semibold flex items-center">
       <AlertCircle className="mr-3 h-6 w-6 text-red-600" />
@@ -1797,7 +1797,8 @@ const displayedDefaulters = monthFilteredDefaulters.filter(s => {
     </h2>
     <p className="text-gray-600 mt-1">Students who have unpaid fee installments</p>
   </div>
-  <div className="flex items-center gap-3 self-start sm:self-center flex-wrap">
+
+  <div className="mt-4 flex flex-wrap items-end gap-3">
     <div>
       <label className="text-xs font-medium text-gray-500 block mb-1">Search Name / Roll No</label>
       <input
@@ -1808,34 +1809,32 @@ const displayedDefaulters = monthFilteredDefaulters.filter(s => {
         className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-44 focus:ring-2 focus:ring-red-500 focus:outline-none"
       />
     </div>
-    <div className="flex items-end gap-2">
-      <div>
-        <label className="text-xs font-medium text-gray-500 block mb-1">From</label>
-        <input
-          type="date"
-          value={pendingFromDate}
-          onChange={e => setPendingFromDate(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
-        />
-      </div>
-      <div>
-        <label className="text-xs font-medium text-gray-500 block mb-1">To</label>
-        <input
-          type="date"
-          value={pendingToDate}
-          onChange={e => setPendingToDate(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
-        />
-      </div>
-      {(pendingFromDate || pendingToDate) && (
-        <button
-          onClick={() => { setPendingFromDate(''); setPendingToDate(''); }}
-          className="px-3 py-2 text-xs font-medium text-gray-500 hover:text-red-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-        >
-          Clear
-        </button>
-      )}
+    <div>
+      <label className="text-xs font-medium text-gray-500 block mb-1">From</label>
+      <input
+        type="date"
+        value={pendingFromDate}
+        onChange={e => setPendingFromDate(e.target.value)}
+        className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
+      />
     </div>
+    <div>
+      <label className="text-xs font-medium text-gray-500 block mb-1">To</label>
+      <input
+        type="date"
+        value={pendingToDate}
+        onChange={e => setPendingToDate(e.target.value)}
+        className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
+      />
+    </div>
+    {(pendingFromDate || pendingToDate) && (
+      <button
+        onClick={() => { setPendingFromDate(''); setPendingToDate(''); }}
+        className="px-3 py-2 text-xs font-medium text-gray-500 hover:text-red-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+      >
+        Clear
+      </button>
+    )}
     <div className="flex items-center gap-3 bg-gray-100 rounded-xl px-4 py-2">
       <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Filter Months:</span>
       <input
