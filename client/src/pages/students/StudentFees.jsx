@@ -1367,31 +1367,39 @@ const displayedDefaulters = monthFilteredDefaulters.filter(s => {
                             onClick={() => handleStudentSelect(student)}
                           >
                             <div className="flex justify-between items-start">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <div className="font-semibold text-gray-900 truncate">{student.fullName}</div>
-                                  {student.balanceAmount === 0 && (
-                                    <span className="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">Paid</span>
-                                  )}
-                                </div>
-                                <div className="text-sm text-gray-600 truncate">
-  Roll No: {student.admissionNo} • {student.course}
+  <div className="flex-1 min-w-0">
+    <div className="flex items-center gap-2 mb-1">
+      <div className="font-semibold text-gray-900 truncate">{student.fullName}</div>
+      {student.balanceAmount === 0 && (
+        <span className="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">Paid</span>
+      )}
+    </div>
+    <div className="text-sm text-gray-600 truncate">
+      Roll No: {student.admissionNo} • {student.course}
+    </div>
+    <div className="text-xs text-gray-500 truncate">
+      Father: {student.fatherName}
+    </div>
+    <div className="flex items-center gap-3 mt-2">
+      <span className="text-sm text-green-600 font-medium">Paid: {formatCurrency(student.paidAmount)}</span>
+      {student.balanceAmount > 0 && (
+        <span className="text-sm text-red-600 font-medium">Due: {formatCurrency(student.balanceAmount)}</span>
+      )}
+    </div>
+    <div className="text-xs text-gray-500 mt-1">Monthly: {formatCurrency(student.monthlyFee)}</div>
+  </div>
+
+  <div className="flex flex-col items-end justify-between self-stretch ml-2">
+    {selectedStudent?._id === student._id && (
+      <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
+    )}
+    <span className={`mt-auto px-2 py-0.5 text-xs font-bold rounded-full capitalize whitespace-nowrap ${
+      student.status?.toLowerCase() === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+    }`}>
+      {student.status}
+    </span>
+  </div>
 </div>
-<div className="text-xs text-gray-500 truncate">
-  Father: {student.fatherName}
-</div>
-                                <div className="flex items-center gap-3 mt-2">
-                                  <span className="text-sm text-green-600 font-medium">Paid: {formatCurrency(student.paidAmount)}</span>
-                                  {student.balanceAmount > 0 && (
-                                    <span className="text-sm text-red-600 font-medium">Due: {formatCurrency(student.balanceAmount)}</span>
-                                  )}
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">Monthly: {formatCurrency(student.monthlyFee)}</div>
-                              </div>
-                              {selectedStudent?._id === student._id && (
-                                <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0 ml-2" />
-                              )}
-                            </div>
                           </div>
                         ))}
                       </div>
