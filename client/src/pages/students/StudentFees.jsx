@@ -442,6 +442,10 @@ const handleRegisterDelete = async (receiptNo, studentId) => {
   return `RCPT${year}${month}${day}${Date.now() % 100000}${rand}`;
 };
 
+  const DISCONTINUED_STATUSES = ['cancelled', 'canceled', 'discontinued'];
+  const isDiscontinuedStatus = (status) =>
+    DISCONTINUED_STATUSES.includes((status || '').toString().toLowerCase());
+
   const getCourseShortName = (courseName) => {
   if (!courseName) return "C";
   return courseName
@@ -487,7 +491,9 @@ const handleRegisterDelete = async (receiptNo, studentId) => {
       }
       const data = await response.json();
       if (data.success) {
-        const transformedStudents = (data.data || []).map(student => {
+        const transformedStudents = (data.data || [])
+          .filter(student => !isDiscontinuedStatus(student.status))
+          .map(student => {
   const activeFeeSchedule = (student.feeSchedule || []).filter(
     f => f.status !== "suspended"
   );
@@ -945,7 +951,9 @@ setSelectedCourseTab(0);
       }
       const data = await response.json();
       if (data.success && data.data && data.data.length > 0) {
-        const transformedStudents = (data.data || []).map(student => {
+        const transformedStudents = (data.data || [])
+          .filter(student => !isDiscontinuedStatus(student.status))
+          .map(student => {
   const activeFeeSchedule = (student.feeSchedule || []).filter(
     f => f.status !== "suspended"
   );
@@ -1089,8 +1097,9 @@ const activeBalance = activeTotalFee - totalPaid;
   // One row per (student, due month) — same student repeats once per overdue month/admission fee
   const buildPendingFeesExportRows = (studentsList) => {
     const rows = [];
-
+    const EXPORT_HEADERS = ['Date of Admission', 'Student Name', 'Batch', 'Faculty', 'Course Name', 'Due Date', 'Fee Type', 'Total Due', 'Status', 'Month'];
     studentsList.forEach(student => {
+      const rawStatus = (student.status || student.originalData?.status || 'Active').toString();
       const overdueList = getOverdueMonths(student);
       const overdueAmt  = getOverdueAmount(overdueList);
 
@@ -1107,40 +1116,50 @@ const activeBalance = activeTotalFee - totalPaid;
         'Faculty':            student.faculty || student.originalData?.facultyAllot || '—',
         'Course Name':        student.course,
         'Total Due':          totalDue,
+        'Status':             rawStatus,
       };
 
       if (admissionFeeDue > 0) {
         rows.push({
           ...baseInfo,
-          'Month With Date': `Admission Fee (Due: ${formatDate(student.dateOfJoining)})`,
-          'Fee Type':         'Admission Fee',
+          'Due Date': formatDate(student.dateOfJoining),
+          'Month':    'Admission Fee',
+          'Fee Type': 'Admission Fee',
         });
       }
 
       overdueList.forEach(fee => {
-        const dueDateFormatted = fee.dueDate ? formatDate(fee.dueDate) : '—';
         rows.push({
           ...baseInfo,
-          'Month With Date': `${fee.month || `Month ${fee.monthNumber}`} (Due: ${dueDateFormatted})`,
-          'Fee Type':         fee.isExamMonth ? 'Exam Fee' : 'Monthly Fee',
+          'Due Date': fee.dueDate ? formatDate(fee.dueDate) : '—',
+          'Month':    fee.month || `Month ${fee.monthNumber}`,
+          'Fee Type': fee.isExamMonth ? 'Exam Fee' : 'Monthly Fee',
         });
       });
     });
 
-    return rows;
+    return { rows, headers: EXPORT_HEADERS };
   };
 
   const exportPendingFeesToExcel = () => {
-    const rows = buildPendingFeesExportRows(displayedDefaulters);
+    const { rows, headers } = buildPendingFeesExportRows(displayedDefaulters);
 
     if (rows.length === 0) {
       alert('No pending fee data to export for the current filter.');
       return;
     }
 
-    const worksheet = XLSX.utils.json_to_sheet(rows, {
-      header: ['Date of Admission', 'Student Name', 'Batch', 'Faculty', 'Course Name', 'Total Due', 'Month With Date', 'Fee Type']
+    const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
+
+    // Auto-size columns based on the widest cell (header or data) in each column
+    worksheet['!cols'] = headers.map(header => {
+      const maxDataLen = rows.reduce((max, row) => {
+        const cellVal = row[header] !== undefined && row[header] !== null ? String(row[header]) : '';
+        return Math.max(max, cellVal.length);
+      }, header.length);
+      return { wch: maxDataLen + 2 };
     });
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Pending Fees');
 
