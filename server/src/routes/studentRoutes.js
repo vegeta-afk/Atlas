@@ -1613,14 +1613,24 @@ router.delete('/fee-register/receipt/:receiptNo', async (req, res) => {
 
       // Reset admission fee if receipt matches
       if (student.admissionFeeReceiptNo === receiptNo) {
-        totalRefunded += student.admissionFee || 0;
-        student.admissionFeePaid        = false;
-        student.admissionFeePaidAmount  = 0;  
-        student.admissionFeeReceiptNo   = '';
-        student.admissionFeePaidDate    = null;
-        student.admissionFeePaymentMode = '';
-        modified = true;
-      }
+  totalRefunded += student.admissionFee || 0;
+  student.admissionFeePaid        = false;
+  student.admissionFeePaidAmount  = 0;  
+  student.admissionFeeReceiptNo   = '';
+  student.admissionFeePaidDate    = null;
+  student.admissionFeePaymentMode = '';
+  modified = true;
+}
+
+// Also strip admission fee data out of ANY paymentHistory entry for this receipt,
+// even if its receiptNo diverged from admissionFeeReceiptNo above.
+student.paymentHistory.forEach(ph => {
+  if (ph.receiptNo === receiptNo && ph.admissionFeeAmount) {
+    totalRefunded += ph.admissionFeeAmount;
+    ph.admissionFeeAmount = 0;
+    modified = true;
+  }
+});
 
       if (modified) {
         student.paidAmount    = Math.max(0, (student.paidAmount || 0) - totalRefunded);
