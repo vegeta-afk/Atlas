@@ -394,7 +394,8 @@ const handleRegisterEdit = async () => {
       body: JSON.stringify({
         oldReceiptNo: editingRegRecord.receiptNo,
         newReceiptNo: editRegReceiptNo,
-        newDate:      editRegDate
+        newDate:      editRegDate,
+        studentId:    editingRegRecord.studentId
       })
     });
     const data = await response.json();
@@ -410,11 +411,11 @@ const handleRegisterEdit = async () => {
   }
 };
 
-const handleRegisterDelete = async (receiptNo) => {
+const handleRegisterDelete = async (receiptNo, studentId) => {
   if (!confirm(`Delete ALL entries for receipt ${receiptNo}?\nFees will be restored to pending.`)) return;
   try {
     const response = await authFetch(
-      `/api/students/fee-register/receipt/${encodeURIComponent(receiptNo)}`,
+      `/api/students/fee-register/receipt/${encodeURIComponent(receiptNo)}?studentId=${studentId}`,
       { method: 'DELETE' }
     );
     const data = await response.json();
@@ -430,13 +431,13 @@ const handleRegisterDelete = async (receiptNo) => {
 };
 
   const generateReceiptNo = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `RCPT${year}${month}${day}${random}`;
-  };
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
+  return `RCPT${year}${month}${day}${Date.now() % 100000}${rand}`;
+};
 
   const getCourseShortName = (courseName) => {
   if (!courseName) return "C";

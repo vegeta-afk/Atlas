@@ -692,6 +692,19 @@ router.post("/payment", async (req, res) => {
       });
     }
 
+    // Idempotency guard — block duplicate/retried submits of the same receipt
+const alreadyExists =
+  student.paymentHistory.some(ph => ph.receiptNo === receiptNo) ||
+  student.feeSchedule.some(f => f.receiptNo === receiptNo) ||
+  student.admissionFeeReceiptNo === receiptNo;
+
+if (alreadyExists) {
+  return res.status(409).json({
+    success: false,
+    message: `Receipt ${receiptNo} has already been recorded for this student`,
+  });
+}
+
     console.log("🔍 Student fee schedule structure:");
     student.feeSchedule.forEach((fee, idx) => {
       console.log(`[${idx}] monthNumber: ${fee.monthNumber} (type: ${typeof fee.monthNumber}), month: "${fee.month}"`);
@@ -1476,10 +1489,12 @@ router.delete("/:id/fees/payment/:monthNumber", async (req, res) => {
 // PUT /api/students/fee-register/receipt — edit receipt no + date
 router.put('/fee-register/receipt', async (req, res) => {
   try {
-    const { oldReceiptNo, newReceiptNo, newDate } = req.body;
+    const { oldReceiptNo, newReceiptNo, newDate, studentId } = req.body;
     if (!oldReceiptNo) return res.status(400).json({ success: false, message: 'oldReceiptNo required' });
+    if (!studentId) return res.status(400).json({ success: false, message: 'studentId required' });
 
     const students = await Student.find({
+      _id: studentId,
       $or: [
         { 'feeSchedule.receiptNo': oldReceiptNo },
         { 'paymentHistory.receiptNo': oldReceiptNo },
@@ -1542,8 +1557,11 @@ router.put('/fee-register/receipt', async (req, res) => {
 router.delete('/fee-register/receipt/:receiptNo', async (req, res) => {
   try {
     const { receiptNo } = req.params;
+    const { studentId } = req.query;
+    if (!studentId) return res.status(400).json({ success: false, message: 'studentId required' });
 
     const students = await Student.find({
+      _id: studentId,
       $or: [
         { 'feeSchedule.receiptNo': receiptNo },
         { 'paymentHistory.receiptNo': receiptNo },
