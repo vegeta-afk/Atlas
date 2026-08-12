@@ -1132,14 +1132,40 @@ const activeBalance = activeTotalFee - totalPaid;
         const balance = fee.balanceAmount !== undefined
           ? fee.balanceAmount
           : (fee.totalFee || 0) - (fee.paidAmount || 0);
+        const monthLabel = fee.month || `Month ${fee.monthNumber}`;
+        const dueDateLabel = fee.dueDate ? formatDate(fee.dueDate) : '—';
 
-        rows.push({
-          ...baseInfo,
-          'Due Date':    fee.dueDate ? formatDate(fee.dueDate) : '—',
-          'Month':       fee.month || `Month ${fee.monthNumber}`,
-          'Fee Type':    fee.isExamMonth ? 'Exam Fee' : 'Monthly Fee',
-          'Monthly Due': balance,
-        });
+        if (fee.isExamMonth) {
+          const examRemaining    = Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0));
+          const monthlyRemaining = Math.max(0, balance - examRemaining);
+
+          if (monthlyRemaining > 0) {
+            rows.push({
+              ...baseInfo,
+              'Due Date':    dueDateLabel,
+              'Month':       monthLabel,
+              'Fee Type':    'Monthly Fee',
+              'Monthly Due': monthlyRemaining,
+            });
+          }
+          if (examRemaining > 0) {
+            rows.push({
+              ...baseInfo,
+              'Due Date':    dueDateLabel,
+              'Month':       monthLabel,
+              'Fee Type':    'Exam Fee',
+              'Monthly Due': examRemaining,
+            });
+          }
+        } else {
+          rows.push({
+            ...baseInfo,
+            'Due Date':    dueDateLabel,
+            'Month':       monthLabel,
+            'Fee Type':    'Monthly Fee',
+            'Monthly Due': balance,
+          });
+        }
       });
     });
 
