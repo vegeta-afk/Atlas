@@ -2518,7 +2518,7 @@ const displayedDefaulters = monthFilteredDefaulters.filter(s => {
       <Edit size={13} />
     </button>
     <button
-      onClick={() => handleRegisterDelete(record.receiptNo)}
+      onClick={() => handleRegisterDelete(record.receiptNo, record.studentId)}
       className="p-1.5 text-red-500 hover:bg-red-50 rounded"
       title="Delete Receipt (restores fees)"
     >
