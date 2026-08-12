@@ -303,6 +303,7 @@ router.get('/fee-register', async (req, res) => {
     const push = (student, fee, courseName, batchTime, faculty, feeType, amount) => {
       if (!amount || amount <= 0) return;
       records.push({
+        studentId:   student._id,
         date:        fee.paymentDate || fee.date,
         receiptNo:   fee.receiptNo,
         rollNo:      student.admissionNo,
@@ -376,6 +377,7 @@ for (const ph of (student.paymentHistory || [])) {
   const admissionAmount = ph.admissionFeeAmount || 0;
   if (admissionAmount > 0) {
     records.push({
+      studentId:   student._id,
       date:        ph.date,
       receiptNo:   ph.receiptNo,
       rollNo:      student.admissionNo,
@@ -404,6 +406,7 @@ for (const ph of (student.paymentHistory || [])) {
           for (const of_ of ph.otherFees) {
             if (!of_.amount) continue;
             records.push({
+              studentId:   student._id,
               date:        ph.date,
               receiptNo:   ph.receiptNo,
               rollNo:      student.admissionNo,
