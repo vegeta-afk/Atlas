@@ -261,6 +261,8 @@ const [regFeeType, setRegFeeType] = useState('all');
   const [regPage, setRegPage] = useState(1);
   const REG_PAGE_SIZE = 15;
   const [defaulterMonthFilter, setDefaulterMonthFilter] = useState(6);
+const [pendingFromDate, setPendingFromDate] = useState('');
+const [pendingToDate, setPendingToDate] = useState('');
 
 
   // ✅ NEW: Course tab states
@@ -1194,9 +1196,18 @@ const feeTypeOptions = [
 const totalRegPages   = Math.max(1, Math.ceil(filteredRegisterData.length / REG_PAGE_SIZE));
 const paginatedRegister = filteredRegisterData.slice((regPage - 1) * REG_PAGE_SIZE, regPage * REG_PAGE_SIZE);
 
-  const displayedDefaulters = defaulterMonthFilter >= 6
+  const monthFilteredDefaulters = defaulterMonthFilter >= 6
   ? defaulterStudents
   : defaulterStudents.filter(s => getOverdueMonths(s).length === defaulterMonthFilter);
+
+const displayedDefaulters = monthFilteredDefaulters.filter(s => {
+  if (!pendingFromDate && !pendingToDate) return true;
+  const doj = s.dateOfJoining ? new Date(s.dateOfJoining) : null;
+  if (!doj || isNaN(doj)) return false;
+  if (pendingFromDate && doj < new Date(pendingFromDate)) return false;
+  if (pendingToDate && doj > new Date(pendingToDate + 'T23:59:59')) return false;
+  return true;
+});
 
   
 
@@ -1779,6 +1790,34 @@ const paginatedRegister = filteredRegisterData.slice((regPage - 1) * REG_PAGE_SI
     <p className="text-gray-600 mt-1">Students who have unpaid fee installments</p>
   </div>
   <div className="flex items-center gap-3 self-start sm:self-center flex-wrap">
+    <div className="flex items-end gap-2">
+      <div>
+        <label className="text-xs font-medium text-gray-500 block mb-1">From</label>
+        <input
+          type="date"
+          value={pendingFromDate}
+          onChange={e => setPendingFromDate(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
+        />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-gray-500 block mb-1">To</label>
+        <input
+          type="date"
+          value={pendingToDate}
+          onChange={e => setPendingToDate(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
+        />
+      </div>
+      {(pendingFromDate || pendingToDate) && (
+        <button
+          onClick={() => { setPendingFromDate(''); setPendingToDate(''); }}
+          className="px-3 py-2 text-xs font-medium text-gray-500 hover:text-red-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+        >
+          Clear
+        </button>
+      )}
+    </div>
     <div className="flex items-center gap-3 bg-gray-100 rounded-xl px-4 py-2">
       <span className="text-xs text-gray-500 font-medium whitespace-nowrap">Filter Months:</span>
       <input
