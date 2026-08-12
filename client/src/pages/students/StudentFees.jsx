@@ -255,6 +255,7 @@ const StudentFees = () => {
   const [regToDate, setRegToDate] = useState(new Date().toISOString().split('T')[0]);
   const [regSearchName, setRegSearchName] = useState('');
   const [regSearchReceipt, setRegSearchReceipt] = useState('');
+const [regPaymentMode, setRegPaymentMode] = useState('all');
   const [regPage, setRegPage] = useState(1);
   const REG_PAGE_SIZE = 15;
   const [defaulterMonthFilter, setDefaulterMonthFilter] = useState(6);
@@ -468,6 +469,10 @@ const handleRegisterDelete = async (receiptNo, studentId) => {
   useEffect(() => {
     if (activeTab === 'paid') fetchYearlyCollection(paidYear);
   }, [paidYear]);
+
+  useEffect(() => {
+  setRegPage(1);
+}, [regPaymentMode]);
 
   const fetchStudents = async () => {
     try {
@@ -1091,8 +1096,12 @@ const activeBalance = activeTotalFee - totalPaid;
 
 
 
-  const totalRegPages   = Math.max(1, Math.ceil(feeRegisterData.length / REG_PAGE_SIZE));
-  const paginatedRegister = feeRegisterData.slice((regPage - 1) * REG_PAGE_SIZE, regPage * REG_PAGE_SIZE);
+  const filteredRegisterData = regPaymentMode === 'all'
+  ? feeRegisterData
+  : feeRegisterData.filter(r => r.paymentMode === regPaymentMode);
+
+const totalRegPages   = Math.max(1, Math.ceil(filteredRegisterData.length / REG_PAGE_SIZE));
+const paginatedRegister = filteredRegisterData.slice((regPage - 1) * REG_PAGE_SIZE, regPage * REG_PAGE_SIZE);
 
   const displayedDefaulters = defaulterMonthFilter >= 6
   ? defaulterStudents
@@ -1232,8 +1241,11 @@ const activeBalance = activeTotalFee - totalPaid;
                                   )}
                                 </div>
                                 <div className="text-sm text-gray-600 truncate">
-                                  Roll No: {student.admissionNo} • {student.course}
-                                </div>
+  Roll No: {student.admissionNo} • {student.course}
+</div>
+<div className="text-xs text-gray-500 truncate">
+  Father: {student.fatherName}
+</div>
                                 <div className="flex items-center gap-3 mt-2">
                                   <span className="text-sm text-green-600 font-medium">Paid: {formatCurrency(student.paidAmount)}</span>
                                   {student.balanceAmount > 0 && (
@@ -2240,6 +2252,21 @@ const activeBalance = activeTotalFee - totalPaid;
         Search
       </button>
 
+      <div>
+        <label className="text-xs font-medium text-gray-500 block mb-1">Payment Mode</label>
+        <select
+          value={regPaymentMode}
+          onChange={e => setRegPaymentMode(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        >
+          <option value="all">All Modes</option>
+          <option value="cash">Cash</option>
+          <option value="cheque">Cheque</option>
+          <option value="bank_transfer">Bank Transfer</option>
+          <option value="online">Online</option>
+        </select>
+      </div>
+
       <div className="ml-auto">
         <label className="text-xs font-medium text-gray-500 block mb-1">Search Receipt No.</label>
         <input
@@ -2356,11 +2383,11 @@ const activeBalance = activeTotalFee - totalPaid;
     {/* Footer: total + pagination */}
     <div className="p-4 border-t bg-gray-50 flex flex-wrap items-center justify-between gap-3">
       <div className="text-sm text-gray-600">
-        <span className="font-semibold text-gray-800">{feeRegisterData.length}</span> records &nbsp;|&nbsp;
-        Total collected:&nbsp;
-        <span className="font-bold text-green-700">
-          ₹{feeRegisterData.reduce((s, r) => s + (r.amount || 0), 0).toLocaleString('en-IN')}
-        </span>
+        <span className="font-semibold text-gray-800">{filteredRegisterData.length}</span> records &nbsp;|&nbsp;
+Total collected:&nbsp;
+<span className="font-bold text-green-700">
+  ₹{filteredRegisterData.reduce((s, r) => s + (r.amount || 0), 0).toLocaleString('en-IN')}
+</span>
       </div>
 
       {totalRegPages > 1 && (
