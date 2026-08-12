@@ -1100,17 +1100,14 @@ const activeBalance = activeTotalFee - totalPaid;
   // One row per (student, due month) — same student repeats once per overdue month/admission fee
   const buildPendingFeesExportRows = (studentsList) => {
     const rows = [];
-    const EXPORT_HEADERS = ['Date of Admission', 'Student Name', 'Batch', 'Faculty', 'Course Name', 'Due Date', 'Fee Type', 'Total Due', 'Status', 'Month'];
+    const EXPORT_HEADERS = ['Date of Admission', 'Student Name', 'Batch', 'Faculty', 'Course Name', 'Due Date', 'Fee Type', 'Monthly Due', 'Status', 'Month'];
     studentsList.forEach(student => {
       const rawStatus = (student.status || student.originalData?.status || 'Active').toString();
       const overdueList = getOverdueMonths(student);
-      const overdueAmt  = getOverdueAmount(overdueList);
 
       const admissionFeeTotal = student.originalData?.admissionFee || 0;
       const admissionFeePaid  = student.originalData?.admissionFeePaidAmount || 0;
       const admissionFeeDue   = Math.max(0, admissionFeeTotal - admissionFeePaid);
-
-      const totalDue = overdueAmt + admissionFeeDue;
 
       const baseInfo = {
         'Date of Admission': formatDate(student.dateOfJoining),
@@ -1118,25 +1115,30 @@ const activeBalance = activeTotalFee - totalPaid;
         'Batch':              student.batch || student.originalData?.batch || student.originalData?.batchTime || '—',
         'Faculty':            student.faculty || student.originalData?.facultyAllot || '—',
         'Course Name':        student.course,
-        'Total Due':          totalDue,
         'Status':             rawStatus,
       };
 
       if (admissionFeeDue > 0) {
         rows.push({
           ...baseInfo,
-          'Due Date': formatDate(student.dateOfJoining),
-          'Month':    'Admission Fee',
-          'Fee Type': 'Admission Fee',
+          'Due Date':    formatDate(student.dateOfJoining),
+          'Month':       'Admission Fee',
+          'Fee Type':    'Admission Fee',
+          'Monthly Due': admissionFeeDue,
         });
       }
 
       overdueList.forEach(fee => {
+        const balance = fee.balanceAmount !== undefined
+          ? fee.balanceAmount
+          : (fee.totalFee || 0) - (fee.paidAmount || 0);
+
         rows.push({
           ...baseInfo,
-          'Due Date': fee.dueDate ? formatDate(fee.dueDate) : '—',
-          'Month':    fee.month || `Month ${fee.monthNumber}`,
-          'Fee Type': fee.isExamMonth ? 'Exam Fee' : 'Monthly Fee',
+          'Due Date':    fee.dueDate ? formatDate(fee.dueDate) : '—',
+          'Month':       fee.month || `Month ${fee.monthNumber}`,
+          'Fee Type':    fee.isExamMonth ? 'Exam Fee' : 'Monthly Fee',
+          'Monthly Due': balance,
         });
       });
     });
