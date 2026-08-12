@@ -1165,6 +1165,13 @@ const activeBalance = activeTotalFee - totalPaid;
   .filter(r => regPaymentMode === 'all' || r.paymentMode === regPaymentMode)
   .filter(r => regFeeType === 'all' || r.feeType === regFeeType);
 
+const feeTypeOptions = [
+  'Monthly Fee',
+  'Admission Fee',
+  'Exam Fee',
+  ...otherFees.map(f => f.name)
+];
+
 const totalRegPages   = Math.max(1, Math.ceil(filteredRegisterData.length / REG_PAGE_SIZE));
 const paginatedRegister = filteredRegisterData.slice((regPage - 1) * REG_PAGE_SIZE, regPage * REG_PAGE_SIZE);
 
