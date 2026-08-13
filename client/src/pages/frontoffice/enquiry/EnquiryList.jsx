@@ -183,7 +183,7 @@ const basePath = location.pathname.startsWith("/admin") ? "/admin" : "/faculty";
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-    }, 400);
+    }, 800);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
