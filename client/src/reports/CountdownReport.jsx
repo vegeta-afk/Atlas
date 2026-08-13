@@ -389,9 +389,6 @@ const CountdownReport = () => {
           <table className="w-full min-w-[1400px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Type
-                </th>
                 <th onClick={() => handleSort("dateOfJoining")} className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
                   D.O.A {getSortIndicator("dateOfJoining")}
                 </th>
@@ -425,18 +422,6 @@ const CountdownReport = () => {
               {courses.length > 0 ? (
                 courses.map((course, index) => (
                   <tr key={course.id || index} className={`hover:bg-gray-50 ${course.courseType === 'additional' ? 'bg-purple-50/30' : ''}`}>
-                    <td className="px-4 py-4 text-center">
-                      {course.courseType === 'primary' ? (
-                        <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                          Primary
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                          <Layers size={10} className="mr-1" />
-                          Additional
-                        </span>
-                      )}
-                    </td>
                     <td className="px-4 py-4 text-center text-sm text-gray-700">{formatDate(course.dateOfJoining)}</td>
                     <td className="px-4 py-4 text-center">
                       <span className={`inline-block px-3 py-1 text-xs font-medium rounded ${
@@ -488,7 +473,7 @@ const CountdownReport = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="10" className="py-16 text-center">
+                  <td colSpan="9" className="py-16 text-center">
                     <Users size={48} className="mx-auto text-gray-300 mb-4" />
                     <h3 className="text-lg font-medium text-gray-700 mb-1">No data found</h3>
                     <p className="text-sm text-gray-500">Try adjusting your search or filter criteria.</p>

@@ -1039,11 +1039,12 @@ exports.bulkDeleteTransfers = async (req, res) => {
 
     const validIds = ids.filter((id) => mongoose.Types.ObjectId.isValid(id));
 
-    // Only requests that are currently 'approved' are eligible
+    // Approved and rejected requests are eligible; pending is excluded
     const eligible = await BatchTransfer.find({
       _id: { $in: validIds },
-      status: 'approved',
+      status: { $in: ['approved', 'rejected'] },
     }).select('_id');
+    
 
     const eligibleIds = eligible.map((t) => t._id.toString());
     const skippedIds = validIds.filter((id) => !eligibleIds.includes(id));
@@ -1056,7 +1057,7 @@ exports.bulkDeleteTransfers = async (req, res) => {
 
     res.json({
       success: true,
-      message: `${deletedCount} request(s) deleted${skippedIds.length ? `, ${skippedIds.length} skipped (not approved)` : ''}.`,
+      message: `${deletedCount} request(s) deleted${skippedIds.length ? `, ${skippedIds.length} skipped (still pending)` : ''}.`,
       data: { deletedCount, deletedIds: eligibleIds, skippedIds },
     });
   } catch (error) {

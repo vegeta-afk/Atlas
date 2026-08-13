@@ -1731,3 +1731,11 @@ input:disabled {
     font-size: 12px;
   }
 }
+
+.filters-section-horizontal .search-box svg {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  transform: none !important;
+  flex-shrink: 0 !important;
+}

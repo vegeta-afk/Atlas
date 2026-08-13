@@ -342,7 +342,7 @@ const toggleSelectMode = () => {
 };
 
 const toggleSelectOne = (id, status) => {
-  if (status !== "approved") return;
+  if (status === "pending") return;
   setSelectedIds((prev) =>
     prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
   );
@@ -487,7 +487,7 @@ const handleBulkDelete = async () => {
   });
 
   const selectableIds = filteredTransfers
-    .filter((t) => t.status === "approved")
+    .filter((t) => t.status === "approved" || t.status === "rejected")
     .map((t) => t._id);
 
   const allSelected =
@@ -710,14 +710,14 @@ const handleBulkDelete = async () => {
       <input
         type="checkbox"
         checked={selectedIds.includes(transfer._id)}
-        disabled={transfer.status !== "approved"}
+        disabled={transfer.status === "pending"}
         onChange={() => toggleSelectOne(transfer._id, transfer.status)}
         className={`w-4 h-4 ${
-          transfer.status === "approved"
+          transfer.status !== "pending"
             ? "cursor-pointer accent-indigo-600"
             : "cursor-not-allowed opacity-30"
         }`}
-        title={transfer.status !== "approved" ? "Only accepted requests can be bulk deleted" : ""}
+        title={transfer.status === "pending" ? "Pending requests must be approved or rejected first" : ""}
       />
     </td>
   )}

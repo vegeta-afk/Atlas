@@ -584,12 +584,12 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
             <div className="search-box">
               <Search size={20} />
               <input
-                type="text"
-                placeholder="           Search by name, phone, enquiry no or WhatsApp no..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                disabled={loading}
-              />
+  type="text"
+  placeholder="Search by name, phone, enquiry no or WhatsApp no..."
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+  disabled={loading}
+/>
             </div>
 
             {/* Date Range Filter */}
