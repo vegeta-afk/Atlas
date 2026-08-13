@@ -89,7 +89,6 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/course-conversion", courseConversionRoutes);
 app.use("/api/course-extension", courseExtensionRoutes);
 app.use("/api/call-logs", callLogRoutes);
-app.use("/api/call-logs", require("./routes/callLogRoutes"));
 app.use('/api/tests', testRouter);
 app.use("/api/materials", materialRoutes);
 app.use("/api/reports/birthdays", birthdayRoutes);
