@@ -28,6 +28,14 @@ const protect = async (req, res, next) => {
         message: 'User not found'
       });
     }
+
+    // ✅ Block suspended accounts, even with a still-valid token
+    if (user.isActive === false) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account has been suspended. Please contact the administrator.'
+      });
+    }
     
     // ✅ CRITICAL: Use facultyId from token OR from user document
     // The token should have facultyId from login function above
