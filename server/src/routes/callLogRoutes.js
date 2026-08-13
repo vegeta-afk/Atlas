@@ -32,3 +32,5 @@ router.post("/", createCallLog);
 router.get("/:id", getCallLog);
 router.put("/:id", updateCallLog);
 router.delete("/:id", authorize("admin"), deleteCallLog);
+
+module.exports = router;
