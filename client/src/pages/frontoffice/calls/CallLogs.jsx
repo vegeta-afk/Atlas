@@ -16,6 +16,8 @@ import {
   Clock,
   ChevronRight,
   History,
+  Trash2,
+  CheckSquare,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -34,6 +36,7 @@ const CallLogs = () => {
   const [activeTab, setActiveTab] = useState("enquiry");
 
   const loggedInUser = JSON.parse(localStorage.getItem("user"));
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const [admissions, setAdmissions] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
@@ -69,6 +72,8 @@ const CallLogs = () => {
   const [counselors, setCounselors] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const [admissionPagination, setAdmissionPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
   const [enquiryPagination, setEnquiryPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
@@ -109,6 +114,7 @@ const CallLogs = () => {
   const enquiryCallReasons = [
     { value: "call not picked", name: "call not picked" },
     { value: "अभी सोच रहा हूँ", name: "अभी सोच रहा हूँ" },
+    { value: "मैं कल आऊँगा/आऊँगी", name: "मैं कल आऊँगा/आऊँगी" },
     { value: "Fees ज़्यादा है", name: "Fees ज़्यादा है" },
     { value: "घर वालों से पूछना है", name: "घर वालों से पूछना है" },
     { value: "अभी time नहीं है", name: "अभी time नहीं है" },
@@ -120,6 +126,7 @@ const CallLogs = () => {
     { value: "बाद में करेंगे", name: "बाद में करेंगे" },
     { value: "Location दूर है", name: "Location दूर है" },
     { value: "Certificate मान्य है या नहीं", name: "Certificate मान्य है या नहीं?" },
+    { value: "other", name: "other" },
   ];
 
   // Hardcoded cancel call reasons
@@ -452,6 +459,66 @@ const CallLogs = () => {
     toast.success("Refreshed!");
   };
 
+  const toggleSelectMode = () => {
+    setSelectMode(!selectMode);
+    setSelectedIds([]);
+  };
+
+  const toggleSelectOne = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteLog = async (id) => {
+    if (!window.confirm("Delete this call log entry permanently? This cannot be undone.")) return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE}/api/call-logs/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success("Call log deleted!");
+        fetchCallLogs();
+      } else {
+        toast.error(data.message || "Failed to delete call log");
+      }
+    } catch (err) {
+      console.error("Error deleting call log:", err);
+      toast.error("Failed to delete call log");
+    }
+  };
+
+  const handleBulkDeleteLogs = async () => {
+    if (selectedIds.length === 0) return;
+    if (!window.confirm(`Delete ${selectedIds.length} call log(s) permanently? This cannot be undone.`)) return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE}/api/call-logs/bulk-delete`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`${data.data.deletedCount} call log(s) deleted!`);
+        setSelectedIds([]);
+        setSelectMode(false);
+        fetchCallLogs();
+      } else {
+        toast.error(data.message || "Failed to bulk delete call logs");
+      }
+    } catch (err) {
+      console.error("Error bulk deleting call logs:", err);
+      toast.error("Failed to bulk delete call logs");
+    }
+  };
+
   // ── render ─────────────────────────────────────────────────────
   return (
     <div className="call-log-page">
@@ -464,6 +531,12 @@ const CallLogs = () => {
         </div>
         <button className="btn-refresh" onClick={handleRefresh}>
           <RefreshCw size={16} /> Refresh
+        </button>
+        <button
+          className={`btn-refresh ${selectMode ? "active" : ""}`}
+          onClick={toggleSelectMode}
+        >
+          <CheckSquare size={16} /> {selectMode ? "Cancel Select" : "Select Logs"}
         </button>
       </div>
 
@@ -732,6 +805,14 @@ const CallLogs = () => {
                               <div className="history-list">
                                 {logs.map((log, idx) => (
                                   <div key={log._id || idx} className="history-item">
+                                    {selectMode && (
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedIds.includes(log._id)}
+                                        onChange={() => toggleSelectOne(log._id)}
+                                        className="history-item-checkbox"
+                                      />
+                                    )}
                                     <div className="history-item-left">
                                       <span className={`call-status-badge ${getStatusBadgeClass(log.callStatus)}`}>{getStatusLabel(log.callStatus)}</span>
                                       {log.callReason && <span className="history-reason">{log.callReason}</span>}
@@ -748,6 +829,13 @@ const CallLogs = () => {
   <span className="history-date">{formatDate(log.createdAt)}</span>
   <span className="history-time">{formatTime(log.createdAt)}</span>
 </div>
+                                      <button
+                                        className="history-delete-btn"
+                                        onClick={() => handleDeleteLog(log._id)}
+                                        title="Delete this call log"
+                                      >
+                                        <Trash2 size={13} />
+                                      </button>
                                     </div>
                                   </div>
                                 ))}
@@ -795,6 +883,18 @@ const CallLogs = () => {
               Next
             </button>
           </div>
+        </div>
+      )}
+
+      {selectMode && selectedIds.length > 0 && (
+        <div className="bulk-delete-bar">
+          <span>{selectedIds.length} selected</span>
+          <button onClick={handleBulkDeleteLogs} className="bulk-delete-btn">
+            <Trash2 size={14} /> Delete Selected
+          </button>
+          <button onClick={() => setSelectedIds([])} className="bulk-clear-btn">
+            Clear
+          </button>
         </div>
       )}
 

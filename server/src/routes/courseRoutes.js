@@ -33,11 +33,7 @@ router
   .put(courseController.updateCourse)
   .delete(courseController.deleteCourse);
 // Course status management
-// router.put(
-//   "/:id/toggle-status",
-//   validateCourseId,
-//   courseController.toggleStatus
-// );
+router.put("/:id/toggle-status", courseController.toggleStatus);
 
 // Course statistics and reports
 router.get("/stats/summary", courseController.getCourseStats);

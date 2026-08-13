@@ -241,3 +241,28 @@ exports.getStatistics = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// ── Bulk delete call logs ──────────────────────────────────────
+exports.bulkDeleteCallLogs = async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide an array of call log IDs to delete",
+      });
+    }
+
+    const result = await CallLog.deleteMany({ _id: { $in: ids } });
+
+    res.json({
+      success: true,
+      message: `${result.deletedCount} call log(s) deleted successfully`,
+      data: { deletedCount: result.deletedCount },
+    });
+  } catch (error) {
+    console.error("Bulk delete call logs error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

@@ -132,6 +132,49 @@ const CourseList = () => {
         </Link>
       </div>
 
+      {/* Stats Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Total Courses</p>
+              <p className="text-2xl font-bold text-gray-800">{pagination.total}</p>
+            </div>
+            <div className="p-2 bg-blue-50 rounded-lg">
+              <BookOpen className="text-blue-600" size={20} />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Active Courses</p>
+              <p className="text-2xl font-bold text-gray-800">
+                {courses.filter(c => c.isActive).length}
+              </p>
+            </div>
+            <div className="p-2 bg-green-50 rounded-lg">
+              <CheckCircle className="text-green-600" size={20} />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Discontinued Courses</p>
+              <p className="text-2xl font-bold text-gray-800">
+                {courses.filter(c => !c.isActive).length}
+              </p>
+            </div>
+            <div className="p-2 bg-red-50 rounded-lg">
+              <XCircle className="text-red-600" size={20} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="flex-1 relative">
@@ -386,53 +429,7 @@ const CourseList = () => {
         )}
       </div>
 
-      {/* Stats Summary */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Courses</p>
-              <p className="text-2xl font-bold text-gray-800">{pagination.total}</p>
-            </div>
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <BookOpen className="text-blue-600" size={20} />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Active Courses</p>
-              <p className="text-2xl font-bold text-gray-800">
-                {courses.filter(c => c.isActive).length}
-              </p>
-            </div>
-            <div className="p-2 bg-green-50 rounded-lg">
-              <CheckCircle className="text-green-600" size={20} />
-            </div>
-          </div>
-        </div>
-        {/* <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Average Seats Filled</p>
-              <p className="text-2xl font-bold text-gray-800">
-                {courses.length > 0
-                  ? Math.round(
-                      courses.reduce((acc, course) => {
-                        const percentage = getSeatPercentage(course.seatsFilled || 0, course.seatsAvailable || 0);
-                        return acc + percentage;
-                      }, 0) / courses.length
-                    )
-                  : 0}%
-              </p>
-            </div>
-            <div className="p-2 bg-purple-50 rounded-lg">
-              <div className="text-purple-600 font-bold">%</div>
-            </div>
-          </div>
-        </div> */}
-      </div>
+      
     </div>
   );
 };

@@ -10,6 +10,7 @@ const {
   getCallLog,
   updateCallLog,
   deleteCallLog,
+  bulkDeleteCallLogs,
   getStatistics,
 } = require("../controllers/callLogController");
 
@@ -22,11 +23,12 @@ router.get("/statistics", getStatistics);
 // Student-specific logs  (must be BEFORE /:id)
 router.get("/student/:studentId/:studentType", getCallLogsByStudent);
 
+// Bulk delete (must be BEFORE /:id, same reason as above)
+router.post("/bulk-delete", authorize("admin"), bulkDeleteCallLogs);
+
 // Main CRUD
 router.get("/", getAllCallLogs);
 router.post("/", createCallLog);
 router.get("/:id", getCallLog);
 router.put("/:id", updateCallLog);
 router.delete("/:id", authorize("admin"), deleteCallLog);
-
-module.exports = router;
