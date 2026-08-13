@@ -432,6 +432,21 @@ const handleDelete = async (id) => {
     );
   });
 
+  const selectableIds = filteredTransfers
+    .filter((t) => t.status === "approved")
+    .map((t) => t._id);
+
+  const allSelected =
+    selectableIds.length > 0 && selectableIds.every((id) => selectedIds.includes(id));
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !selectableIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...selectableIds])));
+    }
+  };
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       {/* Header */}
@@ -453,6 +468,19 @@ const handleDelete = async (id) => {
             <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
             Refresh
           </button>
+          {isAdmin && (
+            <button
+              onClick={toggleSelectMode}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                selectMode
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <CheckSquare size={18} />
+              {selectMode ? "Cancel Select" : "Select"}
+            </button>
+          )}
           {/* <Link
             to={`${basePath}/students/batch-transfer/add`}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
@@ -555,6 +583,16 @@ const handleDelete = async (id) => {
           <table className="w-full min-w-[1200px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
+                {selectMode && (
+                  <th className="px-4 py-4 text-center">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 cursor-pointer accent-indigo-600"
+                    />
+                  </th>
+                )}
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Request Date</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Requested By</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Student Details</th>
@@ -569,7 +607,7 @@ const handleDelete = async (id) => {
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="9" className="px-4 py-12 text-center">
+                  <td colSpan={selectMode ? 10 : 9} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-10 h-10 border-3 border-gray-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
                       <p className="text-sm text-gray-500">Loading transfers...</p>
@@ -578,7 +616,7 @@ const handleDelete = async (id) => {
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan="9" className="px-4 py-12 text-center">
+                  <td colSpan={selectMode ? 10 : 9} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center justify-center text-red-500">
                       <AlertCircle size={40} className="mb-3" />
                       <p className="text-sm font-medium mb-2">{error}</p>
@@ -602,7 +640,7 @@ const handleDelete = async (id) => {
                 </tr>
               ) : filteredTransfers.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="px-4 py-12 text-center">
+                  <td colSpan={selectMode ? 10 : 9} className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center justify-center text-gray-400">
                       <ArrowLeftRight size={48} className="mb-3" />
                       <p className="text-sm font-medium text-gray-600 mb-1">No transfer requests found</p>
@@ -613,6 +651,22 @@ const handleDelete = async (id) => {
               ) : (
                 filteredTransfers.map((transfer) => (
                   <tr key={transfer._id} className="hover:bg-gray-50 transition-colors">
+  {selectMode && (
+    <td className="px-4 py-4 text-center">
+      <input
+        type="checkbox"
+        checked={selectedIds.includes(transfer._id)}
+        disabled={transfer.status !== "approved"}
+        onChange={() => toggleSelectOne(transfer._id, transfer.status)}
+        className={`w-4 h-4 ${
+          transfer.status === "approved"
+            ? "cursor-pointer accent-indigo-600"
+            : "cursor-not-allowed opacity-30"
+        }`}
+        title={transfer.status !== "approved" ? "Only accepted requests can be bulk deleted" : ""}
+      />
+    </td>
+  )}
   <td className="px-4 py-4 text-center">
     <span className="text-sm text-gray-700">{formatDate(transfer.requestDate)}</span>
   </td>
@@ -755,6 +809,25 @@ const handleDelete = async (id) => {
               Next
             </button>
           </div>
+        </div>
+      )}
+
+      {selectMode && selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl flex items-center gap-4 z-40">
+          <span className="text-sm font-medium">{selectedIds.length} selected</span>
+          <button
+            onClick={handleBulkDelete}
+            className="flex items-center gap-2 px-4 py-1.5 bg-red-600 hover:bg-red-700 rounded-full text-sm font-medium transition-colors"
+          >
+            <Trash2 size={14} />
+            Delete Selected
+          </button>
+          <button
+            onClick={() => setSelectedIds([])}
+            className="text-gray-300 hover:text-white text-sm"
+          >
+            Clear
+          </button>
         </div>
       )}
 

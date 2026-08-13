@@ -1022,3 +1022,49 @@ exports.bulkTransferStudents = async (req, res) => {
     });
   }
 };
+
+// @desc    Bulk delete batch transfers (approved/accepted requests only)
+// @route   POST /api/batch-transfers/bulk-delete
+// @access  Private (Admin only)
+exports.bulkDeleteTransfers = async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide an array of transfer IDs to delete',
+      });
+    }
+
+    const validIds = ids.filter((id) => mongoose.Types.ObjectId.isValid(id));
+
+    // Only requests that are currently 'approved' are eligible
+    const eligible = await BatchTransfer.find({
+      _id: { $in: validIds },
+      status: 'approved',
+    }).select('_id');
+
+    const eligibleIds = eligible.map((t) => t._id.toString());
+    const skippedIds = validIds.filter((id) => !eligibleIds.includes(id));
+
+    let deletedCount = 0;
+    if (eligibleIds.length > 0) {
+      const result = await BatchTransfer.deleteMany({ _id: { $in: eligibleIds } });
+      deletedCount = result.deletedCount;
+    }
+
+    res.json({
+      success: true,
+      message: `${deletedCount} request(s) deleted${skippedIds.length ? `, ${skippedIds.length} skipped (not approved)` : ''}.`,
+      data: { deletedCount, deletedIds: eligibleIds, skippedIds },
+    });
+  } catch (error) {
+    console.error('❌ Bulk delete transfer error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during bulk delete',
+      error: error.message,
+    });
+  }
+};
