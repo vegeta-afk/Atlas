@@ -1,22 +1,22 @@
-// pages/students/BridgeBatchList.jsx
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Search,
   ChevronDown,
-  Plus,
   RefreshCw,
   Clock,
   CheckCircle,
   XCircle,
   AlertCircle,
   Eye,
-  ArrowLeftRight,
-  User,
+  GitBranch,
   ThumbsUp,
   ThumbsDown,
-  RotateCcw,
-  MoreVertical, Trash2, X, CheckSquare,
+  MoreVertical,
+  Ban,
+  CheckSquare,
+  X,
+  Plus,
 } from "lucide-react";
 import useBasePath from "../../hooks/useBasePath";
 
@@ -39,9 +39,6 @@ const BridgeBatchList = () => {
   const [filters, setFilters] = useState({ search: "", status: "" });
   const [openDropdown, setOpenDropdown] = useState(null);
   const [viewBatch, setViewBatch] = useState(null);
-
-  const [selectMode, setSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState([]);
 
   useEffect(() => {
     fetchBridgeBatches();
@@ -158,73 +155,6 @@ const BridgeBatchList = () => {
       setLoading(false);
     }
   };
-
-  const toggleSelectMode = () => {
-  setSelectMode(!selectMode);
-  setSelectedIds([]);
-};
-
-const toggleSelectOne = (id, status) => {
-  if (status !== "approved") return;
-  setSelectedIds((prev) =>
-    prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-  );
-};
-
-const selectableIds = filteredTransfers
-  .filter((t) => t.status === "approved")
-  .map((t) => t._id);
-
-const allSelected =
-  selectableIds.length > 0 && selectableIds.every((id) => selectedIds.includes(id));
-
-const toggleSelectAll = () => {
-  if (allSelected) {
-    setSelectedIds((prev) => prev.filter((id) => !selectableIds.includes(id)));
-  } else {
-    setSelectedIds((prev) => Array.from(new Set([...prev, ...selectableIds])));
-  }
-};
-
-const handleBulkDelete = async () => {
-  if (selectedIds.length === 0) return;
-  if (
-    !window.confirm(
-      `Delete ${selectedIds.length} accepted request(s) permanently? This cannot be undone.`
-    )
-  )
-    return;
-
-  try {
-    setLoading(true);
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${API_BASE}/api/batch-transfers/bulk-delete`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ ids: selectedIds }),
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      alert(`🗑️ ${data.data.deletedCount} request(s) deleted!`);
-      setSelectedIds([]);
-      setSelectMode(false);
-      fetchTransfers();
-    } else {
-      alert(data.message || "Failed to bulk delete transfers");
-    }
-  } catch (err) {
-    console.error("Error bulk deleting transfers:", err);
-    alert(err.message || "Failed to bulk delete transfers");
-  } finally {
-    setLoading(false);
-  }
-};
 
   const handleDelete = async (id) => {
     if (!window.confirm("Permanently delete this request? This cannot be undone.")) return;

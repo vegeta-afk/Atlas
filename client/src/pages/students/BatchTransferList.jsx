@@ -16,7 +16,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   RotateCcw,
-  MoreVertical, Trash2, X,
+  MoreVertical, Trash2, X, CheckSquare,
 } from "lucide-react";
 import { setupAPI } from "../../services/api";
 import useBasePath from "../../hooks/useBasePath";
@@ -85,6 +85,8 @@ const BatchTransferList = () => {
 
   const [openDropdown, setOpenDropdown] = useState(null);
   const [viewTransfer, setViewTransfer] = useState(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
 
 const toggleDropdown = (id) => {
   setOpenDropdown(openDropdown === id ? null : id);
@@ -331,6 +333,58 @@ const handleDelete = async (id) => {
   } finally {
     setLoading(false);
     setOpenDropdown(null);
+  }
+};
+
+const toggleSelectMode = () => {
+  setSelectMode(!selectMode);
+  setSelectedIds([]);
+};
+
+const toggleSelectOne = (id, status) => {
+  if (status !== "approved") return;
+  setSelectedIds((prev) =>
+    prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+  );
+};
+
+const handleBulkDelete = async () => {
+  if (selectedIds.length === 0) return;
+  if (
+    !window.confirm(
+      `Delete ${selectedIds.length} accepted request(s) permanently? This cannot be undone.`
+    )
+  )
+    return;
+
+  try {
+    setLoading(true);
+    const token = localStorage.getItem("token");
+
+    const response = await fetch(`${API_BASE}/api/batch-transfers/bulk-delete`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ids: selectedIds }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      alert(`🗑️ ${data.data.deletedCount} request(s) deleted!`);
+      setSelectedIds([]);
+      setSelectMode(false);
+      fetchTransfers();
+    } else {
+      alert(data.message || "Failed to bulk delete transfers");
+    }
+  } catch (err) {
+    console.error("Error bulk deleting transfers:", err);
+    alert(err.message || "Failed to bulk delete transfers");
+  } finally {
+    setLoading(false);
   }
 };
 
