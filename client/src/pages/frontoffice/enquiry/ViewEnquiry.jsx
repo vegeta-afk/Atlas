@@ -398,7 +398,7 @@ const ViewEnquiry = () => {
                 {e.enquiryMethod?.replace(/_/g, " ") || "N/A"}
               </span>
             </div>
-            <div className="va-field-row">
+            {/* <div className="va-field-row">
               <span className="va-field-label">Follow-up Date</span>
               <span className="va-field-value">
                 <Calendar size={14} style={{ marginRight: 6, opacity: 0.6 }} />
@@ -410,12 +410,12 @@ const ViewEnquiry = () => {
               <span className="va-field-value">
                 {formatDate(e.dateOfComing)}
               </span>
-            </div>
+            </div> */}
 
             {/* Prospectus */}
             {e.prospectusFees && (
               <>
-                <div className="va-divider" />
+                {/* <div className="va-divider" /> */}
                 {/* <div className="va-field-row">
                   <span className="va-field-label">Prospectus Fees</span>
                   <span className="va-field-value" style={{ color: e.prospectusFees === "yes" ? "#15803d" : "#dc2626", fontWeight: 600 }}>
