@@ -127,3 +127,63 @@ exports.deleteAdminUser = async (req, res) => {
     });
   }
 };
+
+// @desc    Suspend or reactivate an admin user
+// @route   PUT /api/admin/:id/toggle-status
+// @access  Private (admin only)
+exports.toggleAdminStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Prevent an admin from suspending their own account
+    if (req.user && req.user.id === id) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot suspend your own admin account",
+      });
+    }
+
+    const admin = await User.findOne({ _id: id, role: "admin" });
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+
+    // If this admin is currently active and we're about to suspend them,
+    // block suspending the last remaining active admin
+    if (admin.isActive !== false) {
+      const activeAdminCount = await User.countDocuments({
+        role: "admin",
+        isActive: { $ne: false },
+      });
+      if (activeAdminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot suspend the last remaining active admin account",
+        });
+      }
+    }
+
+    admin.isActive = admin.isActive === false ? true : false;
+    await admin.save();
+
+    res.status(200).json({
+      success: true,
+      message: admin.isActive ? "Admin reactivated successfully" : "Admin suspended successfully",
+      admin: {
+        id: admin._id,
+        isActive: admin.isActive,
+      },
+    });
+  } catch (error) {
+    console.error("Toggle admin status error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
+  }
+};

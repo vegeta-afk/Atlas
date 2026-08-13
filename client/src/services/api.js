@@ -76,6 +76,7 @@ export const adminAPI = {
   createAdmin: (data) => api.post("/admin/create-admin", data),
   getAdmins: () => api.get("/admin/admins"),
   deleteAdmin: (id) => api.delete(`/admin/${id}`),
+  toggleAdminStatus: (id) => api.put(`/admin/${id}/toggle-status`),
 };
 
 

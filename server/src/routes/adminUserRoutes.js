@@ -4,11 +4,13 @@ const {
   createAdminUser,
   getAdminUsers,
   deleteAdminUser,
+  toggleAdminStatus,
 } = require("../controllers/adminUserController");
 const { protect, authorize } = require("../middlewares/authMiddleware");
 
 router.post("/create-admin", protect, authorize("admin"), createAdminUser);
 router.get("/admins", protect, authorize("admin"), getAdminUsers);
+router.put("/:id/toggle-status", protect, authorize("admin"), toggleAdminStatus);
 router.delete("/:id", protect, authorize("admin"), deleteAdminUser);
 
 module.exports = router;

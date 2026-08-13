@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { adminAPI } from "../../services/api";
 import {
   Save, X, User, Copy, Check, Eye, EyeOff,
-  Mail, Phone, Calendar, ShieldCheck, RefreshCw, Search, Trash2,
+  Mail, Phone, Calendar, ShieldCheck, RefreshCw, Search, Trash2, Ban,
 } from "lucide-react";
 
 const AddAdmin = () => {
@@ -32,6 +32,7 @@ const AddAdmin = () => {
   const [listError, setListError] = useState(null);
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
 
   useEffect(() => {
     fetchAdmins();
@@ -67,6 +68,29 @@ const AddAdmin = () => {
       alert(err.response?.data?.message || "Failed to delete admin");
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleToggleStatus = async (admin) => {
+    const isCurrentlyActive = admin.isActive !== false;
+    const action = isCurrentlyActive ? "suspend" : "reactivate";
+    const confirmed = window.confirm(
+      `${isCurrentlyActive ? "Suspend" : "Reactivate"} admin "${admin.name || admin.fullName}"?`
+    );
+    if (!confirmed) return;
+
+    setTogglingId(admin._id);
+    try {
+      const response = await adminAPI.toggleAdminStatus(admin._id);
+      const newIsActive = response.data.admin?.isActive;
+      setAdmins((prev) =>
+        prev.map((a) => (a._id === admin._id ? { ...a, isActive: newIsActive } : a))
+      );
+    } catch (err) {
+      console.error(`Error trying to ${action} admin:`, err);
+      alert(err.response?.data?.message || `Failed to ${action} admin`);
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -214,6 +238,7 @@ const AddAdmin = () => {
         .aa-search:focus { outline: none; border-color: #4f46e5 !important; box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
         .aa-refresh:hover { background: #f3f4f6 !important; }
         .aa-delete-btn:hover { background: #fef2f2 !important; }
+        .aa-suspend-btn:hover { background: #fffbeb !important; }
       `}</style>
 
       {/* Header */}
@@ -423,16 +448,26 @@ const AddAdmin = () => {
                       </div>
                     </td>
                     <td style={styles.td}>
-                      <button
-                        onClick={() => handleDeleteAdmin(admin)}
-                        disabled={deletingId === admin._id}
-                        style={styles.deleteBtn}
-                        className="aa-delete-btn"
-                        title="Delete admin"
-                      >
-                        <Trash2 size={14} />
-                        {deletingId === admin._id ? "Deleting..." : "Delete"}
-                      </button>
+                      <div style={styles.actionsCell}>
+                        <button
+                          onClick={() => handleToggleStatus(admin)}
+                          disabled={togglingId === admin._id}
+                          style={admin.isActive === false ? styles.reactivateIconBtn : styles.suspendIconBtn}
+                          className="aa-suspend-btn"
+                          title={admin.isActive === false ? "Reactivate admin" : "Suspend admin"}
+                        >
+                          {admin.isActive === false ? <ShieldCheck size={14} /> : <Ban size={14} />}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAdmin(admin)}
+                          disabled={deletingId === admin._id}
+                          style={styles.deleteIconBtn}
+                          className="aa-delete-btn"
+                          title="Delete admin"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -581,7 +616,10 @@ const styles = {
   badge: { display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 10px", borderRadius: "20px", fontSize: "12px", fontWeight: 600 },
   badgeActive: { background: "#dcfce7", color: "#166534" },
   badgeInactive: { background: "#fee2e2", color: "#991b1b" },
-  deleteBtn: { display: "flex", alignItems: "center", gap: "4px", padding: "6px 10px", background: "#fff", color: "#ef4444", border: "1px solid #fecaca", borderRadius: "6px", fontSize: "12px", fontWeight: 600, cursor: "pointer" },
+  actionsCell: { display: "flex", alignItems: "center", gap: "6px" },
+  deleteIconBtn: { display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", background: "#fff", color: "#ef4444", border: "1px solid #fecaca", borderRadius: "6px", cursor: "pointer", flexShrink: 0 },
+  suspendIconBtn: { display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", background: "#fff", color: "#f59e0b", border: "1px solid #fde68a", borderRadius: "6px", cursor: "pointer", flexShrink: 0 },
+  reactivateIconBtn: { display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", background: "#fff", color: "#10b981", border: "1px solid #a7f3d0", borderRadius: "6px", cursor: "pointer", flexShrink: 0 },
 };
 
 export default AddAdmin;
