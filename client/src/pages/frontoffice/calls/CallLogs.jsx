@@ -41,6 +41,8 @@ const CallLogs = () => {
   const [admissions, setAdmissions] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
 
+    const [refreshing, setRefreshing] = useState(false);
+
   // call logs stored as a map: { studentId → [logs sorted newest first] }
   const [callLogsMap, setCallLogsMap] = useState({});
 
@@ -452,11 +454,15 @@ const CallLogs = () => {
     return filtered.slice(start, start + pagination.limit);
   };
 
-  const handleRefresh = () => {
-    fetchAdmissions(false);
-    fetchEnquiries(false);
-    fetchCallLogs();
+    const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      fetchAdmissions(false),
+      fetchEnquiries(false),
+      fetchCallLogs(),
+    ]);
     toast.success("Refreshed!");
+    setRefreshing(false);
   };
 
   const toggleSelectMode = () => {
@@ -530,8 +536,8 @@ const CallLogs = () => {
           <p>Manage and track all outbound calls to students and enquiries</p>
         </div>
         <div className="header-actions">
-          <button className="btn-refresh" onClick={handleRefresh}>
-            <RefreshCw size={16} /> Refresh
+                    <button className="btn-refresh" onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw size={16} className={refreshing ? "spin-icon" : ""} /> Refresh
           </button>
           <button
             className={`btn-refresh ${selectMode ? "active" : ""}`}
@@ -830,21 +836,23 @@ const CallLogs = () => {
                                       {log.notes && <p className="history-notes">"{log.notes}"</p>}
                                       {log.nextAction && <span className="history-action">→ {log.nextAction}</span>}
                                     </div>
-                                    <div className="history-item-right">
-                                      <span className="history-counselor">👤 {log.counselorName && log.counselorName !== "Unknown" ? log.counselorName : "Unknown"}</span>
+                                                                        <div className="history-item-right">
+                                      <div className="history-counselor-row">
+                                        <span className="history-counselor">👤 {log.counselorName && log.counselorName !== "Unknown" ? log.counselorName : "Unknown"}</span>
+                                        <button
+                                          className="history-delete-btn"
+                                          onClick={() => handleDeleteLog(log._id)}
+                                          title="Delete this call log"
+                                        >
+                                          <Trash2 size={13} />
+                                        </button>
+                                      </div>
                                       {log.callDuration > 0 && <span className="history-duration"><Clock size={11} />{formatDuration(log.callDuration)}</span>}
                                       {log.followUpDate && <span className="history-followup">📅 Follow-up: {formatDate(log.followUpDate)}</span>}
                                       <div className="history-date-wrap">
   <span className="history-date">{formatDate(log.createdAt)}</span>
   <span className="history-time">{formatTime(log.createdAt)}</span>
 </div>
-                                      <button
-                                        className="history-delete-btn"
-                                        onClick={() => handleDeleteLog(log._id)}
-                                        title="Delete this call log"
-                                      >
-                                        <Trash2 size={13} />
-                                      </button>
                                     </div>
                                   </div>
                                 ))}

@@ -448,19 +448,25 @@
   flex-shrink: 0;
 }
 
+.history-counselor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .history-delete-btn {
-  margin-top: 6px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   border: 1px solid #fecaca;
   background: #fef2f2;
   color: #dc2626;
   border-radius: 6px;
-  font-size: 11px;
   cursor: pointer;
   transition: background 0.2s;
+  flex-shrink: 0;
 }
 
 .history-delete-btn:hover {
@@ -544,4 +550,8 @@
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+}
+
+.spin-icon {
+  animation: spin 0.8s linear infinite;
 }
