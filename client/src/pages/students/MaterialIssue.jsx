@@ -422,8 +422,9 @@ const MaterialIssue = () => {
                   <div className="table-container">
                     <table className="data-table">
                       <thead>
-                        <tr>
+                                                <tr>
                           <th>Student ID</th>
+                          <th>Date of Admission</th>
                           <th style={{ textAlign: "left" }}>Student Name</th>
                           <th>Contact</th>
                           <th>Batch</th>
@@ -434,7 +435,7 @@ const MaterialIssue = () => {
                       <tbody>
                         {filteredStudents.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="empty-row">No active students found</td>
+                                                        <td colSpan={7} className="empty-row">No active students found</td>
                           </tr>
                         ) : (
                           filteredStudents.map((student) => {
@@ -442,8 +443,9 @@ const MaterialIssue = () => {
                               (m) => issuesMap[`${student._id}_${m._id}`]?.issued
                             ).length;
                             return (
-                              <tr key={student._id}>
+                                                            <tr key={student._id}>
                                 <td className="student-id">{student.studentId}</td>
+                                <td>{formatDate(student.admissionDate)}</td>
                                 <td>
                                   <div className="student-info">
                                     <div className="avatar">{student.fullName ? student.fullName.charAt(0) : "?"}</div>
