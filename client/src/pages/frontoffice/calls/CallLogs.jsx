@@ -524,20 +524,22 @@ const CallLogs = () => {
     <div className="call-log-page">
 
       {/* Header */}
-      <div className="page-header">
+            <div className="page-header">
         <div>
           <h1>Call Log</h1>
           <p>Manage and track all outbound calls to students and enquiries</p>
         </div>
-        <button className="btn-refresh" onClick={handleRefresh}>
-          <RefreshCw size={16} /> Refresh
-        </button>
-        <button
-          className={`btn-refresh ${selectMode ? "active" : ""}`}
-          onClick={toggleSelectMode}
-        >
-          <CheckSquare size={16} /> {selectMode ? "Cancel Select" : "Select Logs"}
-        </button>
+        <div className="header-actions">
+          <button className="btn-refresh" onClick={handleRefresh}>
+            <RefreshCw size={16} /> Refresh
+          </button>
+          <button
+            className={`btn-refresh ${selectMode ? "active" : ""}`}
+            onClick={toggleSelectMode}
+          >
+            <CheckSquare size={16} /> {selectMode ? "Cancel Select" : "Select Logs"}
+          </button>
+        </div>
       </div>
 
       {/* Error */}

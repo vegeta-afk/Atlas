@@ -538,3 +538,10 @@
 .history-delete-all-btn:hover {
   background: #fef2f2;
 }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
