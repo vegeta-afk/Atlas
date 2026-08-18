@@ -254,11 +254,7 @@
   margin-left: 8px;
 }
 
-.date-col {
-  text-align: center !important;
-}
-
-.data-table td.date-col,
-.data-table th.date-col {
+.data-table tbody tr td.date-col,
+.data-table thead tr th.date-col {
   text-align: center !important;
 }
