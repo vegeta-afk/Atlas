@@ -259,6 +259,16 @@
   text-align: center !important;
 }
 
+.data-table tbody tr td.material-name-col,
+.data-table thead tr th.material-name-col {
+  text-align: center !important;
+}
+
+.data-table tbody tr td.idx-col,
+.data-table thead tr th.idx-col {
+  text-align: center !important;
+}
+
 
 .issue-filters-row {
   display: flex;

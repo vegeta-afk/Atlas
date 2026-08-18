@@ -344,8 +344,8 @@ const MaterialIssue = () => {
               <table className="data-table">
                 <thead>
                   <tr>
-                                        <th style={{ textAlign: "center" }}>#</th>
-                    <th style={{ textAlign: "center" }}>Material Name</th>
+                                                            <th className="idx-col">#</th>
+                    <th className="material-name-col">Material Name</th>
                     <th>Description</th>
                     <th>Unit</th>
                     <th>Total Stock</th>
@@ -366,9 +366,9 @@ const MaterialIssue = () => {
                       const issued = getIssuedCount(m._id);
                       const available = Math.max(0, (m.totalQuantity || 0) - issued);
                       return (
-                                                <tr key={m._id}>
-                          <td style={{ textAlign: "center" }}>{idx + 1}</td>
-                          <td style={{ textAlign: "center" }}>
+                                                                        <tr key={m._id}>
+                          <td className="idx-col">{idx + 1}</td>
+                          <td className="material-name-col">
                             <strong>{m.name}</strong>
                           </td>
                           <td style={{ color: "#6b7280", fontSize: "13px" }}>{m.description || "—"}</td>
