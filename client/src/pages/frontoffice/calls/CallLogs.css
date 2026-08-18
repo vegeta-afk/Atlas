@@ -218,7 +218,7 @@
 
 .history-item {
   display: grid;
-  grid-template-columns: 200px 1fr 240px;
+  grid-template-columns: 24px 200px 1fr 240px;
   gap: 16px;
   align-items: start;
   background: white;
@@ -428,11 +428,21 @@
   position: relative;
 }
 
+.history-item-checkbox-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  visibility: hidden;
+}
+
+.history-item-checkbox-wrap.visible {
+  visibility: visible;
+}
+
 .history-item-checkbox {
   width: 16px;
   height: 16px;
-  margin-right: 10px;
-  align-self: center;
   cursor: pointer;
   accent-color: #4f46e5;
   flex-shrink: 0;
@@ -502,4 +512,29 @@
 
 .bulk-clear-btn:hover {
   color: white;
+}
+
+.history-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-delete-all-btn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ef4444;
+  background: #fff;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.history-delete-all-btn:hover {
+  background: #fef2f2;
 }

@@ -491,9 +491,10 @@ const CallLogs = () => {
     }
   };
 
-  const handleBulkDeleteLogs = async () => {
-    if (selectedIds.length === 0) return;
-    if (!window.confirm(`Delete ${selectedIds.length} call log(s) permanently? This cannot be undone.`)) return;
+    const handleBulkDeleteLogs = async (idsOverride) => {
+    const idsToDelete = idsOverride || selectedIds;
+    if (idsToDelete.length === 0) return;
+    if (!window.confirm(`Delete ${idsToDelete.length} call log(s) permanently? This cannot be undone.`)) return;
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(`${API_BASE}/api/call-logs/bulk-delete`, {
@@ -502,13 +503,12 @@ const CallLogs = () => {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ids: selectedIds }),
+        body: JSON.stringify({ ids: idsToDelete }),
       });
       const data = await response.json();
       if (data.success) {
         toast.success(`${data.data.deletedCount} call log(s) deleted!`);
-        setSelectedIds([]);
-        setSelectMode(false);
+        if (!idsOverride) { setSelectedIds([]); setSelectMode(false); }
         fetchCallLogs();
       } else {
         toast.error(data.message || "Failed to bulk delete call logs");
@@ -797,22 +797,29 @@ const CallLogs = () => {
                         <tr className="history-row">
                           <td colSpan="9" className="history-cell">
                             <div className="history-panel">
-                              <div className="history-panel-header">
+                                                            <div className="history-panel-header">
                                 <History size={15} />
                                 <strong>Call History</strong>
                                 <span className="history-count">{logs.length} call{logs.length !== 1 ? "s" : ""}</span>
+                                <button
+                                  className="history-delete-all-btn"
+                                  onClick={() => handleBulkDeleteLogs(logs.map((l) => l._id))}
+                                  title="Delete all call history for this student"
+                                >
+                                  <Trash2 size={13} /> Delete All
+                                </button>
                               </div>
                               <div className="history-list">
                                 {logs.map((log, idx) => (
                                   <div key={log._id || idx} className="history-item">
-                                    {selectMode && (
+                                                                        <div className={`history-item-checkbox-wrap ${selectMode ? "visible" : ""}`}>
                                       <input
                                         type="checkbox"
                                         checked={selectedIds.includes(log._id)}
                                         onChange={() => toggleSelectOne(log._id)}
                                         className="history-item-checkbox"
                                       />
-                                    )}
+                                    </div>
                                     <div className="history-item-left">
                                       <span className={`call-status-badge ${getStatusBadgeClass(log.callStatus)}`}>{getStatusLabel(log.callStatus)}</span>
                                       {log.callReason && <span className="history-reason">{log.callReason}</span>}
