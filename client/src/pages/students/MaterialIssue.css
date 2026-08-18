@@ -192,3 +192,64 @@
   background: #3b82f6;
   color: white;
 }
+
+.view-student-meta {
+  display: flex;
+  gap: 24px;
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.material-status-list {
+  max-height: 360px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.material-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.material-status-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.material-status-name svg { color: #6b7280; }
+
+.material-status-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.material-status-badge.issued {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.material-status-badge.pending {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.material-status-date {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-left: 8px;
+}
