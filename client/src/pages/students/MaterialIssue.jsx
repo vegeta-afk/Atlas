@@ -5,7 +5,7 @@ import { Search, Plus, Package, X, Edit2, Trash2, ArrowLeft, Eye } from "lucide-
 import "./MaterialIssue.css";
 
 const MaterialIssue = () => {
-  const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
 
   const [students, setStudents] = useState([]);
   const [materials, setMaterials] = useState([]);
@@ -42,8 +42,9 @@ const MaterialIssue = () => {
       return "";
     }
   });
-  const [localChecks, setLocalChecks] = useState({});
+    const [localChecks, setLocalChecks] = useState({});
   const [submittingIssue, setSubmittingIssue] = useState(false);
+  const hasAutoSelectedRef = React.useRef(false);
 
   const viewingStudent = useMemo(
   () => students.find((s) => s._id === viewingStudentId) || null,
@@ -130,15 +131,19 @@ const MaterialIssue = () => {
     setLocalChecks(seeded);
   }, [selectedStudent, materials, issuesMap]);
 
-  // ── Auto-select the student when arriving from a direct link (e.g. AdmissionList "Issue Material") ──
+    // ── Auto-select the student when arriving from a direct link (e.g. AdmissionList "Issue Material") ──
+  // Runs at most once per page load — prevents re-triggering later just because
+  // a filter or search happens to narrow the list down to 1 result.
   useEffect(() => {
     if (loading) return;
     if (selectedStudentId) return;
     if (activeTab !== "issue") return;
+    if (hasAutoSelectedRef.current) return;
     const searchParam = searchParams.get("search");
     if (!searchParam) return;
 
     if (filteredStudents.length === 1) {
+      hasAutoSelectedRef.current = true;
       setSelectedStudentId(filteredStudents[0]._id);
     }
   }, [loading, filteredStudents, activeTab, searchParams, selectedStudentId]);
@@ -524,6 +529,12 @@ const MaterialIssue = () => {
                     onClick={() => {
                       setSelectedStudentId(null);
                       setSearchTerm("");
+                      hasAutoSelectedRef.current = true;
+                      setSearchParams((prev) => {
+                        const next = new URLSearchParams(prev);
+                        next.delete("search");
+                        return next;
+                      });
                     }}
                     type="button"
                   >
