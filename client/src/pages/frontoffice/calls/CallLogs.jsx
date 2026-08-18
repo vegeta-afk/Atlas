@@ -561,8 +561,8 @@ const CallLogs = () => {
       <div className="stats-cards">
         {[
           { icon: <Users size={24} />, cls: "bg-blue",   val: admissionCount + enquiryCount, label: "Total Students" },
-          { icon: <UserCheck size={24} />, cls: "bg-purple", val: admissionCount, label: "Admissions" },
           { icon: <MessageCircle size={24} />, cls: "bg-green",  val: enquiryCount, label: "Enquiries" },
+          { icon: <UserCheck size={24} />, cls: "bg-purple", val: admissionCount, label: "Admissions" },
           { icon: <Phone size={24} />, cls: "bg-orange", val: todayCallCount, label: "Calls Today" },
         ].map(({ icon, cls, val, label }) => (
           <div key={label} className="stat-card">
