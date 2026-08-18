@@ -28,6 +28,7 @@ const MaterialIssue = () => {
   const [editQty, setEditQty] = useState(0);
   const [editDesc, setEditDesc] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [viewingStudentId, setViewingStudentId] = useState(null);
 
   // ── New: student-form style issue flow ──
   const [selectedStudentId, setSelectedStudentId] = useState(null);
@@ -42,6 +43,11 @@ const MaterialIssue = () => {
   });
   const [localChecks, setLocalChecks] = useState({});
   const [submittingIssue, setSubmittingIssue] = useState(false);
+
+  const viewingStudent = useMemo(
+  () => students.find((s) => s._id === viewingStudentId) || null,
+  [students, viewingStudentId]
+);
 
   const fetchData = async () => {
     try {
@@ -451,12 +457,12 @@ const MaterialIssue = () => {
                                 <td>
                                   {materials.length === 0 ? "—" : `${issuedCount} / ${materials.length}`}
                                 </td>
-                                <td>
+                                                                <td>
                                   <div className="action-buttons">
                                     <button
                                       className="action-btn view"
-                                      onClick={() => setSelectedStudentId(student._id)}
-                                      title="Issue Material"
+                                      onClick={() => setViewingStudentId(student._id)}
+                                      title="View Materials Status"
                                     >
                                       <Eye size={16} />
                                     </button>
@@ -670,6 +676,50 @@ const MaterialIssue = () => {
               <button className="btn-primary" onClick={handleEditMaterial} disabled={savingEdit}>
                 {savingEdit ? "Saving..." : "Save Changes"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+            {viewingStudent && (
+        <div className="modal-overlay" onClick={() => setViewingStudentId(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-row">
+              <h3>Material Status — {viewingStudent.fullName}</h3>
+              <button className="close-btn" onClick={() => setViewingStudentId(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="view-student-meta">
+              <span><strong>Roll No:</strong> {viewingStudent.studentId}</span>
+              <span><strong>Batch:</strong> {getBatchDisplay(viewingStudent)}</span>
+            </div>
+
+            <div className="material-status-list">
+              {materials.length === 0 ? (
+                <div className="empty-row">No materials added yet</div>
+              ) : (
+                materials.map((m) => {
+                  const key = `${viewingStudent._id}_${m._id}`;
+                  const issued = !!issuesMap[key]?.issued;
+                  const issuedAt = issuesMap[key]?.issuedDate || issuesMap[key]?.updatedAt;
+                  return (
+                    <div key={m._id} className="material-status-row">
+                      <span className="material-status-name">
+                        <Package size={14} />
+                        {m.name}
+                      </span>
+                      <span className={`material-status-badge ${issued ? "issued" : "pending"}`}>
+                        {issued ? "Issued" : "Pending"}
+                      </span>
+                      {issued && issuedAt && (
+                        <span className="material-status-date">{formatDate(issuedAt)}</span>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
