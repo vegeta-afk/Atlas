@@ -174,7 +174,7 @@ const MaterialIssue = () => {
     setLocalChecks((prev) => ({ ...prev, [materialId]: !prev[materialId] }));
   };
 
-  const handleSubmitIssue = async () => {
+    const handleSubmitIssue = async () => {
     if (!selectedStudent) return;
     setSubmittingIssue(true);
     try {
@@ -190,6 +190,12 @@ const MaterialIssue = () => {
 
       setSelectedStudentId(null);
       setSearchTerm("");
+      hasAutoSelectedRef.current = true;
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("search");
+        return next;
+      });
     } catch (err) {
       alert("Failed to submit material issue");
     } finally {
