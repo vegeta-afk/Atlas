@@ -257,3 +257,8 @@
 .date-col {
   text-align: center !important;
 }
+
+.data-table td.date-col,
+.data-table th.date-col {
+  text-align: center !important;
+}
