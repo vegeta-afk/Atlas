@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { studentAPI, materialAPI } from "../../services/api";
-import { Search, Plus, Package, X, Edit2, Trash2, ArrowLeft } from "lucide-react";
+import { Search, Plus, Package, X, Edit2, Trash2, ArrowLeft, Eye } from "lucide-react";
 import "./MaterialIssue.css";
 
 const MaterialIssue = () => {
@@ -401,7 +401,7 @@ const MaterialIssue = () => {
           {/* ── ISSUE MATERIALS TAB ── */}
           {activeTab === "issue" && (
             <>
-              {!selectedStudent ? (
+                            {!selectedStudent ? (
                 <>
                   <div className="search-box-horizontal">
                     <Search size={20} />
@@ -413,27 +413,61 @@ const MaterialIssue = () => {
                     />
                   </div>
 
-                  <div className="student-picker-list">
-                    {filteredStudents.length === 0 ? (
-                      <div className="empty-row">No active students found</div>
-                    ) : (
-                      filteredStudents.map((student) => (
-                        <button
-                          key={student._id}
-                          className="student-pick-row"
-                          onClick={() => setSelectedStudentId(student._id)}
-                        >
-                          <div className="student-info">
-                            <div className="avatar">{student.fullName ? student.fullName.charAt(0) : "?"}</div>
-                            <div>
-                              <strong>{student.fullName}</strong>
-                              <small>{student.studentId}</small>
-                            </div>
-                          </div>
-                          <span className="pick-arrow">›</span>
-                        </button>
-                      ))
-                    )}
+                  <div className="table-container">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Student ID</th>
+                          <th style={{ textAlign: "left" }}>Student Name</th>
+                          <th>Contact</th>
+                          <th>Batch</th>
+                          <th>Materials Issued</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredStudents.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="empty-row">No active students found</td>
+                          </tr>
+                        ) : (
+                          filteredStudents.map((student) => {
+                            const issuedCount = materials.filter(
+                              (m) => issuesMap[`${student._id}_${m._id}`]?.issued
+                            ).length;
+                            return (
+                              <tr key={student._id}>
+                                <td className="student-id">{student.studentId}</td>
+                                <td>
+                                  <div className="student-info">
+                                    <div className="avatar">{student.fullName ? student.fullName.charAt(0) : "?"}</div>
+                                    <div>
+                                      <strong>{student.fullName}</strong>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>{student.mobileNumber || "—"}</td>
+                                <td>{getBatchDisplay(student)}</td>
+                                <td>
+                                  {materials.length === 0 ? "—" : `${issuedCount} / ${materials.length}`}
+                                </td>
+                                <td>
+                                  <div className="action-buttons">
+                                    <button
+                                      className="action-btn view"
+                                      onClick={() => setSelectedStudentId(student._id)}
+                                      title="Issue Material"
+                                    >
+                                      <Eye size={16} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </>
               ) : (

@@ -163,3 +163,32 @@
 
 .issue-submit-btn:hover { background: #16a34a; }
 .issue-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.action-btn.view {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
+.action-btn.view:hover {
+  background: #3b82f6;
+  color: white;
+}
