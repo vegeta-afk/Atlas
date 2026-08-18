@@ -72,9 +72,22 @@ const MaterialIssue = () => {
     }
   };
 
-  useEffect(() => {
+    useEffect(() => {
     fetchData();
   }, []);
+
+  // ── Auto-select the student when arriving from a direct link (e.g. AdmissionList "Issue Material") ──
+  useEffect(() => {
+    if (loading) return;
+    if (selectedStudentId) return; // already selected, don't override
+    if (activeTab !== "issue") return;
+    const searchParam = searchParams.get("search");
+    if (!searchParam) return;
+
+    if (filteredStudents.length === 1) {
+      setSelectedStudentId(filteredStudents[0]._id);
+    }
+  }, [loading, filteredStudents, activeTab, searchParams, selectedStudentId]);
 
   const filteredStudents = useMemo(() => {
     if (!searchTerm) return students;

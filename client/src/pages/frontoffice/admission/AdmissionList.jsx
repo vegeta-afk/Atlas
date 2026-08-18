@@ -902,8 +902,8 @@ setFilteredAdmissions(activeAdmissions);
                               <span>Batch Transfer</span>
                             </Link>
 
-                            <Link
-  to={`${basePath}/students/material-issue?search=${encodeURIComponent(admission.name)}&tab=issue`}
+                                                        <Link
+  to={`${basePath}/students/material-issue?search=${encodeURIComponent(admission.studentId)}&tab=issue`}
   className="dropdown-item"
 >
   <Package size={14} />
