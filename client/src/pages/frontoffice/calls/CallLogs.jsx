@@ -114,7 +114,6 @@ const CallLogs = () => {
 
   // Hardcoded enquiry call reasons
   const enquiryCallReasons = [
-    { value: "call not picked", name: "call not picked" },
     { value: "अभी सोच रहा हूँ", name: "अभी सोच रहा हूँ" },
     { value: "मैं कल आऊँगा/आऊँगी", name: "मैं कल आऊँगा/आऊँगी" },
     { value: "Fees ज़्यादा है", name: "Fees ज़्यादा है" },
