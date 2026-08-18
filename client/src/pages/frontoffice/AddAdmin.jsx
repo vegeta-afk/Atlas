@@ -242,18 +242,16 @@ const AddAdmin = () => {
       `}</style>
 
       {/* Header */}
-      <div style={styles.pageHeader}>
-        <div style={styles.headerLeft}>
-          <button style={styles.backLink} className="aa-back-link" onClick={handleCancel} type="button">
-            <X size={20} />
-            Cancel
-          </button>
-          <div>
-            <h1 style={styles.h1}>Create New Admin</h1>
-            <p style={styles.subtitle}>Add a new admin account for the institute software</p>
-          </div>
-        </div>
-      </div>
+<div style={styles.pageHeader}>
+  <div>
+    <h1 style={styles.h1}>Create New Admin</h1>
+    <p style={styles.subtitle}>Add a new admin account for the institute software</p>
+  </div>
+  <button style={styles.backLink} className="aa-back-link" onClick={handleCancel} type="button">
+    <X size={20} />
+    Cancel
+  </button>
+</div>
 
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.card}>
