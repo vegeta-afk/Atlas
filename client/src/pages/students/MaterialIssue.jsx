@@ -10,7 +10,8 @@ const MaterialIssue = () => {
   const [students, setStudents] = useState([]);
   const [materials, setMaterials] = useState([]);
   const [issuesMap, setIssuesMap] = useState({});
-  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
+    const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
+  const [issueStatusFilter, setIssueStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -82,16 +83,25 @@ const MaterialIssue = () => {
     fetchData();
   }, []);
 
-  const filteredStudents = useMemo(() => {
-    if (!searchTerm) return students;
-    const term = searchTerm.toLowerCase();
-    return students.filter(
-      (s) =>
-        s.fullName?.toLowerCase().includes(term) ||
-        s.studentId?.toLowerCase().includes(term) ||
-        s.mobileNumber?.includes(searchTerm)
-    );
-  }, [students, searchTerm]);
+    const filteredStudents = useMemo(() => {
+    let list = students;
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      list = list.filter(
+        (s) =>
+          s.fullName?.toLowerCase().includes(term) ||
+          s.studentId?.toLowerCase().includes(term) ||
+          s.mobileNumber?.includes(searchTerm)
+      );
+    }
+
+    if (issueStatusFilter !== "all") {
+      list = list.filter((s) => getStudentIssueStatus(s) === issueStatusFilter);
+    }
+
+    return list;
+  }, [students, searchTerm, issueStatusFilter, materials, issuesMap]);
 
   const selectedStudent = useMemo(
     () => students.find((s) => s._id === selectedStudentId) || null,
@@ -224,6 +234,14 @@ const MaterialIssue = () => {
     } catch (err) {
       alert("Failed to delete material");
     }
+  };
+
+    const getStudentIssueStatus = (student) => {
+    if (materials.length === 0) return "none";
+    const issuedCount = materials.filter((m) => issuesMap[`${student._id}_${m._id}`]?.issued).length;
+    if (issuedCount === 0) return "none";
+    if (issuedCount === materials.length) return "full";
+    return "partial";
   };
 
   const getIssuedCount = (materialId) => {
@@ -409,14 +427,27 @@ const MaterialIssue = () => {
             <>
                             {!selectedStudent ? (
                 <>
-                  <div className="search-box-horizontal">
-                    <Search size={20} />
-                    <input
-                      type="text"
-                      placeholder="Search by name, student ID, or phone..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                                    <div className="issue-filters-row">
+                    <div className="search-box-horizontal">
+                      <Search size={20} />
+                      <input
+                        type="text"
+                        placeholder="Search by name, student ID, or phone..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+
+                    <select
+                      className="issue-status-select"
+                      value={issueStatusFilter}
+                      onChange={(e) => setIssueStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Students</option>
+                      <option value="full">Fully Issued</option>
+                      <option value="partial">Partially Issued</option>
+                      <option value="none">Not Issued</option>
+                    </select>
                   </div>
 
                   <div className="table-container">
@@ -424,8 +455,8 @@ const MaterialIssue = () => {
                       <thead>
                                                 <tr>
                                                     <th>Student ID</th>
-                                                    <th className="date-col">Date of Admission</th>
-                          <th className="date-col">Student Name</th>
+                                                                              <th className="date-col">Date of Admission</th>
+                          <th className="name-col">Student Name</th>
                           <th>Contact</th>
                           <th>Batch</th>
                           <th>Materials Issued</th>
@@ -446,8 +477,8 @@ const MaterialIssue = () => {
                                                             <tr key={student._id}>
                                 <td className="student-id">{student.studentId}</td>
                                         <td className="date-col">{formatDate(student.admissionDate)}</td>
-                                <td>
-                                  <div className="student-info">
+                                                                <td className="name-col">
+                                  <div className="student-info" style={{ justifyContent: "center" }}>
                                     <div className="avatar">{student.fullName ? student.fullName.charAt(0) : "?"}</div>
                                     <div>
                                       <strong>{student.fullName}</strong>
@@ -456,8 +487,14 @@ const MaterialIssue = () => {
                                 </td>
                                 <td>{student.mobileNumber || "—"}</td>
                                 <td>{getBatchDisplay(student)}</td>
-                                <td>
-                                  {materials.length === 0 ? "—" : `${issuedCount} / ${materials.length}`}
+                                                                <td>
+                                  {materials.length === 0 ? (
+                                    "—"
+                                  ) : (
+                                    <span className={`issue-status-badge ${getStudentIssueStatus(student)}`}>
+                                      {issuedCount} / {materials.length}
+                                    </span>
+                                  )}
                                 </td>
                                                                 <td>
                                   <div className="action-buttons">
