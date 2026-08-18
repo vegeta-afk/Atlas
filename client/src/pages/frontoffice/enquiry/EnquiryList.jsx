@@ -914,15 +914,17 @@ navigate(`${basePath}/front-office/admissions/add?fromEnquiry=true`);
             </button>
           )}
 
-        <button
-          className="dropdown-item"
-          onClick={() => {
-            navigate(`${basePath}/front-office/enquiries/edit/${enquiry._id}`);
-          }}
-        >
-          <Edit size={14} />
-          <span>Edit Enquiry</span>
-        </button>
+                {enquiry.status !== "converted" && (
+          <button
+            className="dropdown-item"
+            onClick={() => {
+              navigate(`${basePath}/front-office/enquiries/edit/${enquiry._id}`);
+            }}
+          >
+            <Edit size={14} />
+            <span>Edit Enquiry</span>
+          </button>
+        )}
         <button
   className="dropdown-item"
   onClick={() => {
