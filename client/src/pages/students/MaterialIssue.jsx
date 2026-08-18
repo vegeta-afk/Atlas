@@ -445,7 +445,7 @@ const MaterialIssue = () => {
                             return (
                                                             <tr key={student._id}>
                                 <td className="student-id">{student.studentId}</td>
-                                <td>{formatDate(student.admissionDate)}</td>
+                                                                <td style={{ textAlign: "center" }}>{formatDate(student.admissionDate)}</td>
                                 <td>
                                   <div className="student-info">
                                     <div className="avatar">{student.fullName ? student.fullName.charAt(0) : "?"}</div>
