@@ -263,10 +263,12 @@ const MaterialIssue = () => {
           <h1>Material Issue</h1>
           <p>Manage material inventory and issue to active students</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowAddModal(true)}>
-          <Plus size={18} />
-          Add Material
-        </button>
+                {activeTab === "inventory" && (
+          <button className="btn-primary" onClick={() => setShowAddModal(true)}>
+            <Plus size={18} />
+            Add Material
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
