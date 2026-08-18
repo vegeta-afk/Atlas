@@ -75,6 +75,15 @@ exports.login = async (req, res) => {
         message: "Invalid email or password",
       });
     }
+
+    // 👇 ADD THIS
+    if (user.isActive === false) {
+      console.log("Suspended account tried to login:", email);
+      return res.status(403).json({
+        success: false,
+        message: "You are suspended. Please contact admin.",
+      });
+    }
     
     // Get facultyId as string
     let facultyIdString = null;
