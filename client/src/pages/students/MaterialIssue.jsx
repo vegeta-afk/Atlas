@@ -83,7 +83,15 @@ const MaterialIssue = () => {
     fetchData();
   }, []);
 
-    const filteredStudents = useMemo(() => {
+      const getStudentIssueStatus = (student) => {
+    if (materials.length === 0) return "none";
+    const issuedCount = materials.filter((m) => issuesMap[`${student._id}_${m._id}`]?.issued).length;
+    if (issuedCount === 0) return "none";
+    if (issuedCount === materials.length) return "full";
+    return "partial";
+  };
+
+  const filteredStudents = useMemo(() => {
     let list = students;
 
     if (searchTerm) {
@@ -236,13 +244,7 @@ const MaterialIssue = () => {
     }
   };
 
-    const getStudentIssueStatus = (student) => {
-    if (materials.length === 0) return "none";
-    const issuedCount = materials.filter((m) => issuesMap[`${student._id}_${m._id}`]?.issued).length;
-    if (issuedCount === 0) return "none";
-    if (issuedCount === materials.length) return "full";
-    return "partial";
-  };
+    
 
   const getIssuedCount = (materialId) => {
     return Object.values(issuesMap).filter(
@@ -477,8 +479,8 @@ const MaterialIssue = () => {
                                                             <tr key={student._id}>
                                 <td className="student-id">{student.studentId}</td>
                                         <td className="date-col">{formatDate(student.admissionDate)}</td>
-                                                                <td className="name-col">
-                                  <div className="student-info" style={{ justifyContent: "center" }}>
+                                                                                                <td className="name-col">
+                                  <div className="student-info">
                                     <div className="avatar">{student.fullName ? student.fullName.charAt(0) : "?"}</div>
                                     <div>
                                       <strong>{student.fullName}</strong>

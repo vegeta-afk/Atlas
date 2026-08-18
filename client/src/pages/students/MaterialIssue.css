@@ -259,10 +259,6 @@
   text-align: center !important;
 }
 
-.data-table tbody tr td.name-col,
-.data-table thead tr th.name-col {
-  text-align: center !important;
-}
 
 .issue-filters-row {
   display: flex;
