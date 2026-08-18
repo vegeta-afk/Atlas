@@ -253,3 +253,7 @@
   color: #9ca3af;
   margin-left: 8px;
 }
+
+.date-col {
+  text-align: center !important;
+}
