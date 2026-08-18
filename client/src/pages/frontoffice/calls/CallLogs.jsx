@@ -74,8 +74,9 @@ const CallLogs = () => {
   const [counselors, setCounselors] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
-  const [selectMode, setSelectMode] = useState(false);
+    const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
 
   const [admissionPagination, setAdmissionPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
   const [enquiryPagination, setEnquiryPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 1 });
@@ -465,9 +466,47 @@ const CallLogs = () => {
     setRefreshing(false);
   };
 
-  const toggleSelectMode = () => {
+    const toggleSelectMode = () => {
     setSelectMode(!selectMode);
     setSelectedIds([]);
+    setSelectedStudentIds([]);
+  };
+
+  const toggleSelectStudent = (id) => {
+    setSelectedStudentIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDeleteStudents = async () => {
+    if (selectedStudentIds.length === 0) return;
+    const allLogIds = selectedStudentIds.flatMap((sid) => (callLogsMap[sid] || []).map((l) => l._id));
+    if (allLogIds.length === 0) return;
+    if (!window.confirm(`Delete ALL call history for ${selectedStudentIds.length} student(s)? This will permanently remove ${allLogIds.length} call log(s).`)) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE}/api/call-logs/bulk-delete`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ids: allLogIds }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`${data.data.deletedCount} call log(s) deleted!`);
+        setSelectedStudentIds([]);
+        setSelectMode(false);
+        fetchCallLogs();
+      } else {
+        toast.error(data.message || "Failed to delete call history");
+      }
+    } catch (err) {
+      console.error("Error deleting student call history:", err);
+      toast.error("Failed to delete call history");
+    }
   };
 
   const toggleSelectOne = (id) => {
@@ -725,13 +764,28 @@ const CallLogs = () => {
 
                   return (
                     <React.Fragment key={item._id}>
-                      <tr className={isExpanded ? "row-expanded" : ""}>
+                                            <tr
+                        className={`${isExpanded ? "row-expanded" : ""} ${selectMode && selectedStudentIds.includes(item._id) ? "row-selected" : ""}`}
+                        onDoubleClick={() => { if (selectMode) toggleSelectStudent(item._id); }}
+                        title={selectMode ? "Double-click to select this record" : undefined}
+                      >
                         <td style={{ paddingRight: 0 }}>
-                          {logs.length > 0 && (
-                            <button className={`expand-btn ${isExpanded ? "open" : ""}`} onClick={() => toggleHistory(item._id)} title="View call history">
-                              <ChevronRight size={15} />
-                            </button>
-                          )}
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            {selectMode && (
+                              <input
+                                type="checkbox"
+                                checked={selectedStudentIds.includes(item._id)}
+                                onChange={() => toggleSelectStudent(item._id)}
+                                className="history-item-checkbox"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            )}
+                            {logs.length > 0 && (
+                              <button className={`expand-btn ${isExpanded ? "open" : ""}`} onClick={() => toggleHistory(item._id)} title="View call history">
+                                <ChevronRight size={15} />
+                              </button>
+                            )}
+                          </div>
                         </td>
 
                         <td className="student-id">{item.admissionNo || item.enquiryNo || "N/A"}</td>
@@ -903,13 +957,25 @@ const CallLogs = () => {
         </div>
       )}
 
-      {selectMode && selectedIds.length > 0 && (
+            {selectMode && selectedIds.length > 0 && (
         <div className="bulk-delete-bar">
-          <span>{selectedIds.length} selected</span>
+          <span>{selectedIds.length} log(s) selected</span>
           <button onClick={handleBulkDeleteLogs} className="bulk-delete-btn">
             <Trash2 size={14} /> Delete Selected
           </button>
           <button onClick={() => setSelectedIds([])} className="bulk-clear-btn">
+            Clear
+          </button>
+        </div>
+      )}
+
+      {selectMode && selectedStudentIds.length > 0 && (
+        <div className="bulk-delete-bar">
+          <span>{selectedStudentIds.length} record(s) selected</span>
+          <button onClick={handleBulkDeleteStudents} className="bulk-delete-btn">
+            <Trash2 size={14} /> Delete All History
+          </button>
+          <button onClick={() => setSelectedStudentIds([])} className="bulk-clear-btn">
             Clear
           </button>
         </div>
