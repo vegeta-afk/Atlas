@@ -72,22 +72,9 @@ const MaterialIssue = () => {
     }
   };
 
-    useEffect(() => {
+        useEffect(() => {
     fetchData();
   }, []);
-
-  // ── Auto-select the student when arriving from a direct link (e.g. AdmissionList "Issue Material") ──
-  useEffect(() => {
-    if (loading) return;
-    if (selectedStudentId) return; // already selected, don't override
-    if (activeTab !== "issue") return;
-    const searchParam = searchParams.get("search");
-    if (!searchParam) return;
-
-    if (filteredStudents.length === 1) {
-      setSelectedStudentId(filteredStudents[0]._id);
-    }
-  }, [loading, filteredStudents, activeTab, searchParams, selectedStudentId]);
 
   const filteredStudents = useMemo(() => {
     if (!searchTerm) return students;
@@ -105,7 +92,7 @@ const MaterialIssue = () => {
     [students, selectedStudentId]
   );
 
-  // When a student is picked, seed the checklist from what's already issued to them
+    // When a student is picked, seed the checklist from what's already issued to them
   useEffect(() => {
     if (!selectedStudent) {
       setLocalChecks({});
@@ -118,6 +105,19 @@ const MaterialIssue = () => {
     });
     setLocalChecks(seeded);
   }, [selectedStudent, materials, issuesMap]);
+
+  // ── Auto-select the student when arriving from a direct link (e.g. AdmissionList "Issue Material") ──
+  useEffect(() => {
+    if (loading) return;
+    if (selectedStudentId) return;
+    if (activeTab !== "issue") return;
+    const searchParam = searchParams.get("search");
+    if (!searchParam) return;
+
+    if (filteredStudents.length === 1) {
+      setSelectedStudentId(filteredStudents[0]._id);
+    }
+  }, [loading, filteredStudents, activeTab, searchParams, selectedStudentId]);
 
   const handleToggle = async (studentId, materialId, forcedValue) => {
     const key = `${studentId}_${materialId}`;
