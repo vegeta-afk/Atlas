@@ -436,9 +436,12 @@ const MaterialIssue = () => {
                 </>
               ) : (
                 <div className="issue-form-card">
-                  <button
+                                    <button
                     className="issue-back-btn"
-                    onClick={() => setSelectedStudentId(null)}
+                    onClick={() => {
+                      setSelectedStudentId(null);
+                      setSearchTerm("");
+                    }}
                     type="button"
                   >
                     <ArrowLeft size={16} /> Back to students
