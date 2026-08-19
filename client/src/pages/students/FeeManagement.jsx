@@ -2278,77 +2278,37 @@ for (const ph of (admStudent?.paymentHistory || [])) {
             Manage fee payments and view schedule
           </p>
         </div>
-        <div className="flex gap-2">
+                <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setShowFeeRegister(!showFeeRegister);
+              setShowReceiptTable(false);
+            }}
+            className="flex items-center justify-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50 text-blue-600 font-medium w-40"
+            title="Toggle Fee View"
+          >
+            <FileText size={16} />
+            {showFeeRegister ? "Fee Schedule" : "Fee Register"}
+          </button>
+
+          <button
+            onClick={() => openMonthModal(null, "add")}
+            className="flex items-center justify-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50 w-40"
+            title="Add Month(s)"
+          >
+            <Plus size={16} />
+            Add Month(s)
+          </button>
+
           <button
             onClick={() => setRefreshing(true) || fetchStudentFees()}
             disabled={refreshing}
-            className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50"
+            className="flex items-center justify-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 w-40"
             title="Refresh"
           >
             <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
             {refreshing ? "Refreshing..." : "Refresh"}
           </button>
-
-          {/* STEP 2 — Updated More Actions Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowMoreActions(!showMoreActions)}
-              className="flex items-center gap-2 px-3 py-2 border rounded-lg hover:bg-gray-50"
-            >
-              <MoreVertical size={16} />
-              {showMoreActions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
-
-            {showMoreActions && (
-  <div className="absolute right-0 mt-1 w-52 bg-white border rounded-lg shadow-lg z-10 py-1">
-
-    <button
-      onClick={() => {
-        setShowFeeRegister(!showFeeRegister);
-        setShowReceiptTable(false);
-        setShowMoreActions(false);
-      }}
-      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-blue-600 font-medium"
-    >
-      <FileText size={14} />
-      {showFeeRegister ? "Fee Schedule View" : "Fee Register View"}
-    </button>
-
-    <div className="border-t my-1" />
-
-    <button
-      onClick={() => { openMonthModal(null, "add"); setShowMoreActions(false); }}
-      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
-    >
-      <Plus size={14} />
-      Add Month(s)
-    </button>
-    <button
-      onClick={() => { saveChangesToBackend(); setShowMoreActions(false); }}
-      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
-    >
-      <FileText size={14} />
-      Save Changes
-    </button>
-
-    <div className="border-t my-1" />
-
-    <button
-      onClick={() => {
-        const pendingMonth = feeData.feeSchedule.find(f => f.status === "pending");
-        if (pendingMonth) { openPaymentModal(pendingMonth, "add"); }
-        else { alert("All months are already paid!"); }
-        setShowMoreActions(false);
-      }}
-      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-green-600"
-    >
-      <Plus size={14} />
-      Add Payment
-    </button>
-
-  </div>
-)}
-          </div>
         </div>
       </div>
 
