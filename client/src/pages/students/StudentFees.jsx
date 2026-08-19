@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { 
   Search, 
   DollarSign, 
@@ -232,6 +233,8 @@ const SingleFeeRow = ({ fee, allCourseFeeSchedules, setAllCourseFeeSchedules, to
   
 
 const StudentFees = () => {
+  const params = useParams();
+  const routeStudentId = params.studentId || params.id;
   const [activeTab, setActiveTab] = useState("payFees");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -461,7 +464,7 @@ const handleRegisterDelete = async (receiptNo, studentId) => {
     .slice(0, 6);
 };
 
-  useEffect(() => {
+    useEffect(() => {
     fetchStudents();
     fetchOtherFees();
     setReceiptNo(generateReceiptNo());
@@ -469,6 +472,16 @@ const handleRegisterDelete = async (receiptNo, studentId) => {
       if (searchTimeout) clearTimeout(searchTimeout);
     };
   }, []);
+
+  useEffect(() => {
+    if (routeStudentId && students.length > 0 && !selectedStudent) {
+      const target = students.find(s => s._id === routeStudentId);
+      if (target) {
+        handleStudentSelect(target);
+        setActiveTab("payFees");
+      }
+    }
+  }, [routeStudentId, students]);
 
   useEffect(() => {
     if (activeTab === 'feeRegister') fetchFeeRegister();
@@ -629,6 +642,10 @@ const activeBalance = activeTotalFee - totalPaid;
             examFee: fee.examFee || 0,
             examPaid: fee.examPaid || 0,        // ← ADD
             monthlyPaid: fee.monthlyPaid || 0,  // ← ADD
+            otherFeeId: fee.otherFeeId || "",
+            otherFeeName: fee.otherFeeName || "",
+            otherFeeAmount: fee.otherFeeAmount || 0,
+            otherFeePaid: fee.otherFeePaid || 0,
             dueDate: fee.dueDate || calculateDueDate(studentData?.admissionDate, monthNumber)
           };
         });
@@ -767,7 +784,10 @@ return sorted;
   };
 
   // ✅ UPDATED: Uses updateCurrentFees
-  const toggleFeeSelection = (courseIndex, feeId) => {
+    const toggleFeeSelection = (courseIndex, feeId) => {
+  let toggledFee = null;
+  let toggledNewSelected = false;
+
   const updated = allCourseFeeSchedules.map((schedule, idx) => {
     if (idx !== courseIndex) return schedule;
     return {
@@ -775,6 +795,8 @@ return sorted;
       fees: schedule.fees.map(fee => {
         if (fee.id !== feeId) return fee;
         const newSelected = !fee.selected;
+        toggledFee = fee;
+        toggledNewSelected = newSelected;
         if (newSelected && fee.isExamMonth) {
           const remainingExam = Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0));
           const remainingMonthly = Math.max(0, (fee.pendingAmount || 0) - remainingExam);
@@ -785,6 +807,26 @@ return sorted;
     };
   });
   setAllCourseFeeSchedules(updated);
+
+  if (toggledFee && toggledFee.otherFeeAmount > 0) {
+    if (toggledNewSelected) {
+      setOtherFeesList(prev => {
+        if (prev.some(f => f.linkedFeeId === feeId)) return prev;
+        return [
+          ...prev,
+          {
+            feeId: toggledFee.otherFeeId || '',
+            feeName: toggledFee.otherFeeName || 'Other Fee',
+            amount: toggledFee.otherFeeAmount,
+            description: `Auto-added from ${toggledFee.month}`,
+            linkedFeeId: feeId,
+          }
+        ];
+      });
+    } else {
+      setOtherFeesList(prev => prev.filter(f => f.linkedFeeId !== feeId));
+    }
+  }
 };
   // ✅ UPDATED: Uses updateCurrentFees
   const handleAmountChange = (courseIndex, feeId, amount) => {

@@ -282,11 +282,11 @@ const paidAmount = monthlyPaid + admissionPaid + additionalPaidRow;
                           {student.studentId || "N/A"}
                         </span>
                         <div className="flex items-center gap-1 mt-0.5">
-                          <CheckCircle size={9} className="text-green-500 shrink-0" />
-                          <span className="text-xs text-gray-400 truncate max-w-[100px]">
-                            {student.admissionNo || "N/A"}
-                          </span>
-                        </div>
+  <CheckCircle size={9} className="text-green-500 shrink-0" />
+  <span className="text-xs text-gray-400 truncate max-w-[100px]">
+    {student.admissionDate ? new Date(student.admissionDate).toLocaleDateString("en-IN") : "N/A"}
+  </span>
+</div>
                       </td>
 
                       {/* Student Name */}
@@ -303,8 +303,8 @@ const paidAmount = monthlyPaid + admissionPaid + additionalPaidRow;
                               {student.fullName || "Unknown"}
                             </div>
                             <div className="text-xs text-gray-400 truncate max-w-[130px]">
-                              {student.email || "No email"}
-                            </div>
+  {student.fatherName || "No father's name"}
+</div>
                           </div>
                         </div>
                       </td>
@@ -369,12 +369,12 @@ const paidAmount = monthlyPaid + admissionPaid + additionalPaidRow;
                             <Eye size={15} />
                           </Link>
                           <Link
-                            to={`${basePath}/students/edit/${student._id}`}
-                            className="p-1.5 rounded-md text-green-600 hover:bg-green-50 hover:text-green-800 transition-colors"
-                            title="Edit"
-                          >
-                            <Edit size={15} />
-                          </Link>
+  to={`${basePath}/front-office/admissions/edit/${student.admissionId}`}
+  className="p-1.5 rounded-md text-green-600 hover:bg-green-50 hover:text-green-800 transition-colors"
+  title="Edit"
+>
+  <Edit size={15} />
+</Link>
                           <Link
                             to={`${basePath}/students/fees/${student._id}`}
                             className="p-1.5 rounded-md text-purple-600 hover:bg-purple-50 hover:text-purple-800 transition-colors"

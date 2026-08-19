@@ -24,12 +24,14 @@ const FeeManagement = ({ studentId, student, course, additionalCourseIndex }) =>
   const additionalCourseData = isAdditionalCourse ? student?.additionalCourses?.[additionalCourseIndex] : null;
   const [feeData, setFeeData] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [courseShortNames, setCourseShortNames] = useState({});
-  const [paymentData, setPaymentData] = useState({
+    const [courseShortNames, setCourseShortNames] = useState({});
+  const [otherFeesOptions, setOtherFeesOptions] = useState([]);
+    const [paymentData, setPaymentData] = useState({
     monthNumber: "",
     amount: "",
     monthlyAmount: "",
     examAmount: "",
+    otherAmount: "",
     paymentDate: new Date().toISOString().split("T")[0],
     receiptNo: "",
     paymentMode: "cash",
@@ -46,13 +48,17 @@ const FeeManagement = ({ studentId, student, course, additionalCourseIndex }) =>
   const [suspendData, setSuspendData] = useState({ monthNumber: null, month: "", reason: "" });
   const [showMonthModal, setShowMonthModal] = useState(false);
   const [showReceiptTable, setShowReceiptTable] = useState(false); // STEP 1
-  const [monthManagementData, setMonthManagementData] = useState({
+    const [monthManagementData, setMonthManagementData] = useState({
     action: "add", // 'add' or 'edit'
     monthNumber: "",
     monthName: "",
     baseFee: "",
     isExamMonth: false,
     examFee: "",
+    hasOtherFee: false,
+    otherFeeId: "",
+    otherFeeName: "",
+    otherFeeAmount: "",
     dueDate: "",
     count: 1,
   });
@@ -63,10 +69,11 @@ const FeeManagement = ({ studentId, student, course, additionalCourseIndex }) =>
 
   const [verifiedPayments, setVerifiedPayments] = useState({});
 
-  useEffect(() => {
+    useEffect(() => {
   if (studentId) {
     fetchStudentFees();
     fetchCourseShortNames();
+    fetchOtherFeesOptions();
   }
 }, [studentId, student?.admissionDate]);
 
@@ -87,6 +94,24 @@ const fetchCourseShortNames = async () => {
     }
   } catch (err) {
     console.error("Error fetching course short names:", err);
+  }
+};
+
+const fetchOtherFeesOptions = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${BASE_URL}/api/setup`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const data = await response.json();
+    if (data.success && data.data && data.data.fees) {
+      const transformed = data.data.fees
+        .filter(fee => fee.isActive !== false)
+        .map(fee => ({ id: fee._id, name: fee.feeName, amount: fee.amount || 0 }));
+      setOtherFeesOptions(transformed);
+    }
+  } catch (err) {
+    console.error("Error fetching other fees options:", err);
   }
 };
 
@@ -452,6 +477,10 @@ const cleanFeeForBackend = (fee) => ({
   receiptNo: fee.receiptNo || "",
   isExamMonth: fee.isExamMonth || false,
   examFee: fee.examFee || 0,
+  otherFeeId: fee.otherFeeId || "",
+  otherFeeName: fee.otherFeeName || "",
+  otherFeeAmount: fee.otherFeeAmount || 0,
+  otherFeePaid: fee.otherFeePaid || 0,
   paymentMode: fee.paymentMode || "",
   paymentId: fee.paymentId || "",
   submittedByName: fee.submittedByName || "",
@@ -533,7 +562,7 @@ const calcTotals = (schedule) => ({
   .reduce((s, f) => s + (f.baseFee || 0) + (f.isExamMonth ? (f.examFee || 0) : 0), 0);
   const paidAmount = processedSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
 
-  const processedData = {
+    const processedData = {
     ...data.data,
     feeSchedule: processedSchedule,
     summary: {
@@ -547,6 +576,10 @@ const calcTotals = (schedule) => ({
 totalExamFees: processedSchedule
   .filter(f => f.status !== "suspended")
   .reduce((s, f) => s + (f.isExamMonth ? (f.examFee || 0) : 0), 0),
+monthlyPaidTotal: processedSchedule
+  .reduce((s, f) => s + (f.isExamMonth ? (f.monthlyPaid || 0) : Math.max(0, (f.paidAmount || 0) - (f.otherFeePaid || 0))), 0),
+otherFeePaidTotal: processedSchedule
+  .reduce((s, f) => s + (f.otherFeePaid || 0), 0),
     }
   };
   setFeeData(processedData);
@@ -626,6 +659,10 @@ const openMonthModal = (fee = null, action = "add") => {
       baseFee: fee.baseFee || fee.monthlyFee || fee.amount || 0,
       isExamMonth: fee.isExamMonth || fee.hasExam || false,
       examFee: fee.examFee || 0,
+      hasOtherFee: !!(fee.otherFeeAmount > 0),
+      otherFeeId: fee.otherFeeId || "",
+      otherFeeName: fee.otherFeeName || "",
+      otherFeeAmount: fee.otherFeeAmount || "",
       dueDate: fee.dueDate ? 
         (() => {
           try {
@@ -668,13 +705,17 @@ const openMonthModal = (fee = null, action = "add") => {
     const shouldBeExamMonth = isExamMonth(nextMonthNumber);
     const defaultExamFee = student?.examFee || course?.examFee || 0;
     
-    setMonthManagementData({
+        setMonthManagementData({
       action: "add",
       monthNumber: nextMonthNumber,
       monthName: "",
       baseFee: student?.monthlyFee || course?.monthlyFee || 0,
       isExamMonth: shouldBeExamMonth,
       examFee: shouldBeExamMonth ? defaultExamFee : 0,
+      hasOtherFee: false,
+      otherFeeId: "",
+      otherFeeName: "",
+      otherFeeAmount: "",
       dueDate: nextDueDate,
       count: 1,
     });
@@ -683,8 +724,8 @@ const openMonthModal = (fee = null, action = "add") => {
 };
   
 
- const handleAddMonth = async () => {
-  const { action, monthNumber, baseFee, isExamMonth, examFee, dueDate, count } = monthManagementData;
+  const handleAddMonth = async () => {
+  const { action, monthNumber, baseFee, isExamMonth, examFee, hasOtherFee, otherFeeId, otherFeeName, otherFeeAmount, dueDate, count } = monthManagementData;
   
   // Validate inputs
   if (!validateMonthData()) {
@@ -700,8 +741,9 @@ const openMonthModal = (fee = null, action = "add") => {
       const originalMonth = feeData.feeSchedule.find(f => f.monthNumber === monthNumber);
       const paidAmount = originalMonth?.paidAmount || 0;
       
-      // Calculate new totals
-      const totalFee = parseFloat(baseFee) + (isExamMonth ? parseFloat(examFee || 0) : 0);
+            // Calculate new totals
+      const otherFeeAmt = hasOtherFee ? (parseFloat(otherFeeAmount) || 0) : 0;
+      const totalFee = parseFloat(baseFee) + (isExamMonth ? parseFloat(examFee || 0) : 0) + otherFeeAmt;
       const newBalance = totalFee - paidAmount;
       const newStatus = paidAmount === 0 ? "pending" : 
                        paidAmount >= totalFee ? "paid" : 
@@ -718,6 +760,9 @@ const openMonthModal = (fee = null, action = "add") => {
             isExamMonth: isExamMonth,
             hasExam: isExamMonth,
             examFee: isExamMonth ? parseFloat(examFee || 0) : 0,
+            otherFeeId: hasOtherFee ? otherFeeId : "",
+            otherFeeName: hasOtherFee ? otherFeeName : "",
+            otherFeeAmount: otherFeeAmt,
             totalFee: totalFee,
             balanceAmount: newBalance,
             pendingAmount: newBalance,
@@ -813,7 +858,8 @@ const openMonthModal = (fee = null, action = "add") => {
         
         // Check exam month
         const isExam = checkExamMonth(monthNum);
-        const totalFee = parseFloat(baseFee) + (isExam ? parseFloat(examFee || 0) : 0);
+        const otherFeeAmt = hasOtherFee ? (parseFloat(otherFeeAmount) || 0) : 0;
+        const totalFee = parseFloat(baseFee) + (isExam ? parseFloat(examFee || 0) : 0) + otherFeeAmt;
         
         // Calculate due date - FIXED
         let monthDueDate;
@@ -844,7 +890,7 @@ const openMonthModal = (fee = null, action = "add") => {
           monthDueDate = fallbackDate.toISOString().split('T')[0];
         }
         
-        newMonths.push({
+                newMonths.push({
           month: monthName,
           monthNumber: monthNum,
           baseFee: parseFloat(baseFee) || 0,
@@ -853,6 +899,9 @@ const openMonthModal = (fee = null, action = "add") => {
           hasExam: isExam,
           isExamMonth: isExam,
           examFee: isExam ? parseFloat(examFee || 0) : 0,
+          otherFeeId: hasOtherFee ? otherFeeId : "",
+          otherFeeName: hasOtherFee ? otherFeeName : "",
+          otherFeeAmount: otherFeeAmt,
           totalFee: totalFee,
           paidAmount: 0,
           pendingAmount: totalFee,
@@ -1280,7 +1329,7 @@ const handleUnsuspend = async (fee) => {
   const partialInstallments = sortedSchedule.filter(f => f.status === "partial").length;
   const pendingInstallments = sortedSchedule.filter(f => f.status === "pending" || f.status === "overdue").length;
   
-  setFeeData({
+    setFeeData({
     ...feeData,
     feeSchedule: sortedSchedule, // Store sorted
     summary: {
@@ -1294,6 +1343,8 @@ const handleUnsuspend = async (fee) => {
       pendingInstallments,
       totalMonthlyFees: sortedSchedule.filter(f => f.status !== "suspended").reduce((sum, fee) => sum + (fee.baseFee || 0), 0),
       totalExamFees: sortedSchedule.filter(f => f.status !== "suspended").reduce((sum, fee) => sum + (fee.examFee || 0), 0),
+      monthlyPaidTotal: sortedSchedule.reduce((s, f) => s + (f.isExamMonth ? (f.monthlyPaid || 0) : Math.max(0, (f.paidAmount || 0) - (f.otherFeePaid || 0))), 0),
+      otherFeePaidTotal: sortedSchedule.reduce((s, f) => s + (f.otherFeePaid || 0), 0),
     },
   });
 };
@@ -1343,13 +1394,16 @@ const response = await fetch(endpoint, {
 
   setSelectedMonth(fee);
 
+    const hasSplit = fee.isExamMonth || (fee.otherFeeAmount || 0) > 0;
+
   if (action === "edit" && (fee.status === "paid" || fee.status === "partial")) {
     // ✅ Pre-fill with the CURRENT paid amount (not adding on top)
     setPaymentData({
       monthNumber: fee.monthNumber,
       amount: fee.paidAmount || "",         // show what was already entered
-      monthlyAmount: fee.isExamMonth ? (fee.monthlyPaid || 0) : "",
+      monthlyAmount: hasSplit ? (fee.monthlyPaid || (fee.paidAmount || 0) - (fee.examPaid || 0) - (fee.otherFeePaid || 0)) : "",
       examAmount: fee.isExamMonth ? (fee.examPaid || 0) : "",
+      otherAmount: (fee.otherFeeAmount || 0) > 0 ? (fee.otherFeePaid || 0) : "",
       paymentDate: fee.paymentDate
         ? new Date(fee.paymentDate).toISOString().split("T")[0]
         : new Date().toISOString().split("T")[0],
@@ -1364,6 +1418,7 @@ const response = await fetch(endpoint, {
       amount: "",
       monthlyAmount: "",
       examAmount: "",
+      otherAmount: "",
       paymentDate: new Date().toISOString().split("T")[0],
       receiptNo: generateReceiptNo(),
       paymentMode: "cash",
@@ -1409,12 +1464,20 @@ const response = await fetch(endpoint, {
     return monthlyFeeAmt - (selectedMonth.monthlyPaid || 0);
   };
 
-  // Max exam-portion payment for exam months
+    // Max exam-portion payment for exam months
   const getMaxExamPaymentAllowed = () => {
     if (!selectedMonth) return 0;
     const examFeeAmt = selectedMonth.examFee || 0;
     if (paymentData.action === "edit") return examFeeAmt;
     return examFeeAmt - (selectedMonth.examPaid || 0);
+  };
+
+  // Max other-fee-portion payment for months with an other fee attached
+  const getMaxOtherPaymentAllowed = () => {
+    if (!selectedMonth) return 0;
+    const otherFeeAmt = selectedMonth.otherFeeAmount || 0;
+    if (paymentData.action === "edit") return otherFeeAmt;
+    return otherFeeAmt - (selectedMonth.otherFeePaid || 0);
   };
 
   // Check if payment exceeds total course fee - FIXED OVERPAYMENT VALIDATION
@@ -1442,26 +1505,32 @@ const response = await fetch(endpoint, {
   try {
     const token = localStorage.getItem("token");
 
-    // ─── EXAM MONTHS: handle monthly + exam portions separately ───
-    if (selectedMonth?.isExamMonth) {
+        // ─── SPLIT MONTHS: exam and/or other-fee months, handled per-portion ───
+    if (selectedMonth?.isExamMonth || (selectedMonth?.otherFeeAmount || 0) > 0) {
       const monthlyAmt = parseFloat(paymentData.monthlyAmount) || 0;
-      const examAmt = parseFloat(paymentData.examAmount) || 0;
-      const totalAmt = monthlyAmt + examAmt;
+      const examAmt = selectedMonth.isExamMonth ? (parseFloat(paymentData.examAmount) || 0) : 0;
+      const otherAmt = (selectedMonth.otherFeeAmount || 0) > 0 ? (parseFloat(paymentData.otherAmount) || 0) : 0;
+      const totalAmt = monthlyAmt + examAmt + otherAmt;
 
       if (totalAmt <= 0) {
-        alert("Please enter a monthly and/or exam amount");
+        alert("Please enter an amount for at least one portion");
         return;
       }
 
       const maxMonthly = getMaxMonthlyPaymentAllowed();
       const maxExam = getMaxExamPaymentAllowed();
+      const maxOther = getMaxOtherPaymentAllowed();
 
       if (monthlyAmt > maxMonthly) {
         alert(`Monthly fee payment cannot exceed ${formatCurrency(maxMonthly)}`);
         return;
       }
-      if (examAmt > maxExam) {
+      if (selectedMonth.isExamMonth && examAmt > maxExam) {
         alert(`Exam fee payment cannot exceed ${formatCurrency(maxExam)}`);
+        return;
+      }
+      if ((selectedMonth.otherFeeAmount || 0) > 0 && otherAmt > maxOther) {
+        alert(`${selectedMonth.otherFeeName || "Other"} fee payment cannot exceed ${formatCurrency(maxOther)}`);
         return;
       }
       if (checkOverpayment(totalAmt)) {
@@ -1478,12 +1547,16 @@ const response = await fetch(endpoint, {
           const newExamPaid = paymentData.action === "edit"
             ? examAmt
             : (fee.examPaid || 0) + examAmt;
-          const newPaidAmount = newMonthlyPaid + newExamPaid;
+          const newOtherPaid = paymentData.action === "edit"
+            ? otherAmt
+            : (fee.otherFeePaid || 0) + otherAmt;
+          const newPaidAmount = newMonthlyPaid + newExamPaid + newOtherPaid;
           const newBalance = totalFee - newPaidAmount;
           return {
             ...fee,
             monthlyPaid: newMonthlyPaid,
             examPaid: newExamPaid,
+            otherFeePaid: newOtherPaid,
             paidAmount: newPaidAmount,
             balanceAmount: newBalance,
             pendingAmount: newBalance,
@@ -2326,14 +2399,23 @@ for (const ph of (admStudent?.paymentHistory || [])) {
             {feeData.summary.totalInstallments} months
           </div>
         </div>
-        <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+                <div className="bg-green-50 p-4 rounded-lg border border-green-100">
           <div className="flex items-center gap-2 text-green-600 font-semibold mb-2">
             <CheckCircle size={16} />
             Paid Amount
           </div>
-          <div className="text-xl font-bold">
-            {formatCurrency(feeData.summary.paidAmount)}
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-xl font-bold">{formatCurrency(feeData.summary.monthlyPaidTotal || 0)}</span>
+            <span className="text-xs text-gray-400">Monthly</span>
           </div>
+          {(feeData.summary.otherFeePaidTotal || 0) > 0 && (
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-sm font-semibold text-green-700">
+                {formatCurrency((feeData.summary.monthlyPaidTotal || 0) + (feeData.summary.otherFeePaidTotal || 0))}
+              </span>
+              <span className="text-xs text-gray-400">Monthly + Other</span>
+            </div>
+          )}
           <div className="text-xs text-gray-500 mt-1">
             {feeData.summary.paidInstallments} installments paid
           </div>
@@ -2945,11 +3027,72 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                 )}
               </div>
 
+                            {/* Other fee toggle */}
+              <div className="border border-gray-100 rounded-lg p-3 bg-gray-50">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <div
+                    onClick={() => {
+                      const isChecked = !monthManagementData.hasOtherFee;
+                      setMonthManagementData({
+                        ...monthManagementData,
+                        hasOtherFee: isChecked,
+                        otherFeeId: isChecked ? monthManagementData.otherFeeId : "",
+                        otherFeeName: isChecked ? monthManagementData.otherFeeName : "",
+                        otherFeeAmount: isChecked ? monthManagementData.otherFeeAmount : "",
+                      });
+                    }}
+                    className={`w-10 h-5 rounded-full transition-colors relative cursor-pointer ${monthManagementData.hasOtherFee ? "bg-purple-500" : "bg-gray-300"}`}
+                  >
+                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${monthManagementData.hasOtherFee ? "translate-x-5" : "translate-x-0.5"}`} />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">Include Other Fee</span>
+                  {monthManagementData.hasOtherFee && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">Other Fee</span>}
+                </label>
+
+                {monthManagementData.hasOtherFee && (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Fee Type</label>
+                      <select
+                        value={monthManagementData.otherFeeId}
+                        onChange={(e) => {
+                          const found = otherFeesOptions.find(f => f.id === e.target.value);
+                          setMonthManagementData({
+                            ...monthManagementData,
+                            otherFeeId: e.target.value,
+                            otherFeeName: found?.name || "",
+                            otherFeeAmount: found?.amount ?? monthManagementData.otherFeeAmount,
+                          });
+                        }}
+                        className="w-full border border-purple-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white"
+                      >
+                        <option value="">Select a fee type</option>
+                        {otherFeesOptions.map(f => (
+                          <option key={f.id} value={f.id}>{f.name} — ₹{f.amount}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Other Fee Amount (₹)</label>
+                      <input
+                        type="number" min="0"
+                        value={monthManagementData.otherFeeAmount}
+                        onChange={(e) => setMonthManagementData({ ...monthManagementData, otherFeeAmount: e.target.value })}
+                        className="w-full border border-purple-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Total fee preview pill */}
               <div className="flex items-center justify-between bg-blue-50 rounded-lg px-4 py-3 border border-blue-100">
                 <span className="text-sm text-blue-700 font-medium">Total per month</span>
                 <span className="text-lg font-bold text-blue-800">
-                  ₹{(parseFloat(monthManagementData.baseFee) || 0) + (monthManagementData.isExamMonth ? (parseFloat(monthManagementData.examFee) || 0) : 0)}
+                  ₹{(parseFloat(monthManagementData.baseFee) || 0)
+                    + (monthManagementData.isExamMonth ? (parseFloat(monthManagementData.examFee) || 0) : 0)
+                    + (monthManagementData.hasOtherFee ? (parseFloat(monthManagementData.otherFeeAmount) || 0) : 0)}
                 </span>
               </div>
             </div>
@@ -3016,9 +3159,9 @@ for (const ph of (admStudent?.paymentHistory || [])) {
 
             <div className="p-6 space-y-4">
               {/* Amount */}
-              {selectedMonth.isExamMonth ? (
+                            {selectedMonth.isExamMonth || (selectedMonth.otherFeeAmount || 0) > 0 ? (
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className={`grid gap-3 ${selectedMonth.isExamMonth && (selectedMonth.otherFeeAmount || 0) > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
                     <div>
                       <div className="flex justify-between items-center mb-1.5">
                         <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Monthly Fee (₹)</label>
@@ -3039,34 +3182,60 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                         <p className="text-red-500 text-xs mt-1">⚠ Exceeds monthly fee remaining</p>
                       )}
                     </div>
-                    <div>
-                      <div className="flex justify-between items-center mb-1.5">
-                        <label className="text-xs font-semibold text-yellow-700 uppercase tracking-wider">Exam Fee (₹)</label>
-                        <span className="text-xs text-gray-400">Max: {formatCurrency(getMaxExamPaymentAllowed())}</span>
+                    {selectedMonth.isExamMonth && (
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className="text-xs font-semibold text-yellow-700 uppercase tracking-wider">Exam Fee (₹)</label>
+                          <span className="text-xs text-gray-400">Max: {formatCurrency(getMaxExamPaymentAllowed())}</span>
+                        </div>
+                        <input
+                          type="number"
+                          value={paymentData.examAmount}
+                          onChange={(e) => setPaymentData({ ...paymentData, examAmount: e.target.value })}
+                          className={`w-full border rounded-lg px-3 py-2.5 text-base font-semibold focus:outline-none focus:ring-2 bg-yellow-50 ${
+                            parseFloat(paymentData.examAmount || 0) > getMaxExamPaymentAllowed()
+                              ? "border-red-300 focus:ring-red-300"
+                              : "border-yellow-300 focus:ring-yellow-400"
+                          }`}
+                          placeholder="0"
+                        />
+                        {parseFloat(paymentData.examAmount || 0) > getMaxExamPaymentAllowed() && (
+                          <p className="text-red-500 text-xs mt-1">⚠ Exceeds exam fee remaining</p>
+                        )}
                       </div>
-                      <input
-                        type="number"
-                        value={paymentData.examAmount}
-                        onChange={(e) => setPaymentData({ ...paymentData, examAmount: e.target.value })}
-                        className={`w-full border rounded-lg px-3 py-2.5 text-base font-semibold focus:outline-none focus:ring-2 bg-yellow-50 ${
-                          parseFloat(paymentData.examAmount || 0) > getMaxExamPaymentAllowed()
-                            ? "border-red-300 focus:ring-red-300"
-                            : "border-yellow-300 focus:ring-yellow-400"
-                        }`}
-                        placeholder="0"
-                      />
-                      {parseFloat(paymentData.examAmount || 0) > getMaxExamPaymentAllowed() && (
-                        <p className="text-red-500 text-xs mt-1">⚠ Exceeds exam fee remaining</p>
-                      )}
-                    </div>
+                    )}
+                    {(selectedMonth.otherFeeAmount || 0) > 0 && (
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className="text-xs font-semibold text-purple-700 uppercase tracking-wider">
+                            {selectedMonth.otherFeeName || "Other Fee"} (₹)
+                          </label>
+                          <span className="text-xs text-gray-400">Max: {formatCurrency(getMaxOtherPaymentAllowed())}</span>
+                        </div>
+                        <input
+                          type="number"
+                          value={paymentData.otherAmount}
+                          onChange={(e) => setPaymentData({ ...paymentData, otherAmount: e.target.value })}
+                          className={`w-full border rounded-lg px-3 py-2.5 text-base font-semibold focus:outline-none focus:ring-2 bg-purple-50 ${
+                            parseFloat(paymentData.otherAmount || 0) > getMaxOtherPaymentAllowed()
+                              ? "border-red-300 focus:ring-red-300"
+                              : "border-purple-300 focus:ring-purple-400"
+                          }`}
+                          placeholder="0"
+                        />
+                        {parseFloat(paymentData.otherAmount || 0) > getMaxOtherPaymentAllowed() && (
+                          <p className="text-red-500 text-xs mt-1">⚠ Exceeds other fee remaining</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
                     <span className="text-sm text-gray-600">Total paying:</span>
                     <span className="font-bold text-gray-800">
-                      {formatCurrency((parseFloat(paymentData.monthlyAmount) || 0) + (parseFloat(paymentData.examAmount) || 0))}
+                      {formatCurrency((parseFloat(paymentData.monthlyAmount) || 0) + (parseFloat(paymentData.examAmount) || 0) + (parseFloat(paymentData.otherAmount) || 0))}
                     </span>
                   </div>
-                  {checkOverpayment((parseFloat(paymentData.monthlyAmount) || 0) + (parseFloat(paymentData.examAmount) || 0)) && (
+                  {checkOverpayment((parseFloat(paymentData.monthlyAmount) || 0) + (parseFloat(paymentData.examAmount) || 0) + (parseFloat(paymentData.otherAmount) || 0)) && (
                     <p className="text-red-500 text-xs">⚠ Payment would exceed total course fee</p>
                   )}
                 </div>
@@ -3176,13 +3345,14 @@ for (const ph of (admStudent?.paymentHistory || [])) {
               </button>
               <button
                 onClick={handlePayment}
-                disabled={
-                  selectedMonth.isExamMonth
+                                disabled={
+                  selectedMonth.isExamMonth || (selectedMonth.otherFeeAmount || 0) > 0
                     ? (
-                        ((parseFloat(paymentData.monthlyAmount) || 0) + (parseFloat(paymentData.examAmount) || 0)) <= 0 ||
+                        ((parseFloat(paymentData.monthlyAmount) || 0) + (parseFloat(paymentData.examAmount) || 0) + (parseFloat(paymentData.otherAmount) || 0)) <= 0 ||
                         parseFloat(paymentData.monthlyAmount || 0) > getMaxMonthlyPaymentAllowed() ||
                         parseFloat(paymentData.examAmount || 0) > getMaxExamPaymentAllowed() ||
-                        checkOverpayment((parseFloat(paymentData.monthlyAmount) || 0) + (parseFloat(paymentData.examAmount) || 0))
+                        parseFloat(paymentData.otherAmount || 0) > getMaxOtherPaymentAllowed() ||
+                        checkOverpayment((parseFloat(paymentData.monthlyAmount) || 0) + (parseFloat(paymentData.examAmount) || 0) + (parseFloat(paymentData.otherAmount) || 0))
                       )
                     : (
                         !paymentData.amount ||
