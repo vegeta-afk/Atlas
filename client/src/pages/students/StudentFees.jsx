@@ -73,13 +73,18 @@ const SingleFeeRow = ({ fee, allCourseFeeSchedules, setAllCourseFeeSchedules, to
               )}
             </div>
             <div className="text-sm text-gray-600">{fee.description}</div>
-            <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                        <div className="text-xs text-gray-500 mt-1 flex items-center gap-2 flex-wrap">
               <span>Type: {fee.type}</span>
               {fee.isExamMonth && (
                 <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">Exam Month</span>
               )}
               {fee.isAdmissionFee && (
                 <span className="px-1.5 py-0.5 bg-purple-100 text-purple-800 rounded text-xs font-medium">One-time Fee</span>
+              )}
+              {(fee.otherFeeAmount || 0) > 0 && (
+                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                  Other Fee: {fee.otherFeeName || "Other"} — ₹{fee.otherFeeAmount}
+                </span>
               )}
             </div>
           </div>
@@ -615,12 +620,19 @@ const activeBalance = activeTotalFee - totalPaid;
 
         if (feeSchedule.length === 0) return [];
 
-        const processedFeeSchedule = feeSchedule.map((fee) => {
+                const processedFeeSchedule = feeSchedule.map((fee) => {
           const monthNumber = fee.monthNumber || 1;
           let monthName = fee.month;
-          const totalAmount = fee.totalFee || fee.totalAmount || 0;
-          const paidAmount = fee.paidAmount || 0;
-          const balanceAmount = fee.balanceAmount !== undefined ? fee.balanceAmount : totalAmount - paidAmount;
+          const grandTotal = fee.totalFee || fee.totalAmount || 0;
+          const grandPaid = fee.paidAmount || 0;
+          const otherFeeAmt = fee.otherFeeAmount || 0;
+          const otherFeePaidAmt = fee.otherFeePaid || 0;
+          const otherFeeRemaining = Math.max(0, otherFeeAmt - otherFeePaidAmt);
+
+          // Monthly/exam-only figures — other fee is tracked & collected separately
+          const totalAmount = Math.max(0, grandTotal - otherFeeAmt);
+          const paidAmount = Math.max(0, grandPaid - otherFeePaidAmt);
+          const balanceAmount = Math.max(0, totalAmount - paidAmount);
 
           return {
             id: fee._id || `fee-${studentId}-${monthNumber}`,
@@ -644,8 +656,9 @@ const activeBalance = activeTotalFee - totalPaid;
             monthlyPaid: fee.monthlyPaid || 0,  // ← ADD
             otherFeeId: fee.otherFeeId || "",
             otherFeeName: fee.otherFeeName || "",
-            otherFeeAmount: fee.otherFeeAmount || 0,
-            otherFeePaid: fee.otherFeePaid || 0,
+            otherFeeAmount: otherFeeAmt,
+            otherFeePaid: otherFeePaidAmt,
+            otherFeeRemaining,
             dueDate: fee.dueDate || calculateDueDate(studentData?.admissionDate, monthNumber)
           };
         });
@@ -706,39 +719,68 @@ return sorted;
         { courseName: fullStudent.course || "Primary Course", fees: primaryFees || [] }
       ];
 
-      if (fullStudent.additionalCourses && fullStudent.additionalCourses.length > 0) {
+            if (fullStudent.additionalCourses && fullStudent.additionalCourses.length > 0) {
         fullStudent.additionalCourses.forEach((ac, acIndex) => {
   const fees = (ac.feeSchedule || [])
     .filter(fee => fee.status !== "paid" && (fee.balanceAmount || 0) > 0)
-    .map(fee => ({
-      id: fee._id,
-      monthNumber: fee.monthNumber,
-      month: fee.month,
-      description: `${ac.courseName} - ${fee.isExamMonth ? "Exam Fee" : "Monthly Fee"}`,
-      type: fee.isExamMonth ? "exam" : "monthly",
-      courseName: ac.courseName,
-      courseShortName: getCourseShortName(ac.courseName),
-      courseIndex: acIndex + 1,
-      totalAmount: fee.totalFee || 0,
-      pendingAmount: fee.balanceAmount || fee.totalFee || 0,
-      paidAmount: fee.paidAmount || 0,
-      balanceAmount: fee.balanceAmount || fee.totalFee || 0,
-      status: fee.status || "pending",
-      selected: false,
-      payingAmount: fee.balanceAmount || fee.totalFee || 0,
-      isExamMonth: fee.isExamMonth || false,
-      examFee: fee.examFee || 0,
-      examPaid: fee.examPaid || 0,
-      monthlyPaid: fee.monthlyPaid || 0,
-      dueDate: fee.dueDate || null,
-      additionalCourseIndex: acIndex
-    }));
+    .map(fee => {
+      const grandTotal = fee.totalFee || 0;
+      const grandPaid = fee.paidAmount || 0;
+      const otherFeeAmt = fee.otherFeeAmount || 0;
+      const otherFeePaidAmt = fee.otherFeePaid || 0;
+      const otherFeeRemaining = Math.max(0, otherFeeAmt - otherFeePaidAmt);
+      const totalAmount = Math.max(0, grandTotal - otherFeeAmt);
+      const paidAmount = Math.max(0, grandPaid - otherFeePaidAmt);
+      const balanceAmount = Math.max(0, totalAmount - paidAmount);
+      return {
+        id: fee._id,
+        monthNumber: fee.monthNumber,
+        month: fee.month,
+        description: `${ac.courseName} - ${fee.isExamMonth ? "Exam Fee" : "Monthly Fee"}`,
+        type: fee.isExamMonth ? "exam" : "monthly",
+        courseName: ac.courseName,
+        courseShortName: getCourseShortName(ac.courseName),
+        courseIndex: acIndex + 1,
+        totalAmount,
+        pendingAmount: balanceAmount,
+        paidAmount,
+        balanceAmount,
+        status: fee.status || "pending",
+        selected: false,
+        payingAmount: balanceAmount,
+        isExamMonth: fee.isExamMonth || false,
+        examFee: fee.examFee || 0,
+        examPaid: fee.examPaid || 0,
+        monthlyPaid: fee.monthlyPaid || 0,
+        otherFeeId: fee.otherFeeId || "",
+        otherFeeName: fee.otherFeeName || "",
+        otherFeeAmount: otherFeeAmt,
+        otherFeePaid: otherFeePaidAmt,
+        otherFeeRemaining,
+        dueDate: fee.dueDate || null,
+        additionalCourseIndex: acIndex
+      };
+    });
 
           schedules.push({ courseName: ac.courseName, fees });
         });
       }
 
       setAllCourseFeeSchedules(schedules);
+
+      // Auto-populate Additional Other Fees from any month that already has one attached
+      const autoOtherFees = schedules.flatMap(schedule =>
+        schedule.fees
+          .filter(fee => (fee.otherFeeRemaining || 0) > 0)
+          .map(fee => ({
+            feeId: fee.otherFeeId || '',
+            feeName: fee.otherFeeName || 'Other Fee',
+            amount: fee.otherFeeRemaining,
+            description: `Auto-added from ${fee.month}`,
+            linkedFeeId: fee.id,
+          }))
+      );
+      setOtherFeesList(autoOtherFees);
 
       // ✅ Recompute paid/balance off the FULL record, same logic as fetchStudents
       const activeFeeSchedule = (fullStudent.feeSchedule || []).filter(f => f.status !== "suspended");
@@ -774,20 +816,28 @@ return sorted;
         originalData: fullStudent
       });
       setReceiptNo(generateReceiptNo());
-    } catch (error) {
+        } catch (error) {
       console.error("Error selecting student:", error);
       const primaryFees = await fetchStudentFeeSchedule(student._id, student.originalData || student);
       setAllCourseFeeSchedules([{ courseName: student.course || "Primary Course", fees: primaryFees || [] }]);
+      setOtherFeesList(
+        (primaryFees || [])
+          .filter(fee => (fee.otherFeeRemaining || 0) > 0)
+          .map(fee => ({
+            feeId: fee.otherFeeId || '',
+            feeName: fee.otherFeeName || 'Other Fee',
+            amount: fee.otherFeeRemaining,
+            description: `Auto-added from ${fee.month}`,
+            linkedFeeId: fee.id,
+          }))
+      );
       setSelectedStudent({ ...student, batch: student.batch || student.originalData?.batch || student.originalData?.batchName || "N/A", feeSchedule: primaryFees || [] });
       setReceiptNo(generateReceiptNo());
     }
   };
 
   // ✅ UPDATED: Uses updateCurrentFees
-    const toggleFeeSelection = (courseIndex, feeId) => {
-  let toggledFee = null;
-  let toggledNewSelected = false;
-
+        const toggleFeeSelection = (courseIndex, feeId) => {
   const updated = allCourseFeeSchedules.map((schedule, idx) => {
     if (idx !== courseIndex) return schedule;
     return {
@@ -795,8 +845,6 @@ return sorted;
       fees: schedule.fees.map(fee => {
         if (fee.id !== feeId) return fee;
         const newSelected = !fee.selected;
-        toggledFee = fee;
-        toggledNewSelected = newSelected;
         if (newSelected && fee.isExamMonth) {
           const remainingExam = Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0));
           const remainingMonthly = Math.max(0, (fee.pendingAmount || 0) - remainingExam);
@@ -807,26 +855,6 @@ return sorted;
     };
   });
   setAllCourseFeeSchedules(updated);
-
-  if (toggledFee && toggledFee.otherFeeAmount > 0) {
-    if (toggledNewSelected) {
-      setOtherFeesList(prev => {
-        if (prev.some(f => f.linkedFeeId === feeId)) return prev;
-        return [
-          ...prev,
-          {
-            feeId: toggledFee.otherFeeId || '',
-            feeName: toggledFee.otherFeeName || 'Other Fee',
-            amount: toggledFee.otherFeeAmount,
-            description: `Auto-added from ${toggledFee.month}`,
-            linkedFeeId: feeId,
-          }
-        ];
-      });
-    } else {
-      setOtherFeesList(prev => prev.filter(f => f.linkedFeeId !== feeId));
-    }
-  }
 };
   // ✅ UPDATED: Uses updateCurrentFees
   const handleAmountChange = (courseIndex, feeId, amount) => {
