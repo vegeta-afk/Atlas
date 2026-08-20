@@ -767,20 +767,7 @@ return sorted;
       }
 
       setAllCourseFeeSchedules(schedules);
-
-      // Auto-populate Additional Other Fees from any month that already has one attached
-      const autoOtherFees = schedules.flatMap(schedule =>
-        schedule.fees
-          .filter(fee => (fee.otherFeeRemaining || 0) > 0)
-          .map(fee => ({
-            feeId: fee.otherFeeId || '',
-            feeName: fee.otherFeeName || 'Other Fee',
-            amount: fee.otherFeeRemaining,
-            description: `Auto-added from ${fee.month}`,
-            linkedFeeId: fee.id,
-          }))
-      );
-      setOtherFeesList(autoOtherFees);
+      setOtherFeesList([]);
 
       // ✅ Recompute paid/balance off the FULL record, same logic as fetchStudents
       const activeFeeSchedule = (fullStudent.feeSchedule || []).filter(f => f.status !== "suspended");
@@ -819,25 +806,17 @@ return sorted;
         } catch (error) {
       console.error("Error selecting student:", error);
       const primaryFees = await fetchStudentFeeSchedule(student._id, student.originalData || student);
-      setAllCourseFeeSchedules([{ courseName: student.course || "Primary Course", fees: primaryFees || [] }]);
-      setOtherFeesList(
-        (primaryFees || [])
-          .filter(fee => (fee.otherFeeRemaining || 0) > 0)
-          .map(fee => ({
-            feeId: fee.otherFeeId || '',
-            feeName: fee.otherFeeName || 'Other Fee',
-            amount: fee.otherFeeRemaining,
-            description: `Auto-added from ${fee.month}`,
-            linkedFeeId: fee.id,
-          }))
-      );
+            setAllCourseFeeSchedules([{ courseName: student.course || "Primary Course", fees: primaryFees || [] }]);
+      setOtherFeesList([]);
       setSelectedStudent({ ...student, batch: student.batch || student.originalData?.batch || student.originalData?.batchName || "N/A", feeSchedule: primaryFees || [] });
       setReceiptNo(generateReceiptNo());
     }
   };
 
-  // ✅ UPDATED: Uses updateCurrentFees
-        const toggleFeeSelection = (courseIndex, feeId) => {
+      const toggleFeeSelection = (courseIndex, feeId) => {
+  let toggledFee = null;
+  let toggledNewSelected = false;
+
   const updated = allCourseFeeSchedules.map((schedule, idx) => {
     if (idx !== courseIndex) return schedule;
     return {
@@ -845,6 +824,8 @@ return sorted;
       fees: schedule.fees.map(fee => {
         if (fee.id !== feeId) return fee;
         const newSelected = !fee.selected;
+        toggledFee = fee;
+        toggledNewSelected = newSelected;
         if (newSelected && fee.isExamMonth) {
           const remainingExam = Math.max(0, (fee.examFee || 0) - (fee.examPaid || 0));
           const remainingMonthly = Math.max(0, (fee.pendingAmount || 0) - remainingExam);
@@ -855,7 +836,28 @@ return sorted;
     };
   });
   setAllCourseFeeSchedules(updated);
+
+  if (toggledFee && (toggledFee.otherFeeRemaining || 0) > 0) {
+    if (toggledNewSelected) {
+      setOtherFeesList(prev => {
+        if (prev.some(f => f.linkedFeeId === feeId)) return prev;
+        return [
+          ...prev,
+          {
+            feeId: toggledFee.otherFeeId || '',
+            feeName: toggledFee.otherFeeName || 'Other Fee',
+            amount: toggledFee.otherFeeRemaining,
+            description: `Auto-added from ${toggledFee.month}`,
+            linkedFeeId: feeId,
+          }
+        ];
+      });
+    } else {
+      setOtherFeesList(prev => prev.filter(f => f.linkedFeeId !== feeId));
+    }
+  }
 };
+
   // ✅ UPDATED: Uses updateCurrentFees
   const handleAmountChange = (courseIndex, feeId, amount) => {
   const updated = allCourseFeeSchedules.map((schedule, idx) => {

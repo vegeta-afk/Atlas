@@ -2733,7 +2733,7 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                 {fee.dueDate ? new Date(fee.dueDate).toLocaleDateString("en-IN") : "N/A"}
               </div>
             </td>
-            <td className="px-4 py-3 whitespace-nowrap border-r">
+                        <td className="px-4 py-3 whitespace-nowrap border-r">
               <div className="font-medium">{formatCurrency(fee.monthlyFee || fee.amount || 0)}</div>
               {fee.isExamMonth && (
                 <div className="text-xs mt-1">
@@ -2744,6 +2744,13 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                   ) : (
                     <span className="text-gray-400">⏳ Unpaid</span>
                   )}
+                </div>
+              )}
+              {(fee.otherFeeAmount || 0) > 0 && (
+                <div className="mt-1">
+                  <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">
+                    {fee.otherFeeName || "Other Fee"} — ₹{fee.otherFeeAmount}
+                  </span>
                 </div>
               )}
             </td>
