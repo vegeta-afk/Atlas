@@ -739,7 +739,8 @@ if (admissionFeePayment && admissionFeePayment.amount > 0) {
     const updatedMonths = [];
     const errors = [];
 
-    // ✅ Update otherFeePaid on each linked month's schedule entry (primary or additional course)
+        // ✅ Update otherFeePaid AND fee.paidAmount/balanceAmount on each linked month's schedule entry
+    // (fee.paidAmount must stay = monthlyPaid + examPaid + otherFeePaid, matching FeeManagement.jsx's convention)
     let otherFeesTotal = 0;
     if (Array.isArray(otherFeesData)) {
       otherFeesData.forEach((of_) => {
@@ -768,7 +769,13 @@ if (admissionFeePayment && admissionFeePayment.amount > 0) {
         const fee = feeArray[feeIndex];
         const otherTotal = fee.otherFeeAmount || 0;
         const currentOtherPaid = fee.otherFeePaid || 0;
-        fee.otherFeePaid = Math.min(otherTotal, currentOtherPaid + amt);
+        const actualIncrement = Math.min(amt, Math.max(0, otherTotal - currentOtherPaid));
+        if (actualIncrement <= 0) return;
+
+        fee.otherFeePaid = currentOtherPaid + actualIncrement;
+        fee.paidAmount = (fee.paidAmount || 0) + actualIncrement;
+        fee.balanceAmount = Math.max(0, (fee.totalFee || 0) - fee.paidAmount);
+        fee.status = fee.balanceAmount === 0 ? "paid" : "partial";
 
         feeArray[feeIndex] = fee;
         if (isAC) {
