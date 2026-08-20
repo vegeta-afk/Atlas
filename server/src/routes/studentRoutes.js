@@ -735,9 +735,49 @@ if (admissionFeePayment && admissionFeePayment.amount > 0) {
   }
 }
 
-    let totalPaid = 0;
+        let totalPaid = 0;
     const updatedMonths = [];
     const errors = [];
+
+    // ✅ Update otherFeePaid on each linked month's schedule entry (primary or additional course)
+    let otherFeesTotal = 0;
+    if (Array.isArray(otherFeesData)) {
+      otherFeesData.forEach((of_) => {
+        const amt = parseFloat(of_.amount) || 0;
+        if (amt <= 0) return;
+        otherFeesTotal += amt;
+
+        if (of_.monthNumber === null || of_.monthNumber === undefined) return; // not linked to a specific month
+
+        const monthNum = Number(of_.monthNumber);
+        const acIdx = of_.additionalCourseIndex;
+        const isAC = acIdx !== null && acIdx !== undefined;
+
+        let feeArray, feeIndex;
+        if (isAC) {
+          const ac = student.additionalCourses?.[acIdx];
+          if (!ac) return;
+          feeArray = ac.feeSchedule;
+          feeIndex = feeArray.findIndex((f) => f.monthNumber === monthNum);
+        } else {
+          feeArray = student.feeSchedule;
+          feeIndex = feeArray.findIndex((f) => f.monthNumber === monthNum);
+        }
+        if (feeIndex === -1) return;
+
+        const fee = feeArray[feeIndex];
+        const otherTotal = fee.otherFeeAmount || 0;
+        const currentOtherPaid = fee.otherFeePaid || 0;
+        fee.otherFeePaid = Math.min(otherTotal, currentOtherPaid + amt);
+
+        feeArray[feeIndex] = fee;
+        if (isAC) {
+          student.markModified(`additionalCourses.${acIdx}.feeSchedule`);
+        } else {
+          student.markModified("feeSchedule");
+        }
+      });
+    }
 
     // Handle multiple months payment
     if (paymentType === "multiple" && Array.isArray(months) && Array.isArray(amounts)) {
@@ -939,8 +979,8 @@ student.markModified("feeSchedule");
       }
     }
 
-    // Update student totals
-    student.paidAmount = (student.paidAmount || 0) + totalPaid;
+        // Update student totals — include other-fee amounts collected in this payment
+    student.paidAmount = (student.paidAmount || 0) + totalPaid + otherFeesTotal;
     student.balanceAmount = Math.max(0, student.totalCourseFee - student.paidAmount);
 
     // Add to payment history

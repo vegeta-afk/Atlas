@@ -2746,10 +2746,15 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                   )}
                 </div>
               )}
-              {(fee.otherFeeAmount || 0) > 0 && (
+                            {(fee.otherFeeAmount || 0) > 0 && (
                 <div className="mt-1">
-                  <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                    (fee.otherFeePaid || 0) >= (fee.otherFeeAmount || 0)
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-red-100 text-red-700"
+                  }`}>
                     {fee.otherFeeName || "Other Fee"} — ₹{fee.otherFeeAmount}
+                    {(fee.otherFeePaid || 0) >= (fee.otherFeeAmount || 0) ? " ✓" : ""}
                   </span>
                 </div>
               )}

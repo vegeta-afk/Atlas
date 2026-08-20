@@ -81,9 +81,9 @@ const SingleFeeRow = ({ fee, allCourseFeeSchedules, setAllCourseFeeSchedules, to
               {fee.isAdmissionFee && (
                 <span className="px-1.5 py-0.5 bg-purple-100 text-purple-800 rounded text-xs font-medium">One-time Fee</span>
               )}
-              {(fee.otherFeeAmount || 0) > 0 && (
+                            {(fee.otherFeeRemaining || 0) > 0 && (
                 <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
-                  Other Fee: {fee.otherFeeName || "Other"} — ₹{fee.otherFeeAmount}
+                  Other Fee: {fee.otherFeeName || "Other"} — ₹{fee.otherFeeRemaining} due
                 </span>
               )}
             </div>
@@ -197,6 +197,20 @@ const SingleFeeRow = ({ fee, allCourseFeeSchedules, setAllCourseFeeSchedules, to
               {fee.status === "partial" && (
                 <div className="text-xs text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
               )}
+            </div>
+                    ) : (fee.pendingAmount || 0) === 0 && (fee.otherFeeRemaining || 0) > 0 ? (
+            <div className="flex items-center justify-between bg-purple-50 border border-purple-200 rounded-lg px-4 py-3">
+              <div>
+                <div className="text-sm font-medium text-purple-800">✅ Monthly fee fully paid</div>
+                <div className="text-xs text-purple-600 mt-0.5">
+                  {fee.otherFeeName || "Other Fee"} of {formatCurrency(fee.otherFeeRemaining)} is still due — pay it in the{" "}
+                  <span className="font-semibold">Additional Other Fees</span> section below.
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0 ml-3">
+                <div className="text-xs text-gray-500">Already paid</div>
+                <div className="font-bold text-purple-700">{formatCurrency(fee.paidAmount || 0)}</div>
+              </div>
             </div>
           ) : (
             <div className="flex items-center space-x-4">
@@ -891,15 +905,17 @@ return sorted;
   };
 
   // ✅ UPDATED: Collects from ALL courses
-  const handlePaymentSubmit = async (e) => {
+    const handlePaymentSubmit = async (e) => {
     e.preventDefault();
     try {
       const selectedFees = allCourseFeeSchedules.flatMap(schedule =>
         schedule.fees.filter(fee => fee.selected && fee.payingAmount > 0)
       );
 
-      if (selectedFees.length === 0) {
-        alert("Please select at least one fee to pay");
+      const hasOtherFeesToPay = otherFeesList.some(f => parseFloat(f.amount) > 0);
+
+      if (selectedFees.length === 0 && !hasOtherFeesToPay) {
+        alert("Please select at least one fee to pay, or enter an amount for an other fee");
         return;
       }
 
@@ -930,14 +946,22 @@ const paymentData = {
   paymentMode,
   paymentId: paymentMode !== "cash" ? paymentId : "",
   remarks: remarks || "",
-  otherFees: otherFeesList
+    otherFees: otherFeesList
     .filter(f => parseFloat(f.amount) > 0)
-    .map(f => ({
-      feeId: f.feeId,
-      feeName: f.feeName || "Other Fee",
-      amount: parseFloat(f.amount),
-      description: f.description || ""
-    })),
+    .map(f => {
+      const linkedFee = f.linkedFeeId
+        ? allCourseFeeSchedules.flatMap(s => s.fees).find(fee => fee.id === f.linkedFeeId)
+        : null;
+      return {
+        feeId: f.feeId,
+        feeName: f.feeName || "Other Fee",
+        amount: parseFloat(f.amount),
+        description: f.description || "",
+        linkedFeeId: f.linkedFeeId || null,
+        monthNumber: linkedFee?.monthNumber ?? null,
+        additionalCourseIndex: linkedFee?.additionalCourseIndex ?? null,
+      };
+    }),
 };
 
 // ← ADD THIS RIGHT HERE
