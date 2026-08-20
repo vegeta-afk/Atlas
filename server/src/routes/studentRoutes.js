@@ -1830,6 +1830,10 @@ const student = await Student.findOne(
       amount:      baseFee,  
       monthlyPaid: fee.monthlyPaid || 0,  // ← ADD
       examPaid:    fee.examPaid || 0,     // ← ADD
+      otherFeeId:     fee.otherFeeId || "",
+      otherFeeName:   fee.otherFeeName || "",
+      otherFeeAmount: fee.otherFeeAmount || 0,
+      otherFeePaid:   fee.otherFeePaid || 0,
     };
   });
 })();
