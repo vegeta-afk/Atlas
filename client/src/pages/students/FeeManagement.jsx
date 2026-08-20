@@ -68,6 +68,9 @@ const FeeManagement = ({ studentId, student, course, additionalCourseIndex }) =>
   const [showFeeRegister, setShowFeeRegister] = useState(false);
 
   const [verifiedPayments, setVerifiedPayments] = useState({});
+  const [otherFeeDates, setOtherFeeDates] = useState({});
+  const [showOtherFeeDateModal, setShowOtherFeeDateModal] = useState(false);
+  const [otherFeeDateEdit, setOtherFeeDateEdit] = useState({ key: null, date: "", label: "" });
 
     useEffect(() => {
   if (studentId) {
@@ -503,11 +506,20 @@ const calcTotals = (schedule) => ({
     }
   }, [studentId, student?.admissionDate]);
 
-  useEffect(() => {
+    useEffect(() => {
   if (studentId) {
     try {
       const saved = localStorage.getItem(`verifiedPayments_${studentId}`);
       if (saved) setVerifiedPayments(JSON.parse(saved));
+    } catch {}
+  }
+}, [studentId]);
+
+  useEffect(() => {
+  if (studentId) {
+    try {
+      const saved = localStorage.getItem(`otherFeeDates_${studentId}`);
+      if (saved) setOtherFeeDates(JSON.parse(saved));
     } catch {}
   }
 }, [studentId]);
@@ -2112,11 +2124,21 @@ const deletePaymentLocally = (fee) => {
     }
   };
 
-  const toggleVerified = (key) => {
+    const toggleVerified = (key) => {
   setVerifiedPayments(prev => {
     const updated = { ...prev, [key]: !prev[key] };
     try {
       localStorage.setItem(`verifiedPayments_${studentId}`, JSON.stringify(updated));
+    } catch {}
+    return updated;
+  });
+};
+
+  const saveOtherFeeDate = (key, date) => {
+  setOtherFeeDates(prev => {
+    const updated = { ...prev, [key]: date };
+    try {
+      localStorage.setItem(`otherFeeDates_${studentId}`, JSON.stringify(updated));
     } catch {}
     return updated;
   });
@@ -2746,18 +2768,35 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                   )}
                 </div>
               )}
-                            {(fee.otherFeeAmount || 0) > 0 && (
-                <div className="mt-1">
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                    (fee.otherFeePaid || 0) >= (fee.otherFeeAmount || 0)
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-red-100 text-red-700"
-                  }`}>
-                    {fee.otherFeeName || "Other Fee"} — ₹{fee.otherFeeAmount}
-                    {(fee.otherFeePaid || 0) >= (fee.otherFeeAmount || 0) ? " ✓" : ""}
-                  </span>
-                </div>
-              )}
+                                                        {(fee.otherFeeAmount || 0) > 0 && (() => {
+                const dateKey = `${additionalCourseIndex ?? "primary"}_${fee.monthNumber}`;
+                const savedDate = otherFeeDates[dateKey];
+                return (
+                  <div className="mt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtherFeeDateEdit({ key: dateKey, date: savedDate || "", label: fee.otherFeeName || "Other Fee" });
+                        setShowOtherFeeDateModal(true);
+                      }}
+                      className={`text-xs px-1.5 py-0.5 rounded-full font-medium cursor-pointer hover:opacity-80 transition-opacity ${
+                        (fee.otherFeePaid || 0) >= (fee.otherFeeAmount || 0)
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                      title="Click to set the date this fee was added"
+                    >
+                      {fee.otherFeeName || "Other Fee"} — ₹{fee.otherFeeAmount}
+                      {(fee.otherFeePaid || 0) >= (fee.otherFeeAmount || 0) ? " ✓" : ""}
+                      {savedDate && (
+                        <span className="ml-1 opacity-70">
+                          ({new Date(savedDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                );
+              })()}
             </td>
             <td className="px-4 py-3 whitespace-nowrap border-r">
               <div className={`font-medium ${fee.isExamMonth ? "text-red-600" : "text-gray-400"}`}>
@@ -3529,7 +3568,7 @@ for (const ph of (admStudent?.paymentHistory || [])) {
         >
           Cancel
         </button>
-        <button
+                <button
           onClick={handleSuspend}
           disabled={!suspendData.reason.trim()}
           className="px-5 py-2 text-sm text-white rounded-lg font-medium bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
@@ -3541,6 +3580,59 @@ for (const ph of (admStudent?.paymentHistory || [])) {
     </div>
   </div>
 )}
+
+      {showOtherFeeDateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 flex justify-between items-center">
+              <div>
+                <h3 className="text-white font-bold">Other Fee Added On</h3>
+                <p className="text-white/70 text-xs mt-0.5">{otherFeeDateEdit.label}</p>
+              </div>
+              <button onClick={() => setShowOtherFeeDateModal(false)} className="text-white/70 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Date requested / added</label>
+                <input
+                  type="date"
+                  value={otherFeeDateEdit.date}
+                  onChange={(e) => setOtherFeeDateEdit({ ...otherFeeDateEdit, date: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                />
+              </div>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs text-purple-700">
+                This is just a note for you — saved on this device only. It doesn't affect fees, receipts, or reports.
+              </div>
+            </div>
+            <div className="px-6 pb-6 flex justify-end gap-3">
+              {otherFeeDateEdit.date && (
+                <button
+                  onClick={() => {
+                    saveOtherFeeDate(otherFeeDateEdit.key, "");
+                    setShowOtherFeeDateModal(false);
+                  }}
+                  className="px-4 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50"
+                >
+                  Clear
+                </button>
+              )}
+              <button onClick={() => setShowOtherFeeDateModal(false)} className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600">
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  saveOtherFeeDate(otherFeeDateEdit.key, otherFeeDateEdit.date);
+                  setShowOtherFeeDateModal(false);
+                }}
+                className="px-5 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
