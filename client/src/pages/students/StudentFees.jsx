@@ -771,7 +771,7 @@ return sorted;
         pendingAmount: balanceAmount,
         paidAmount,
         balanceAmount,
-        status: fee.status || (paidAmount > 0 ? "partial" : "pending"),
+        status: paidAmount === 0 ? "pending" : paidAmount >= totalAmount ? "paid" : "partial",
         selected: false,
         payingAmount: balanceAmount,
         isExamMonth: fee.isExamMonth || false,
