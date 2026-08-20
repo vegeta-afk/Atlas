@@ -68,9 +68,8 @@ const FeeManagement = ({ studentId, student, course, additionalCourseIndex }) =>
   const [showFeeRegister, setShowFeeRegister] = useState(false);
 
   const [verifiedPayments, setVerifiedPayments] = useState({});
-  const [otherFeeDates, setOtherFeeDates] = useState({});
   const [showOtherFeeDateModal, setShowOtherFeeDateModal] = useState(false);
-  const [otherFeeDateEdit, setOtherFeeDateEdit] = useState({ key: null, date: "", label: "" });
+  const [otherFeeDateEdit, setOtherFeeDateEdit] = useState({ monthNumber: null, date: "", label: "" });
 
     useEffect(() => {
   if (studentId) {
@@ -484,6 +483,7 @@ const cleanFeeForBackend = (fee) => ({
   otherFeeName: fee.otherFeeName || "",
   otherFeeAmount: fee.otherFeeAmount || 0,
   otherFeePaid: fee.otherFeePaid || 0,
+  otherFeeDate: fee.otherFeeDate || null,
   paymentMode: fee.paymentMode || "",
   paymentId: fee.paymentId || "",
   submittedByName: fee.submittedByName || "",
@@ -515,14 +515,7 @@ const calcTotals = (schedule) => ({
   }
 }, [studentId]);
 
-  useEffect(() => {
-  if (studentId) {
-    try {
-      const saved = localStorage.getItem(`otherFeeDates_${studentId}`);
-      if (saved) setOtherFeeDates(JSON.parse(saved));
-    } catch {}
-  }
-}, [studentId]);
+
 
  const fetchStudentFees = async () => {
   try {
@@ -2134,14 +2127,35 @@ const deletePaymentLocally = (fee) => {
   });
 };
 
-  const saveOtherFeeDate = (key, date) => {
-  setOtherFeeDates(prev => {
-    const updated = { ...prev, [key]: date };
-    try {
-      localStorage.setItem(`otherFeeDates_${studentId}`, JSON.stringify(updated));
-    } catch {}
-    return updated;
-  });
+    const saveOtherFeeDate = async (monthNumber, date) => {
+  const updatedFeeSchedule = feeData.feeSchedule.map(f =>
+    f.monthNumber === monthNumber ? { ...f, otherFeeDate: date || null } : f
+  );
+
+  // Optimistic UI update so it feels instant
+  updateFeeSchedule(updatedFeeSchedule);
+
+  try {
+    const token = localStorage.getItem("token");
+    const endpoint = isAdditionalCourse
+      ? `${BASE_URL}/api/students/${studentId}/additional-course-fees/schedule`
+      : `${BASE_URL}/api/students/${studentId}/fees/schedule`;
+
+    await fetch(endpoint, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        feeSchedule: updatedFeeSchedule.map(cleanFeeForBackend),
+        totalCourseFee: feeData.summary.totalCourseFee,
+        paidAmount: feeData.summary.paidAmount,
+        balanceAmount: feeData.summary.balanceAmount,
+        ...(isAdditionalCourse && { additionalCourseIndex }),
+      }),
+    });
+  } catch (err) {
+    console.error("Error saving other fee date:", err);
+    alert("Saved on screen, but failed to sync to server. Please refresh to confirm.");
+  }
 };
 
   const getCourseShortName = (fee) => {
@@ -2768,15 +2782,14 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                   )}
                 </div>
               )}
-                                                        {(fee.otherFeeAmount || 0) > 0 && (() => {
-                const dateKey = `${additionalCourseIndex ?? "primary"}_${fee.monthNumber}`;
-                const savedDate = otherFeeDates[dateKey];
+                                                                                    {(fee.otherFeeAmount || 0) > 0 && (() => {
+                const savedDate = fee.otherFeeDate;
                 return (
                   <div className="mt-1">
                     <button
                       type="button"
                       onClick={() => {
-                        setOtherFeeDateEdit({ key: dateKey, date: savedDate || "", label: fee.otherFeeName || "Other Fee" });
+                        setOtherFeeDateEdit({ monthNumber: fee.monthNumber, date: savedDate ? new Date(savedDate).toISOString().split("T")[0] : "", label: fee.otherFeeName || "Other Fee" });
                         setShowOtherFeeDateModal(true);
                       }}
                       className={`text-xs px-1.5 py-0.5 rounded-full font-medium cursor-pointer hover:opacity-80 transition-opacity ${
@@ -3601,15 +3614,15 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
                 />
               </div>
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs text-purple-700">
-                This is just a note for you — saved on this device only. It doesn't affect fees, receipts, or reports.
+                            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs text-purple-700">
+                Visible to anyone who opens this student's fee page. It's just a note — doesn't affect fees, receipts, or reports.
               </div>
             </div>
             <div className="px-6 pb-6 flex justify-end gap-3">
-              {otherFeeDateEdit.date && (
+                            {otherFeeDateEdit.date && (
                 <button
                   onClick={() => {
-                    saveOtherFeeDate(otherFeeDateEdit.key, "");
+                    saveOtherFeeDate(otherFeeDateEdit.monthNumber, "");
                     setShowOtherFeeDateModal(false);
                   }}
                   className="px-4 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50"
@@ -3622,7 +3635,7 @@ for (const ph of (admStudent?.paymentHistory || [])) {
               </button>
               <button
                 onClick={() => {
-                  saveOtherFeeDate(otherFeeDateEdit.key, otherFeeDateEdit.date);
+                  saveOtherFeeDate(otherFeeDateEdit.monthNumber, otherFeeDateEdit.date);
                   setShowOtherFeeDateModal(false);
                 }}
                 className="px-5 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium"

@@ -1881,6 +1881,7 @@ const student = await Student.findOne(
       otherFeeName:   fee.otherFeeName || "",
       otherFeeAmount: fee.otherFeeAmount || 0,
       otherFeePaid:   fee.otherFeePaid || 0,
+      otherFeeDate:   fee.otherFeeDate || null,
     };
   });
 })();
