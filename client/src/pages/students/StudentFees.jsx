@@ -89,22 +89,34 @@ const SingleFeeRow = ({ fee, allCourseFeeSchedules, setAllCourseFeeSchedules, to
             </div>
           </div>
         </div>
-        <div className="text-right">
-          <div className="font-bold text-gray-900">
-            {formatCurrency(fee.pendingAmount || 0)}
-            {fee.status === "partial" && (
-              <span className="text-sm font-normal text-gray-500 ml-1">remaining</span>
-            )}
-          </div>
-          <div className="text-sm">
-            {fee.status === "partial" ? (
-              <div className="text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
-            ) : (
-              <div className="text-red-600">Due: {formatCurrency(fee.pendingAmount || 0)}</div>
-            )}
-          </div>
-          {fee.status === "partial" && (
-            <div className="text-xs text-gray-500 mt-1">Original: {formatCurrency(fee.totalAmount)}</div>
+                <div className="text-right">
+          {(fee.pendingAmount || 0) === 0 && (fee.otherFeeRemaining || 0) > 0 ? (
+            <>
+              <div className="font-bold text-purple-700">
+                {formatCurrency(fee.otherFeeRemaining)}
+                <span className="text-sm font-normal text-purple-500 ml-1">other fee due</span>
+              </div>
+              <div className="text-sm text-green-600">Monthly paid: {formatCurrency(fee.paidAmount || 0)}</div>
+            </>
+          ) : (
+            <>
+              <div className="font-bold text-gray-900">
+                {formatCurrency(fee.pendingAmount || 0)}
+                {fee.status === "partial" && (
+                  <span className="text-sm font-normal text-gray-500 ml-1">remaining</span>
+                )}
+              </div>
+              <div className="text-sm">
+                {fee.status === "partial" ? (
+                  <div className="text-green-600">Already paid: {formatCurrency(fee.paidAmount || 0)}</div>
+                ) : (
+                  <div className="text-red-600">Due: {formatCurrency(fee.pendingAmount || 0)}</div>
+                )}
+              </div>
+              {fee.status === "partial" && (
+                <div className="text-xs text-gray-500 mt-1">Original: {formatCurrency(fee.totalAmount)}</div>
+              )}
+            </>
           )}
         </div>
       </div>
