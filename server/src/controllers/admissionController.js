@@ -425,6 +425,7 @@ console.log("🔍 BACKEND totalFees received:", req.body.totalFees);
       if (student) {
         student.fullName       = admission.fullName;
         student.dateOfBirth    = admission.dateOfBirth;
+        student.admissionDate  = admission.admissionDate;
         student.gender         = admission.gender;
         student.fatherName     = admission.fatherName;
         student.motherName     = admission.motherName;

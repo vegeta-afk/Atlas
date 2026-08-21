@@ -63,6 +63,7 @@ const EditAdmission = () => {
 
   const [originalCourseId, setOriginalCourseId] = useState("");
   const [courseChanged, setCourseChanged] = useState(false);
+  const [originalAdmissionDate, setOriginalAdmissionDate] = useState("");
 
 
 
@@ -183,6 +184,7 @@ category: "",
 
         setOriginalCourseId(resolvedCourseId);
         setCourseChanged(false);
+        setOriginalAdmissionDate(formatDate(d.admissionDate));
 
         if (d.photo) setPhotoPreview(d.photo);
       } else {
@@ -393,9 +395,10 @@ setCategories(categories || []);
 
 
 
-     let newFeeSchedule = null;
+          let newFeeSchedule = null;
+     const admissionDateChanged = formData.admissionDate !== originalAdmissionDate;
 
-if (courseChanged && selectedCourseDetails && formData.courseId) {
+if ((courseChanged || admissionDateChanged) && selectedCourseDetails && formData.courseId) {
   // Course changed — with or without scholarship
   const courseToUse = (formData.hasScholarship && formData.finalMonthlyFee > 0)
     ? { ...selectedCourseDetails, monthlyFee: formData.finalMonthlyFee }
