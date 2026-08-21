@@ -10,6 +10,14 @@ function addMonthsSafe(baseDate, months) {
   return d;
 }
 
+function setDueDateDay(monthDate, targetDay) {
+  const d = new Date(monthDate);
+  d.setDate(1);
+  const daysInMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(targetDay, daysInMonth));
+  return d;
+}
+
 // ─── HELPER: Parse "6,14" or "6, 14" → [6, 14] ───────────────
 // Filters out any month numbers beyond course duration
 function parseExamMonths(examMonthsStr, durationMonths) {
@@ -32,6 +40,7 @@ const generateFeeSchedule = (course, startDate) => {
 
     const feeSchedule = [];
     const start = new Date(startDate || new Date());
+    const admissionDay = start.getDate();
 
     // ── Parse duration ─────────────────────────────────────────
     // Handles: "15", "15 months", "1 year", "2 years"
@@ -58,9 +67,8 @@ const generateFeeSchedule = (course, startDate) => {
       // FIX: addMonthsSafe prevents Jan31 → March skipping February
       const monthDate = addMonthsSafe(start, month - 1);
 
-      // Due date = 5th of that month
-      const dueDate = new Date(monthDate);
-      dueDate.setDate(5);
+      // Due date = admission date's day (clamped to month length)
+      const dueDate = setDueDateDay(monthDate, admissionDay);
 
       const isExamMonth  = examMonths.includes(month);
       const thisExamFee  = isExamMonth ? examFee : 0;
@@ -120,6 +128,7 @@ const generateConvertedFeeSchedule = (student, newCourse, conversionMonth) => {
 
     const feeSchedule = [];
     const startDate = new Date(student.admissionDate);
+    const admissionDay = startDate.getDate();
     const newMonthlyFee = parseFloat(newCourse.monthlyFee) || 0;
     const newExamFee = parseFloat(newCourse.examFee) || 0;
     const newDuration = parseInt(newCourse.duration) || 0;
@@ -185,8 +194,7 @@ const generateConvertedFeeSchedule = (student, newCourse, conversionMonth) => {
 
       console.log(`   Month ${monthNum} | exam=${isExamMonth} | ₹${monthlyFee} + ₹${examFee} = ₹${totalFee}`);
 
-      const dueDate = new Date(monthDate);
-      dueDate.setDate(5);
+      const dueDate = setDueDateDay(monthDate, admissionDay);
 
       feeSchedule.push({
         month: monthDate.toLocaleString('default', { month: 'long', year: 'numeric' }),
@@ -271,12 +279,12 @@ console.log(`   Discounted Monthly: ₹${discountedMonthlyFee}`);
 
     // ── 4. Generate schedule ──
     const start = new Date(startDate || new Date());
+    const admissionDay = start.getDate();
     const feeSchedule = [];
 
     for (let month = 1; month <= durationMonths; month++) {
       const monthDate = addMonthsSafe(start, month - 1);
-      const dueDate = new Date(monthDate);
-      dueDate.setDate(5);
+      const dueDate = setDueDateDay(monthDate, admissionDay);
 
       const isExamMonth = examMonths.includes(month);
       const thisExamFee = isExamMonth ? examFee : 0;

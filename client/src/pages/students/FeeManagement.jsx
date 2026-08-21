@@ -374,9 +374,8 @@ const processFeeSchedule = (feeSchedule, apiStudent = null) => {
 // Helper function to calculate due date (15th of the month) - FIXED
 const calculateDueDate = (monthsFromAdmission) => {
   if (!student?.admissionDate) {
-    // If no admission date, use today's month and set to 15th
+    // If no admission date, use today's date-of-month as fallback
     const defaultDate = new Date();
-    defaultDate.setDate(15);
     return defaultDate.toISOString().split('T')[0];
   }
   
@@ -388,13 +387,17 @@ const calculateDueDate = (monthsFromAdmission) => {
       throw new Error("Invalid admission date");
     }
     
+    const admissionDay = admissionDate.getDate();
+    
     const dueDate = new Date(admissionDate);
+    dueDate.setDate(1); // anchor first to avoid month-overflow
     
     // Add months safely
     dueDate.setMonth(admissionDate.getMonth() + monthsFromAdmission);
     
-    // Set to 15th of the month
-    dueDate.setDate(15);
+    // Set to admission date's day, clamped to the month's length
+    const daysInMonth = new Date(dueDate.getFullYear(), dueDate.getMonth() + 1, 0).getDate();
+    dueDate.setDate(Math.min(admissionDay, daysInMonth));
     
     // Validate the result
     if (isNaN(dueDate.getTime())) {
@@ -404,10 +407,9 @@ const calculateDueDate = (monthsFromAdmission) => {
     return dueDate.toISOString().split('T')[0];
   } catch (error) {
     console.error("Error calculating due date:", error);
-    // Fallback: 15th of next month
+    // Fallback: same day next month
     const fallbackDate = new Date();
     fallbackDate.setMonth(fallbackDate.getMonth() + monthsFromAdmission + 1);
-    fallbackDate.setDate(15);
     return fallbackDate.toISOString().split('T')[0];
   }
 };
@@ -1189,12 +1191,14 @@ const lastIsExam = false;
     let newDueDate = new Date();
     if (student?.admissionDate) {
       const admission = new Date(student.admissionDate);
+      const admissionDay = admission.getDate();
       const monthDate = new Date(admission);
       monthDate.setDate(1);
       monthDate.setMonth(admission.getMonth() + (newMonthNumber - 1));
       newMonthName = monthDate.toLocaleString("en-US", { month: "long", year: "numeric" });
       newDueDate = new Date(monthDate);
-      newDueDate.setDate(5);
+      const daysInMonth = new Date(newDueDate.getFullYear(), newDueDate.getMonth() + 1, 0).getDate();
+      newDueDate.setDate(Math.min(admissionDay, daysInMonth));
     }
 
     // 4. Append new month at end
