@@ -3100,39 +3100,56 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                 </div>
               </div>
 
-              {/* Exam fee toggle */}
-              <div className="border border-gray-100 rounded-lg p-3 bg-gray-50">
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <div
-                    onClick={() => {
-                      const isChecked = !monthManagementData.isExamMonth;
-                      setMonthManagementData({
-                        ...monthManagementData,
-                        isExamMonth: isChecked,
-                        examFee: isChecked ? (monthManagementData.examFee || course?.examFee || student?.examFee || 0) : 0,
-                      });
-                    }}
-                    className={`w-10 h-5 rounded-full transition-colors relative cursor-pointer ${monthManagementData.isExamMonth ? "bg-amber-500" : "bg-gray-300"}`}
-                  >
-                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${monthManagementData.isExamMonth ? "translate-x-5" : "translate-x-0.5"}`} />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">Include Exam Fee</span>
-                  {monthManagementData.isExamMonth && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Exam Month</span>}
-                </label>
+             {/* Exam fee toggle */}
+{(() => {
+  const editingFee = monthManagementData.action === "edit"
+    ? feeData?.feeSchedule?.find(f => f.monthNumber === monthManagementData.monthNumber)
+    : null;
+  const examLocked = !!editingFee && (editingFee.examPaid || 0) > 0;
 
-                {monthManagementData.isExamMonth && (
-                  <div className="mt-3">
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Exam Fee (₹)</label>
-                    <input
-                      type="number" min="0"
-                      value={monthManagementData.examFee}
-                      onChange={(e) => setMonthManagementData({ ...monthManagementData, examFee: e.target.value })}
-                      className="w-full border border-amber-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-                      placeholder="0"
-                    />
-                  </div>
-                )}
-              </div>
+  return (
+    <div className="border border-gray-100 rounded-lg p-3 bg-gray-50">
+      <label className={`flex items-center gap-2.5 ${examLocked ? "cursor-not-allowed" : "cursor-pointer"}`}>
+        <div
+          onClick={() => {
+            if (examLocked) return; // can't turn off once exam fee is paid
+            const isChecked = !monthManagementData.isExamMonth;
+            setMonthManagementData({
+              ...monthManagementData,
+              isExamMonth: isChecked,
+              examFee: isChecked ? (monthManagementData.examFee || course?.examFee || student?.examFee || 0) : 0,
+            });
+          }}
+          className={`w-10 h-5 rounded-full transition-colors relative ${examLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${monthManagementData.isExamMonth ? "bg-amber-500" : "bg-gray-300"}`}
+        >
+          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${monthManagementData.isExamMonth ? "translate-x-5" : "translate-x-0.5"}`} />
+        </div>
+        <span className="text-sm font-medium text-gray-700">Include Exam Fee</span>
+        {monthManagementData.isExamMonth && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Exam Month</span>}
+      </label>
+
+      {examLocked && (
+        <p className="text-xs text-amber-600 mt-2">
+          🔒 Exam fee ({formatCurrency(editingFee.examPaid || 0)}) already paid — delete the exam payment first (use "-Exam" on the schedule row) before removing exam fee here.
+        </p>
+      )}
+
+      {monthManagementData.isExamMonth && (
+        <div className="mt-3">
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Exam Fee (₹)</label>
+          <input
+            type="number" min="0"
+            value={monthManagementData.examFee}
+            onChange={(e) => setMonthManagementData({ ...monthManagementData, examFee: e.target.value })}
+            disabled={examLocked}
+            className={`w-full border border-amber-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 ${examLocked ? "bg-gray-100 cursor-not-allowed" : "bg-white"}`}
+            placeholder="0"
+          />
+        </div>
+      )}
+    </div>
+  );
+})()}
 
                             {/* Other fee toggle */}
               <div className="border border-gray-100 rounded-lg p-3 bg-gray-50">
