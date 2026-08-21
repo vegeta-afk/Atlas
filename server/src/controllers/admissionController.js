@@ -445,6 +445,8 @@ console.log("🔍 BACKEND totalFees received:", req.body.totalFees);
         student.batchTime      = admission.batchTime;
         student.facultyAllot   = admission.facultyAllot;
         student.cast           = admission.cast;
+        student.category       = admission.category;
+        student.place          = admission.place;
         student.speciallyAbled = admission.speciallyAbled;
         student.remarks        = admission.remarks;
 

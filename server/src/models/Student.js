@@ -45,6 +45,9 @@ const studentSchema = new mongoose.Schema(
     city: String,
     state: String,
     pincode: String,
+    place: String,
+    cast: String,
+    category: String,
 
     // Academic Information (Primary Course)
     course: {

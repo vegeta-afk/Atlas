@@ -29,6 +29,11 @@ import {
   Layers,
   Package,
   Award,
+  Hash,
+  Users,
+  Cake,
+  VenetianMask,
+  UserCircle2,
 } from "lucide-react";
 
 const ViewStudent = () => {
@@ -392,6 +397,23 @@ const handleMaterialToggle = async (materialId) => {
     });
   };
 
+  const formatSimpleDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "N/A";
+    return date.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const formatPhoneDisplay = (phone) => {
+    if (!phone) return "N/A";
+    const cleaned = phone.replace(/\D/g, "");
+    return cleaned.length === 10 ? `${cleaned.slice(0, 5)} ${cleaned.slice(5)}` : phone;
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -633,6 +655,159 @@ const activeBalanceAmount = activeTotalFee - activePaidAmount;
                   </div>
                 </div>
               </div>
+            </div>
+          )}          {activeTab === "basic" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                {/* Personal Information */}
+                <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-5 py-3 border-b border-blue-100 flex items-center gap-2">
+                    <User size={18} className="text-blue-600" />
+                    <h3 className="font-semibold text-gray-800">Personal Information</h3>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500 flex items-center gap-2">
+                        <UserCircle2 size={15} className="text-gray-400" /> Full Name
+                      </span>
+                      <span className="text-sm font-medium text-gray-800">{student.fullName || "N/A"}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500 flex items-center gap-2">
+                        <Cake size={15} className="text-gray-400" /> Date of Birth
+                      </span>
+                      <span className="text-sm font-medium text-gray-800">{formatSimpleDate(student.dateOfBirth)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500 flex items-center gap-2">
+                        <VenetianMask size={15} className="text-gray-400" /> Gender
+                      </span>
+                      <span className="text-sm font-medium text-gray-800 capitalize">{student.gender || "N/A"}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500 flex items-center gap-2">
+                        <Users size={15} className="text-gray-400" /> Father's Name
+                      </span>
+                      <span className="text-sm font-medium text-gray-800">{student.fatherName || "N/A"}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500 flex items-center gap-2">
+                        <Users size={15} className="text-gray-400" /> Mother's Name
+                      </span>
+                      <span className="text-sm font-medium text-gray-800">{student.motherName || "N/A"}</span>
+                    </div>
+                                        <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Caste</span>
+                      <span className="text-sm font-medium text-gray-800 uppercase">{student.cast || "N/A"}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Category</span>
+                      <span className="text-sm font-medium text-gray-800">{student.category || "N/A"}</span>
+                    </div>
+                    {student.speciallyAbled && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-500">Specially Abled</span>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Yes</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Contact Information */}
+                <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 px-5 py-3 border-b border-emerald-100 flex items-center gap-2">
+                    <Phone size={18} className="text-emerald-600" />
+                    <h3 className="font-semibold text-gray-800">Contact Information</h3>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500 flex items-center gap-2">
+                        <Mail size={15} className="text-gray-400" /> Email
+                      </span>
+                      <span className="text-sm font-medium text-gray-800">{student.email || "N/A"}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500 flex items-center gap-2">
+                        <Phone size={15} className="text-gray-400" /> Mobile
+                      </span>
+                      <span className="text-sm font-medium text-gray-800">{formatPhoneDisplay(student.mobileNumber)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500 flex items-center gap-2">
+                        <Phone size={15} className="text-gray-400" /> Father's Mobile
+                      </span>
+                      <span className="text-sm font-medium text-gray-800">{formatPhoneDisplay(student.fatherNumber)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500 flex items-center gap-2">
+                        <Phone size={15} className="text-gray-400" /> Mother's Mobile
+                      </span>
+                      <span className="text-sm font-medium text-gray-800">{formatPhoneDisplay(student.motherNumber)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500 flex items-center gap-2">
+                        <Hash size={15} className="text-gray-400" /> Aadhar Number
+                      </span>
+                      <span className="text-sm font-medium text-gray-800">{student.aadharNumber || "N/A"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                {/* Address */}
+                <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-gradient-to-r from-orange-50 to-amber-50 px-5 py-3 border-b border-orange-100 flex items-center gap-2">
+                    <MapPin size={18} className="text-orange-600" />
+                    <h3 className="font-semibold text-gray-800">Address</h3>
+                  </div>
+                                    <div className="p-5 space-y-1.5">
+                    {student.place && (
+                      <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                        <MapPin size={12} className="text-gray-400" /> {student.place}
+                      </p>
+                    )}
+                    <p className="text-sm font-medium text-gray-800">{student.address || "N/A"}</p>
+                    <p className="text-sm text-gray-600">
+                      {[student.city, student.state].filter(Boolean).join(", ")}
+                      {student.pincode ? ` - ${student.pincode}` : ""}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Enrollment */}
+                <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-gradient-to-r from-purple-50 to-fuchsia-50 px-5 py-3 border-b border-purple-100 flex items-center gap-2">
+                    <Calendar size={18} className="text-purple-600" />
+                    <h3 className="font-semibold text-gray-800">Enrollment</h3>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Admission Date</span>
+                      <span className="text-sm font-medium text-gray-800">{formatSimpleDate(student.admissionDate)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Admission No</span>
+                      <span className="text-sm font-medium text-gray-800">{student.admissionNo || "N/A"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Remarks — only if present */}
+              {student.remarks && (
+                <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 px-5 py-3 border-b border-gray-100 flex items-center gap-2">
+                    <FileText size={18} className="text-gray-600" />
+                    <h3 className="font-semibold text-gray-800">Remarks</h3>
+                  </div>
+                  <div className="p-5">
+                    <p className="text-sm text-gray-700">{student.remarks}</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
