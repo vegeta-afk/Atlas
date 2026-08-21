@@ -615,48 +615,6 @@ const activeBalanceAmount = activeTotalFee - activePaidAmount;
         {/* Tab Content */}
         <div className="p-6">
           {activeTab === "basic" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-4">
-                  Personal Information
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <User size={18} className="text-gray-400" />
-                    <span className="font-medium">Name:</span>
-                    <span>{student.fullName}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Mail size={18} className="text-gray-400" />
-                    <span className="font-medium">Email:</span>
-                    <span>{student.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Phone size={18} className="text-gray-400" />
-                    <span className="font-medium">Phone:</span>
-                    <span>{student.mobileNumber}</span>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-4">
-                  Contact Information
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-2">
-                    <MapPin size={18} className="text-gray-400 mt-1" />
-                    <div>
-                      <div className="font-medium">Address:</div>
-                      <div>{student.address}</div>
-                      <div>
-                        {student.city}, {student.state} - {student.pincode}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}          {activeTab === "basic" && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
