@@ -2189,6 +2189,13 @@ const feeRegisterRows = useMemo(() => {
   if (!feeData) return [];
   const rows = [];
 
+  // NEW: index paymentHistory by receiptNo so we can fall back to it
+  // for submittedBy/paymentMode when the feeSchedule entry lacks them
+  const paymentHistoryByReceipt = {};
+  for (const ph of (feeData.student?.paymentHistory || [])) {
+    if (ph.receiptNo) paymentHistoryByReceipt[ph.receiptNo] = ph;
+  }
+
   const getShortName = (fee) => {
     const conversionHistory = feeData?.student?.conversionHistory || [];
     if (conversionHistory.length === 0) {
@@ -2211,6 +2218,7 @@ const feeRegisterRows = useMemo(() => {
   // ── 1. Primary feeSchedule ─────────────────────────────
   for (const fee of (feeData.feeSchedule || [])) {
     if (!fee.receiptNo || !(fee.paidAmount > 0)) continue;
+    const phMatch = paymentHistoryByReceipt[fee.receiptNo];
 
     if (fee.isExamMonth && (fee.monthlyPaid || fee.examPaid)) {
       if ((fee.monthlyPaid || 0) > 0) {
@@ -2224,9 +2232,9 @@ const feeRegisterRows = useMemo(() => {
           faculty:     student?.facultyAllot || '—',
           feeType:     'Monthly Fee',
           amount:      fee.monthlyPaid,
-          paymentMode: fee.paymentMode,
+          paymentMode: fee.paymentMode || phMatch?.paymentMode,
           paymentId:   fee.paymentId,
-          submittedBy: fee.submittedByName,
+          submittedBy: fee.submittedByName || phMatch?.collectedByName,
         });
       }
       if ((fee.examPaid || 0) > 0) {
@@ -2240,9 +2248,9 @@ const feeRegisterRows = useMemo(() => {
           faculty:     student?.facultyAllot || '—',
           feeType:     'Exam Fee',
           amount:      fee.examPaid,
-          paymentMode: fee.paymentMode,
+          paymentMode: fee.paymentMode || phMatch?.paymentMode,
           paymentId:   fee.paymentId,
-          submittedBy: fee.submittedByName,
+          submittedBy: fee.submittedByName || phMatch?.collectedByName,
         });
       }
     } else {
@@ -2256,9 +2264,9 @@ const feeRegisterRows = useMemo(() => {
         faculty:     student?.facultyAllot || '—',
         feeType:     fee.isExamMonth ? 'Exam Fee' : 'Monthly Fee',
         amount:      fee.paidAmount,
-        paymentMode: fee.paymentMode,
+        paymentMode: fee.paymentMode || phMatch?.paymentMode,
         paymentId:   fee.paymentId,
-        submittedBy: fee.submittedByName,
+        submittedBy: fee.submittedByName || phMatch?.collectedByName,
       });
     }
   }
@@ -2278,6 +2286,7 @@ const feeRegisterRows = useMemo(() => {
         faculty:     student?.facultyAllot || '—',
         feeType:     of_.feeName || 'Other Fee',
         amount:      of_.amount,
+        paymentMode: ph.paymentMode,
         submittedBy: ph.collectedByName,
       });
     }
@@ -2298,6 +2307,7 @@ for (const ph of (admStudent?.paymentHistory || [])) {
     faculty:     student?.facultyAllot || '—',
     feeType:     'Admission Fee',
     amount:      ph.admissionFeeAmount,
+    paymentMode: ph.paymentMode || admStudent?.admissionFeePaymentMode,
     submittedBy: ph.collectedByName,
   });
 }
