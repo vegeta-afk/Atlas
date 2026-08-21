@@ -2910,25 +2910,31 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                       <Edit size={16} />
                     </button>
                     {fee.isExamMonth ? (
-                      <div className="flex flex-col gap-1">
-                        <button
-                          onClick={() => deleteMonthlyFee(fee)}
-                          disabled={(fee.monthlyPaid || 0) === 0}
-                          className="px-1.5 py-0.5 text-xs text-orange-600 border border-orange-300 rounded hover:bg-orange-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="Delete Monthly Fee Only"
-                        >
-                          -Monthly
-                        </button>
-                        <button
-                          onClick={() => deleteExamFee(fee)}
-                          disabled={(fee.examPaid || 0) === 0}
-                          className="px-1.5 py-0.5 text-xs text-red-600 border border-red-300 rounded hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                          title="Delete Exam Fee Only"
-                        >
-                          -Exam
-                        </button>
-                      </div>
-                    ) : (
+  <div className="flex flex-col gap-1">
+    <button
+      onClick={() => deleteMonthlyFee(fee)}
+      disabled={(fee.monthlyPaid || 0) === 0}
+      className="px-1.5 py-0.5 text-xs text-orange-600 border border-orange-300 rounded hover:bg-orange-50 disabled:opacity-30 disabled:cursor-not-allowed"
+      title="Delete Monthly Fee Only"
+    >
+      -Monthly
+    </button>
+    <button
+      onClick={() => deleteExamFee(fee)}
+      disabled={(fee.examPaid || 0) === 0 || (fee.monthlyPaid || 0) > 0}
+      className="px-1.5 py-0.5 text-xs text-red-600 border border-red-300 rounded hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
+      title={
+        (fee.examPaid || 0) === 0
+          ? "No exam fee paid to delete"
+          : (fee.monthlyPaid || 0) > 0
+          ? "Delete Monthly Fee first before removing Exam Fee"
+          : "Delete Exam Fee Only"
+      }
+    >
+      -Exam
+    </button>
+  </div>
+) : (
                       <button onClick={() => deletePayment(fee)} className="p-1 text-red-600 hover:text-red-900 rounded hover:bg-red-50" title="Delete Payment">
                         <Trash2 size={16} />
                       </button>
