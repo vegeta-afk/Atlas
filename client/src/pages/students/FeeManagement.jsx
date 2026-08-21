@@ -587,6 +587,8 @@ monthlyPaidTotal: processedSchedule
   .reduce((s, f) => s + (f.isExamMonth ? (f.monthlyPaid || 0) : Math.max(0, (f.paidAmount || 0) - (f.otherFeePaid || 0))), 0),
 otherFeePaidTotal: processedSchedule
   .reduce((s, f) => s + (f.otherFeePaid || 0), 0),
+examPaidTotal: processedSchedule
+  .reduce((s, f) => s + (f.examPaid || 0), 0),
     }
   };
   setFeeData(processedData);
@@ -1354,6 +1356,7 @@ const handleUnsuspend = async (fee) => {
       totalExamFees: sortedSchedule.filter(f => f.status !== "suspended").reduce((sum, fee) => sum + (fee.examFee || 0), 0),
       monthlyPaidTotal: sortedSchedule.reduce((s, f) => s + (f.isExamMonth ? (f.monthlyPaid || 0) : Math.max(0, (f.paidAmount || 0) - (f.otherFeePaid || 0))), 0),
       otherFeePaidTotal: sortedSchedule.reduce((s, f) => s + (f.otherFeePaid || 0), 0),
+      examPaidTotal: sortedSchedule.reduce((s, f) => s + (f.examPaid || 0), 0),
     },
   });
 };
@@ -2455,20 +2458,34 @@ for (const ph of (admStudent?.paymentHistory || [])) {
             Paid Amount
           </div>
           <div className="flex items-baseline gap-1.5">
-            <span className="text-xl font-bold">{formatCurrency(feeData.summary.monthlyPaidTotal || 0)}</span>
-            <span className="text-xs text-gray-400">Monthly</span>
-          </div>
-          {(feeData.summary.otherFeePaidTotal || 0) > 0 && (
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-sm font-semibold text-green-700">
-                {formatCurrency((feeData.summary.monthlyPaidTotal || 0) + (feeData.summary.otherFeePaidTotal || 0))}
-              </span>
-              <span className="text-xs text-gray-400">Monthly + Other</span>
-            </div>
-          )}
-          <div className="text-xs text-gray-500 mt-1">
-            {feeData.summary.paidInstallments} installments paid
-          </div>
+  <span className="text-xl font-bold">{formatCurrency(feeData.summary.monthlyPaidTotal || 0)}</span>
+  <span className="text-xs text-gray-400">Monthly</span>
+</div>
+{(feeData.summary.otherFeePaidTotal || 0) > 0 && (
+  <div className="flex items-baseline gap-1.5 mt-0.5">
+    <span className="text-sm font-semibold text-green-700">
+      {formatCurrency((feeData.summary.monthlyPaidTotal || 0) + (feeData.summary.otherFeePaidTotal || 0))}
+    </span>
+    <span className="text-xs text-gray-400">Monthly + Other</span>
+  </div>
+)}
+{(feeData.summary.examPaidTotal || 0) > 0 && (
+  <div className="flex items-baseline gap-1.5 mt-0.5">
+    <span className="text-sm font-semibold text-yellow-700">
+      {formatCurrency(feeData.summary.examPaidTotal || 0)}
+    </span>
+    <span className="text-xs text-gray-400">Exam Fee Paid</span>
+  </div>
+)}
+<div className="flex items-baseline gap-1.5 mt-1 pt-1 border-t border-green-200">
+  <span className="text-sm font-bold text-green-800">
+    {formatCurrency(feeData.summary.paidAmount || 0)}
+  </span>
+  <span className="text-xs text-gray-400">Total Received</span>
+</div>
+<div className="text-xs text-gray-500 mt-1">
+  {feeData.summary.paidInstallments} installments paid
+</div>
         </div>
         <div className="bg-red-50 p-4 rounded-lg border border-red-100">
           <div className="flex items-center gap-2 text-red-600 font-semibold mb-2">
