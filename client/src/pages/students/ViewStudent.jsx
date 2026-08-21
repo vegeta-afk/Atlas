@@ -750,6 +750,10 @@ const activeBalanceAmount = activeTotalFee - activePaidAmount;
                       <span className="text-sm text-gray-500">Admission No</span>
                       <span className="text-sm font-medium text-gray-800">{student.admissionNo || "N/A"}</span>
                     </div>
+                                        <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Faculty</span>
+                      <span className="text-sm font-medium text-gray-800">{student.facultyAllot || "Not Allotted"}</span>
+                    </div>
                   </div>
                 </div>
               </div>
