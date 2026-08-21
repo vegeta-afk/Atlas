@@ -2457,17 +2457,37 @@ for (const ph of (admStudent?.paymentHistory || [])) {
   <CheckCircle size={16} />
   Paid Amount
 </div>
-<div
-  className="group relative inline-block cursor-help"
-  title={`Monthly: ${formatCurrency(feeData.summary.monthlyPaidTotal || 0)}${
-    (feeData.summary.otherFeePaidTotal || 0) > 0 ? `\nOther Fees: ${formatCurrency(feeData.summary.otherFeePaidTotal || 0)}` : ''
-  }${
-    (feeData.summary.examPaidTotal || 0) > 0 ? `\nExam Fee: ${formatCurrency(feeData.summary.examPaidTotal || 0)}` : ''
-  }`}
->
-  <span className="text-xl font-bold border-b border-dotted border-gray-400">
-    {formatCurrency(feeData.summary.paidAmount || 0)}
-  </span>
+<div className="flex items-center gap-1.5">
+  <span className="text-xl font-bold">{formatCurrency(feeData.summary.paidAmount || 0)}</span>
+  <div className="group relative inline-flex">
+    <AlertCircle size={14} className="text-gray-400 hover:text-green-600 cursor-help transition-colors" />
+    <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-44 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+      <div className="bg-gray-900 text-white text-xs rounded-lg shadow-xl p-3 space-y-1.5">
+        <div className="flex justify-between gap-3">
+          <span className="text-gray-300">Monthly</span>
+          <span className="font-semibold">{formatCurrency(feeData.summary.monthlyPaidTotal || 0)}</span>
+        </div>
+        {(feeData.summary.otherFeePaidTotal || 0) > 0 && (
+          <div className="flex justify-between gap-3">
+            <span className="text-gray-300">Other Fees</span>
+            <span className="font-semibold">{formatCurrency(feeData.summary.otherFeePaidTotal || 0)}</span>
+          </div>
+        )}
+        {(feeData.summary.examPaidTotal || 0) > 0 && (
+          <div className="flex justify-between gap-3">
+            <span className="text-gray-300">Exam Fee</span>
+            <span className="font-semibold">{formatCurrency(feeData.summary.examPaidTotal || 0)}</span>
+          </div>
+        )}
+        <div className="flex justify-between gap-3 pt-1.5 border-t border-gray-700">
+          <span className="text-gray-300">Total</span>
+          <span className="font-bold text-green-400">{formatCurrency(feeData.summary.paidAmount || 0)}</span>
+        </div>
+      </div>
+      {/* Arrow */}
+      <div className="w-2.5 h-2.5 bg-gray-900 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
+    </div>
+  </div>
 </div>
 <div className="text-xs text-gray-500 mt-1">
   {feeData.summary.paidInstallments} installments paid
