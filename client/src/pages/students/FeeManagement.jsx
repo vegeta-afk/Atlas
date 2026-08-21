@@ -2454,34 +2454,20 @@ for (const ph of (admStudent?.paymentHistory || [])) {
         </div>
                 <div className="bg-green-50 p-4 rounded-lg border border-green-100">
           <div className="flex items-center gap-2 text-green-600 font-semibold mb-2">
-            <CheckCircle size={16} />
-            Paid Amount
-          </div>
-          <div className="flex items-baseline gap-1.5">
-  <span className="text-xl font-bold">{formatCurrency(feeData.summary.monthlyPaidTotal || 0)}</span>
-  <span className="text-xs text-gray-400">Monthly</span>
+  <CheckCircle size={16} />
+  Paid Amount
 </div>
-{(feeData.summary.otherFeePaidTotal || 0) > 0 && (
-  <div className="flex items-baseline gap-1.5 mt-0.5">
-    <span className="text-sm font-semibold text-green-700">
-      {formatCurrency((feeData.summary.monthlyPaidTotal || 0) + (feeData.summary.otherFeePaidTotal || 0))}
-    </span>
-    <span className="text-xs text-gray-400">Monthly + Other</span>
-  </div>
-)}
-{(feeData.summary.examPaidTotal || 0) > 0 && (
-  <div className="flex items-baseline gap-1.5 mt-0.5">
-    <span className="text-sm font-semibold text-yellow-700">
-      {formatCurrency(feeData.summary.examPaidTotal || 0)}
-    </span>
-    <span className="text-xs text-gray-400">Exam Fee Paid</span>
-  </div>
-)}
-<div className="flex items-baseline gap-1.5 mt-1 pt-1 border-t border-green-200">
-  <span className="text-sm font-bold text-green-800">
+<div
+  className="group relative inline-block cursor-help"
+  title={`Monthly: ${formatCurrency(feeData.summary.monthlyPaidTotal || 0)}${
+    (feeData.summary.otherFeePaidTotal || 0) > 0 ? `\nOther Fees: ${formatCurrency(feeData.summary.otherFeePaidTotal || 0)}` : ''
+  }${
+    (feeData.summary.examPaidTotal || 0) > 0 ? `\nExam Fee: ${formatCurrency(feeData.summary.examPaidTotal || 0)}` : ''
+  }`}
+>
+  <span className="text-xl font-bold border-b border-dotted border-gray-400">
     {formatCurrency(feeData.summary.paidAmount || 0)}
   </span>
-  <span className="text-xs text-gray-400">Total Received</span>
 </div>
 <div className="text-xs text-gray-500 mt-1">
   {feeData.summary.paidInstallments} installments paid
