@@ -135,12 +135,12 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
         { path: "/admin/students",                   label: "Student List",      icon: <UsersIcon size={15} /> },
         { path: "/admin/students/attendance",        label: "Attendance",        icon: <Calendar size={15} /> },
         { path: "/admin/students/fees",              label: "Fee Management",    icon: <CreditCard size={15} /> },
-        { path: "/admin/students/exams",             label: "Exam Results",      icon: <FileText size={15} /> },
         { path: "/admin/students/batch-transfer",    label: "Batch Transfer",    icon: <ArrowLeftRight size={15} /> },
         { path: "/admin/students/course-conversion", label: "Course Conversion", icon: <TrendingUp size={15} /> },
         { path: "/admin/students/course-extension",  label: "Course Extension",  icon: <Plus size={15} /> },
         { path: "/admin/students/bridge-batch",      label: "Bridge Batch",      icon: <GitBranch size={15} /> },
         { path: "/admin/students/material-issue", label: "Material Issue", icon: <Package size={15} /> },
+        { path: "/admin/students/exams",             label: "Exam Results",      icon: <FileText size={15} /> },
       ],
     },
     {
