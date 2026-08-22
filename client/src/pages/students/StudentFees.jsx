@@ -1333,6 +1333,24 @@ const paginatedRegister = filteredRegisterData.slice((regPage - 1) * REG_PAGE_SI
   ? defaulterStudents
   : defaulterStudents.filter(s => getOverdueMonths(s).length === defaulterMonthFilter);
 
+
+const toggleVerified = async (record) => {
+  try {
+    const response = await authFetch("/api/students/fee-register/verify", {
+      method: "PATCH",
+      body: JSON.stringify({ receiptNo: record.receiptNo, studentId: record.studentId })
+    });
+    const data = await response.json();
+    if (data.success) {
+      setFeeRegisterData(prev =>
+        prev.map(r => r.receiptNo === record.receiptNo ? { ...r, verified: data.verified } : r)
+      );
+    }
+  } catch (err) {
+    console.error("Verify toggle error:", err);
+  }
+};  
+
 const displayedDefaulters = monthFilteredDefaulters.filter(s => {
   if (pendingFromDate || pendingToDate) {
     const doj = s.dateOfJoining ? new Date(s.dateOfJoining) : null;
@@ -2603,13 +2621,27 @@ const displayedDefaulters = monthFilteredDefaulters.filter(s => {
             </tr>
           ) : (
             paginatedRegister.map((record, idx) => (
-              <tr key={idx} className={`hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+              <tr
+  key={idx}
+  onDoubleClick={() => toggleVerified(record)}
+  className={`hover:bg-blue-50 transition-colors cursor-pointer select-none ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+  title="Double-click to toggle verified"
+>
                 <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                   {formatDate(record.date)}
                 </td>
                 <td className="px-4 py-3 text-sm font-semibold text-gray-900 whitespace-nowrap">
-                  {record.receiptNo}
-                </td>
+  <span
+    className={
+      record.verified
+        ? "inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-50 text-green-700 ring-2 ring-green-400 shadow-[0_0_8px_rgba(34,197,94,0.65)]"
+        : ""
+    }
+  >
+    {record.verified && <CheckCircle size={13} className="text-green-600" />}
+    {record.receiptNo}
+  </span>
+</td>
                 <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                   {record.rollNo}
                 </td>

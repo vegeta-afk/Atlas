@@ -315,7 +315,8 @@ router.get('/fee-register', async (req, res) => {
         paymentMode: fee.paymentMode || 'N/A',
         paymentId:   fee.paymentId   || '',
         feeType,
-        amount
+        amount,
+        verified: (student.verifiedReceipts || []).includes(fee.receiptNo)
       });
     };
 
@@ -389,7 +390,8 @@ for (const ph of (student.paymentHistory || [])) {
       paymentMode: student.admissionFeePaymentMode || 'N/A',
       paymentId:   student.admissionFeePaymentId   || '',
       feeType:     'Admission Fee',
-      amount:      admissionAmount
+      amount:      admissionAmount,
+      verified:    (student.verifiedReceipts || []).includes(ph.receiptNo)
     });
   }
 }
@@ -1695,6 +1697,40 @@ student.paymentHistory.forEach(ph => {
     res.json({ success: true, message: 'Receipt deleted. Fees restored to pending.' });
   } catch (err) {
     console.error('Delete receipt error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PATCH /api/students/fee-register/verify — toggle offline-verified flag on a receipt
+router.patch('/fee-register/verify', async (req, res) => {
+  try {
+    const { receiptNo, studentId } = req.body;
+    if (!receiptNo || !studentId) {
+      return res.status(400).json({ success: false, message: 'receiptNo and studentId are required' });
+    }
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    student.verifiedReceipts = student.verifiedReceipts || [];
+    const idx = student.verifiedReceipts.indexOf(receiptNo);
+    let verified;
+    if (idx === -1) {
+      student.verifiedReceipts.push(receiptNo);
+      verified = true;
+    } else {
+      student.verifiedReceipts.splice(idx, 1);
+      verified = false;
+    }
+
+    student.markModified('verifiedReceipts');
+    await student.save();
+
+    res.json({ success: true, verified });
+  } catch (err) {
+    console.error('Toggle verified receipt error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 });

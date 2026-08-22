@@ -88,6 +88,8 @@ scholarship: {
 },
 
 
+verifiedReceipts: { type: [String], default: [] },
+
     // Multiple batch enrollment (legacy)
     enrolledBatches: [
       {
