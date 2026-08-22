@@ -69,7 +69,7 @@ const ViewStudent = () => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [bridgeBatches, setBridgeBatches] = useState([]);
   const [batchTransfers, setBatchTransfers] = useState([]);
-  const [expandedHistoryKey, setExpandedHistoryKey] = useState(null);
+  const [historyView, setHistoryView] = useState("transfer"); // transfer | bridge | conversion | extension
 
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -449,6 +449,15 @@ const handleMaterialToggle = async (materialId) => {
     if (!phone) return "N/A";
     const cleaned = phone.replace(/\D/g, "");
     return cleaned.length === 10 ? `${cleaned.slice(0, 5)} ${cleaned.slice(5)}` : phone;
+  };
+
+  const formatTime12hr = (time24) => {
+    if (!time24) return "";
+    const [hourStr, minStr] = time24.split(":");
+    let hour = parseInt(hourStr, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12 || 12;
+    return `${hour}:${minStr} ${ampm}`;
   };
 
   const formatCurrency = (amount) => {
@@ -1381,68 +1390,228 @@ const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
         </div>
       )}
 
-            {activeTab === "history" && (
+                  {activeTab === "history" && (
         <div>
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <HistoryIcon size={20} className="text-indigo-600" />
-            Student History Timeline
-          </h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <HistoryIcon size={20} className="text-indigo-600" />
+              Student History
+            </h3>
+          </div>
 
-          {historyLoading ? (
+          {/* Toggle Buttons */}
+          <div className="flex flex-wrap gap-2 mb-5 border-b border-gray-200 pb-3">
+            {[
+              { id: "transfer", label: "Batch Transfer", icon: <ArrowLeftRight size={15} />, count: batchTransfers.length },
+              { id: "bridge", label: "Bridge Batch", icon: <Layers size={15} />, count: bridgeBatches.length },
+              { id: "conversion", label: "Course Conversion", icon: <GitBranch size={15} />, count: (student.conversionHistory || []).length },
+              { id: "extension", label: "Course Extension", icon: <Repeat size={15} />, count: (student.extensionHistory || []).length },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setHistoryView(tab.id)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  historyView === tab.id
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+                <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${
+                  historyView === tab.id ? "bg-white/20" : "bg-gray-200"
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {historyLoading && (historyView === "transfer" || historyView === "bridge") ? (
             <div className="flex justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
-          ) : historyTimeline.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <HistoryIcon size={40} className="mx-auto mb-3 text-gray-300" />
-              <p>No history records found for this student.</p>
-            </div>
           ) : (
-            <div className="relative pl-8 space-y-4">
-              <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gray-200" />
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
 
-              {historyTimeline.map((event) => {
-                const config = historyTypeConfig[event.type];
-                const isExpanded = expandedHistoryKey === event.key;
-
-                return (
-                  <div key={event.key} className="relative">
-                    <div className={`absolute -left-8 top-1 w-6 h-6 rounded-full flex items-center justify-center ${config.bg} ${config.text} ring-4 ring-white`}>
-                      {config.icon}
-                    </div>
-
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
-                      <button
-                        onClick={() => setExpandedHistoryKey(isExpanded ? null : event.key)}
-                        className="w-full flex justify-between items-center px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-                      >
-                        <div>
-                          <p className="font-medium text-gray-800">{event.title}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {formatSimpleDate(event.date)} • <span className={config.text}>{event.subtitle}</span>
-                          </p>
-                        </div>
-                        {isExpanded ? <ChevronUp size={16} className="flex-shrink-0" /> : <ChevronDown size={16} className="flex-shrink-0" />}
-                      </button>
-
-                      {isExpanded && (
-                        <div className="px-4 py-3 bg-white space-y-2">
-                          {event.details.map((d, i) => (
-                            <div key={i} className="flex justify-between text-sm">
-                              <span className="text-gray-500">{d.label}</span>
-                              <span className="font-medium text-gray-800 text-right max-w-[60%]">{d.value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+              {/* ===== BATCH TRANSFER TABLE ===== */}
+              {historyView === "transfer" && (
+                batchTransfers.length === 0 ? (
+                  <div className="text-center py-10 text-gray-400">
+                    <ArrowLeftRight size={40} className="mx-auto mb-3" />
+                    <p className="text-sm">No batch transfer records found.</p>
                   </div>
-                );
-              })}
+                ) : (
+                  <table className="w-full min-w-[900px]">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Request Date</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Requested By</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Previous Batch</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Previous Teacher</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">New Batch</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">New Teacher</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {batchTransfers.map((t) => (
+                        <tr key={t._id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{formatSimpleDate(t.requestDate || t.createdAt)}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{t.requestedByName || t.requestedBy?.name || "N/A"}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{t.previousBatch || t.previousBatchTime || "N/A"}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{t.previousTeacher || "N/A"}</td>
+                          <td className="px-4 py-3 text-center text-sm font-medium text-green-600">{t.newBatchTime || t.newBatch || "N/A"}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{t.newTeacher || "N/A"}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                              t.status === "approved" ? "bg-green-100 text-green-700" :
+                              t.status === "rejected" ? "bg-red-100 text-red-700" :
+                              "bg-yellow-100 text-yellow-700"
+                            }`}>
+                              {t.status === "approved" ? "Approved" : t.status === "rejected" ? "Rejected" : "Pending"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              )}
+
+              {/* ===== BRIDGE BATCH TABLE ===== */}
+              {historyView === "bridge" && (
+                bridgeBatches.length === 0 ? (
+                  <div className="text-center py-10 text-gray-400">
+                    <Layers size={40} className="mx-auto mb-3" />
+                    <p className="text-sm">No bridge batch records found.</p>
+                  </div>
+                ) : (
+                  <table className="w-full min-w-[900px]">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Requested</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Course</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Temp Faculty</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Time Slot</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Topics</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {bridgeBatches.map((b) => {
+                        const totalItems = (b.selectedTopics?.length || 0) + (b.selectedSubtopics?.length || 0);
+                        const statusMap = {
+                          pending: { label: "Pending", cls: "bg-yellow-100 text-yellow-700" },
+                          active: { label: "Active", cls: "bg-blue-100 text-blue-700" },
+                          ready_to_merge: { label: "Ready to Merge", cls: "bg-purple-100 text-purple-700" },
+                          merged: { label: "Merged", cls: "bg-green-100 text-green-700" },
+                          rejected: { label: "Rejected", cls: "bg-red-100 text-red-700" },
+                          cancelled: { label: "Cancelled", cls: "bg-gray-100 text-gray-600" },
+                        };
+                        const st = statusMap[b.status] || { label: b.status, cls: "bg-gray-100 text-gray-600" };
+                        return (
+                          <tr key={b._id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-center text-sm text-gray-700">{formatSimpleDate(b.createdAt)}</td>
+                            <td className="px-4 py-3 text-center text-sm text-gray-700">{b.courseName || "N/A"}</td>
+                            <td className="px-4 py-3 text-center text-sm text-gray-700">{b.tempFacultyName || "N/A"}</td>
+                            <td className="px-4 py-3 text-center text-sm text-gray-700">
+                              {b.timeSlot?.startTime && b.timeSlot?.endTime
+                                ? `${formatTime12hr(b.timeSlot.startTime)} - ${formatTime12hr(b.timeSlot.endTime)}`
+                                : "N/A"}
+                            </td>
+                            <td className="px-4 py-3 text-center text-sm font-medium text-indigo-600">
+                              {totalItems} item{totalItems === 1 ? "" : "s"}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${st.cls}`}>{st.label}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )
+              )}
+
+              {/* ===== COURSE CONVERSION TABLE ===== */}
+              {historyView === "conversion" && (
+                (student.conversionHistory || []).length === 0 ? (
+                  <div className="text-center py-10 text-gray-400">
+                    <GitBranch size={40} className="mx-auto mb-3" />
+                    <p className="text-sm">No course conversion records found.</p>
+                  </div>
+                ) : (
+                  <table className="w-full min-w-[900px]">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Date</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">From Course</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">To Course</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Month</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Reason</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Old Total Fee</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">New Total Fee</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {student.conversionHistory.map((c, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{formatSimpleDate(c.conversionDate)}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{c.fromCourse || "N/A"}</td>
+                          <td className="px-4 py-3 text-center text-sm font-medium text-green-600">{c.toCourse || "N/A"}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{c.conversionMonth || "N/A"}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{c.reason || "N/A"}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{formatCurrency(c.oldTotalFee)}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{formatCurrency(c.newTotalFee)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              )}
+
+              {/* ===== COURSE EXTENSION TABLE ===== */}
+              {historyView === "extension" && (
+                (student.extensionHistory || []).length === 0 ? (
+                  <div className="text-center py-10 text-gray-400">
+                    <Repeat size={40} className="mx-auto mb-3" />
+                    <p className="text-sm">No course extension records found.</p>
+                  </div>
+                ) : (
+                  <table className="w-full min-w-[900px]">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Date</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">From Course</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">To Course</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Month</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Reason</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Additional Fees</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">New Total Fee</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {student.extensionHistory.map((e, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{formatSimpleDate(e.extensionDate)}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{e.fromCourse || "N/A"}</td>
+                          <td className="px-4 py-3 text-center text-sm font-medium text-green-600">{e.toCourse || "N/A"}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{e.extensionMonth || "N/A"}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{e.reason || "N/A"}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{formatCurrency(e.additionalFees)}</td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{formatCurrency(e.newTotalFee)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              )}
             </div>
           )}
         </div>
       )}
+
 
       {activeTab === "material" && (
   <div>
