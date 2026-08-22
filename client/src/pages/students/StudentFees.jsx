@@ -2630,15 +2630,8 @@ const displayedDefaulters = monthFilteredDefaulters.filter(s => {
                 <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                   {formatDate(record.date)}
                 </td>
-                <td className="px-4 py-3 text-sm font-semibold text-gray-900 whitespace-nowrap">
-  <span
-    className={
-      record.verified
-        ? "inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-50 text-green-700 ring-2 ring-green-400 shadow-[0_0_8px_rgba(34,197,94,0.65)]"
-        : ""
-    }
-  >
-    {record.verified && <CheckCircle size={13} className="text-green-600" />}
+                <td className="px-4 py-3 text-sm font-semibold whitespace-nowrap">
+  <span className={record.verified ? "text-green-600" : "text-gray-900"}>
     {record.receiptNo}
   </span>
 </td>
