@@ -788,10 +788,10 @@ const getConversionPreview = async () => {
                       </thead>
                       <tbody className="divide-y divide-gray-200">
                         {/* Paid months */}
-                        {previewData.conversion.paidMonths > 0 && (
+                        {previewData.conversion.totalPaidMonths > 0 && (
                           <tr className="bg-green-50">
                             <td className="px-6 py-4 font-medium">
-                              Month 1 – {previewData.conversion.paidMonths}
+                              Month 1 – {previewData.conversion.totalPaidMonths}
                             </td>
                             <td className="px-6 py-4 text-right font-semibold text-green-700">
                               {formatCurrency(previewData.conversion.actualCashPaid)}
@@ -810,7 +810,7 @@ const getConversionPreview = async () => {
                         {/* Future months */}
                         <tr className="bg-yellow-50">
                           <td className="px-6 py-4 font-medium">
-                            Month {previewData.conversion.conversionMonth} – {previewData.newCourse.duration}
+                            Month {previewData.conversion.conversionMonth} – {previewData.conversion.conversionMonth + previewData.newCourse.duration - 1}
                             <span className="ml-2 text-xs text-yellow-600">
                               ({previewData.conversion.remainingMonths} months)
                             </span>
@@ -859,7 +859,7 @@ const getConversionPreview = async () => {
                     </p>
                     <ul className="list-disc list-inside text-yellow-700 space-y-1 text-sm">
                       <li>
-                        Already paid months ({previewData.conversion.paidMonths}) will remain unchanged
+                        Already paid months ({previewData.conversion.totalPaidMonths}) will remain unchanged
                         at {formatCurrency(previewData.oldCourse.monthlyFee)}/month
                       </li>
                       <li>

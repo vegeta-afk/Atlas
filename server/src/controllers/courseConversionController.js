@@ -43,16 +43,10 @@ exports.getEligibleStudents = async (req, res) => {
       .limit(20);
 
     const formattedStudents = students.map(student => {
-      const admissionDate = new Date(student.admissionDate);
-      const today      = new Date();
-      const diffDays   = Math.ceil(Math.abs(today - admissionDate) / (1000 * 60 * 60 * 24));
-      const courseDuration = parseInt(student.courseCode?.duration, 10) || 999;
-const currentMonth = Math.min(
-  Math.floor(diffDays / 30) + 1,
-  courseDuration
-);
-      const paidEntries  = student.feeSchedule?.filter(m => m.paidAmount > 0) || [];
-      const paidAmount   = paidEntries.reduce((sum, m) => sum + (m.paidAmount || 0), 0);
+  const courseDuration = parseInt(student.courseCode?.duration, 10) || 999;
+  const paidEntries  = student.feeSchedule?.filter(m => m.paidAmount > 0) || [];
+  const paidAmount   = paidEntries.reduce((sum, m) => sum + (m.paidAmount || 0), 0);
+  const currentMonth = Math.min(paidEntries.length + 1, courseDuration);
 
       return {
         id: student._id, studentId: student.studentId, rollNo: student.studentId,
@@ -108,30 +102,31 @@ const newMonthlyFee = (finalMonthlyFee && parseFloat(finalMonthlyFee) > 0)
     ) || [];
     const paidBeforeConversionCount = paidBeforeConversion.length;
 
-    // Calculate months after conversion
-    const monthsAfterConversion = newDuration - (conversionMonthNum - 1);
-    if (monthsAfterConversion <= 0)
+    // New course always contributes its FULL duration, starting at conversionMonth
+    const monthsAfterConversion = newDuration;
+    if (newDuration <= 0)
       return res.status(400).json({ 
         success: false, 
-        message: "Conversion month is beyond new course duration" 
+        message: "Selected course has invalid duration" 
       });
 
-    // Parse exam months correctly
+    // Parse exam months (relative to the NEW course's own numbering)
     const examMonths = newCourse.examMonths
       ? newCourse.examMonths.split(',').map(m => parseInt(m.trim())).filter(m => !isNaN(m))
       : [];
 
-    // ✅ Calculate future fees (months from conversionMonth to end)
+    // ✅ Calculate future fees for the new course's full duration
     let futureMonthlyTotal = 0;
     let futureExamTotal = 0;
     const futureExamMonths = [];
 
-    for (let monthNum = conversionMonthNum; monthNum <= newDuration; monthNum++) {
-      const isExam = examMonths.includes(monthNum);
+    for (let relativeMonth = 1; relativeMonth <= newDuration; relativeMonth++) {
+      const absoluteMonth = conversionMonthNum - 1 + relativeMonth;
+      const isExam = examMonths.includes(relativeMonth);
       futureMonthlyTotal += newMonthlyFee;
       if (isExam) {
         futureExamTotal += newExamFee;
-        futureExamMonths.push(monthNum);
+        futureExamMonths.push(absoluteMonth);
       }
     }
     
@@ -266,16 +261,10 @@ exports.convertStudentCourse = async (req, res) => {
       });
     }
 
-    // Calculate current month
-    const admissionDate = new Date(student.admissionDate);
-    const today = new Date();
-    const diffTime = Math.abs(today - admissionDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    // Calculate current month (based on paid months, not calendar time)
     const oldCourseDuration = parseInt(oldCourse?.duration, 10) || 999;
-const currentMonth = Math.min(
-  Math.floor(diffDays / 30) + 1,
-  oldCourseDuration
-);
+    const paidEntriesForCurrentMonth = student.feeSchedule?.filter(m => m.paidAmount > 0) || [];
+    const currentMonth = Math.min(paidEntriesForCurrentMonth.length + 1, oldCourseDuration);
 
     if (conversionMonthNum < currentMonth) {
       await session.abortTransaction();

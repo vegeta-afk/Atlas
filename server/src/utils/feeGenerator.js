@@ -181,13 +181,14 @@ const generateConvertedFeeSchedule = (student, newCourse, conversionMonth) => {
 
     console.log(`✅ Preserved ${feeSchedule.length} paid months (₹${paidAmount})`);
 
-    // ✅ GENERATE NEW MONTHS from conversionMonth onwards using NEW COURSE RULES
-    for (let monthNum = conversionMonth; monthNum <= newDuration; monthNum++) {
+        // ✅ GENERATE NEW MONTHS: full new-course duration, starting at conversionMonth
+    for (let relativeMonth = 1; relativeMonth <= newDuration; relativeMonth++) {
+      const monthNum = conversionMonth - 1 + relativeMonth; // absolute month in schedule
       const monthDate = new Date(startDate);
       monthDate.setMonth(startDate.getMonth() + monthNum - 1);
 
-      // Check exam months based on NEW COURSE ONLY
-      const isExamMonth = examMonths.includes(monthNum);
+      // examMonths are relative to the NEW course's own numbering (e.g. "exam in its 6th month")
+      const isExamMonth = examMonths.includes(relativeMonth);
       const monthlyFee = newMonthlyFee;
       const examFee = isExamMonth ? newExamFee : 0;
       const totalFee = monthlyFee + examFee;
