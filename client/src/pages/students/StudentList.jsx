@@ -387,13 +387,13 @@ const admissionIdValue =
                           >
                             <DollarSign size={15} />
                           </Link>
-                          <Link
+                          {/* <Link
                             to={`${basePath}/students/attendance/${student._id}`}
                             className="p-1.5 rounded-md text-orange-500 hover:bg-orange-50 hover:text-orange-700 transition-colors"
                             title="Attendance"
                           >
                             <Calendar size={15} />
-                          </Link>
+                          </Link> */}
                         </div>
                       </td>
                     </tr>
