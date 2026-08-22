@@ -629,6 +629,7 @@ const examPaidTotal = activeFeeSchedule.reduce((s, f) => s + (f.examPaid || 0), 
     </div>
   </div>
 </div>
+              
               <div className="bg-orange-50 p-4 rounded-lg">
                 <div className="text-orange-600 font-semibold">Balance</div>
                 <div className="text-xl font-bold">
