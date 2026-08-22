@@ -673,7 +673,7 @@ const activeBalance = activeTotalFee - totalPaid;
             pendingAmount: balanceAmount,
             balanceAmount,
             paidAmount,
-                        status: fee.status || (paidAmount > 0 ? "partial" : "pending"),
+            status: paidAmount === 0 ? "pending" : paidAmount >= totalAmount ? "paid" : "partial",
             selected: false,
             payingAmount: balanceAmount,
             isExamMonth: fee.isExamMonth || false,
@@ -2079,9 +2079,9 @@ const displayedDefaulters = monthFilteredDefaulters.filter(s => {
                         {(student.fullName || '?')[0].toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold text-gray-900 truncate">{student.fullName}</div>
-                        <div className="text-xs text-gray-400 truncate">{student.studentId || ''}</div>
-                      </div>
+      <div className="text-sm font-semibold text-gray-900 truncate">{student.fullName}</div>
+      <div className="text-xs text-gray-400 truncate">{student.fatherName || ''}</div>
+    </div>
                     </div>
                   </td>
  
