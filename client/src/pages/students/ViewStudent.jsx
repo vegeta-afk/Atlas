@@ -474,6 +474,13 @@ const activePaidAmount = monthlyPaid + admissionPaid + additionalPaid;
 
 const activeBalanceAmount = activeTotalFee - activePaidAmount;
 
+const monthlyPaidTotal = activeFeeSchedule.reduce(
+  (s, f) => s + (f.isExamMonth ? (f.monthlyPaid || 0) : Math.max(0, (f.paidAmount || 0) - (f.otherFeePaid || 0))),
+  0
+);
+const otherFeePaidTotal = activeFeeSchedule.reduce((s, f) => s + (f.otherFeePaid || 0), 0);
+const examPaidTotal = activeFeeSchedule.reduce((s, f) => s + (f.examPaid || 0), 0);
+
   const tabs = [
     { id: "basic", label: "Basic Info", icon: <User size={18} /> },
     { id: "fees", label: "Fees", icon: <DollarSign size={18} /> },
@@ -577,9 +584,45 @@ const activeBalanceAmount = activeTotalFee - activePaidAmount;
                 <div className="text-xl font-bold">{attendanceStats.attendancePercentage}%</div>
               </div>
               <div className="bg-purple-50 p-4 rounded-lg">
-                <div className="text-purple-600 font-semibold">Fees Paid</div>
-                <div className="text-xl font-bold">₹{activePaidAmount}</div>
-              </div>
+  <div className="text-purple-600 font-semibold">Fees Paid</div>
+  <div className="flex items-center gap-1.5">
+    <span className="text-xl font-bold">₹{activePaidAmount}</span>
+    <div className="group relative inline-flex">
+      <AlertCircle size={14} className="text-gray-400 hover:text-purple-600 cursor-help transition-colors" />
+      <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-44 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+        <div className="bg-gray-900 text-white text-xs rounded-lg shadow-xl p-3 space-y-1.5">
+          <div className="flex justify-between gap-3">
+            <span className="text-gray-300">Monthly</span>
+            <span className="font-semibold">{formatCurrency(monthlyPaidTotal)}</span>
+          </div>
+          {otherFeePaidTotal > 0 && (
+            <div className="flex justify-between gap-3">
+              <span className="text-gray-300">Other Fees</span>
+              <span className="font-semibold">{formatCurrency(otherFeePaidTotal)}</span>
+            </div>
+          )}
+          {examPaidTotal > 0 && (
+            <div className="flex justify-between gap-3">
+              <span className="text-gray-300">Exam Fee</span>
+              <span className="font-semibold">{formatCurrency(examPaidTotal)}</span>
+            </div>
+          )}
+          {admissionPaid > 0 && (
+            <div className="flex justify-between gap-3">
+              <span className="text-gray-300">Admission Fee</span>
+              <span className="font-semibold">{formatCurrency(admissionPaid)}</span>
+            </div>
+          )}
+          <div className="flex justify-between gap-3 pt-1.5 border-t border-gray-700">
+            <span className="text-gray-300">Total</span>
+            <span className="font-bold text-purple-400">{formatCurrency(activePaidAmount)}</span>
+          </div>
+        </div>
+      </div>
+      <div className="w-2.5 h-2.5 bg-gray-900 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
+    </div>
+  </div>
+</div>
               <div className="bg-orange-50 p-4 rounded-lg">
                 <div className="text-orange-600 font-semibold">Balance</div>
                 <div className="text-xl font-bold">
