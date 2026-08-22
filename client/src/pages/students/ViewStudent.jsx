@@ -34,6 +34,9 @@ import {
   Cake,
   VenetianMask,
   UserCircle2,
+  ArrowLeftRight,
+  Repeat,
+  GitBranch,
   History as HistoryIcon,
 } from "lucide-react";
 
