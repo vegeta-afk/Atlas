@@ -607,7 +607,7 @@ const examPaidTotal = activeFeeSchedule.reduce((s, f) => s + (f.examPaid || 0), 
               <span className="font-semibold">{formatCurrency(examPaidTotal)}</span>
             </div>
           )}
-                    {admissionPaid > 0 && (
+          {admissionPaid > 0 && (
             <div className="flex justify-between gap-3">
               <span className="text-gray-300">Admission Fee</span>
               <span className="font-semibold">{formatCurrency(admissionPaid)}</span>
@@ -624,8 +624,8 @@ const examPaidTotal = activeFeeSchedule.reduce((s, f) => s + (f.examPaid || 0), 
             <span className="font-bold text-purple-400">{formatCurrency(activePaidAmount)}</span>
           </div>
         </div>
+        <div className="w-2.5 h-2.5 bg-gray-900 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
       </div>
-      <div className="w-2.5 h-2.5 bg-gray-900 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
     </div>
   </div>
 </div>
