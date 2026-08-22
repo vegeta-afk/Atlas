@@ -2940,7 +2940,7 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                       </button>
                     )}
                   </>
-                ) : fee.status === "suspended" ? (
+                                ) : fee.status === "suspended" ? (
                   <button
                     type="button"
                     onClick={() => handleUnsuspend(fee)}
@@ -2950,22 +2950,17 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                     Unsuspend
                   </button>
                 ) : (
-                  <>
-                    <button onClick={() => openPaymentModal(fee, "add")} className="p-1 text-green-600 hover:text-green-900 rounded hover:bg-green-50" title="Add Payment">
-                      <Plus size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSuspendData({ monthNumber: fee.monthNumber, month: fee.month, reason: "" });
-                        setShowSuspendModal(true);
-                      }}
-                      className="p-1 text-red-500 hover:text-red-700 rounded hover:bg-red-50"
-                      title="Suspend Month"
-                    >
-                      <AlertCircle size={16} />
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSuspendData({ monthNumber: fee.monthNumber, month: fee.month, reason: "" });
+                      setShowSuspendModal(true);
+                    }}
+                    className="p-1 text-red-500 hover:text-red-700 rounded hover:bg-red-50"
+                    title="Suspend Month"
+                  >
+                    <AlertCircle size={16} />
+                  </button>
                 )}
               </div>
             </td>
