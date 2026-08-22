@@ -566,7 +566,7 @@ const calcTotals = (schedule) => ({
   
   const totalCourseFee = processedSchedule
   .filter(f => f.status !== "suspended")
-  .reduce((s, f) => s + (f.baseFee || 0) + (f.isExamMonth ? (f.examFee || 0) : 0), 0);
+  .reduce((s, f) => s + (f.baseFee || 0) + (f.isExamMonth ? (f.examFee || 0) : 0) + (f.otherFeeAmount || 0), 0);
   const paidAmount = processedSchedule.reduce((s, f) => s + (f.paidAmount || 0), 0);
 
     const processedData = {
