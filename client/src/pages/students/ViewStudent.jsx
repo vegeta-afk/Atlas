@@ -34,6 +34,7 @@ import {
   Cake,
   VenetianMask,
   UserCircle2,
+  History as HistoryIcon,
 } from "lucide-react";
 
 const ViewStudent = () => {
@@ -62,6 +63,10 @@ const ViewStudent = () => {
   const [togglingMaterial, setTogglingMaterial] = useState(null);
   const [syllabusProgress, setSyllabusProgress] = useState({}); // courseId -> { courseName, syllabus }
   const [syllabusLoading, setSyllabusLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [bridgeBatches, setBridgeBatches] = useState([]);
+  const [batchTransfers, setBatchTransfers] = useState([]);
+  const [expandedHistoryKey, setExpandedHistoryKey] = useState(null);
 
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -87,7 +92,10 @@ const ViewStudent = () => {
   fetchStudentDetails();
   fetchStudentAttendance();
   fetchStudentMaterials();
+  fetchStudentHistory();
 }, [id]);
+
+
 
 
 
@@ -193,6 +201,32 @@ const ViewStudent = () => {
     console.error("Error fetching materials:", error);
   } finally {
     setMaterialLoading(false);
+  }
+};
+
+
+
+const fetchStudentHistory = async () => {
+  setHistoryLoading(true);
+  try {
+    const token = localStorage.getItem("token");
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const [bridgeRes, transferRes] = await Promise.all([
+      fetch(`${BASE_URL}/api/bridge-batch/student/${id}`, { headers }),
+      fetch(`${BASE_URL}/api/batch-transfers/student/${id}`, { headers }),
+    ]);
+
+    const bridgeData = await bridgeRes.json();
+    const transferData = await transferRes.json();
+
+    setBridgeBatches(bridgeData.data || []);
+    setBatchTransfers(transferData.data || []);
+  } catch (error) {
+    console.error("Error fetching student history:", error);
+  } finally {
+    setHistoryLoading(false);
   }
 };
 
@@ -432,6 +466,112 @@ const handleMaterialToggle = async (materialId) => {
     return { totalMonthlyFees, totalExamFees, totalPaid, totalFees };
   };
 
+  const buildHistoryTimeline = () => {
+    const events = [];
+
+    (student.conversionHistory || []).forEach((c, idx) => {
+      events.push({
+        key: `conv-${idx}`,
+        type: "conversion",
+        date: c.conversionDate,
+        title: `Course Converted: ${c.fromCourse} → ${c.toCourse}`,
+        subtitle: `Month ${c.conversionMonth || "N/A"}`,
+        details: [
+          { label: "Reason", value: c.reason || "N/A" },
+          { label: "Old Total Fee", value: formatCurrency(c.oldTotalFee) },
+          { label: "New Total Fee", value: formatCurrency(c.newTotalFee) },
+          { label: "Old Paid Amount", value: formatCurrency(c.oldPaidAmount) },
+          { label: "New Paid Amount", value: formatCurrency(c.newPaidAmount) },
+        ],
+      });
+    });
+
+    (student.extensionHistory || []).forEach((e, idx) => {
+      events.push({
+        key: `ext-${idx}`,
+        type: "extension",
+        date: e.extensionDate,
+        title: `Course Extended: ${e.fromCourse} → ${e.toCourse}`,
+        subtitle: `Month ${e.extensionMonth || "N/A"}`,
+        details: [
+          { label: "Reason", value: e.reason || "N/A" },
+          { label: "Additional Fees", value: formatCurrency(e.additionalFees) },
+          { label: "New Total Fee", value: formatCurrency(e.newTotalFee) },
+        ],
+      });
+    });
+
+    bridgeBatches.forEach((b, idx) => {
+      const statusLabelMap = {
+        pending: "Pending Approval",
+        active: "Active",
+        ready_to_merge: "Ready to Merge",
+        merged: "Merged Back",
+        cancelled: "Cancelled",
+        rejected: "Rejected",
+      };
+      events.push({
+        key: `bridge-${b._id || idx}`,
+        type: "bridge",
+        date: b.createdAt,
+        title: `Bridge Batch: ${b.courseName || "N/A"}`,
+        subtitle: statusLabelMap[b.status] || b.status,
+        details: [
+          { label: "Status", value: statusLabelMap[b.status] || b.status },
+          { label: "Reason", value: b.reason || "N/A" },
+          { label: "Temp Faculty", value: b.tempFacultyName || "N/A" },
+          { label: "Parent Batch", value: b.parentBatchId?.displayName || b.parentBatchId?.batchName || "N/A" },
+          { label: "Requested By", value: b.requestedBy?.name || "N/A" },
+          ...(b.approvedBy ? [{ label: "Approved By", value: b.approvedBy?.name || "N/A" }] : []),
+          ...(b.approvedDate ? [{ label: "Approved Date", value: formatSimpleDate(b.approvedDate) }] : []),
+          ...(b.mergedBy ? [{ label: "Merged By", value: b.mergedBy?.name || "N/A" }] : []),
+          ...(b.mergedDate ? [{ label: "Merged Date", value: formatSimpleDate(b.mergedDate) }] : []),
+          ...(b.rejectedReason ? [{ label: "Rejected Reason", value: b.rejectedReason }] : []),
+          { label: "Topics Covered", value: `${(b.selectedTopics || []).filter(t => t.completed).length} / ${(b.selectedTopics || []).length}` },
+        ],
+      });
+    });
+
+    batchTransfers.forEach((t, idx) => {
+      const statusLabelMap = {
+        pending: "Pending Approval",
+        approved: "Approved",
+        rejected: "Rejected",
+      };
+      events.push({
+        key: `transfer-${t._id || idx}`,
+        type: "transfer",
+        date: t.requestDate || t.createdAt,
+        title: `Batch Transfer: ${t.previousBatch || t.previousBatchTime || "N/A"} → ${t.newBatchTime || t.newBatch || "N/A"}`,
+        subtitle: statusLabelMap[t.status] || t.status,
+        details: [
+          { label: "Status", value: statusLabelMap[t.status] || t.status },
+          { label: "Reason", value: t.transferReason || "N/A" },
+          { label: "Previous Teacher", value: t.previousTeacher || "N/A" },
+          { label: "New Teacher", value: t.newTeacher || "N/A" },
+          { label: "Requested By", value: t.requestedByName || t.requestedBy?.name || "N/A" },
+          ...(t.approvedBy ? [{ label: "Approved/Rejected By", value: t.approvedBy?.name || t.approvedBy?.username || "N/A" }] : []),
+          ...(t.approvedDate ? [{ label: "Decision Date", value: formatSimpleDate(t.approvedDate) }] : []),
+          ...(t.rejectionReason ? [{ label: "Rejection Reason", value: t.rejectionReason }] : []),
+          ...(t.remarks ? [{ label: "Remarks", value: t.remarks }] : []),
+        ],
+      });
+    });
+
+    return events
+      .filter(e => e.date)
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+  };
+
+  const historyTimeline = buildHistoryTimeline();
+
+  const historyTypeConfig = {
+    conversion: { icon: <GitBranch size={16} />, bg: "bg-blue-100", text: "text-blue-700", ring: "ring-blue-200" },
+    extension: { icon: <Repeat size={16} />, bg: "bg-teal-100", text: "text-teal-700", ring: "ring-teal-200" },
+    bridge: { icon: <Layers size={16} />, bg: "bg-purple-100", text: "text-purple-700", ring: "ring-purple-200" },
+    transfer: { icon: <ArrowLeftRight size={16} />, bg: "bg-amber-100", text: "text-amber-700", ring: "ring-amber-200" },
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -499,6 +639,7 @@ const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
     { id: "attendance", label: "Attendance", icon: <Calendar size={18} /> },
     { id: "academic", label: "Academic", icon: <BookOpen size={18} /> },
     { id: "syllabus", label: "Syllabus Progress", icon: <CheckCircle size={18} /> },
+    { id: "history", label: "History", icon: <HistoryIcon size={18} /> },
     { id: "documents", label: "Documents", icon: <FileText size={18} /> },
     { id: "material", label: "Material Issue", icon: <Package size={18} /> },
   ];
@@ -1227,6 +1368,69 @@ const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
                           )}
                         </div>
                       ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+            {activeTab === "history" && (
+        <div>
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <HistoryIcon size={20} className="text-indigo-600" />
+            Student History Timeline
+          </h3>
+
+          {historyLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : historyTimeline.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <HistoryIcon size={40} className="mx-auto mb-3 text-gray-300" />
+              <p>No history records found for this student.</p>
+            </div>
+          ) : (
+            <div className="relative pl-8 space-y-4">
+              <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gray-200" />
+
+              {historyTimeline.map((event) => {
+                const config = historyTypeConfig[event.type];
+                const isExpanded = expandedHistoryKey === event.key;
+
+                return (
+                  <div key={event.key} className="relative">
+                    <div className={`absolute -left-8 top-1 w-6 h-6 rounded-full flex items-center justify-center ${config.bg} ${config.text} ring-4 ring-white`}>
+                      {config.icon}
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => setExpandedHistoryKey(isExpanded ? null : event.key)}
+                        className="w-full flex justify-between items-center px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                      >
+                        <div>
+                          <p className="font-medium text-gray-800">{event.title}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {formatSimpleDate(event.date)} • <span className={config.text}>{event.subtitle}</span>
+                          </p>
+                        </div>
+                        {isExpanded ? <ChevronUp size={16} className="flex-shrink-0" /> : <ChevronDown size={16} className="flex-shrink-0" />}
+                      </button>
+
+                      {isExpanded && (
+                        <div className="px-4 py-3 bg-white space-y-2">
+                          {event.details.map((d, i) => (
+                            <div key={i} className="flex justify-between text-sm">
+                              <span className="text-gray-500">{d.label}</span>
+                              <span className="font-medium text-gray-800 text-right max-w-[60%]">{d.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

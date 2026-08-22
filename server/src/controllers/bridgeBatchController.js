@@ -677,3 +677,26 @@ exports.getBridgeBatchesForFacultyTab = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// NEW: Get all bridge batch records (any status) for a specific student — used by ViewStudent history tab
+// GET /api/bridge-batch/student/:studentId
+exports.getBridgeBatchesForStudent = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const bridgeBatches = await BridgeBatch.find({ studentIds: studentId })
+      .populate('parentBatchId', 'batchName displayName')
+      .populate('tempBatchId', 'batchName displayName')
+      .populate('requestedBy', 'name')
+      .populate('approvedBy', 'name')
+      .populate('mergedBy', 'name')
+      .select('courseName status reason timeSlot createdAt approvedDate mergedDate rejectedReason tempFacultyName parentBatchId tempBatchId requestedBy approvedBy mergedBy selectedTopics selectedSubtopics')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json({ success: true, count: bridgeBatches.length, data: bridgeBatches });
+  } catch (error) {
+    console.error('Error in getBridgeBatchesForStudent:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

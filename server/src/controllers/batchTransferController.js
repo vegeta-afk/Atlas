@@ -1069,3 +1069,33 @@ exports.bulkDeleteTransfers = async (req, res) => {
     });
   }
 };
+
+// @desc    Get all batch transfer records (any status) for a specific student — used by ViewStudent history tab
+// @route   GET /api/batch-transfers/student/:studentId
+// @access  Private
+exports.getTransfersForStudent = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const transfers = await BatchTransfer.find({ studentId })
+      .populate('previousTeacherId', 'facultyName facultyNo')
+      .populate('newTeacherId', 'facultyName facultyNo')
+      .populate('approvedBy', 'username name')
+      .populate('requestedBy', 'username name fullName')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({
+      success: true,
+      count: transfers.length,
+      data: transfers,
+    });
+  } catch (error) {
+    console.error('❌ Get transfers for student error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message,
+    });
+  }
+};
