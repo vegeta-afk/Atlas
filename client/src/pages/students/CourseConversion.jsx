@@ -730,7 +730,7 @@ const getConversionPreview = async () => {
               <div className="p-6">
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="p-5 bg-blue-50 rounded-xl border border-blue-200">
+                  {/* <div className="p-5 bg-blue-50 rounded-xl border border-blue-200">
                     <p className="text-sm text-blue-600 mb-1">Old Total Fee</p>
                     <p className="text-2xl font-bold text-gray-900">
                       {formatCurrency(previewData.conversion.oldTotalFee)}
@@ -738,7 +738,7 @@ const getConversionPreview = async () => {
                     <p className="text-xs text-blue-500 mt-2">
                       {previewData.oldCourse.duration} months @ {formatCurrency(previewData.oldCourse.monthlyFee)}/mo
                     </p>
-                  </div>
+                  </div> */}
                   
                   <div className="p-5 bg-green-50 rounded-xl border border-green-200">
                     <p className="text-sm text-green-600 mb-1">New Total Fee</p>
@@ -750,7 +750,7 @@ const getConversionPreview = async () => {
                     </p>
                   </div>
                   
-                  <div className={`p-5 rounded-xl border ${
+                  {/* <div className={`p-5 rounded-xl border ${
                     previewData.conversion.feeDifference > 0 
                       ? "bg-orange-50 border-orange-200" 
                       : "bg-teal-50 border-teal-200"
@@ -769,7 +769,7 @@ const getConversionPreview = async () => {
                         ? "Additional fees due" 
                         : "Reduction in fees"}
                     </p>
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Fee Breakdown Table */}
@@ -816,7 +816,7 @@ const getConversionPreview = async () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right font-semibold text-yellow-700">
-                            {formatCurrency(previewData.conversion.futureFeeTotal)}
+                            {formatCurrency(previewData.conversion.remainingMonths * previewData.newCourse.monthlyFee)}
                           </td>
                           <td className="px-6 py-4 text-center">
                             <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
