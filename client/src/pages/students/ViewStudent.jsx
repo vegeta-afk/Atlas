@@ -481,6 +481,18 @@ const monthlyPaidTotal = activeFeeSchedule.reduce(
 const otherFeePaidTotal = activeFeeSchedule.reduce((s, f) => s + (f.otherFeePaid || 0), 0);
 const examPaidTotal = activeFeeSchedule.reduce((s, f) => s + (f.examPaid || 0), 0);
 
+const monthlyFeeTotal = activeFeeSchedule.reduce((s, f) => s + (f.baseFee || 0), 0);
+const examFeeTotal = activeFeeSchedule.reduce((s, f) => s + (f.isExamMonth ? (f.examFee || 0) : 0), 0);
+const otherFeeTotal = activeFeeSchedule.reduce((s, f) => s + (f.otherFeeAmount || 0), 0);
+
+const monthlyBalance = Math.max(0, monthlyFeeTotal - monthlyPaidTotal);
+const examBalance = Math.max(0, examFeeTotal - examPaidTotal);
+const otherFeeBalance = Math.max(0, otherFeeTotal - otherFeePaidTotal);
+const admissionBalance = Math.max(0, (student.admissionFee || 0) - admissionPaid);
+const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
+
+
+
   const tabs = [
     { id: "basic", label: "Basic Info", icon: <User size={18} /> },
     { id: "fees", label: "Fees", icon: <DollarSign size={18} /> },
@@ -631,11 +643,51 @@ const examPaidTotal = activeFeeSchedule.reduce((s, f) => s + (f.examPaid || 0), 
 </div>
               
               <div className="bg-orange-50 p-4 rounded-lg">
-                <div className="text-orange-600 font-semibold">Balance</div>
-                <div className="text-xl font-bold">
-  ₹{activeBalanceAmount}
+  <div className="text-orange-600 font-semibold">Balance</div>
+  <div className="flex items-center gap-1.5">
+    <span className="text-xl font-bold">₹{activeBalanceAmount}</span>
+    <div className="group relative inline-flex">
+      <AlertCircle size={14} className="text-gray-400 hover:text-orange-600 cursor-help transition-colors" />
+      <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-44 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+        <div className="bg-gray-900 text-white text-xs rounded-lg shadow-xl p-3 space-y-1.5">
+          <div className="flex justify-between gap-3">
+            <span className="text-gray-300">Monthly</span>
+            <span className="font-semibold">{formatCurrency(monthlyBalance)}</span>
+          </div>
+          {otherFeeBalance > 0 && (
+            <div className="flex justify-between gap-3">
+              <span className="text-gray-300">Other Fees</span>
+              <span className="font-semibold">{formatCurrency(otherFeeBalance)}</span>
+            </div>
+          )}
+          {examBalance > 0 && (
+            <div className="flex justify-between gap-3">
+              <span className="text-gray-300">Exam Fee</span>
+              <span className="font-semibold">{formatCurrency(examBalance)}</span>
+            </div>
+          )}
+          {admissionBalance > 0 && (
+            <div className="flex justify-between gap-3">
+              <span className="text-gray-300">Admission Fee</span>
+              <span className="font-semibold">{formatCurrency(admissionBalance)}</span>
+            </div>
+          )}
+          {additionalBalance > 0 && (
+            <div className="flex justify-between gap-3">
+              <span className="text-gray-300">Additional Courses</span>
+              <span className="font-semibold">{formatCurrency(additionalBalance)}</span>
+            </div>
+          )}
+          <div className="flex justify-between gap-3 pt-1.5 border-t border-gray-700">
+            <span className="text-gray-300">Total</span>
+            <span className="font-bold text-orange-400">{formatCurrency(activeBalanceAmount)}</span>
+          </div>
+        </div>
+        <div className="w-2.5 h-2.5 bg-gray-900 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
+      </div>
+    </div>
+  </div>
 </div>
-              </div>
             </div>
           </div>
         </div>
