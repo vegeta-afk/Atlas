@@ -274,6 +274,11 @@ const monthlyPaid = activeFeeSchedule.reduce((s, f) => s + (f.paidAmount || 0), 
 const admissionPaid = student.admissionFeePaidAmount || 0;
 const paidAmount = monthlyPaid + admissionPaid + additionalPaidRow;
 
+const admissionIdValue =
+  student.admissionId && typeof student.admissionId === "object"
+    ? student.admissionId._id
+    : student.admissionId;
+
                   return (
                     <tr key={student._id} className="hover:bg-gray-50 transition-colors">
                       {/* Student ID */}
@@ -369,7 +374,7 @@ const paidAmount = monthlyPaid + admissionPaid + additionalPaidRow;
                             <Eye size={15} />
                           </Link>
                           <Link
-  to={`${basePath}/front-office/admissions/edit/${student.admissionId}`}
+  to={`${basePath}/front-office/admissions/edit/${admissionIdValue}`}
   className="p-1.5 rounded-md text-green-600 hover:bg-green-50 hover:text-green-800 transition-colors"
   title="Edit"
 >
