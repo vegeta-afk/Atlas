@@ -1479,18 +1479,9 @@ const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
                 </div>
               </div>
 
-              <label className="flex items-center gap-2 cursor-pointer">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${isIssued ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}>
-                  {isIssued ? "Issued" : "Not Issued"}
-                </span>
-                <input
-                  type="checkbox"
-                  checked={isIssued}
-                  disabled={togglingMaterial === m._id}
-                  onChange={() => handleMaterialToggle(m._id)}
-                  className="w-5 h-5"
-                />
-              </label>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${isIssued ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}>
+                {isIssued ? "Issued" : "Not Issued"}
+              </span>
             </div>
           );
         })}
