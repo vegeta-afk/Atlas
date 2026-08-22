@@ -467,6 +467,7 @@ const handleMaterialToggle = async (materialId) => {
   };
 
   const buildHistoryTimeline = () => {
+    if (!student) return [];
     const events = [];
 
     (student.conversionHistory || []).forEach((c, idx) => {
