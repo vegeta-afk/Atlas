@@ -106,6 +106,12 @@ const ViewAdmission = () => {
     return `₹${Number(amount).toLocaleString("en-IN")}`;
   };
 
+  const formatDuration = (value) => {
+    if (!value) return value;
+    const str = value.toString().trim();
+    return /^\d+$/.test(str) ? `${str} Month${str === "1" ? "" : "s"}` : str;
+  };
+
   const getInitials = (name) => {
     if (!name) return "?";
     return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
