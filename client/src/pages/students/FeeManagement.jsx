@@ -261,33 +261,7 @@ const processConvertedStudentFeeSchedule = (feeSchedule) => {
       }
     }
 
-      // Given an absolute fee-schedule month number, figure out which course
-  // (pre- or post-conversion) governs that month, and its relative month
-  // number within that course's own numbering (exam months are stored
-  // relative to each course, not to the overall fee schedule).
-  const getCourseSegmentForMonth = (monthNumber) => {
-    const conversionHistory = feeData?.student?.conversionHistory || student?.conversionHistory || [];
-
-    if (conversionHistory.length === 0) {
-      return { courseName: student?.course || course?.courseFullName || "", segmentStart: 1 };
-    }
-
-    const sortedHistory = [...conversionHistory].sort((a, b) => a.conversionMonth - b.conversionMonth);
-    let courseName = sortedHistory[0].fromCourse;
-    let segmentStart = 1;
-
-    for (const conversion of sortedHistory) {
-      if (monthNumber >= conversion.conversionMonth) {
-        courseName = conversion.toCourse;
-        segmentStart = conversion.conversionMonth;
-      } else {
-        break;
-      }
-    }
-
-    return { courseName, segmentStart };
-  };
-
+    
     // ✅ DB is now correct — trust these fields directly
     const examFee    = fee.examFee    || 0;
     const totalFee   = fee.totalFee   || 0;
@@ -447,6 +421,33 @@ const calculateDueDate = (monthsFromAdmission) => {
     return fallbackDate.toISOString().split('T')[0];
   }
 };
+
+  // Given an absolute fee-schedule month number, figure out which course
+  // (pre- or post-conversion) governs that month, and its relative month
+  // number within that course's own numbering (exam months are stored
+  // relative to each course, not to the overall fee schedule).
+  const getCourseSegmentForMonth = (monthNumber) => {
+    const conversionHistory = feeData?.student?.conversionHistory || student?.conversionHistory || [];
+
+    if (conversionHistory.length === 0) {
+      return { courseName: student?.course || course?.courseFullName || "", segmentStart: 1 };
+    }
+
+    const sortedHistory = [...conversionHistory].sort((a, b) => a.conversionMonth - b.conversionMonth);
+    let courseName = sortedHistory[0].fromCourse;
+    let segmentStart = 1;
+
+    for (const conversion of sortedHistory) {
+      if (monthNumber >= conversion.conversionMonth) {
+        courseName = conversion.toCourse;
+        segmentStart = conversion.conversionMonth;
+      } else {
+        break;
+      }
+    }
+
+    return { courseName, segmentStart };
+  };
 
   // Helper function to determine if month is an exam month
   const isExamMonth = (monthNumber) => {
