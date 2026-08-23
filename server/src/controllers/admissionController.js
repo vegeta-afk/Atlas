@@ -98,7 +98,7 @@ exports.getAdmissions = async (req, res) => {
     const admissionIds = admissionDocs.map((a) => a._id);
     const linkedStudents = await Student.find({
       admissionId: { $in: admissionIds },
-    }).select("admissionId batchTime facultyAllot additionalCourses primaryCourseStatus");
+    }).select("admissionId batchTime facultyAllot additionalCourses primaryCourseStatus course courseCode");
 
     const studentMap = {};
     linkedStudents.forEach((s) => {
@@ -110,6 +110,8 @@ exports.getAdmissions = async (req, res) => {
       if (liveStudent) {
         return {
           ...admission,
+          course: liveStudent.course || admission.course,       // ← reflects conversions
+          courseId: liveStudent.courseCode || admission.courseId,
           batchTime: liveStudent.batchTime || admission.batchTime,
           facultyAllot: liveStudent.facultyAllot || admission.facultyAllot,
           primaryCourseStatus: liveStudent.primaryCourseStatus || "active",
@@ -160,14 +162,16 @@ exports.getAdmission = async (req, res) => {
       });
     }
 
-    // ── Pull live batch/faculty from Student if this admission was converted ──
+    // ── Pull live batch/faculty/course from Student if this admission was converted ──
     const linkedStudent = await Student.findOne({
       admissionId: admission._id,
-    }).select("batchTime facultyAllot");
+    }).select("batchTime facultyAllot course courseCode");
 
     if (linkedStudent) {
       admission.batchTime = linkedStudent.batchTime || admission.batchTime;
       admission.facultyAllot = linkedStudent.facultyAllot || admission.facultyAllot;
+      admission.course = linkedStudent.course || admission.course;
+      admission.courseId = linkedStudent.courseCode || admission.courseId;
     }
 
     res.json({
