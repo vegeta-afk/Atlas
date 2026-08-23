@@ -504,8 +504,12 @@ studentSchema.methods.recomputeOverallStatus = function () {
     });
   }
 
-  if (courseStatuses.every(s => s === "completed")) {
+    if (this.primaryCourseStatus === "completed") {
     this.status = "completed";
+  } else if (courseStatuses.some(s => s === "active")) {
+    // Any course still running → student reads as active overall,
+    // even if another course is on hold.
+    this.status = "active";
   } else if (courseStatuses.some(s => s === "on_hold")) {
     this.status = "inactive";
   } else if (courseStatuses.every(s => s === "discontinued")) {

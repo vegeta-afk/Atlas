@@ -43,7 +43,18 @@ exports.getAdmissions = async (req, res) => {
     }
 
     // Status filter
-    if (req.query.status) {
+    if (req.query.status === "on_hold") {
+      // Overall Student.status no longer means "on hold" once any course is
+      // still active — resolve "who has a course on hold" directly from
+      // Student's per-course fields instead of the derived single status.
+      const heldStudents = await Student.find({
+        $or: [
+          { primaryCourseStatus: "on_hold" },
+          { additionalCourses: { $elemMatch: { status: "on_hold", isActive: { $ne: false } } } },
+        ],
+      }).select("admissionId");
+      filter._id = { $in: heldStudents.map(s => s.admissionId) };
+    } else if (req.query.status) {
       filter.status = req.query.status;
     }
 

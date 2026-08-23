@@ -205,9 +205,14 @@ const [courses, setCourses] = useState([]);
 
         const ACTIVE_STATUSES = ["admitted", "confirmed", "pending", "provisional", "new", "under_process", "approved"];
 
-const activeAdmissions = transformedAdmissions.filter(a => 
-  ACTIVE_STATUSES.includes(a.admissionStatus)
-);
+        // Keep visible if overall status is active-ish, OR if any additional
+        // course is still running (even while primary is on hold/completed)
+        const hasActiveAdditionalCourse = (a) =>
+          (a.additionalCourses || []).some((ac) => ac.status === "active");
+
+        const activeAdmissions = transformedAdmissions.filter(
+          (a) => ACTIVE_STATUSES.includes(a.admissionStatus) || hasActiveAdditionalCourse(a)
+        );
 
 setAdmissions(activeAdmissions);
 setFilteredAdmissions(activeAdmissions);
