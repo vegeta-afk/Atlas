@@ -98,7 +98,7 @@ exports.getAdmissions = async (req, res) => {
     const admissionIds = admissionDocs.map((a) => a._id);
     const linkedStudents = await Student.find({
       admissionId: { $in: admissionIds },
-    }).select("admissionId batchTime facultyAllot");
+    }).select("admissionId batchTime facultyAllot additionalCourses primaryCourseStatus");
 
     const studentMap = {};
     linkedStudents.forEach((s) => {
@@ -112,6 +112,14 @@ exports.getAdmissions = async (req, res) => {
           ...admission,
           batchTime: liveStudent.batchTime || admission.batchTime,
           facultyAllot: liveStudent.facultyAllot || admission.facultyAllot,
+          primaryCourseStatus: liveStudent.primaryCourseStatus || "active",
+          additionalCourses: (liveStudent.additionalCourses || [])
+            .filter(ac => ac.isActive !== false)
+            .map(ac => ({
+              _id: ac._id,
+              courseName: ac.courseName,
+              status: ac.status || "active",
+            })),
         };
       }
       return admission;
@@ -974,10 +982,16 @@ exports.getAdmissionActivities = async (req, res) => {
 // ============================================
 // CHECK FEE ELIGIBILITY FOR COMPLETION
 // ============================================
-const checkFeeEligibilityForCompletion = (student) => {
+const checkFeeEligibilityForCompletion = (student, courseType = "primary") => {
   const pendingMonths = [];
 
-  const schedule = student.feeSchedule || [];
+  let schedule;
+  if (courseType === "primary") {
+    schedule = student.feeSchedule || [];
+  } else {
+    const ac = student.additionalCourses.id(courseType);
+    schedule = ac ? ac.feeSchedule || [] : [];
+  }
 
   for (const fee of schedule) {
     if (fee.status === "suspended") continue; // suspended months don't block completion
@@ -1003,14 +1017,29 @@ const checkFeeEligibilityForCompletion = (student) => {
 // CHECK EXAM ATTEMPT ELIGIBILITY FOR COMPLETION
 // (separate from fee — checks actual paper attempt via TestSubmission)
 // ============================================
-const checkExamEligibilityForCompletion = async (student) => {
+const checkExamEligibilityForCompletion = async (student, courseType = "primary") => {
   const pendingExams = [];
 
-  if (!student.courseCode?.examMonths || !student.admissionDate) {
+  let courseRef, admissionDateForCheck, courseIdForSubmissions;
+
+  if (courseType === "primary") {
+    courseRef = student.courseCode;
+    admissionDateForCheck = student.admissionDate;
+    courseIdForSubmissions = student.courseCode?._id;
+  } else {
+    const ac = student.additionalCourses.id(courseType);
+    if (!ac) return { eligible: true, pendingExams };
+    const Course = require("../models/Course");
+    courseRef = await Course.findById(ac.courseId).select("examMonths").lean();
+    admissionDateForCheck = ac.startDate || student.admissionDate;
+    courseIdForSubmissions = ac.courseId;
+  }
+
+  if (!courseRef?.examMonths || !admissionDateForCheck) {
     return { eligible: true, pendingExams };
   }
 
-  const examMonths = student.courseCode.examMonths
+  const examMonths = courseRef.examMonths
     .split(",")
     .map((m) => parseInt(m.trim()))
     .filter((m) => !isNaN(m));
@@ -1021,7 +1050,7 @@ const checkExamEligibilityForCompletion = async (student) => {
 
   const submissions = await TestSubmission.find({
     studentId: student._id,
-    courseId: student.courseCode._id,
+    courseId: courseIdForSubmissions,
   })
     .select("testId submittedAt")
     .sort({ submittedAt: 1 })
@@ -1046,9 +1075,7 @@ const checkExamEligibilityForCompletion = async (student) => {
     submissionByExamIndex[semesterNumber - 1] = sub;
   });
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const startDate = new Date(student.admissionDate);
+  const startDate = new Date(admissionDateForCheck);
 
   examMonths.forEach((monthNum, index) => {
     const isCompleted = !!submissionByExamIndex[index];
@@ -1597,45 +1624,67 @@ exports.cancelAdmission = async (req, res) => {
   }
 };
 
-// @desc    Put admission on hold
+// Maps derived Student.status → your existing Admission.status vocabulary
+const mapStudentStatusToAdmissionStatus = (studentStatus) => {
+  const map = { active: "admitted", inactive: "on_hold", completed: "completed", discontinued: "cancelled" };
+  return map[studentStatus] || "admitted";
+};
+
+// @desc    Put admission (or a specific course) on hold
 // @route   PUT /api/admissions/:id/hold
+// @body    { reason, courseType }  courseType: "all" | "primary" | additionalCourse _id
 // @access  Private
 exports.holdAdmission = async (req, res) => {
   try {
-    const { reason } = req.body;
-    
+    const { reason, courseType = "all" } = req.body;
+
     const admission = await Admission.findById(req.params.id);
-    
     if (!admission) {
-      return res.status(404).json({
-        success: false,
-        message: "Admission not found"
-      });
+      return res.status(404).json({ success: false, message: "Admission not found" });
     }
 
-    // Store old status
-    const oldStatus = admission.status;
-    
-    // Update admission status
-    admission.status = "on_hold";
-    admission.remarks = `${reason || 'No reason provided'}`;
-    admission.updatedBy = req.user?.id;
-    
-    await admission.save();
-    
-    // Update associated student if exists
     const student = await Student.findOne({ admissionId: admission._id });
+
     if (student) {
-      student.status = "inactive";
-      student.remarks = student.remarks ? 
-        `${student.remarks} | On Hold: ${reason}` : 
-        `On Hold: ${reason}`;
+      const remark = `On Hold: ${reason || "No reason provided"}`;
+
+      if (courseType === "all") {
+        student.primaryCourseStatus = "on_hold";
+        student.primaryCourseOnHoldAt = new Date();
+        student.primaryCourseStatusRemarks = remark;
+        student.additionalCourses.forEach(ac => {
+          if (ac.isActive !== false) {
+            ac.status = "on_hold";
+            ac.onHoldAt = new Date();
+            ac.statusRemarks = remark;
+          }
+        });
+      } else if (courseType === "primary") {
+        student.primaryCourseStatus = "on_hold";
+        student.primaryCourseOnHoldAt = new Date();
+        student.primaryCourseStatusRemarks = remark;
+      } else {
+        const ac = student.additionalCourses.id(courseType);
+        if (ac) {
+          ac.status = "on_hold";
+          ac.onHoldAt = new Date();
+          ac.statusRemarks = remark;
+        }
+      }
+
+      student.recomputeOverallStatus();
+      student.markModified("additionalCourses");
       await student.save();
     }
 
+    admission.status = student ? mapStudentStatusToAdmissionStatus(student.status) : "on_hold";
+    admission.remarks = reason || "No reason provided";
+    admission.updatedBy = req.user?.id;
+    await admission.save();
+
     res.json({
       success: true,
-      message: "Admission put on hold successfully",
+      message: "Hold applied successfully",
       data: admission
     });
   } catch (error) {
@@ -1648,29 +1697,23 @@ exports.holdAdmission = async (req, res) => {
   }
 };
 
-// @desc    Mark admission as complete (Manual)
-// @route   PUT /api/admissions/:id/complete
-// @access  Private
+// @body { reason, force, courseType }  courseType: "primary" | additionalCourse _id
 exports.completeAdmission = async (req, res) => {
   try {
-    const { reason, force } = req.body;
+    const { reason, force, courseType = "primary" } = req.body;
 
     const admission = await Admission.findById(req.params.id);
-
     if (!admission) {
-      return res.status(404).json({
-        success: false,
-        message: "Admission not found"
-      });
+      return res.status(404).json({ success: false, message: "Admission not found" });
     }
 
-    // ── FEE + EXAM ELIGIBILITY CHECK ──────────────────────────────
+    // ── FEE + EXAM ELIGIBILITY CHECK (scoped to courseType) ────────
     const student = await Student.findOne({ admissionId: admission._id })
-      .populate("courseCode", "examMonths"); // ← NEEDED for exam check
+      .populate("courseCode", "examMonths");
 
     if (student && !force) {
-      const feeEligibility = checkFeeEligibilityForCompletion(student);
-      const examEligibility = await checkExamEligibilityForCompletion(student);
+      const feeEligibility = checkFeeEligibilityForCompletion(student, courseType);
+      const examEligibility = await checkExamEligibilityForCompletion(student, courseType);
 
       if (!feeEligibility.eligible || !examEligibility.eligible) {
         return res.status(400).json({
@@ -1684,24 +1727,33 @@ exports.completeAdmission = async (req, res) => {
     }
     // ─────────────────────────────────────────────────────────
 
-    const oldStatus = admission.status;
-    admission.status = "completed";
-    admission.remarks = `${reason || 'Manually completed'}`;
-    admission.updatedBy = req.user?.id;
-
-    await admission.save();
-
     if (student) {
-      student.status = "completed";
-      student.remarks = student.remarks ?
-        `${student.remarks} | Completed: ${reason}` :
-        `Completed: ${reason}`;
+      const remark = reason || "Manually completed";
+      if (courseType === "primary") {
+        student.primaryCourseStatus = "completed";
+        student.primaryCourseCompletedAt = new Date();
+        student.primaryCourseStatusRemarks = remark;
+      } else {
+        const ac = student.additionalCourses.id(courseType);
+        if (ac) {
+          ac.status = "completed";
+          ac.completedAt = new Date();
+          ac.statusRemarks = remark;
+        }
+      }
+      student.recomputeOverallStatus();
+      student.markModified("additionalCourses");
       await student.save();
     }
 
+    admission.status = student ? mapStudentStatusToAdmissionStatus(student.status) : "completed";
+    admission.remarks = reason || "Manually completed";
+    admission.updatedBy = req.user?.id;
+    await admission.save();
+
     res.json({
       success: true,
-      message: "Admission marked as complete successfully",
+      message: "Course marked complete successfully",
       data: admission
     });
   } catch (error) {
@@ -1714,54 +1766,65 @@ exports.completeAdmission = async (req, res) => {
   }
 };
 
-// @desc    Reactivate cancelled/on-hold admission
+// @desc    Reactivate cancelled/on-hold admission (or a specific course)
 // @route   PUT /api/admissions/:id/reactivate
+// @body    { reason, courseType }  courseType: "all" | "primary" | additionalCourse _id
 // @access  Private
 exports.reactivateAdmission = async (req, res) => {
   try {
-    const { reason } = req.body;
-    
+    const { reason, courseType = "all" } = req.body;
+
     const admission = await Admission.findById(req.params.id);
-    
     if (!admission) {
-      return res.status(404).json({
-        success: false,
-        message: "Admission not found"
-      });
+      return res.status(404).json({ success: false, message: "Admission not found" });
     }
 
-    // Store old status
-    const oldStatus = admission.status;
-    
-    // Update admission status back to admitted
-    admission.status = "admitted";
-    admission.remarks = `${reason || 'Reactivated'}`;
-    admission.updatedBy = req.user?.id;
-    
-    await admission.save();
-    
-    // Update associated student if exists
     const student = await Student.findOne({ admissionId: admission._id });
+
     if (student) {
-      student.status = "active";
-      student.remarks = student.remarks ? 
-        `${student.remarks} | Reactivated: ${reason}` : 
-        `Reactivated: ${reason}`;
+      const remark = `Reactivated: ${reason || ""}`.trim();
+
+      if (courseType === "all") {
+        student.primaryCourseStatus = "active";
+        student.primaryCourseStatusRemarks = remark;
+        student.additionalCourses.forEach(ac => {
+          if (ac.isActive !== false) {
+            ac.status = "active";
+            ac.statusRemarks = remark;
+          }
+        });
+      } else if (courseType === "primary") {
+        student.primaryCourseStatus = "active";
+        student.primaryCourseStatusRemarks = remark;
+      } else {
+        const ac = student.additionalCourses.id(courseType);
+        if (ac) {
+          ac.status = "active";
+          ac.statusRemarks = remark;
+        }
+      }
+
+      student.recomputeOverallStatus();
+      student.markModified("additionalCourses");
       await student.save();
-      
+
       // Re-add to TeacherBatch if needed
-      // Re-add to TeacherBatch directly (already in same file)
-try {
-  await assignStudentToFacultyBatch(student);
-  console.log(`✅ Student re-added to TeacherBatch after reactivation`);
-} catch (tbError) {
-  console.error("Error reassigning to TeacherBatch:", tbError);
-}
+      try {
+        await assignStudentToFacultyBatch(student);
+        console.log(`✅ Student re-added to TeacherBatch after reactivation`);
+      } catch (tbError) {
+        console.error("Error reassigning to TeacherBatch:", tbError);
+      }
     }
+
+    admission.status = student ? mapStudentStatusToAdmissionStatus(student.status) : "admitted";
+    admission.remarks = reason || "Reactivated";
+    admission.updatedBy = req.user?.id;
+    await admission.save();
 
     res.json({
       success: true,
-      message: "Admission reactivated successfully",
+      message: "Reactivated successfully",
       data: admission
     });
   } catch (error) {

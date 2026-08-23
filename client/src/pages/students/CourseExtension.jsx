@@ -841,7 +841,7 @@ setExtensionStartDate("");
                     <p className="font-semibold text-yellow-800 mb-2">Exam Schedule</p>
                     <p className="text-yellow-700">
                       {previewData.examCount} exam(s) at months: {previewData.examMonths.join(", ")} 
-                      (₹{formatCurrency(previewData.examFee)} each)
+                      ({formatCurrency(previewData.examFee)} each)
                     </p>
                   </div>
                 )}

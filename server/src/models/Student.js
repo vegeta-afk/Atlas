@@ -197,6 +197,14 @@ verifiedReceipts: { type: [String], default: [] },
         
         // Status
         isActive: { type: Boolean, default: true },
+        status: {
+          type: String,
+          enum: ["active", "on_hold", "completed", "discontinued"],
+          default: "active",
+        },
+        statusRemarks: String,
+        completedAt: Date,
+        onHoldAt: Date,
         enrolledAt: { type: Date, default: Date.now }
       }
     ],
@@ -354,7 +362,7 @@ otherFeeDate: Date,
       }
     ],
 
-    // Status
+    // Status (kept for backward compat — now DERIVED via recomputeOverallStatus)
     status: {
       type: String,
       enum: ["active", "inactive", "completed", "discontinued"],
@@ -364,6 +372,16 @@ otherFeeDate: Date,
       type: Boolean,
       default: true,
     },
+
+    // NEW — real status of the primary course, independent of additional courses
+    primaryCourseStatus: {
+      type: String,
+      enum: ["active", "on_hold", "completed", "discontinued"],
+      default: "active",
+    },
+    primaryCourseStatusRemarks: String,
+    primaryCourseCompletedAt: Date,
+    primaryCourseOnHoldAt: Date,
 
     // Metadata
     createdBy: {
@@ -476,5 +494,27 @@ studentSchema.virtual('totalPaidAllCourses').get(function() {
   
   return total;
 });
+
+// Derives overall student.status from primary + all active additional course statuses
+studentSchema.methods.recomputeOverallStatus = function () {
+  const courseStatuses = [this.primaryCourseStatus];
+  if (this.additionalCourses && this.additionalCourses.length > 0) {
+    this.additionalCourses.forEach(ac => {
+      if (ac.isActive !== false) courseStatuses.push(ac.status || "active");
+    });
+  }
+
+  if (courseStatuses.every(s => s === "completed")) {
+    this.status = "completed";
+  } else if (courseStatuses.some(s => s === "on_hold")) {
+    this.status = "inactive";
+  } else if (courseStatuses.every(s => s === "discontinued")) {
+    this.status = "discontinued";
+  } else {
+    this.status = "active";
+  }
+
+  return this.status;
+};
 
 module.exports = mongoose.model("Student", studentSchema);

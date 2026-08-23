@@ -43,6 +43,7 @@ const HoldList = () => {
   const [statusAction, setStatusAction] = useState(null);
   const [statusReason, setStatusReason] = useState("");
   const [processingStatus, setProcessingStatus] = useState(false);
+  const [selectedCourseType, setSelectedCourseType] = useState("primary"); // "primary" | additionalCourse _id
   const [dateRange, setDateRange] = useState({
     startDate: "",
     endDate: "",
@@ -153,6 +154,8 @@ const HoldList = () => {
           email: admission.email,
           holdReason: admission.remarks || "No reason provided",
           heldAt: admission.updatedAt || admission.createdAt,
+          primaryCourseStatus: admission.primaryCourseStatus || "active",
+          additionalCourses: admission.additionalCourses || [],
         }));
 
         setAdmissions(transformedAdmissions);
@@ -200,6 +203,21 @@ const HoldList = () => {
     debouncedSearchTerm,
   ]);
 
+  // Returns the list of course entries currently on_hold for this student:
+  // [{ type: "primary", label: courseName }, { type: additionalCourse._id, label: courseName }]
+  const getHeldCourses = (admission) => {
+    const held = [];
+    if (admission.primaryCourseStatus === "on_hold") {
+      held.push({ type: "primary", label: `${admission.course} (Primary)` });
+    }
+    (admission.additionalCourses || []).forEach((ac) => {
+      if (ac.status === "on_hold") {
+        held.push({ type: ac._id, label: ac.courseName });
+      }
+    });
+    return held;
+  };
+
   const handleSort = (frontendKey) => {
     setSortConfig({
       key: frontendKey,
@@ -220,13 +238,15 @@ const HoldList = () => {
       case "reactivate":
         response = await admissionAPI.reactivateAdmission(
           selectedStudent.id,
-          statusReason || "Reactivated from Hold List"
+          statusReason || "Reactivated from Hold List",
+          selectedCourseType
         );
         break;
       case "complete":
         response = await admissionAPI.completeAdmission(
           selectedStudent.id,
-          statusReason || "Marked complete from Hold List"
+          statusReason || "Marked complete from Hold List",
+          selectedCourseType
         );
         break;
       default:
@@ -258,10 +278,26 @@ const HoldList = () => {
 
 
 const handleDirectComplete = async (admission) => {
+  const heldCourses = getHeldCourses(admission);
+
+  // More than one course on hold — need the user to pick which one to complete
+  if (heldCourses.length > 1) {
+    setSelectedStudent(admission);
+    setStatusAction("complete");
+    setStatusReason("");
+    setSelectedCourseType(heldCourses[0].type);
+    setShowStatusModal(true);
+    return;
+  }
+
+  // Exactly one course on hold — auto-target it, no picker needed
+  const courseType = heldCourses[0]?.type || "primary";
+
   try {
     const response = await admissionAPI.completeAdmission(
       admission.id,
-      "Marked complete from Hold List"
+      "Marked complete from Hold List",
+      courseType
     );
 
     if (response.data.success) {
@@ -736,6 +772,8 @@ const handleDirectComplete = async (admission) => {
         setSelectedStudent(admission);
         setStatusAction("reactivate");
         setStatusReason("");
+        const held = getHeldCourses(admission);
+        setSelectedCourseType(held.length === 1 ? held[0].type : "all");
         setShowStatusModal(true);
         setOpenDropdown(null);
       }}
@@ -848,6 +886,41 @@ const handleDirectComplete = async (admission) => {
       <p className="modal-student-name">
         {selectedStudent?.name} ({selectedStudent?.studentId})
       </p>
+
+      {selectedStudent && getHeldCourses(selectedStudent).length > 1 && (
+        <div className="form-group">
+          <label>Which course?</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {getHeldCourses(selectedStudent).map((c) => (
+              <button
+                key={c.type}
+                type="button"
+                className="btn-secondary"
+                style={{
+                  textAlign: "left",
+                  border: selectedCourseType === c.type ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                }}
+                onClick={() => setSelectedCourseType(c.type)}
+              >
+                {c.label}
+              </button>
+            ))}
+            {statusAction === "reactivate" && (
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{
+                  textAlign: "left",
+                  border: selectedCourseType === "all" ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                }}
+                onClick={() => setSelectedCourseType("all")}
+              >
+                All held courses
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="form-group">
         <label>Reason (optional)</label>

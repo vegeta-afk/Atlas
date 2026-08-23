@@ -122,35 +122,37 @@ export const admissionAPI = {
   cancelAdmission: (id, reason) => 
     api.put(`/admissions/${id}/cancel`, { reason }),
   
-  // Put admission on hold
-  holdAdmission: (id, reason) => 
-    api.put(`/admissions/${id}/hold`, { reason }),
+  // Put admission (or a specific course) on hold
+  // courseType: "all" | "primary" | additionalCourse _id
+  holdAdmission: (id, reason, courseType = "all") => 
+    api.put(`/admissions/${id}/hold`, { reason, courseType }),
 
   getCertificateNo: (id) => api.get(`/admissions/${id}/certificate-no`),
   getStudentStatus: (id) => api.get(`/admissions/${id}/student-status`),
   
-  // Mark admission as complete (manual)
-  completeAdmission: (id, reason) => 
-    api.put(`/admissions/${id}/complete`, { reason }),
+  // Mark admission (or a specific course) as complete (manual)
+  // courseType: "primary" | additionalCourse _id
+  completeAdmission: (id, reason, courseType = "primary", force = false) => 
+    api.put(`/admissions/${id}/complete`, { reason, courseType, force }),
   
-  // Reactivate cancelled/on-hold admission
-  reactivateAdmission: (id, reason) => 
-    api.put(`/admissions/${id}/reactivate`, { reason }),
+  // Reactivate cancelled/on-hold admission (or a specific course)
+  reactivateAdmission: (id, reason, courseType = "all") => 
+    api.put(`/admissions/${id}/reactivate`, { reason, courseType }),
 
   
   
   // Generic function that calls the appropriate endpoint based on action
   updateAdmissionStatus: (id, data) => {
-    const { action, reason } = data;
+    const { action, reason, courseType } = data;
     switch(action) {
       case 'cancel':
         return api.put(`/admissions/${id}/cancel`, { reason });
       case 'hold':
-        return api.put(`/admissions/${id}/hold`, { reason });
+        return api.put(`/admissions/${id}/hold`, { reason, courseType: courseType || 'all' });
       case 'complete':
-        return api.put(`/admissions/${id}/complete`, { reason });
+        return api.put(`/admissions/${id}/complete`, { reason, courseType: courseType || 'primary' });
       case 'reactivate':
-        return api.put(`/admissions/${id}/reactivate`, { reason });
+        return api.put(`/admissions/${id}/reactivate`, { reason, courseType: courseType || 'all' });
       default:
         return api.put(`/admissions/${id}/status`, data);
     }

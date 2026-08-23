@@ -46,6 +46,7 @@ const AdmissionList = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [statusAction, setStatusAction] = useState(null);
   const [statusReason, setStatusReason] = useState("");
+  const [selectedCourseType, setSelectedCourseType] = useState("all"); // "all" | "primary" | additionalCourse _id
   const [processingStatus, setProcessingStatus] = useState(false);
   const [dateRange, setDateRange] = useState({
     startDate: "",
@@ -198,6 +199,8 @@ const [courses, setCourses] = useState([]);
           admissionStatus: admission.status || "confirmed",
           admissionBy: admission.admissionBy || "N/A",
           email: admission.email,
+          primaryCourseStatus: admission.primaryCourseStatus || "active",
+          additionalCourses: admission.additionalCourses || [],
         }));
 
         const ACTIVE_STATUSES = ["admitted", "confirmed", "pending", "provisional", "new", "under_process", "approved"];
@@ -301,13 +304,13 @@ setFilteredAdmissions(activeAdmissions);
           response = await admissionAPI.cancelAdmission(selectedStudent.id, statusReason);
           break;
         case 'hold':
-          response = await admissionAPI.holdAdmission(selectedStudent.id, statusReason);
+          response = await admissionAPI.holdAdmission(selectedStudent.id, statusReason, selectedCourseType);
           break;
         case 'complete':
-          response = await admissionAPI.completeAdmission(selectedStudent.id, statusReason);
+          response = await admissionAPI.completeAdmission(selectedStudent.id, statusReason, selectedCourseType);
           break;
         case 'reactivate':
-          response = await admissionAPI.reactivateAdmission(selectedStudent.id, statusReason);
+          response = await admissionAPI.reactivateAdmission(selectedStudent.id, statusReason, selectedCourseType);
           break;
         default:
           return;
@@ -955,6 +958,7 @@ setFilteredAdmissions(activeAdmissions);
                                   setSelectedStudent(admission);
                                   setStatusAction('hold');
                                   setStatusReason('');
+                                  setSelectedCourseType('all');
                                   setShowStatusModal(true);
                                   setOpenDropdown(null);
                                 }}
@@ -973,6 +977,7 @@ setFilteredAdmissions(activeAdmissions);
                                   setSelectedStudent(admission);
                                   setStatusAction('reactivate');
                                   setStatusReason('');
+                                  setSelectedCourseType('all');
                                   setShowStatusModal(true);
                                   setOpenDropdown(null);
                                 }}
@@ -1076,7 +1081,54 @@ setFilteredAdmissions(activeAdmissions);
             <p className="modal-student-name">
               {selectedStudent?.name} ({selectedStudent?.studentId})
             </p>
-            
+
+            {(statusAction === 'hold' || statusAction === 'reactivate') &&
+              selectedStudent?.additionalCourses?.length > 0 && (
+              <div className="form-group">
+                <label>Apply to</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <button
+                    type="button"
+                    className={`btn-secondary${selectedCourseType === "primary" ? " active" : ""}`}
+                    style={{
+                      textAlign: "left",
+                      border: selectedCourseType === "primary" ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                    }}
+                    onClick={() => setSelectedCourseType("primary")}
+                  >
+                    Primary course only ({selectedStudent.course})
+                  </button>
+
+                  {selectedStudent.additionalCourses.map((ac) => (
+                    <button
+                      key={ac._id}
+                      type="button"
+                      className={`btn-secondary${selectedCourseType === ac._id ? " active" : ""}`}
+                      style={{
+                        textAlign: "left",
+                        border: selectedCourseType === ac._id ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                      }}
+                      onClick={() => setSelectedCourseType(ac._id)}
+                    >
+                      {ac.courseName} only
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    className={`btn-secondary${selectedCourseType === "all" ? " active" : ""}`}
+                    style={{
+                      textAlign: "left",
+                      border: selectedCourseType === "all" ? "2px solid #3b82f6" : "1px solid #d1d5db",
+                    }}
+                    onClick={() => setSelectedCourseType("all")}
+                  >
+                    All courses (normal hold)
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="form-group">
               <label>Reason {statusAction !== 'reactivate' ? '(required)' : '(optional)'}</label>
               <textarea
