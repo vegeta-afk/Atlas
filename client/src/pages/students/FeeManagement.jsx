@@ -24,7 +24,8 @@ const FeeManagement = ({ studentId, student, course, additionalCourseIndex, onFe
   const additionalCourseData = isAdditionalCourse ? student?.additionalCourses?.[additionalCourseIndex] : null;
   const [feeData, setFeeData] = useState(null);
   const [loading, setLoading] = useState(false);
-    const [courseShortNames, setCourseShortNames] = useState({});
+  const [courseShortNames, setCourseShortNames] = useState({});
+  const [courseDetailsMap, setCourseDetailsMap] = useState({});
   const [otherFeesOptions, setOtherFeesOptions] = useState([]);
     const [paymentData, setPaymentData] = useState({
     monthNumber: "",
@@ -87,12 +88,18 @@ const fetchCourseShortNames = async () => {
     });
     const data = await response.json();
     if (data.success) {
-      const map = {};
-      (data.data || []).forEach(course => {
-        map[course.courseFullName] = course.courseShortName || 
-          course.courseFullName.split(' ').map(w => w[0]).join('');
+      const shortNameMap = {};
+      const detailsMap = {};
+      (data.data || []).forEach(c => {
+        shortNameMap[c.courseFullName] = c.courseShortName ||
+          c.courseFullName.split(' ').map(w => w[0]).join('');
+        detailsMap[c.courseFullName] = {
+          examMonths: c.examMonths || "",
+          examFee: c.examFee || 0,
+        };
       });
-      setCourseShortNames(map);
+      setCourseShortNames(shortNameMap);
+      setCourseDetailsMap(detailsMap);
     }
   } catch (err) {
     console.error("Error fetching course short names:", err);
@@ -253,6 +260,33 @@ const processConvertedStudentFeeSchedule = (feeSchedule) => {
         monthName = `Month ${monthNum}`;
       }
     }
+
+      // Given an absolute fee-schedule month number, figure out which course
+  // (pre- or post-conversion) governs that month, and its relative month
+  // number within that course's own numbering (exam months are stored
+  // relative to each course, not to the overall fee schedule).
+  const getCourseSegmentForMonth = (monthNumber) => {
+    const conversionHistory = feeData?.student?.conversionHistory || student?.conversionHistory || [];
+
+    if (conversionHistory.length === 0) {
+      return { courseName: student?.course || course?.courseFullName || "", segmentStart: 1 };
+    }
+
+    const sortedHistory = [...conversionHistory].sort((a, b) => a.conversionMonth - b.conversionMonth);
+    let courseName = sortedHistory[0].fromCourse;
+    let segmentStart = 1;
+
+    for (const conversion of sortedHistory) {
+      if (monthNumber >= conversion.conversionMonth) {
+        courseName = conversion.toCourse;
+        segmentStart = conversion.conversionMonth;
+      } else {
+        break;
+      }
+    }
+
+    return { courseName, segmentStart };
+  };
 
     // ✅ DB is now correct — trust these fields directly
     const examFee    = fee.examFee    || 0;
@@ -416,22 +450,20 @@ const calculateDueDate = (monthsFromAdmission) => {
 
   // Helper function to determine if month is an exam month
   const isExamMonth = (monthNumber) => {
-  if (!course?.examMonths) return false;
-  
   try {
-    // Handle different formats: "1,3,5" or "[1,3,5]" or "1, 3, 5"
-    let examMonthsStr = course.examMonths.toString().trim();
-    
-    // Remove brackets if present
-    examMonthsStr = examMonthsStr.replace(/[\[\]]/g, '');
-    
-    // Split and parse
+    const { courseName, segmentStart } = getCourseSegmentForMonth(monthNumber);
+    const relativeMonth = monthNumber - segmentStart + 1;
+    const examMonthsRaw = courseDetailsMap[courseName]?.examMonths ?? course?.examMonths;
+
+    if (!examMonthsRaw) return false;
+
+    let examMonthsStr = examMonthsRaw.toString().trim().replace(/[\[\]]/g, '');
     const examMonths = examMonthsStr
       .split(',')
       .map(num => parseInt(num.trim()))
       .filter(num => !isNaN(num));
-    
-    return examMonths.includes(parseInt(monthNumber));
+
+    return examMonths.includes(relativeMonth);
   } catch (error) {
     console.error("Error checking exam month:", error);
     return false;
@@ -440,19 +472,20 @@ const calculateDueDate = (monthsFromAdmission) => {
 
 // Helper function to check if a month should be an exam month based on course
 const checkExamMonth = (monthNumber) => {
-  if (!course?.examMonths) return false;
-  
   try {
-    const examMonthsStr = course.examMonths.toString().trim();
-    // Remove brackets if present
-    const cleanStr = examMonthsStr.replace(/[\[\]]/g, '');
-    
+    const { courseName, segmentStart } = getCourseSegmentForMonth(monthNumber);
+    const relativeMonth = monthNumber - segmentStart + 1;
+    const examMonthsRaw = courseDetailsMap[courseName]?.examMonths ?? course?.examMonths;
+
+    if (!examMonthsRaw) return false;
+
+    const cleanStr = examMonthsRaw.toString().trim().replace(/[\[\]]/g, '');
     const examMonths = cleanStr
       .split(',')
       .map(num => parseInt(num.trim()))
       .filter(num => !isNaN(num));
-    
-    return examMonths.includes(parseInt(monthNumber));
+
+    return examMonths.includes(relativeMonth);
   } catch (error) {
     console.error("Error checking exam month:", error);
     return false;
@@ -712,7 +745,8 @@ const openMonthModal = (fee = null, action = "add") => {
     }
     
     const shouldBeExamMonth = isExamMonth(nextMonthNumber);
-    const defaultExamFee = student?.examFee || course?.examFee || 0;
+    const { courseName: targetCourseName } = getCourseSegmentForMonth(nextMonthNumber);
+    const defaultExamFee = courseDetailsMap[targetCourseName]?.examFee ?? student?.examFee ?? course?.examFee ?? 0;
     
         setMonthManagementData({
       action: "add",
