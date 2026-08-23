@@ -45,7 +45,7 @@ const FeeManagement = ({ studentId, student, course, additionalCourseIndex }) =>
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [showMoreActions, setShowMoreActions] = useState(false);
   const [showSuspendModal, setShowSuspendModal] = useState(false);
-  const [suspendData, setSuspendData] = useState({ monthNumber: null, month: "", reason: "" });
+  const [suspendData, setSuspendData] = useState({ monthNumber: null, month: "", reason: "", addReplacementMonth: true });
   const [showMonthModal, setShowMonthModal] = useState(false);
   const [showReceiptTable, setShowReceiptTable] = useState(false); // STEP 1
     const [monthManagementData, setMonthManagementData] = useState({
@@ -817,22 +817,17 @@ const openMonthModal = (fee = null, action = "add") => {
       alert("Error updating month. Please try again.");
     }
   } else {
-    // Add new month(s) - FIXED AND STABLE
+    // Add new month(s) - supports inserting into a gap, not just appending
     try {
       const newMonths = [];
-      
+
       // Get existing months
       const existingMonths = feeData?.feeSchedule || [];
-      const existingMonthNumbers = existingMonths
-        .map(f => f.monthNumber)
-        .filter(num => !isNaN(num) && num > 0);
-      
-      // Find the next month number (max + 1)
-      let startMonth = 1;
-      if (existingMonthNumbers.length > 0) {
-        startMonth = Math.max(...existingMonthNumbers) + 1;
-      }
-      
+
+      // Start from the user-chosen month number (defaults to max + 1, but can be
+      // changed to fill a gap left by a deleted month)
+      const startMonth = parseInt(monthManagementData.monthNumber) || 1;
+
       console.log(`Adding ${count} months starting from month ${startMonth}`);
       
       const token = localStorage.getItem("token");
@@ -1083,11 +1078,29 @@ const validateMonthData = () => {
     return false;
   }
   
-  // For adding months, validate count
+  // For adding months, validate count and target month number(s)
   if (action === "add") {
     const countNum = parseInt(count);
     if (isNaN(countNum) || countNum < 1 || countNum > 12) {
       alert("Please enter a valid number of months to add (1-12)");
+      return false;
+    }
+
+    const startNum = parseInt(monthManagementData.monthNumber);
+    if (isNaN(startNum) || startNum < 1) {
+      alert("Please enter a valid month number to insert at");
+      return false;
+    }
+
+    const existingMonthNumbers = (feeData?.feeSchedule || [])
+      .map(f => f.monthNumber)
+      .filter(num => !isNaN(num) && num > 0);
+
+    const targetNumbers = Array.from({ length: countNum }, (_, i) => startNum + i);
+    const collisions = targetNumbers.filter(n => existingMonthNumbers.includes(n));
+
+    if (collisions.length > 0) {
+      alert(`Month ${collisions.join(", ")} already exist${collisions.length > 1 ? "" : "s"}. Use Edit on that row instead, or pick a different starting month number.`);
       return false;
     }
   }
@@ -1228,9 +1241,10 @@ const lastIsExam = false;
       remarks: `Auto-added: replacing suspended Month ${suspendData.monthNumber}`,
     };
 
-    const finalSchedule = [...updatedSchedule, newMonth];
+    const finalSchedule = suspendData.addReplacementMonth
+      ? [...updatedSchedule, newMonth]
+      : updatedSchedule;
 
-    // 5. Save to backend
     // 5. Save to backend
     const endpoint = isAdditionalCourse
       ? `${BASE_URL}/api/students/${studentId}/additional-course-fees/schedule`
@@ -1251,16 +1265,20 @@ const lastIsExam = false;
       }),
     });
 
+    const successMessage = suspendData.addReplacementMonth
+      ? `Month ${suspendData.monthNumber} suspended. New month ${newMonthNumber} added at end.`
+      : `Month ${suspendData.monthNumber} suspended. No replacement month added.`;
+
     if (response.ok) {
       updateFeeSchedule(finalSchedule);
-      alert(`Month ${suspendData.monthNumber} suspended. New month ${newMonthNumber} added at end.`);
+      alert(successMessage);
     } else {
       updateFeeSchedule(finalSchedule);
       alert("Saved locally (backend failed)");
     }
 
     setShowSuspendModal(false);
-    setSuspendData({ monthNumber: null, month: "", reason: "" });
+    setSuspendData({ monthNumber: null, month: "", reason: "", addReplacementMonth: true });
 
   } catch (error) {
     console.error("Suspend error:", error);
@@ -2953,7 +2971,7 @@ for (const ph of (admStudent?.paymentHistory || [])) {
                   <button
                     type="button"
                     onClick={() => {
-                      setSuspendData({ monthNumber: fee.monthNumber, month: fee.month, reason: "" });
+                      setSuspendData({ monthNumber: fee.monthNumber, month: fee.month, reason: "", addReplacementMonth: true });
                       setShowSuspendModal(true);
                     }}
                     className="p-1 text-red-500 hover:text-red-700 rounded hover:bg-red-50"
@@ -3059,16 +3077,32 @@ for (const ph of (admStudent?.paymentHistory || [])) {
 
             <div className="p-6 space-y-4">
 
-              {/* Count input — only for add */}
+              {/* Month number + count — only for add */}
               {monthManagementData.action === "add" && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Number of Months to Add</label>
-                  <input
-                    type="number" min="1" max="12"
-                    value={monthManagementData.count}
-                    onChange={(e) => setMonthManagementData({ ...monthManagementData, count: parseInt(e.target.value) || 1 })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                      Insert at Month #
+                    </label>
+                    <input
+                      type="number" min="1"
+                      value={monthManagementData.monthNumber}
+                      onChange={(e) => setMonthManagementData({ ...monthManagementData, monthNumber: parseInt(e.target.value) || 1 })}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Defaults to the next month. Change this to fill a gap (e.g. a deleted month).
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Number of Months to Add</label>
+                    <input
+                      type="number" min="1" max="12"
+                      value={monthManagementData.count}
+                      onChange={(e) => setMonthManagementData({ ...monthManagementData, count: parseInt(e.target.value) || 1 })}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -3606,12 +3640,16 @@ for (const ph of (admStudent?.paymentHistory || [])) {
       </div>
 
       <div className="p-6 space-y-4">
-        <div className="p-4 bg-red-50 rounded-lg border border-red-100">
+                <div className="p-4 bg-red-50 rounded-lg border border-red-100">
           <p className="text-sm text-red-700 font-medium">⚠ What will happen:</p>
           <ul className="text-sm text-red-600 mt-2 space-y-1 list-disc list-inside">
             <li>Month {suspendData.monthNumber} will be marked as <strong>Suspended</strong></li>
-            <li>A new month will be <strong>auto-added at the end</strong> with the same fee</li>
-            <li>This action can be undone by deleting the suspended month</li>
+            {suspendData.addReplacementMonth ? (
+              <li>A new month will be <strong>auto-added at the end</strong> with the same fee</li>
+            ) : (
+              <li>No replacement month will be added — the course will just be <strong>one month shorter</strong></li>
+            )}
+            <li>This action can be undone by deleting the suspended month{suspendData.addReplacementMonth ? " (removes the auto-added month too)" : ""}</li>
           </ul>
         </div>
 
@@ -3627,6 +3665,16 @@ for (const ph of (admStudent?.paymentHistory || [])) {
             placeholder="e.g. Student was absent the entire month..."
           />
         </div>
+
+        <label className="flex items-center gap-2.5 cursor-pointer">
+          <div
+            onClick={() => setSuspendData({ ...suspendData, addReplacementMonth: !suspendData.addReplacementMonth })}
+            className={`w-10 h-5 rounded-full transition-colors relative cursor-pointer ${suspendData.addReplacementMonth ? "bg-red-500" : "bg-gray-300"}`}
+          >
+            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${suspendData.addReplacementMonth ? "translate-x-5" : "translate-x-0.5"}`} />
+          </div>
+          <span className="text-sm font-medium text-gray-700">Add a replacement month at the end</span>
+        </label>
       </div>
 
       <div className="px-6 pb-6 flex justify-end gap-3">
