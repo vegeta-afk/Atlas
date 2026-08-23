@@ -19,7 +19,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 
-const FeeManagement = ({ studentId, student, course, additionalCourseIndex }) => {
+const FeeManagement = ({ studentId, student, course, additionalCourseIndex, onFeeUpdate }) => {
   const isAdditionalCourse = additionalCourseIndex !== undefined && additionalCourseIndex !== null;
   const additionalCourseData = isAdditionalCourse ? student?.additionalCourses?.[additionalCourseIndex] : null;
   const [feeData, setFeeData] = useState(null);
@@ -1277,6 +1277,8 @@ const lastIsExam = false;
       alert("Saved locally (backend failed)");
     }
 
+    onFeeUpdate?.();
+
     setShowSuspendModal(false);
     setSuspendData({ monthNumber: null, month: "", reason: "", addReplacementMonth: true });
 
@@ -1333,6 +1335,7 @@ const handleUnsuspend = async (fee) => {
     if (response.ok) {
       updateFeeSchedule(updatedSchedule);
       alert(`Month ${fee.monthNumber} unsuspended successfully.`);
+      onFeeUpdate?.();
     } else {
       const errData = await response.json().catch(() => ({}));
       alert("Failed to unsuspend: " + (errData.message || "Backend error"));
@@ -3690,7 +3693,7 @@ for (const ph of (admStudent?.paymentHistory || [])) {
           className="px-5 py-2 text-sm text-white rounded-lg font-medium bg-red-500 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <AlertCircle size={15} />
-          Suspend & Add New Month
+          {suspendData.addReplacementMonth ? "Suspend & Add New Month" : "Suspend Only"}
         </button>
       </div>
     </div>

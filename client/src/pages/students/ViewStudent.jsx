@@ -1060,6 +1060,7 @@ const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
                   studentId={id}
                   student={student.data || student}
                   course={student.courseCode || { courseFullName: student.course }}
+                  onFeeUpdate={fetchStudentDetails}
                 />
               </div>
 
@@ -1098,6 +1099,7 @@ const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
           duration: course.duration,
         }}
         additionalCourseIndex={index}
+        onFeeUpdate={fetchStudentDetails}
       />
     </div>
   </div>
