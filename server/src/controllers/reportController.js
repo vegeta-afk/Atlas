@@ -74,12 +74,22 @@ exports.getCountdownReport = async (req, res) => {
         // Use courseCode2 for converted, courseMap for original
         const courseData = student.courseCode2 || courseMap[student.courseCode];
 
-        if (student.admissionDate && courseData?.duration) {
-          const startDate = new Date(student.admissionDate);
-          const durationMonths = parseInt(courseData.duration) || 12;
+        if (student.admissionDate && (courseData?.duration || student.feeSchedule?.length > 0)) {
+  const startDate = new Date(student.admissionDate);
 
-          const courseEndDate = new Date(startDate);
-          courseEndDate.setMonth(startDate.getMonth() + durationMonths);
+  let courseEndDate;
+  if (student.feeSchedule?.length > 0) {
+    // Use the actual last fee month's due date
+    const lastMonth = student.feeSchedule.reduce((max, f) =>
+      (!max || new Date(f.dueDate) > new Date(max.dueDate)) ? f : max
+    , null);
+    courseEndDate = new Date(lastMonth.dueDate);
+  } else {
+    // Fallback: no fee schedule yet, use Course.duration
+    const durationMonths = parseInt(courseData.duration) || 12;
+    courseEndDate = new Date(startDate);
+    courseEndDate.setMonth(startDate.getMonth() + durationMonths);
+  }
 
           const daysLeft = Math.ceil((courseEndDate - today) / (1000 * 60 * 60 * 24));
 
@@ -431,10 +441,20 @@ exports.exportCountdownReport = async (req, res) => {
     students.forEach(student => {
       // Primary
       const courseData = student.courseCode2 || courseMap[student.courseCode];
-      if (student.admissionDate && courseData?.duration) {
+      if (student.admissionDate && (courseData?.duration || student.feeSchedule?.length > 0)) {
         const startDate = new Date(student.admissionDate);
-        const endDate = new Date(startDate);
-        endDate.setMonth(startDate.getMonth() + parseInt(courseData.duration));
+
+        let endDate;
+        if (student.feeSchedule?.length > 0) {
+          const lastMonth = student.feeSchedule.reduce((max, f) =>
+            (!max || f.monthNumber > max.monthNumber) ? f : max
+          , null);
+          endDate = new Date(lastMonth.dueDate);
+        } else {
+          endDate = new Date(startDate);
+          endDate.setMonth(startDate.getMonth() + parseInt(courseData.duration));
+        }
+
         const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
         let status = "Ongoing";
         if (daysLeft < 0) status = "Expired";
@@ -599,11 +619,21 @@ exports.getCompletionStats = async (req, res) => {
 
     students.forEach(student => {
       const courseData = student.courseCode2 || courseMap[student.courseCode];
-      if (student.admissionDate && courseData?.duration) {
+      if (student.admissionDate && (courseData?.duration || student.feeSchedule?.length > 0)) {
         totalCourses++;
         const startDate = new Date(student.admissionDate);
-        const endDate = new Date(startDate);
-        endDate.setMonth(startDate.getMonth() + parseInt(courseData.duration));
+
+        let endDate;
+        if (student.feeSchedule?.length > 0) {
+          const lastMonth = student.feeSchedule.reduce((max, f) =>
+            (!max || f.monthNumber > max.monthNumber) ? f : max
+          , null);
+          endDate = new Date(lastMonth.dueDate);
+        } else {
+          endDate = new Date(startDate);
+          endDate.setMonth(startDate.getMonth() + parseInt(courseData.duration));
+        }
+
         const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
         if (daysLeft <= 0) completedThisMonth++;
         else if (daysLeft <= 30) completingNextMonth++;
