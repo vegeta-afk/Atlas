@@ -25,4 +25,7 @@ router.post("/preview", courseExtensionController.getExtensionPreview);
 // @route   POST /api/course-extension/extend
 router.post("/extend", courseExtensionController.extendStudentCourse);
 
+// @route   DELETE /api/course-extension/revert/:studentId/:additionalCourseId
+router.delete("/revert/:studentId/:additionalCourseId", courseExtensionController.revertCourseExtension);
+
 module.exports = router;

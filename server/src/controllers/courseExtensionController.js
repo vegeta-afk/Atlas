@@ -409,3 +409,103 @@ originalMonthlyFee: parseFloat(newCourse.monthlyFee) || 0,
     });
   }
 };
+
+// @desc    Revert a course extension (only if no payments made on it)
+// @route   DELETE /api/course-extension/revert/:studentId/:additionalCourseId
+// @access  Private (Admin)
+exports.revertCourseExtension = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { studentId, additionalCourseId } = req.params;
+
+    const student = await Student.findById(studentId).session(session);
+    if (!student) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    const additionalCourse = student.additionalCourses.id(additionalCourseId);
+    if (!additionalCourse) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ success: false, message: "Additional course not found on this student" });
+    }
+
+    // Block revert if any payment exists on this course's fee schedule
+    const hasPayments = (additionalCourse.feeSchedule || []).some(m => (m.paidAmount || 0) > 0);
+    if (hasPayments) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({
+        success: false,
+        message: "Cannot revert — fees have already been collected for this course. Process a refund/adjustment manually instead."
+      });
+    }
+
+    // Recalculate totals
+    const courseTotal = (additionalCourse.feeSchedule || []).reduce((sum, m) => sum + (m.totalFee || 0), 0);
+    student.totalCourseFee = Math.max(0, (student.totalCourseFee || 0) - courseTotal);
+    student.balanceAmount = student.totalCourseFee - (student.paidAmount || 0);
+
+    // Remove the additional course
+    student.additionalCourses.pull(additionalCourseId);
+
+    // If no additional courses remain, clear courseCode2
+    if (student.additionalCourses.length === 0) {
+      student.courseCode2 = undefined;
+    }
+
+    // Mark the matching extensionHistory entry as reverted (keep for audit trail)
+    if (student.extensionHistory && student.extensionHistory.length > 0) {
+      const match = [...student.extensionHistory]
+        .reverse()
+        .find(h => h.toCourse === additionalCourse.courseName && !h.reverted);
+      if (match) {
+        match.reverted = true;
+        match.revertedAt = new Date();
+        match.revertedBy = req.user?.id;
+      }
+    }
+
+    await student.save({ session });
+
+    // Clean up TeacherBatch assignment for this batch, only if the student
+    // has no other active course (primary or additional) using that same batch
+    if (additionalCourse.batchId) {
+      const stillUsesBatch =
+        student.batchTime === additionalCourse.batchTime ||
+        student.additionalCourses.some(ac => ac.batchId?.toString() === additionalCourse.batchId.toString());
+
+      if (!stillUsesBatch) {
+        await TeacherBatch.updateMany(
+          { batch: additionalCourse.batchId, "assignedStudents.student": student._id },
+          { $set: { "assignedStudents.$.isActive": false } },
+          { session }
+        );
+      }
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.json({
+      success: true,
+      message: "Course extension reverted successfully",
+      data: {
+        studentId: student._id,
+        removedCourse: additionalCourse.courseName,
+        newTotalFee: student.totalCourseFee,
+        newBalanceAmount: student.balanceAmount,
+      }
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("❌ Revert extension error:", error);
+    res.status(500).json({ success: false, message: "Server error during revert", error: error.message });
+  }
+};

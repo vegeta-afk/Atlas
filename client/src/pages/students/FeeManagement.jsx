@@ -1323,6 +1323,43 @@ const lastIsExam = false;
   }
 };
 
+const revertCourseExtension = async () => {
+  if (!isAdditionalCourse || !additionalCourseData) return;
+
+  const hasPayments = (additionalCourseData.feeSchedule || []).some(m => (m.paidAmount || 0) > 0);
+  if (hasPayments) {
+    alert("Cannot revert — fees have already been collected for this course. Process a refund/adjustment manually instead.");
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to revert "${additionalCourseData.courseName}"? This will permanently remove this course from the student's record. This cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(
+      `${BASE_URL}/api/course-extension/revert/${studentId}/${additionalCourseData._id}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    const data = await response.json().catch(() => ({}));
+
+    if (response.ok && data.success) {
+      alert("Course extension reverted successfully.");
+      onFeeUpdate?.();
+    } else {
+      alert("Failed to revert: " + (data.message || "Unknown error"));
+    }
+  } catch (error) {
+    console.error("Revert extension error:", error);
+    alert(`Error: ${error.message}`);
+  }
+};
+
 const handleUnsuspend = async (fee) => {
   if (!confirm(`Unsuspend ${fee.month}? The auto-added replacement month will also be removed.`)) return;
 
@@ -2481,6 +2518,17 @@ for (const ph of (admStudent?.paymentHistory || [])) {
             <Plus size={16} />
             Add Month(s)
           </button>
+
+          {isAdditionalCourse && (
+            <button
+              onClick={revertCourseExtension}
+              className="flex items-center justify-center gap-2 px-3 py-2 border border-red-200 rounded-lg hover:bg-red-50 text-red-600 font-medium w-40"
+              title="Revert this course extension"
+            >
+              <AlertCircle size={16} />
+              Revert Extension
+            </button>
+          )}
 
           <button
             onClick={() => setRefreshing(true) || fetchStudentFees()}
