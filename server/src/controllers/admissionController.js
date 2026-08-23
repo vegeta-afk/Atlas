@@ -116,12 +116,38 @@ exports.getAdmissions = async (req, res) => {
       studentMap[s.admissionId.toString()] = s;
     });
 
-    // Picks whichever course is actually running right now:
-    // prefer primary if it's active, else the first active additional course,
-    // else just fall back to primary (e.g. everything's on hold/completed).
-    const pickActiveCourse = (student) => {
+    // Picks the course most relevant to whichever list is asking:
+    // - "on_hold" list  → the course that's actually on hold
+    // - "completed" list → the course that's actually completed
+    // - everything else (Admission List / default) → whichever course is active
+    const pickCourseForContext = (student, statusFilter) => {
+      const fallback = { course: student.course, courseId: student.courseCode };
+
+      if (statusFilter === "on_hold") {
+        if (student.primaryCourseStatus === "on_hold") return fallback;
+        const heldAdditional = (student.additionalCourses || []).find(
+          ac => ac.isActive !== false && ac.status === "on_hold"
+        );
+        if (heldAdditional) {
+          return { course: heldAdditional.courseName, courseId: heldAdditional.courseId };
+        }
+        return fallback;
+      }
+
+      if (statusFilter === "completed") {
+        if (student.primaryCourseStatus === "completed") return fallback;
+        const completedAdditional = (student.additionalCourses || []).find(
+          ac => ac.isActive !== false && ac.status === "completed"
+        );
+        if (completedAdditional) {
+          return { course: completedAdditional.courseName, courseId: completedAdditional.courseId };
+        }
+        return fallback;
+      }
+
+      // Default (Admission List): show whichever course is active
       if (student.primaryCourseStatus === "active" || !student.primaryCourseStatus) {
-        return { course: student.course, courseId: student.courseCode };
+        return fallback;
       }
       const activeAdditional = (student.additionalCourses || []).find(
         ac => ac.isActive !== false && ac.status === "active"
@@ -129,13 +155,13 @@ exports.getAdmissions = async (req, res) => {
       if (activeAdditional) {
         return { course: activeAdditional.courseName, courseId: activeAdditional.courseId };
       }
-      return { course: student.course, courseId: student.courseCode };
+      return fallback;
     };
 
     const admissions = admissionDocs.map((admission) => {
       const liveStudent = studentMap[admission._id.toString()];
       if (liveStudent) {
-        const { course, courseId } = pickActiveCourse(liveStudent);
+        const { course, courseId } = pickCourseForContext(liveStudent, req.query.status);
         return {
           ...admission,
           course: course || admission.course,
