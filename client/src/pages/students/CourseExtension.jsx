@@ -602,6 +602,20 @@ setExtensionStartDate("");
             </div>
             
             <div className="p-6">
+              <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <p className="text-sm text-gray-500 mb-2 font-semibold">Current Primary Course Assignment</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <p className="text-sm text-gray-700">
+                    <span className="text-gray-500">Faculty:</span>{" "}
+                    <span className="font-semibold">{selectedStudent?.facultyName || "Not Allotted"}</span>
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    <span className="text-gray-500">Batch:</span>{" "}
+                    <span className="font-semibold">{selectedStudent?.batchTime || "N/A"}</span>
+                  </p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Faculty Selection */}
                 <div>
@@ -792,35 +806,15 @@ setExtensionStartDate("");
                 </div>
 
                 {/* Faculty & Batch Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                    <p className="text-sm text-gray-500 mb-2 font-semibold">Previous (Primary Course)</p>
-                    <div className="space-y-1">
-                      <p className="text-sm text-gray-700">
-                        <span className="text-gray-500">Faculty:</span>{" "}
-                        <span className="font-semibold">{previewData.student.facultyName || "Not Allotted"}</span>
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        <span className="text-gray-500">Batch:</span>{" "}
-                        <span className="font-semibold">{previewData.student.batchTime || "N/A"}</span>
-                      </p>
-                    </div>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
-                    <p className="text-sm text-purple-600 mb-2 font-semibold">New (Additional Course)</p>
-                    <div className="space-y-1">
-                      <p className="text-sm text-gray-700">
-                        <span className="text-purple-600">Faculty:</span>{" "}
-                        <span className="font-semibold">{previewData.faculty?.facultyName}</span>
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        <span className="text-purple-600">Batch:</span>{" "}
-                        <span className="font-semibold">{previewData.batch}</span>
-                      </p>
-                    </div>
+                    <p className="text-sm text-purple-600 mb-1">Assigned Faculty</p>
+                    <p className="font-semibold text-gray-900">{previewData.faculty?.facultyName}</p>
                   </div>
-                </div>
-                <div className="mb-6">
+                  <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-200">
+                    <p className="text-sm text-indigo-600 mb-1">Batch Time</p>
+                    <p className="font-semibold text-gray-900">{previewData.batch}</p>
+                  </div>
                   <div className="p-4 bg-teal-50 rounded-xl border border-teal-200">
                     <p className="text-sm text-teal-600 mb-1">Course Start Date</p>
                     <p className="font-semibold text-gray-900">{formatDate(previewData.extensionStartDate)}</p>
