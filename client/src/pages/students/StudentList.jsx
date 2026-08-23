@@ -75,6 +75,22 @@ const StudentList = () => {
     return matchesSearch && matchesStatus;
   });
 
+  // Picks whichever course is actually running right now for display —
+  // prefer primary if it's active, else the first active additional course,
+  // else fall back to primary (e.g. everything's on hold/completed).
+  const getActiveCourseDisplay = (student) => {
+    if (student.primaryCourseStatus === "active" || !student.primaryCourseStatus) {
+      return { name: student.course, sub: student.specialization || "General" };
+    }
+    const activeAdditional = (student.additionalCourses || []).find(
+      (ac) => ac.isActive !== false && ac.status === "active"
+    );
+    if (activeAdditional) {
+      return { name: activeAdditional.courseName, sub: "Additional Course" };
+    }
+    return { name: student.course, sub: student.specialization || "General" };
+  };
+
   const calculateFeePercentage = (student) => {
   const activeFeeSchedule = (student.feeSchedule || []).filter(
     f => f.status !== "suspended"
@@ -280,6 +296,8 @@ const admissionIdValue =
     ? student.admissionId._id
     : student.admissionId;
 
+const activeCourseDisplay = getActiveCourseDisplay(student);
+
                   return (
                     <tr key={student._id} className="hover:bg-gray-50 transition-colors">
                       {/* Student ID */}
@@ -315,13 +333,13 @@ const admissionIdValue =
                         </div>
                       </td>
 
-                      {/* Course */}
+                       {/* Course */}
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         <div className="text-xs text-gray-800 font-medium truncate max-w-[140px]">
-                          {student.course || "No course"}
+                          {activeCourseDisplay.name || "No course"}
                         </div>
                         <div className="text-xs text-gray-400 truncate max-w-[140px]">
-                          {student.specialization || "General"}
+                          {activeCourseDisplay.sub}
                         </div>
                       </td>
 

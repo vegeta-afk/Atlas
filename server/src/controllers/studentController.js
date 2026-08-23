@@ -31,7 +31,7 @@ const getAllStudents = async (req, res) => {
   .sort({ createdAt: -1 })
   .select(
     "studentId admissionNo fullName fatherName admissionDate dateOfJoining course courseCode " +
-    "batch batchTime batchName facultyAllot status monthlyFee feeAmount totalCourseFee " +
+    "batch batchTime batchName facultyAllot status primaryCourseStatus monthlyFee feeAmount totalCourseFee " +
     "admissionFee admissionFeePaid admissionFeePaidAmount feeSchedule additionalCourses"
   )
   .populate("admissionId", "admissionNo admissionDate")

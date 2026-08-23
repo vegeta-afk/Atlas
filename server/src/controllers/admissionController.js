@@ -116,13 +116,30 @@ exports.getAdmissions = async (req, res) => {
       studentMap[s.admissionId.toString()] = s;
     });
 
+    // Picks whichever course is actually running right now:
+    // prefer primary if it's active, else the first active additional course,
+    // else just fall back to primary (e.g. everything's on hold/completed).
+    const pickActiveCourse = (student) => {
+      if (student.primaryCourseStatus === "active" || !student.primaryCourseStatus) {
+        return { course: student.course, courseId: student.courseCode };
+      }
+      const activeAdditional = (student.additionalCourses || []).find(
+        ac => ac.isActive !== false && ac.status === "active"
+      );
+      if (activeAdditional) {
+        return { course: activeAdditional.courseName, courseId: activeAdditional.courseId };
+      }
+      return { course: student.course, courseId: student.courseCode };
+    };
+
     const admissions = admissionDocs.map((admission) => {
       const liveStudent = studentMap[admission._id.toString()];
       if (liveStudent) {
+        const { course, courseId } = pickActiveCourse(liveStudent);
         return {
           ...admission,
-          course: liveStudent.course || admission.course,       // ← reflects conversions
-          courseId: liveStudent.courseCode || admission.courseId,
+          course: course || admission.course,
+          courseId: courseId || admission.courseId,
           batchTime: liveStudent.batchTime || admission.batchTime,
           facultyAllot: liveStudent.facultyAllot || admission.facultyAllot,
           primaryCourseStatus: liveStudent.primaryCourseStatus || "active",
