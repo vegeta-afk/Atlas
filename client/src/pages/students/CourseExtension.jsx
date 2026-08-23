@@ -602,25 +602,39 @@ setExtensionStartDate("");
             </div>
             
             <div className="p-6">
-              <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                <p className="text-sm text-gray-500 mb-2 font-semibold">Current Primary Course Assignment</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <p className="text-sm text-gray-700">
-                    <span className="text-gray-500">Faculty:</span>{" "}
-                    <span className="font-semibold">{selectedStudent?.facultyName || "Not Allotted"}</span>
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    <span className="text-gray-500">Batch:</span>{" "}
-                    <span className="font-semibold">{selectedStudent?.batchTime || "N/A"}</span>
-                  </p>
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Faculty Selection */}
+                {/* Current Teacher Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Faculty <span className="text-red-500">*</span>
+                    Current Teacher Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={selectedStudent?.facultyName || "Not Allotted"}
+                    readOnly
+                    disabled
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Current Batch Time */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Current Batch Time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={selectedStudent?.batchTime || "N/A"}
+                    readOnly
+                    disabled
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed"
+                  />
+                </div>
+
+                {/* New Faculty Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    New Teacher Name <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={selectedFaculty}
@@ -628,7 +642,7 @@ setExtensionStartDate("");
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     disabled={facultyLoading}
                   >
-                    <option value="">Choose a faculty</option>
+                    <option value="">Select New Teacher</option>
                     {facultyList.map((faculty) => (
                       <option key={faculty._id} value={faculty._id}>
                         {faculty.facultyName} - {faculty.courseAssigned || "General"}
@@ -640,10 +654,10 @@ setExtensionStartDate("");
                   )}
                 </div>
 
-                {/* Batch Selection */}
+                {/* New Batch Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Batch Time <span className="text-red-500">*</span>
+                    New Batch Time <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={selectedBatch}
@@ -651,7 +665,7 @@ setExtensionStartDate("");
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     disabled={batchLoading}
                   >
-                    <option value="">Choose a batch time</option>
+                    <option value="">Select New Batch</option>
                     {batchList.map((batch) => (
                       <option key={batch._id} value={batch.displayName}>
                         {batch.batchName} ({batch.displayName})
