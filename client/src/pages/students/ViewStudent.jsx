@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import FeeManagement from "./FeeManagement";
-import { courseAPI } from "../../../services/api";
+import { courseAPI } from "../../services/api";
 
 
 import {
