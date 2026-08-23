@@ -365,6 +365,16 @@ const oldPaidAmount = student.paidAmount || 0;
       .filter(month => month.isExamMonth)
       .map(month => month.monthNumber);
 
+    // ── Breakdown for the "New Total Fee" tooltip ──
+    const oldMonthsInSchedule = newFeeSchedule.filter(m => m.monthNumber < conversionMonthNum);
+    const oldUnpaidCarried = oldMonthsInSchedule.filter(m => m.paidAmount === 0);
+    const oldUnpaidCarriedMonths = oldUnpaidCarried.length;
+    const oldUnpaidCarriedAmount = oldUnpaidCarried.reduce((sum, m) => sum + (m.totalFee || 0), 0);
+
+    const newCourseMonthsInSchedule = newFeeSchedule.filter(m => m.monthNumber >= conversionMonthNum);
+    const newCourseMonthlyTotal = newCourseMonthsInSchedule.reduce((sum, m) => sum + (m.monthlyFee || m.baseFee || 0), 0);
+    const newCourseExamTotal = newCourseMonthsInSchedule.reduce((sum, m) => sum + (m.examFee || 0), 0);
+
     console.log("\n✅ CONVERSION COMPLETE");
     console.log("=".repeat(60));
 
@@ -385,7 +395,13 @@ const oldPaidAmount = student.paidAmount || 0;
         examMonths: examMonthsInNewSchedule,
         totalExamFees: newFeeSchedule.reduce((sum, m) => sum + (m.examFee || 0), 0),
         paidMonths: newFeeSchedule.filter(m => m.paidAmount > 0).length,
-        totalMonths: newFeeSchedule.length
+        totalMonths: newFeeSchedule.length,
+        // ── breakdown fields for tooltip ──
+        oldUnpaidCarriedMonths,
+        oldUnpaidCarriedAmount,
+        newCourseMonths: newCourseMonthsInSchedule.length,
+        newCourseMonthlyTotal,
+        newCourseExamTotal
       }
     });
 

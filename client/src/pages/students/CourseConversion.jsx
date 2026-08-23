@@ -309,7 +309,34 @@ const getConversionPreview = async () => {
 
                 <div className="space-y-4">
                   <div className="p-4 bg-green-50 rounded-xl border border-green-200">
-                    <p className="text-sm text-green-600">New Total Fee</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm text-green-600">New Total Fee</p>
+                      <div className="group relative">
+                        <Info size={14} className="text-green-500 cursor-help" />
+                        <div className="hidden group-hover:block absolute left-0 top-6 z-10 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-xl space-y-1">
+                          {success.data.oldUnpaidCarriedMonths > 0 && (
+                            <div className="flex justify-between">
+                              <span>Pending old month{success.data.oldUnpaidCarriedMonths > 1 ? "s" : ""} ({success.data.oldUnpaidCarriedMonths}):</span>
+                              <span>{formatCurrency(success.data.oldUnpaidCarriedAmount)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span>New course ({success.data.newCourseMonths} mo):</span>
+                            <span>{formatCurrency(success.data.newCourseMonthlyTotal)}</span>
+                          </div>
+                          {success.data.newCourseExamTotal > 0 && (
+                            <div className="flex justify-between">
+                              <span>Exam fee:</span>
+                              <span>{formatCurrency(success.data.newCourseExamTotal)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between border-t border-gray-700 pt-1 font-semibold">
+                            <span>Total:</span>
+                            <span>{formatCurrency(success.data.newTotalFee - success.data.newPaidAmount)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                     <p className="text-xl font-bold text-green-600">
                       {formatCurrency(success.data.newTotalFee - success.data.newPaidAmount)}
                     </p>
