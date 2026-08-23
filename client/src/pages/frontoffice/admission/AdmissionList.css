@@ -1322,3 +1322,18 @@ dropdown-item.cancel-option span {
   color: #374151;
   white-space: nowrap;
 }
+
+.course-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.course-duration-tag {
+  font-size: 11px;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 1px 6px;
+  border-radius: 4px;
+  width: fit-content;
+}

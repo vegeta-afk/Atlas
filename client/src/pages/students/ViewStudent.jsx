@@ -693,6 +693,11 @@ const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
                     <GraduationCap size={16} />
                     {student.course || "Mathematics and Physics"}
                   </span>
+                  {student.duration && (
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                      {student.duration}
+                    </span>
+                  )}
                   <span className="inline-flex items-center gap-1 text-gray-600">
                     <ClockIcon size={16} />
                     {student.batchTime || "08:00 to 09:00"}

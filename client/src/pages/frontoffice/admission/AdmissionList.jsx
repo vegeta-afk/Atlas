@@ -98,6 +98,11 @@ const [courses, setCourses] = useState([]);
     const h12 = h % 12 || 12;
     return `${h12}:${minutes} ${ampm}`;
   };
+
+  const getCourseDuration = (courseName) => {
+    const match = courses.find((c) => c.courseFullName === courseName);
+    return match?.duration || null;
+  };
  
   // Field mapping for sorting
   const fieldMapping = {
@@ -819,7 +824,16 @@ setFilteredAdmissions(activeAdmissions);
                       </div>
                     </div>
                   </td>
-                  <td>{admission.course || "N/A"}</td>
+                  <td>
+                    <div className="course-cell">
+                      <span>{admission.course || "N/A"}</span>
+                      {getCourseDuration(admission.course) && (
+                        <span className="course-duration-tag">
+                          {getCourseDuration(admission.course)}
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td>
                     <div className="date-info">
                       <Calendar size={14} />

@@ -1,7 +1,7 @@
 // pages/frontoffice/admission/ViewAdmission.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { admissionAPI } from "../../../services/api";
+import { admissionAPI, courseAPI } from "../../../services/api";
 import useBasePath from "../../../hooks/useBasePath";
 import {
   ArrowLeft,
@@ -36,6 +36,7 @@ const ViewAdmission = () => {
   const [error, setError]         = useState(null);
   const [photoError, setPhotoError] = useState(false);
   const [linkedStudent, setLinkedStudent] = useState(null);
+  const [courseDuration, setCourseDuration] = useState(null);
 
   useEffect(() => {
     if (id) fetchAdmission();
@@ -49,6 +50,18 @@ const ViewAdmission = () => {
       const response = await admissionAPI.getAdmission(id);
       if (response.data.success) {
         setAdmission(response.data.data);
+
+        try {
+          const courseRes = await courseAPI.getActiveCourses();
+          if (courseRes.data.success) {
+            const matched = courseRes.data.data.find(
+              (c) => c.courseFullName === response.data.data.course
+            );
+            setCourseDuration(matched?.duration || null);
+          }
+        } catch (durationErr) {
+          console.error("Failed to fetch course duration:", durationErr);
+        }
       } else {
         throw new Error(response.data.message || "Failed to fetch admission");
       }
@@ -347,6 +360,10 @@ const ViewAdmission = () => {
             <div className="va-field-row">
               <span className="va-field-label">Course</span>
               <span className="va-field-value va-highlight">{d.course || "N/A"}</span>
+            </div>
+            <div className="va-field-row">
+              <span className="va-field-label">Duration</span>
+              <span className="va-field-value">{courseDuration || "N/A"}</span>
             </div>
             {d.specialization && (
               <div className="va-field-row">
