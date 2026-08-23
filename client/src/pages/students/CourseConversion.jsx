@@ -308,17 +308,13 @@ const getConversionPreview = async () => {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                      <p className="text-sm text-gray-500">Old Total</p>
-                      <p className="text-xl font-bold text-gray-900">{formatCurrency(success.data.oldTotalFee)}</p>
-                    </div>
-                    <div className="p-4 bg-green-50 rounded-xl border border-green-200">
-                      <p className="text-sm text-green-600">New Total</p>
-                      <p className="text-xl font-bold text-green-600">{formatCurrency(success.data.newTotalFee)}</p>
-                    </div>
+                  <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                    <p className="text-sm text-green-600">New Total Fee</p>
+                    <p className="text-xl font-bold text-green-600">
+                      {formatCurrency(success.data.newTotalFee - success.data.newPaidAmount)}
+                    </p>
                   </div>
-                  
+
                   <div className="p-4 bg-orange-50 rounded-xl border border-orange-200">
                     <p className="text-sm text-orange-600">New Balance</p>
                     <p className="text-2xl font-bold text-orange-600">{formatCurrency(success.data.newBalanceAmount)}</p>
