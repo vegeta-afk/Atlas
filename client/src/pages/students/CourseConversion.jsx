@@ -743,7 +743,7 @@ const getConversionPreview = async () => {
                   <div className="p-5 bg-green-50 rounded-xl border border-green-200">
                     <p className="text-sm text-green-600 mb-1">New Total Fee</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {formatCurrency(previewData.conversion.newTotalFee)}
+                      {formatCurrency(previewData.conversion.futureFeeTotal)}
                     </p>
                     <p className="text-xs text-green-500 mt-2">
                       {previewData.newCourse.duration} months @ {formatCurrency(previewData.newCourse.monthlyFee)}/mo
@@ -787,26 +787,6 @@ const getConversionPreview = async () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {/* Paid months */}
-                        {previewData.conversion.totalPaidMonths > 0 && (
-                          <tr className="bg-green-50">
-                            <td className="px-6 py-4 font-medium">
-                              Month 1 – {previewData.conversion.totalPaidMonths}
-                            </td>
-                            <td className="px-6 py-4 text-right font-semibold text-green-700">
-                              {formatCurrency(previewData.conversion.actualCashPaid)}
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                                PAID
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-gray-600">
-                              {previewData.oldCourse.name} @ {formatCurrency(previewData.oldCourse.monthlyFee)}/mo
-                            </td>
-                          </tr>
-                        )}
-
                         {/* Future months */}
                         <tr className="bg-yellow-50">
                           <td className="px-6 py-4 font-medium">
