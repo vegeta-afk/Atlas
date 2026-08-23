@@ -25,7 +25,7 @@ exports.getEligibleStudents = async (req, res) => {
 
     // ✅ FIXED: removed .populate("courseCode") - courseCode is String type, cannot be populated
     const students = await Student.find(filter)
-      .select("studentId fullName course admissionDate feeSchedule paidAmount balanceAmount enrolledBatches additionalCourses")
+      .select("studentId fullName course admissionDate feeSchedule paidAmount balanceAmount enrolledBatches additionalCourses facultyAllot batchTime")
       .limit(20);
 
     const formattedStudents = students.map(student => {
@@ -54,6 +54,8 @@ exports.getEligibleStudents = async (req, res) => {
         name: student.fullName,
         courseName: student.course,         // ✅ course is a String field, use directly
         courseDuration: "N/A",              // ✅ no populate needed, duration not critical here
+        facultyName: student.facultyAllot || "Not Allotted",
+        batchTime: student.batchTime || "N/A",
         admissionDate: student.admissionDate,
         currentMonth,
         paidMonths: paidEntries.length,
@@ -177,10 +179,17 @@ exports.extendStudentCourse = async (req, res) => {
   batchTime,
   scholarshipPercent,
   finalMonthlyFee,
-  hasScholarship
+  hasScholarship,
+  extensionStartDate
 } = req.body;
 
-    console.log("Request body:", { studentId, newCourseId, facultyId, batchTime, extensionReason });
+    console.log("Request body:", { studentId, newCourseId, facultyId, batchTime, extensionReason, extensionStartDate });
+
+    if (!extensionStartDate) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ success: false, message: "Extension start date is required" });
+    }
 
     // Find student
     const student = await Student.findById(studentId).session(session);
@@ -212,7 +221,7 @@ exports.extendStudentCourse = async (req, res) => {
 
   const newExamFee = parseFloat(newCourse.examFee) || 0;
 const newDuration = parseInt(newCourse.duration) || 0;
-const startDate = new Date(student.admissionDate);
+const startDate = new Date(extensionStartDate);
 
 // ============================================
 // STEP 1: Generate fee schedule for new course
@@ -252,6 +261,7 @@ console.log(`✅ Generated ${newFeeSchedule.length} months for new course`);
       facultyName: faculty.facultyName,
       batchTime: batchTime,
       batchId: batch?._id || null,
+      startDate: startDate,
       feeSchedule: newFeeSchedule,
       attendance: [],
       payments: [],

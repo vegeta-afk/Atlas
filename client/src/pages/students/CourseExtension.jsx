@@ -63,6 +63,7 @@ const CourseExtension = () => {
   const [previewData, setPreviewData] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
+  const [extensionStartDate, setExtensionStartDate] = useState("");
   const [isNewCourseScholarshipEligible, setIsNewCourseScholarshipEligible] = useState(false);
 const [showScholarshipModal, setShowScholarshipModal] = useState(false);
 const [scholarshipPercent, setScholarshipPercent] = useState("");
@@ -161,8 +162,8 @@ const [scholarshipData, setScholarshipData] = useState(null);
 };
 
  const getExtensionPreview = async () => {
-  if (!selectedStudent || !selectedCourse || !selectedFaculty || !selectedBatch) {
-    setError("Please select student, course, faculty, and batch");
+  if (!selectedStudent || !selectedCourse || !selectedFaculty || !selectedBatch || !extensionStartDate) {
+    setError("Please select student, course, faculty, batch, and a start date");
     return;
   }
 
@@ -191,6 +192,7 @@ const [scholarshipData, setScholarshipData] = useState(null);
       course: selectedCourse,
       faculty: faculty,
       batch: selectedBatch,
+      extensionStartDate,
       totalFee,
       monthlyFee,
       originalMonthlyFee,        // ✅ keep for display
@@ -227,6 +229,7 @@ const [scholarshipData, setScholarshipData] = useState(null);
         extensionReason: extensionReason || "Course extension requested",
         facultyId: selectedFaculty,
         batchTime: selectedBatch,
+        extensionStartDate,
         scholarshipPercent: scholarshipData ? scholarshipData.percent : 0,
 finalMonthlyFee: scholarshipData ? scholarshipData.finalMonthlyFee : null,
 hasScholarship: !!scholarshipData,
@@ -265,6 +268,7 @@ hasScholarship: !!scholarshipData,
     setScholarshipData(null);
 setScholarshipPercent("");
 setIsNewCourseScholarshipEligible(false);
+setExtensionStartDate("");
   };
 
   const goBack = () => {
@@ -646,6 +650,22 @@ setIsNewCourseScholarshipEligible(false);
                 </div>
               </div>
 
+              {/* Course Start Date */}
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Course Start Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={extensionStartDate}
+                  onChange={(e) => setExtensionStartDate(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  The new course's fee schedule will start from this date, not the student's original admission date.
+                </p>
+              </div>
+
               {/* Scholarship Section */}
 {isNewCourseScholarshipEligible && (
   <div className="mt-6 p-4 bg-purple-50 rounded-xl border border-purple-200">
@@ -708,7 +728,7 @@ setIsNewCourseScholarshipEligible(false);
               <div className="mt-8 flex justify-end">
                 <button
                   onClick={getExtensionPreview}
-                  disabled={!selectedFaculty || !selectedBatch || previewLoading}
+                   disabled={!selectedFaculty || !selectedBatch || !extensionStartDate || previewLoading}
                   className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
                 >
                   {previewLoading ? (
@@ -773,13 +793,37 @@ setIsNewCourseScholarshipEligible(false);
 
                 {/* Faculty & Batch Summary */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
-                    <p className="text-sm text-purple-600 mb-1">Assigned Faculty</p>
-                    <p className="font-semibold text-gray-900">{previewData.faculty?.facultyName}</p>
+                  <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                    <p className="text-sm text-gray-500 mb-2 font-semibold">Previous (Primary Course)</p>
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-700">
+                        <span className="text-gray-500">Faculty:</span>{" "}
+                        <span className="font-semibold">{previewData.student.facultyName || "Not Allotted"}</span>
+                      </p>
+                      <p className="text-sm text-gray-700">
+                        <span className="text-gray-500">Batch:</span>{" "}
+                        <span className="font-semibold">{previewData.student.batchTime || "N/A"}</span>
+                      </p>
+                    </div>
                   </div>
-                  <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-200">
-                    <p className="text-sm text-indigo-600 mb-1">Batch Time</p>
-                    <p className="font-semibold text-gray-900">{previewData.batch}</p>
+                  <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                    <p className="text-sm text-purple-600 mb-2 font-semibold">New (Additional Course)</p>
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-700">
+                        <span className="text-purple-600">Faculty:</span>{" "}
+                        <span className="font-semibold">{previewData.faculty?.facultyName}</span>
+                      </p>
+                      <p className="text-sm text-gray-700">
+                        <span className="text-purple-600">Batch:</span>{" "}
+                        <span className="font-semibold">{previewData.batch}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mb-6">
+                  <div className="p-4 bg-teal-50 rounded-xl border border-teal-200">
+                    <p className="text-sm text-teal-600 mb-1">Course Start Date</p>
+                    <p className="font-semibold text-gray-900">{formatDate(previewData.extensionStartDate)}</p>
                   </div>
                 </div>
 
