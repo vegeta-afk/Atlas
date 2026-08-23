@@ -661,6 +661,12 @@ const otherFeeBalance = Math.max(0, otherFeeTotal - otherFeePaidTotal);
 const admissionBalance = Math.max(0, (student.admissionFee || 0) - admissionPaid);
 const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
 
+  const formatDuration = (value) => {
+    if (!value) return value;
+    const str = value.toString().trim();
+    return /^\d+$/.test(str) ? `${str} Month${str === "1" ? "" : "s"}` : str;
+  };
+
 
 
   const tabs = [
@@ -712,7 +718,7 @@ const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
                   </span>
                   {courseDuration && (
                     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                      {courseDuration}
+                      {formatDuration(courseDuration)}
                     </span>
                   )}
                   <span className="inline-flex items-center gap-1 text-gray-600">
@@ -1263,9 +1269,9 @@ const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
                         <span className="font-medium">Course:</span>{" "}
                         {student.course || "Mathematics and Physics"}
                       </div>
-                      <div>
+                                            <div>
                         <span className="font-medium">Duration:</span>{" "}
-                        {student.duration || "15 months"}
+                        {formatDuration(courseDuration) || "N/A"}
                       </div>
                       <div>
                         <span className="font-medium">Batch Time:</span>{" "}

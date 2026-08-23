@@ -361,10 +361,10 @@ const ViewAdmission = () => {
               <span className="va-field-label">Course</span>
               <span className="va-field-value va-highlight">{d.course || "N/A"}</span>
             </div>
-            <div className="va-field-row">
-              <span className="va-field-label">Duration</span>
-              <span className="va-field-value">{courseDuration || "N/A"}</span>
-            </div>
+                            <div className="va-field-row">
+                  <span className="va-field-label">Duration</span>
+                  <span className="va-field-value">{formatDuration(courseDuration) || "N/A"}</span>
+                </div>
             {d.specialization && (
               <div className="va-field-row">
                 <span className="va-field-label">Specialization</span>
