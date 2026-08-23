@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import FeeManagement from "./FeeManagement";
+import { courseAPI } from "../../../services/api";
 
 
 import {
@@ -70,6 +71,7 @@ const ViewStudent = () => {
   const [bridgeBatches, setBridgeBatches] = useState([]);
   const [batchTransfers, setBatchTransfers] = useState([]);
   const [historyView, setHistoryView] = useState("transfer"); // transfer | bridge | conversion | extension
+  const [courseDuration, setCourseDuration] = useState(null);
 
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -88,8 +90,23 @@ const ViewStudent = () => {
   useEffect(() => {
     if (student) {
       fetchSyllabusProgress();
+      fetchCourseDuration();
     }
   }, [student]);
+
+  const fetchCourseDuration = async () => {
+    try {
+      const res = await courseAPI.getActiveCourses();
+      if (res.data.success) {
+        const matched = res.data.data.find(
+          (c) => c.courseFullName === student.course
+        );
+        setCourseDuration(matched?.duration || null);
+      }
+    } catch (err) {
+      console.error("Error fetching course duration:", err);
+    }
+  };
 
   useEffect(() => {
   fetchStudentDetails();
@@ -693,9 +710,9 @@ const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
                     <GraduationCap size={16} />
                     {student.course || "Mathematics and Physics"}
                   </span>
-                  {student.duration && (
+                  {courseDuration && (
                     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                      {student.duration}
+                      {courseDuration}
                     </span>
                   )}
                   <span className="inline-flex items-center gap-1 text-gray-600">
