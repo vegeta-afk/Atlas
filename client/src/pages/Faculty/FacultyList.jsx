@@ -216,7 +216,7 @@ const FacultyList = () => {
         facultyList.map(async (f) => {
           try {
             const res = await facultyAPI.getFacultyBatches(f._id);
-            const batches = res.data?.data?.batches || [];
+            const batches = (res.data?.data?.batches || []).filter((b) => !b.isTemporary);
             return { faculty: f, batches };
           } catch {
             return { faculty: f, batches: [] };
@@ -529,7 +529,7 @@ const fetchFreeBatches = async (facultyList) => {
   // ── batchesByFaculty — now carries facultyPhoto too ─────────────────────
   const batchesByFaculty = faculty.map((f) => {
     const regularBatches = allBatchesData
-      .filter((b) => b.facultyId === f._id)
+      .filter((b) => b.facultyId === f._id && !b.isTemporary)
       .map((b) => ({ ...b, batchType: "regular" }));
 
     const bridgeBatchesForFac = bridgeBatchesData
