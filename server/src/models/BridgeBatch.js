@@ -67,6 +67,7 @@ const bridgeBatchSchema = new mongoose.Schema(
         subtopicName: { type: String, required: true },
         completed: { type: Boolean, default: false },
         completedDate: Date,
+        inProgress: { type: Boolean, default: false },
       },
     ],
 

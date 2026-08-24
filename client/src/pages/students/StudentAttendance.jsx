@@ -1550,15 +1550,9 @@ const handleBatchSelect = (batch) => {
           <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
             Student Details
           </th>
-          {/* <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-            Courses
-          </th>
-          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-            Contact
-          </th>
           <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
             Today's Status
-          </th> */}
+          </th>
           {!isAdmin && (
             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
               Quick Actions
@@ -1569,7 +1563,7 @@ const handleBatchSelect = (batch) => {
       <tbody className="bg-white divide-y divide-gray-100">
         {students.length === 0 ? (
           <tr>
-            <td colSpan={isAdmin ? 2 : 3} className="px-6 py-12 text-center">
+            <td colSpan={isAdmin ? 3 : 4} className="px-6 py-12 text-center">
               <Users className="mx-auto text-gray-400 mb-4" size={48} />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Students Found</h3>
               <p className="text-gray-600">There are no students assigned to this batch.</p>
@@ -1617,42 +1611,27 @@ const handleBatchSelect = (batch) => {
                   </div>
                 </div>
               </td>
-              {/* <td className="px-6 py-4">
-                <div className="flex flex-wrap gap-1">
-                  {(student.courses && student.courses.length > 0) ? (
-                    student.courses.map((course, index) => (
-                      <span key={index} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
-                        {course}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-gray-400 text-xs">No courses</span>
-                  )}
-                </div>
-              </td> */}
-              {/* <td className="px-6 py-4">
-                <div className="text-sm text-gray-900">{student.contact || student.mobileNumber || 'N/A'}</div>
-                <div className="text-xs text-gray-500">{student.email || 'N/A'}</div>
-              </td> */}
-              {/* <td className="px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                      attendance[student._id] === "present"
-                        ? "bg-green-100 text-green-800 border border-green-200"
-                        : attendance[student._id] === "absent"
-                        ? "bg-red-100 text-red-800 border border-red-200"
-                        : attendance[student._id] === "leave"
-                        ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
-                        : attendance[student._id] === "late"
-                        ? "bg-blue-100 text-blue-800 border border-blue-200"
-                        : "bg-gray-100 text-gray-800 border border-gray-200"
-                    }`}
-                  >
-                    {attendance[student._id] || "Not Marked"}
-                  </span>
-                </div>
-              </td> */}
+              <td className="px-6 py-4">
+                <span
+                  className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap ${
+                    attendance[student._id] === "present"
+                      ? "bg-green-100 text-green-800 border border-green-200"
+                      : attendance[student._id] === "absent"
+                      ? "bg-red-100 text-red-800 border border-red-200"
+                      : attendance[student._id] === "leave"
+                      ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                      : "bg-gray-100 text-gray-800 border border-gray-200"
+                  }`}
+                >
+                  {attendance[student._id] === "present"
+                    ? "Present"
+                    : attendance[student._id] === "absent"
+                    ? "Absent"
+                    : attendance[student._id] === "leave"
+                    ? "Leave"
+                    : "Not Marked"}
+                </span>
+              </td>
               {!isAdmin && (
                 <td className="px-6 py-4">
                   <div className="flex gap-2">

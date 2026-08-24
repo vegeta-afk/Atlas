@@ -36,7 +36,11 @@ const BridgeTopicCompletionModal = ({ bridgeBatchId, date, onClose, onSaved }) =
         // Default every dropdown to whatever the DB actually says right now
         const initialStatus = {};
         (result.data.selectedSubtopics || []).forEach((s) => {
-          initialStatus[s.subtopicKey] = s.completed ? "completed" : "not_started";
+          initialStatus[s.subtopicKey] = s.completed
+            ? "completed"
+            : s.inProgress
+            ? "in_progress"
+            : "not_started";
         });
         setSubStatus(initialStatus);
       }
@@ -89,6 +93,10 @@ const BridgeTopicCompletionModal = ({ bridgeBatchId, date, onClose, onSaved }) =
         .filter((s) => !s.completed && subStatus[s.subtopicKey] === "completed")
         .map((s) => s.subtopicKey);
 
+      const inProgressSubtopicKeys = (bridgeBatch?.selectedSubtopics || [])
+        .filter((s) => !s.completed && subStatus[s.subtopicKey] === "in_progress")
+        .map((s) => s.subtopicKey);
+
       // Topics with NO subtopics rely on the manual checkbox; topics WITH subtopics
       // are marked complete only once every one of their subtopics is completed
       // (already-saved OR completed this session).
@@ -105,8 +113,8 @@ const BridgeTopicCompletionModal = ({ bridgeBatchId, date, onClose, onSaved }) =
         })
         .map((topic) => topic.topicKey);
 
-      if (completedSubtopicKeys.length === 0 && completedTopicKeys.length === 0) {
-        alert("Select at least one topic or subtopic as Completed to save.");
+      if (completedSubtopicKeys.length === 0 && completedTopicKeys.length === 0 && inProgressSubtopicKeys.length === 0) {
+        alert("Select at least one topic or subtopic to save.");
         setSaving(false);
         return;
       }
@@ -122,6 +130,7 @@ const BridgeTopicCompletionModal = ({ bridgeBatchId, date, onClose, onSaved }) =
           date,
           completedTopicKeys,
           completedSubtopicKeys,
+          inProgressSubtopicKeys,
         }),
       });
       const result = await response.json();

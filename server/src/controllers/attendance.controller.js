@@ -2079,6 +2079,16 @@ exports.getBatchTopicBoard = async (req, res) => {
       bridgeStudentAdmissionMap[s._id.toString()] = s.studentId;
     });
 
+    // NEW — a bridge session runs at its OWN tempBatchId slot, which can differ from the
+    // temp faculty's regular parentBatchId assignment. Fetch those slots so bridge rows can
+    // be grouped/displayed under their real time instead of borrowing the parent batch's.
+    const tempBatchIds = [...new Set(bridgeBatches.map((b) => b.tempBatchId?.toString()).filter(Boolean))];
+    const tempBatchDocs = tempBatchIds.length > 0
+      ? await Batch.find({ _id: { $in: tempBatchIds } }).select('batchName displayName startTime endTime').lean()
+      : [];
+    const tempBatchMap = {};
+    tempBatchDocs.forEach((b) => { tempBatchMap[b._id.toString()] = b; });
+
     const courses = await Course.find({ _id: { $in: [...allCourseIds] } }).select('courseFullName courseShortName syllabus').lean();
     const courseMap = {};
     courses.forEach((c) => { courseMap[c._id.toString()] = c; });
@@ -2139,84 +2149,25 @@ exports.getBatchTopicBoard = async (req, res) => {
       );
       const hasConverged = distinctTopicSubtopicPairs.size <= 1;
 
-      // Bridge students where this same person is the temp faculty, tied to this batch
-      const relevantBridges = bridgeBatches.filter(
-        (b) => b.tempFacultyId.toString() === tb.teacher._id.toString() && b.parentBatchId.toString() === tb.batch._id.toString()
-      );
-      let doubleExtra = 0, bridgeTopic = { topicName: null, startDate: null, subtopicName: null };
-      let bridgeCompleted = false;
-      if (relevantBridges.length > 0) {
-        doubleExtra = relevantBridges.reduce((sum, b) => sum + (b.studentIds?.length || 0), 0);
-        const b = relevantBridges[0];
-
-        // Bridge completion lives directly on the BridgeBatch document itself
-        // (selectedTopics/selectedSubtopics, each with their own `completed` flag) —
-        // it is NOT stored in TopicCompletion, so read it straight from `b`.
-        const topics = b.selectedTopics || [];
-        const subtopics = b.selectedSubtopics || [];
-
-        const allTopicsDone = topics.length === 0 || topics.every((t) => t.completed);
-        const allSubtopicsDone = subtopics.length === 0 || subtopics.every((s) => s.completed);
-        bridgeCompleted = (topics.length > 0 || subtopics.length > 0) && allTopicsDone && allSubtopicsDone;
-
-        if (!bridgeCompleted) {
-          // A topic's own checkbox can be ticked "complete" while its subtopics are still
-          // pending (they're tracked independently) — so find "current" by PENDING SUBTOPIC
-          // first, not by the topic-level flag, otherwise an already-checked topic hides
-          // its own still-pending subtopics.
-          let currentTopic = null;
-          let currentSubtopicName = null;
-
-          for (const t of topics) {
-            const subsUnderTopic = subtopics.filter((s) => s.subtopicKey.startsWith(`${t.topicKey}_`));
-            const pendingSub = subsUnderTopic.find((s) => !s.completed);
-            if (pendingSub) {
-              currentTopic = t;
-              currentSubtopicName = pendingSub.subtopicName;
-              break;
-            }
-          }
-          // Fallback: no subtopic-level match found (e.g. topic has no subtopics at all) —
-          // use the first topic not yet marked complete
-          if (!currentTopic) {
-            currentTopic = topics.find((t) => !t.completed) || null;
-          }
-
-          bridgeTopic = {
-            topicName: currentTopic ? currentTopic.topicName : null,
-            startDate: b.approvedDate || b.createdAt || null,
-            subtopicName: currentSubtopicName,
-          };
-        }
-      }
+      // Bridge sessions no longer merge onto this teacher's regular-batch row — they run at
+      // their own tempBatchId time slot and get their own row (built separately below).
+      const doubleExtra = 0;
+      const bridgeTopic = { topicName: null, startDate: null, subtopicName: null };
+      const bridgeCompleted = false;
 
       const primary = regularTopics[0] || { topicName: null, startDate: null, subtopicName: null };
 
-      // Build the name+tag list for the Total column tooltip: regular students first, then bridge students
-      const studentList = [
-        ...activeStudents.map((as) => {
-          const cid = studentCourseIdMap[as.student._id.toString()];
-          const admissionNo = as.student.studentId || '';
-          return {
-            name: as.student.fullName,
-            tag: 'Reg',
-            courseShortName: courseMap[cid]?.courseShortName || '',
-            last4: admissionNo ? admissionNo.slice(-4) : '',
-          };
-        }),
-        ...relevantBridges.flatMap((b) => {
-          const cid = b.courseId.toString();
-          return (b.studentIds || []).map((sid) => {
-            const admissionNo = bridgeStudentAdmissionMap[sid.toString()] || '';
-            return {
-              name: bridgeStudentNameMap[sid.toString()] || 'Unknown',
-              tag: 'Bridge',
-              courseShortName: courseMap[cid]?.courseShortName || '',
-              last4: admissionNo ? admissionNo.slice(-4) : '',
-            };
-          });
-        }),
-      ];
+      // Regular students only now — bridge students appear on their own row (built below).
+      const studentList = activeStudents.map((as) => {
+        const cid = studentCourseIdMap[as.student._id.toString()];
+        const admissionNo = as.student.studentId || '';
+        return {
+          name: as.student.fullName,
+          tag: 'Reg',
+          courseShortName: courseMap[cid]?.courseShortName || '',
+          last4: admissionNo ? admissionNo.slice(-4) : '',
+        };
+      });
 
       return {
         batchId: tb.batch._id.toString(),
@@ -2240,8 +2191,84 @@ exports.getBatchTopicBoard = async (req, res) => {
       };
     }))).filter(Boolean);
 
-    rows.sort((a, b) => (a.batchStartTime || '').localeCompare(b.batchStartTime || ''));
-    res.json({ success: true, data: rows });
+    // Bridge batches get their own rows, grouped under their real tempBatchId time slot —
+    // matching the Bridge Batch list and each faculty's own schedule card — instead of being
+    // merged onto whichever row coincidentally shares a teacher with the bridge's parent batch.
+    const bridgeRows = bridgeBatches
+      .filter((b) => {
+        if (batchId && b.tempBatchId?.toString() !== batchId) return false;
+        if (tbQuery.teacher && b.tempFacultyId?.toString() !== tbQuery.teacher.toString()) return false;
+        return true;
+      })
+      .map((b) => {
+        const tempBatch = b.tempBatchId ? tempBatchMap[b.tempBatchId.toString()] : null;
+        if (!tempBatch) return null; // no resolvable slot — skip rather than mis-group it
+
+        const topics = b.selectedTopics || [];
+        const subtopics = b.selectedSubtopics || [];
+        const allTopicsDone = topics.length === 0 || topics.every((t) => t.completed);
+        const allSubtopicsDone = subtopics.length === 0 || subtopics.every((s) => s.completed);
+        const bridgeCompleted = (topics.length > 0 || subtopics.length > 0) && allTopicsDone && allSubtopicsDone;
+
+        let bridgeTopic = { topicName: null, startDate: null, subtopicName: null };
+        if (!bridgeCompleted) {
+          let currentTopic = null;
+          let currentSubtopicName = null;
+          for (const t of topics) {
+            const subsUnderTopic = subtopics.filter((s) => s.subtopicKey.startsWith(`${t.topicKey}_`));
+            const pendingSub = subsUnderTopic.find((s) => !s.completed);
+            if (pendingSub) {
+              currentTopic = t;
+              currentSubtopicName = pendingSub.subtopicName;
+              break;
+            }
+          }
+          if (!currentTopic) currentTopic = topics.find((t) => !t.completed) || null;
+          bridgeTopic = {
+            topicName: currentTopic ? currentTopic.topicName : null,
+            startDate: b.approvedDate || b.createdAt || null,
+            subtopicName: currentSubtopicName,
+          };
+        }
+
+        const cid = b.courseId?.toString();
+        const studentList = (b.studentIds || []).map((sid) => {
+          const admissionNo = bridgeStudentAdmissionMap[sid.toString()] || '';
+          return {
+            name: bridgeStudentNameMap[sid.toString()] || 'Unknown',
+            tag: 'Bridge',
+            courseShortName: courseMap[cid]?.courseShortName || '',
+            last4: admissionNo ? admissionNo.slice(-4) : '',
+          };
+        });
+        const studentCount = (b.studentIds || []).length;
+
+        return {
+          batchId: tempBatch._id.toString(),
+          batchTime: tempBatch.displayName || `${tempBatch.startTime} to ${tempBatch.endTime}`,
+          batchStartTime: tempBatch.startTime,
+          facultyName: b.tempFacultyName,
+          substituteFacultyName: null,
+          bsCount: 0,
+          studentList,
+          courseStartDate: null,
+          runningCourse: null,
+          runningSubtopic: null,
+          hasConverged: true,
+          regularTopics: [],
+          doubleExtra: studentCount,
+          bridgeStartDate: bridgeTopic.startDate,
+          bridgeRunningCourse: bridgeTopic.topicName,
+          bridgeRunningSubtopic: bridgeTopic.subtopicName,
+          bridgeCompleted,
+          total: studentCount,
+        };
+      })
+      .filter(Boolean);
+
+    const allRows = [...rows, ...bridgeRows];
+    allRows.sort((a, b) => (a.batchStartTime || '').localeCompare(b.batchStartTime || ''));
+    res.json({ success: true, data: allRows });
   } catch (error) {
     console.error('Error in getBatchTopicBoard:', error);
     res.status(500).json({ success: false, message: error.message });

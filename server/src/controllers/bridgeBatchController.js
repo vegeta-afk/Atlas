@@ -187,14 +187,15 @@ exports.markBridgeAttendance = async (req, res) => {
 // body: { bridgeBatchId, date, completedTopicKeys: [], completedSubtopicKeys: [] }
 exports.saveBridgeTopicCompletion = async (req, res) => {
   try {
-    const { bridgeBatchId, date, completedTopicKeys, completedSubtopicKeys } = req.body;
+    const { bridgeBatchId, date, completedTopicKeys, completedSubtopicKeys, inProgressSubtopicKeys } = req.body;
     const tempFacultyId = req.user.id;
 
     const topicKeys = completedTopicKeys || [];
     const subtopicKeys = completedSubtopicKeys || [];
+    const inProgressKeys = inProgressSubtopicKeys || [];
 
-    if (topicKeys.length === 0 && subtopicKeys.length === 0) {
-      return res.status(400).json({ success: false, message: 'Select at least one topic or subtopic covered today' });
+    if (topicKeys.length === 0 && subtopicKeys.length === 0 && inProgressKeys.length === 0) {
+      return res.status(400).json({ success: false, message: 'Select at least one topic or subtopic to save' });
     }
 
     const bridgeBatch = await BridgeBatch.findById(bridgeBatchId);
@@ -216,6 +217,10 @@ exports.saveBridgeTopicCompletion = async (req, res) => {
     if (invalidSubtopicKeys.length > 0) {
       return res.status(400).json({ success: false, message: 'Some subtopics are not part of this bridge batch' });
     }
+    const invalidInProgressKeys = inProgressKeys.filter((k) => !validSubtopicKeys.has(k));
+    if (invalidInProgressKeys.length > 0) {
+      return res.status(400).json({ success: false, message: 'Some subtopics are not part of this bridge batch' });
+    }
 
     bridgeBatch.selectedTopics.forEach((t) => {
       if (topicKeys.includes(t.topicKey)) {
@@ -227,6 +232,9 @@ exports.saveBridgeTopicCompletion = async (req, res) => {
       if (subtopicKeys.includes(s.subtopicKey)) {
         s.completed = true;
         s.completedDate = new Date();
+        s.inProgress = false; // completed supersedes in-progress
+      } else if (inProgressKeys.includes(s.subtopicKey)) {
+        s.inProgress = true;
       }
     });
 
