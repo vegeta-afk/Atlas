@@ -295,7 +295,7 @@ const AddBridgeBatchRequest = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.tempFacultyId) newErrors.tempFacultyId = "Please select a temp faculty";
+    if (!formData.tempFacultyId) newErrors.tempFacultyId = "Please select a Bridge faculty";
     if (formData.selectedTopicKeys.length === 0) newErrors.selectedTopicKeys = "Select at least one pending topic";
     if (!formData.tempBatchId) newErrors.tempBatchId = "Please select a batch slot for the bridge sessions";
     if (!formData.reason) newErrors.reason = "Please provide a reason for this bridge request";
@@ -369,7 +369,7 @@ const AddBridgeBatchRequest = () => {
           </h1>
           <p className="text-sm text-gray-500">
             {step === 1 && "Search and select a student who is behind on topics"}
-            {step === 2 && "Pick pending topics, temp faculty, and time slot"}
+            {step === 2 && "Pick pending topics, Bridge faculty, and time slot"}
             {step === 3 && "Review and submit for admin approval"}
           </p>
         </div>
@@ -536,14 +536,14 @@ const AddBridgeBatchRequest = () => {
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Temp Faculty *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Bridge Faculty *</label>
                     <select
                       name="tempFacultyId"
                       value={formData.tempFacultyId}
                       onChange={handleChange}
                       className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.tempFacultyId ? "border-red-500" : "border-gray-200"}`}
                     >
-                      <option value="">Select Temp Faculty</option>
+                      <option value="">Select Bridge Faculty</option>
                       {facultyMembers.map((f) => (
                         <option key={f._id} value={f._id}>
                           {f.facultyName} {f.facultyNo ? `(${f.facultyNo})` : ""}
@@ -554,14 +554,14 @@ const AddBridgeBatchRequest = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Temp Batch Slot *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Bridge Batch Slot *</label>
                     <select
                       name="tempBatchId"
                       value={formData.tempBatchId}
                       onChange={handleChange}
                       className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.tempBatchId ? "border-red-500" : "border-gray-200"}`}
                     >
-                      <option value="">Select Batch Slot</option>
+                      <option value="">Select Bridge Batch Slot</option>
                       {batches.map((batch) => {
                         const displayName = batch.displayName ||
                           `${batch.startTime || ""} to ${batch.endTime || ""}`.trim();
@@ -705,7 +705,7 @@ const AddBridgeBatchRequest = () => {
                   <div>
                     <h3 className="font-medium text-gray-700 mb-3">Bridge Session</h3>
                     <div className="space-y-2 text-sm">
-                      <p><span className="text-gray-500">Temp Faculty:</span> <span className="font-medium text-green-600">{formData.tempFacultyName}</span></p>
+                      <p><span className="text-gray-500">Bridge Faculty:</span> <span className="font-medium text-green-600">{formData.tempFacultyName}</span></p>
                       <p><span className="text-gray-500">Time:</span> <span className="font-medium text-green-600">
                         {batches.find((b) => b._id === formData.tempBatchId)?.displayName ||
                           batches.find((b) => b._id === formData.tempBatchId)?.batchName ||
