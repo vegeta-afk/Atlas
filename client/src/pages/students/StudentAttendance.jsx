@@ -188,18 +188,46 @@ const isEditWindowOpen = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
-      
-      if (result.success) {
-        setFacultyList(result.data || []);
-      } else {
+
+      if (!result.success) {
         throw new Error(result.message || 'Failed to fetch faculty');
       }
+
+      const baseFacultyList = result.data || [];
+
+      const enrichedFacultyList = await Promise.all(
+        baseFacultyList.map(async (faculty) => {
+          try {
+            const batchesRes = await fetch(
+              `${BASE_URL}/api/faculty/${faculty._id}/batches`,
+              { headers: { 'Authorization': `Bearer ${token}` } }
+            );
+            if (!batchesRes.ok) return faculty;
+
+            const batchesResult = await batchesRes.json();
+            if (!batchesResult.success) return faculty;
+
+            const facultyDetail = batchesResult.data?.faculty || {};
+
+            return {
+              ...faculty,
+              totalBatches: facultyDetail.totalBatches ?? faculty.totalBatches,
+              totalStudents: facultyDetail.totalStudents ?? faculty.totalStudents,
+            };
+          } catch (err) {
+            console.error(`Error fetching batch counts for faculty ${faculty._id}:`, err);
+            return faculty;
+          }
+        })
+      );
+
+      setFacultyList(enrichedFacultyList);
     } catch (error) {
       console.error("Error fetching faculty list:", error);
       alert('Error loading faculty list: ' + error.message);
