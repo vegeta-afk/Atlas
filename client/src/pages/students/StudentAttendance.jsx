@@ -1620,15 +1620,13 @@ const handleBatchSelect = (batch) => {
                       ? "bg-red-100 text-red-800 border border-red-200"
                       : attendance[student._id] === "leave"
                       ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                      : attendance[student._id] === "late"
+                      ? "bg-blue-100 text-blue-800 border border-blue-200"
                       : "bg-gray-100 text-gray-800 border border-gray-200"
                   }`}
                 >
-                  {attendance[student._id] === "present"
-                    ? "Present"
-                    : attendance[student._id] === "absent"
-                    ? "Absent"
-                    : attendance[student._id] === "leave"
-                    ? "Leave"
+                  {attendance[student._id]
+                    ? attendance[student._id].charAt(0).toUpperCase() + attendance[student._id].slice(1)
                     : "Not Marked"}
                 </span>
               </td>
