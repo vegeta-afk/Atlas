@@ -338,7 +338,11 @@ const fetchBatchStudents = async (batchId, isBridgeParam, silent = false, teache
       const initialAttendance = {};
       const initialTimes = {};
       studentsData.forEach((student) => {
-        const todayStatus = student.todayStatus === 'not_marked' ? 'absent' : student.todayStatus;
+        // Admin is only viewing — show the real status, including "not marked", instead of
+        // defaulting to "absent" (which was hiding whether attendance was taken at all).
+        // Faculty keeps the "not_marked" -> "absent" default, since that's the base state
+        // their own Present/Absent buttons toggle from.
+        const todayStatus = (!isAdmin && student.todayStatus === 'not_marked') ? 'absent' : student.todayStatus;
         initialAttendance[student._id] = todayStatus;
         if (student.todayCheckInTime) {
           initialTimes[student._id] = student.todayCheckInTime;
