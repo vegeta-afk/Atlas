@@ -23,6 +23,7 @@ import {
   RotateCcw,
   ArrowLeftRight,
   Package,
+  GitBranch,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import "./AdmissionList.css";
@@ -922,12 +923,20 @@ setFilteredAdmissions(activeAdmissions);
                               <span>Log Call</span>
                             </button>
 
-                            <Link
+                                                        <Link
                               to={`${basePath}/students/batch-transfer/add?admissionId=${admission.id}`}
                               className="dropdown-item"
                             >
                               <ArrowLeftRight size={14} />
                               <span>Batch Transfer</span>
+                            </Link>
+
+                            <Link
+                              to={`${basePath}/students/bridge-batch/add?admissionId=${admission.id}`}
+                              className="dropdown-item"
+                            >
+                              <GitBranch size={14} />
+                              <span>Bridge Batch</span>
                             </Link>
 
                                                         <Link
