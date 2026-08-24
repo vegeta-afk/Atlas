@@ -693,7 +693,7 @@ const handleBatchSelect = (batch) => {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
             <GraduationCap size={22} />
-            All Faculty
+            Attendance
           </h2>
           <div className="flex items-center gap-3">
             <div className="relative">
