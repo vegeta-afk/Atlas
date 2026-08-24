@@ -284,6 +284,14 @@ const AddBridgeBatchRequest = () => {
   });
 };
 
+const deselectAllTopics = () => {
+  setFormData((prev) => ({
+    ...prev,
+    selectedTopicKeys: [],
+    selectedSubtopicKeys: [],
+  }));
+};
+
   const toggleExpand = (topicKey) => {
     setExpandedTopics((prev) => {
       const next = new Set(prev);
@@ -577,9 +585,24 @@ const AddBridgeBatchRequest = () => {
                 </div>
 
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Topics to Cover * {loadingTopics && <span className="text-xs text-gray-400">(loading...)</span>}
-                  </label>
+  <div className="flex items-center justify-between mb-2">
+    <label className="block text-sm font-medium text-gray-700">
+      Topics to Cover * {loadingTopics && (
+        <span className="text-xs text-gray-400">(loading...)</span>
+      )}
+    </label>
+
+    {(formData.selectedTopicKeys.length > 0 ||
+      formData.selectedSubtopicKeys.length > 0) && (
+      <button
+        type="button"
+        onClick={deselectAllTopics}
+        className="text-xs font-medium text-red-600 hover:text-red-700 hover:underline transition-colors"
+      >
+        Deselect All
+      </button>
+    )}
+  </div>
                   <p className="text-xs text-gray-400 mb-2">
                     Pending topics are pre-checked. You can also tick a few extra topics the main batch is
                     already ahead on, to help this student catch up to the same pace.
