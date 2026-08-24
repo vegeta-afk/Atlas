@@ -691,15 +691,10 @@ const handleBatchSelect = (batch) => {
       {/* Admin Header */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-              <GraduationCap size={24} />
-              Faculty Management (Admin View)
-            </h2>
-            <p className="text-gray-600">
-              Browse all faculty members and their assigned batches
-            </p>
-          </div>
+          <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <GraduationCap size={22} />
+            All Faculty
+          </h2>
           <div className="flex items-center gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
