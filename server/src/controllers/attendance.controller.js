@@ -2093,6 +2093,17 @@ exports.getBatchTopicBoard = async (req, res) => {
     const courseMap = {};
     courses.forEach((c) => { courseMap[c._id.toString()] = c; });
 
+    // Bridge batches merge back onto an existing regular-teaching row when the SAME
+    // teacher already has a row at the bridge's own tempBatchId slot — that's what keeps
+    // "Jyoti" as one row instead of splitting into a second one at the same time.
+    const mergedBridgeIds = new Set(
+      bridgeBatches
+        .filter((b) => teacherBatches.some((tb) => tb.batch && tb.teacher &&
+          tb.teacher._id.toString() === b.tempFacultyId.toString() &&
+          b.tempBatchId?.toString() === tb.batch._id.toString()))
+        .map((b) => b._id.toString())
+    );
+
     // Process every teacherBatch IN PARALLEL instead of one-by-one
     const rows = (await Promise.all(teacherBatches.map(async (tb) => {
       if (!tb.batch || !tb.teacher) return null;
@@ -2149,25 +2160,78 @@ exports.getBatchTopicBoard = async (req, res) => {
       );
       const hasConverged = distinctTopicSubtopicPairs.size <= 1;
 
-      // Bridge sessions no longer merge onto this teacher's regular-batch row — they run at
-      // their own tempBatchId time slot and get their own row (built separately below).
-      const doubleExtra = 0;
-      const bridgeTopic = { topicName: null, startDate: null, subtopicName: null };
-      const bridgeCompleted = false;
+      // Bridge sessions merge back onto THIS row when their tempBatchId slot matches this
+      // row's own batch — i.e. the bridge is actually happening at the same time this
+      // teacher already teaches here.
+      const relevantBridges = bridgeBatches.filter(
+        (b) => b.tempFacultyId.toString() === tb.teacher._id.toString() && b.tempBatchId?.toString() === tb.batch._id.toString()
+      );
+      let doubleExtra = 0, bridgeTopic = { topicName: null, startDate: null, subtopicName: null };
+      let bridgeCompleted = false;
+      if (relevantBridges.length > 0) {
+        doubleExtra = relevantBridges.reduce((sum, b) => sum + (b.studentIds?.length || 0), 0);
+        const b = relevantBridges[0];
+
+        const topics = b.selectedTopics || [];
+        const subtopics = b.selectedSubtopics || [];
+
+        const allTopicsDone = topics.length === 0 || topics.every((t) => t.completed);
+        const allSubtopicsDone = subtopics.length === 0 || subtopics.every((s) => s.completed);
+        bridgeCompleted = (topics.length > 0 || subtopics.length > 0) && allTopicsDone && allSubtopicsDone;
+
+        if (!bridgeCompleted) {
+          let currentTopic = null;
+          let currentSubtopicName = null;
+
+          for (const t of topics) {
+            const subsUnderTopic = subtopics.filter((s) => s.subtopicKey.startsWith(`${t.topicKey}_`));
+            const pendingSub = subsUnderTopic.find((s) => !s.completed);
+            if (pendingSub) {
+              currentTopic = t;
+              currentSubtopicName = pendingSub.subtopicName;
+              break;
+            }
+          }
+          if (!currentTopic) {
+            currentTopic = topics.find((t) => !t.completed) || null;
+          }
+
+          bridgeTopic = {
+            topicName: currentTopic ? currentTopic.topicName : null,
+            startDate: b.approvedDate || b.createdAt || null,
+            subtopicName: currentSubtopicName,
+          };
+        }
+      }
 
       const primary = regularTopics[0] || { topicName: null, startDate: null, subtopicName: null };
 
-      // Regular students only now — bridge students appear on their own row (built below).
-      const studentList = activeStudents.map((as) => {
-        const cid = studentCourseIdMap[as.student._id.toString()];
-        const admissionNo = as.student.studentId || '';
-        return {
-          name: as.student.fullName,
-          tag: 'Reg',
-          courseShortName: courseMap[cid]?.courseShortName || '',
-          last4: admissionNo ? admissionNo.slice(-4) : '',
-        };
-      });
+      // Build the name+tag list for the Total column tooltip: regular students first, then
+      // any bridge students merged onto this same row.
+      const studentList = [
+        ...activeStudents.map((as) => {
+          const cid = studentCourseIdMap[as.student._id.toString()];
+          const admissionNo = as.student.studentId || '';
+          return {
+            name: as.student.fullName,
+            tag: 'Reg',
+            courseShortName: courseMap[cid]?.courseShortName || '',
+            last4: admissionNo ? admissionNo.slice(-4) : '',
+          };
+        }),
+        ...relevantBridges.flatMap((b) => {
+          const cid = b.courseId.toString();
+          return (b.studentIds || []).map((sid) => {
+            const admissionNo = bridgeStudentAdmissionMap[sid.toString()] || '';
+            return {
+              name: bridgeStudentNameMap[sid.toString()] || 'Unknown',
+              tag: 'Bridge',
+              courseShortName: courseMap[cid]?.courseShortName || '',
+              last4: admissionNo ? admissionNo.slice(-4) : '',
+            };
+          });
+        }),
+      ];
 
       return {
         batchId: tb.batch._id.toString(),
@@ -2196,6 +2260,7 @@ exports.getBatchTopicBoard = async (req, res) => {
     // merged onto whichever row coincidentally shares a teacher with the bridge's parent batch.
     const bridgeRows = bridgeBatches
       .filter((b) => {
+        if (mergedBridgeIds.has(b._id.toString())) return false; // already merged onto a regular row above
         if (batchId && b.tempBatchId?.toString() !== batchId) return false;
         if (tbQuery.teacher && b.tempFacultyId?.toString() !== tbQuery.teacher.toString()) return false;
         return true;
