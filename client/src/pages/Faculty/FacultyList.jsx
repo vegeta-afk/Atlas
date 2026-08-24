@@ -979,11 +979,11 @@ const handleBulkTransferSubmit = async () => {
                           </button>
                           {openDropdown === facultyMember._id && (
                             <div className="dropdown-menu" onClick={(e) => e.stopPropagation()}>
-                              {facultyMember.status === "active" && (
+                              {/* {facultyMember.status === "active" && (
                                 <button className="dropdown-item" onClick={() => { handleMarkOnLeave(facultyMember); setOpenDropdown(null); }}>
                                   <Clock size={14} /><span>Mark as On Leave</span>
                                 </button>
-                              )}
+                              )} */}
                               {facultyMember.status === "on-leave" && (
                                 <button className="dropdown-item" onClick={() => { handleActivateFaculty(facultyMember); setOpenDropdown(null); }}>
                                   <UserCheck size={14} /><span>Mark as Active</span>
