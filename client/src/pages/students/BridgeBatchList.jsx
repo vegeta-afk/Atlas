@@ -117,7 +117,7 @@ const BridgeBatchList = () => {
       });
       const data = await response.json();
       if (data.success) {
-        alert("✅ Bridge batch approved! Temp faculty can now start sessions.");
+        alert("✅ Bridge batch approved! Bridge faculty can now start sessions.");
         fetchBridgeBatches();
       } else {
         alert(data.message || "Failed to approve");
@@ -503,7 +503,7 @@ const BridgeBatchList = () => {
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Requested</th>
                 <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Student</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Course</th>
-                <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Temp Faculty</th>
+                <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Bridge Faculty</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Time Slot</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Topics</th>
                 <th className="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
@@ -746,7 +746,7 @@ const BridgeBatchList = () => {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Temp Faculty</span>
+                <span className="text-gray-500">Bridge Faculty</span>
                 <span className="font-medium text-gray-800">{viewBatch.tempFacultyName || "N/A"}</span>
               </div>
               <div className="flex justify-between">
