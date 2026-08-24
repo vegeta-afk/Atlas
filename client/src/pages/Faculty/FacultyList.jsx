@@ -964,15 +964,15 @@ const handleBulkTransferSubmit = async () => {
                         <button className="action-btn edit" onClick={() => handleEditFaculty(facultyMember._id)} title="Edit Faculty">
                           <Edit size={16} />
                         </button>
-                        {facultyMember.status === "inactive" ? (
-                          <button className="action-btn view" onClick={() => handleActivateFaculty(facultyMember)} title="Activate Faculty">
-                            <UserCheck size={16} />
-                          </button>
-                        ) : facultyMember.status === "active" ? (
+                        {facultyMember.status === "active" ? (
                           <button className="action-btn delete" onClick={() => handleDeactivateFaculty(facultyMember)} title="Deactivate Faculty">
                             <UserX size={16} />
                           </button>
-                        ) : null}
+                        ) : (
+                          <button className="action-btn view" onClick={() => handleActivateFaculty(facultyMember)} title="Activate Faculty">
+                            <UserCheck size={16} />
+                          </button>
+                        )}
                         <div className="dropdown-container">
                           <button className="action-btn more" onClick={(e) => toggleDropdown(facultyMember._id, e)} title="More options">
                             <MoreVertical size={16} />
@@ -982,6 +982,11 @@ const handleBulkTransferSubmit = async () => {
                               {facultyMember.status === "active" && (
                                 <button className="dropdown-item" onClick={() => { handleMarkOnLeave(facultyMember); setOpenDropdown(null); }}>
                                   <Clock size={14} /><span>Mark as On Leave</span>
+                                </button>
+                              )}
+                              {facultyMember.status === "on-leave" && (
+                                <button className="dropdown-item" onClick={() => { handleActivateFaculty(facultyMember); setOpenDropdown(null); }}>
+                                  <UserCheck size={14} /><span>Mark as Active</span>
                                 </button>
                               )}
                               {facultyMember.email && (
