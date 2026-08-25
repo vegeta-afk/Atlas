@@ -44,6 +44,8 @@ const [newToDate, setNewToDate] = useState("");
   }, [statusFilter]);
 
   const [approveTarget, setApproveTarget] = useState(null);
+const [approvedFrom, setApprovedFrom] = useState("");
+const [approvedTo, setApprovedTo] = useState("");
   const [approveBatches, setApproveBatches] = useState([]);
   const [facultyOptions, setFacultyOptions] = useState([]);
   const [assignments, setAssignments] = useState({}); // { batchId: substituteFacultyUserId }
@@ -202,14 +204,27 @@ const handleExtend = async () => {
     );
   };
 
-  const filters = ["pending", "approved", "rejected", "all"];
+  const formatDate = (d) =>
+  d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+const displayedLeaves = React.useMemo(() => {
+  let list = [...leaves];
+  if (statusFilter === "approved") {
+    list.sort((a, b) => new Date(b.approvedDate || 0) - new Date(a.approvedDate || 0));
+if (approvedFrom) list = list.filter((l) => l.approvedDate && new Date(l.approvedDate) >= new Date(approvedFrom));
+if (approvedTo) list = list.filter((l) => l.approvedDate && new Date(l.approvedDate) <= new Date(approvedTo + "T23:59:59"));
+  }
+  return list;
+}, [leaves, statusFilter, approvedFrom, approvedTo]);
+
+const filters = ["pending", "approved", "rejected", "all"];
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-2xl font-bold text-gray-800 mb-1">Leave Management</h1>
       <p className="text-sm text-gray-500 mb-6">Review and approve faculty leave requests</p>
 
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 flex-wrap items-center">
         {filters.map((f) => (
           <button
             key={f}
@@ -221,6 +236,32 @@ const handleExtend = async () => {
             {f}
           </button>
         ))}
+        {statusFilter === "approved" && (
+          <div className="flex items-center gap-2 ml-4">
+            <label className="text-xs text-gray-500">Approved From</label>
+            <input
+              type="date"
+              value={approvedFrom}
+              onChange={(e) => setApprovedFrom(e.target.value)}
+              className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
+            />
+            <label className="text-xs text-gray-500">To</label>
+            <input
+              type="date"
+              value={approvedTo}
+              onChange={(e) => setApprovedTo(e.target.value)}
+              className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
+            />
+            {(approvedFrom || approvedTo) && (
+              <button
+                onClick={() => { setApprovedFrom(""); setApprovedTo(""); }}
+                className="text-xs text-gray-500 underline"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -236,16 +277,17 @@ const handleExtend = async () => {
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">To</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Reason</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Approved On</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
-            ) : leaves.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">No {statusFilter !== "all" ? statusFilter : ""} requests</td></tr>
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
+            ) : displayedLeaves.length === 0 ? (
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">No {statusFilter !== "all" ? statusFilter : ""} requests</td></tr>
             ) : (
-              leaves.map((l) => (
+              displayedLeaves.map((l) => (
                 <tr key={l._id}>
                   <td className="px-4 py-3 text-gray-800 font-medium">{l.faculty?.facultyName || l.facultyName}</td>
                   <td className="px-4 py-3 capitalize text-gray-700">{l.leaveType}</td>
@@ -257,6 +299,9 @@ const handleExtend = async () => {
   {l.status === "approved" && !isLeaveActive(l) && (
     <span className="ml-2 text-xs text-gray-400">(Ended)</span>
   )}
+</td>
+<td className="px-4 py-3 text-gray-700">
+  {l.status === "approved" ? formatDate(l.approvedDate) : "—"}
 </td>
 
                   <td className="px-4 py-3">
