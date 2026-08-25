@@ -179,8 +179,9 @@ const BatchCourseProgressDetail = () => {
                         <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs">Subtopic</th>
                         <th className="text-center px-4 py-3 font-semibold text-gray-600 text-xs">Status</th>
                         <th className="text-center px-4 py-3 font-semibold text-gray-600 text-xs">Started</th>
-                        <th className="text-center px-4 py-3 font-semibold text-gray-600 text-xs">Days Taught</th>
                         <th className="text-center px-4 py-3 font-semibold text-gray-600 text-xs">Ended / Last Taught</th>
+                        <th className="text-center px-4 py-3 font-semibold text-gray-600 text-xs">Days Taught</th>
+<th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs">Faculty</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -200,11 +201,12 @@ const BatchCourseProgressDetail = () => {
                             )}
                           </td>
                           <td className="px-4 py-3 text-center text-gray-600">{formatDate(sub.startedDate)}</td>
-                          <td className="px-4 py-3 text-center text-gray-600">{sub.taughtDaysCount} day{sub.taughtDaysCount !== 1 ? "s" : ""}</td>
                           <td className="px-4 py-3 text-center text-gray-600">
-                            {sub.status === "completed" ? formatDate(sub.completedDate) : formatDate(sub.lastTaughtDate)}
-                          </td>
-                        </tr>
+  {sub.status === "completed" ? formatDate(sub.completedDate) : formatDate(sub.lastTaughtDate)}
+</td>
+<td className="px-4 py-3 text-center text-gray-600">{sub.taughtDaysCount} day{sub.taughtDaysCount !== 1 ? "s" : ""}</td>
+<td className="px-4 py-3 text-gray-600">{sub.facultyName || selectedTeacher}</td>
+</tr>
                       ))}
                     </tbody>
                   </table>
