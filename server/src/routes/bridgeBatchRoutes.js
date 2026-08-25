@@ -12,6 +12,7 @@ router.get('/student-batch-info', protect, bridgeBatchController.getStudentBatch
 router.get('/:id/students', protect, bridgeBatchController.getBridgeBatchStudents);
 router.get('/student/:studentId', protect, bridgeBatchController.getBridgeBatchesForStudent);
 router.put('/:id/approve', protect, authorize('admin'), bridgeBatchController.approveBridgeBatch);
+router.put('/:id/transfer', protect, authorize('admin'), bridgeBatchController.transferBridgeBatch);
 router.put('/:id/reject', protect, authorize('admin'), bridgeBatchController.rejectBridgeBatch);
 router.put('/:id/merge', protect, authorize('admin'), bridgeBatchController.mergeBridgeBatch);
 router.delete('/:id', protect, authorize('admin'), bridgeBatchController.deleteBridgeBatch);

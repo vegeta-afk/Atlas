@@ -329,6 +329,9 @@ getTransfers: (params) => {
   // Get single transfer
   getTransfer: (id) => api.get(`/batch-transfers/${id}`),
 
+   transferBridgeBatch: (bridgeBatchId, payload) =>
+    api.put(`/bridge-batch/${bridgeBatchId}/transfer`, payload),
+
   // Create new transfer request
   createTransfer: (data) => {
     console.log("API call - createTransfer with data:", data);

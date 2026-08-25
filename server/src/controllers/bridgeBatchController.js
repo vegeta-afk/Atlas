@@ -7,6 +7,7 @@ const Student = require('../models/Student');
 const Course = require('../models/Course');
 const User = require('../models/user');
 const TeacherBatch = require('../models/TeacherBatch');
+const Faculty = require('../models/Faculty');
 
 // 1. Faculty requests a bridge batch for their student
 // body: { parentBatchId, courseId, studentIds: [], tempFacultyId, selectedTopics: [{topicKey, topicName}], timeSlot }
@@ -706,5 +707,76 @@ exports.getBridgeBatchesForStudent = async (req, res) => {
   } catch (error) {
     console.error('Error in getBridgeBatchesForStudent:', error);
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Transfer an entire bridge batch (with its students) to a new faculty
+// @route   PUT /api/bridge-batch/:id/transfer
+// @access  Private (Admin only)
+exports.transferBridgeBatch = async (req, res) => {
+  try {
+    const { newTeacherId, transferReason, newStartTime, newEndTime } = req.body;
+
+    if (!newTeacherId) {
+      return res.status(400).json({ success: false, message: 'New teacher is required' });
+    }
+
+    // If either time field is given, both must be given — a half-set slot is ambiguous
+    if ((newStartTime && !newEndTime) || (!newStartTime && newEndTime)) {
+      return res.status(400).json({ success: false, message: 'Please provide both start and end time, or leave both blank to keep the existing timing' });
+    }
+
+    const bridgeBatch = await BridgeBatch.findById(req.params.id);
+    if (!bridgeBatch) {
+      return res.status(404).json({ success: false, message: 'Bridge batch not found' });
+    }
+
+    // newTeacherId is a Faculty._id (same shape FacultyList sends for regular transfers).
+    // BridgeBatch stores the linked User._id in tempFacultyId, so resolve that first —
+    // same lookup pattern requestBridgeBatch already uses.
+    const newFaculty = await Faculty.findById(newTeacherId);
+    if (!newFaculty) {
+      return res.status(404).json({ success: false, message: 'New faculty not found' });
+    }
+
+    const newFacultyUser = await User.findOne({ facultyId: newFaculty._id });
+    if (!newFacultyUser) {
+      return res.status(404).json({ success: false, message: 'New faculty (linked user account) not found' });
+    }
+
+    const previousTempFacultyId = bridgeBatch.tempFacultyId;
+    const previousTempFacultyName = bridgeBatch.tempFacultyName;
+    const previousTimeSlot = bridgeBatch.timeSlot;
+
+    // Repoint the batch to the new teacher's linked User account — studentIds stay
+    // untouched, so attendance/topic-marking for this bridge batch now checks against
+    // the new teacher's req.user.id, same as markBridgeAttendance/getBridgeBatchStudents expect.
+    bridgeBatch.tempFacultyId = newFacultyUser._id;
+    bridgeBatch.tempFacultyName = newFacultyUser.name || newFaculty.facultyName;
+
+    // Timing is optional — only overwrite if a new slot was actually provided.
+    if (newStartTime && newEndTime) {
+      bridgeBatch.timeSlot = { startTime: newStartTime, endTime: newEndTime };
+    }
+
+    await bridgeBatch.save();
+
+    res.json({
+      success: true,
+      message: `Bridge batch transferred to ${bridgeBatch.tempFacultyName} successfully.`,
+      data: {
+        bridgeBatchId: bridgeBatch._id,
+        previousTempFacultyId,
+        previousTempFacultyName,
+        newTempFacultyId: newFacultyUser._id,
+        newTempFacultyName: bridgeBatch.tempFacultyName,
+        previousTimeSlot,
+        newTimeSlot: bridgeBatch.timeSlot,
+        studentCount: (bridgeBatch.studentIds || []).length,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Transfer bridge batch error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };

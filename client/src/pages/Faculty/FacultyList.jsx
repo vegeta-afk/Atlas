@@ -96,6 +96,8 @@ const FacultyList = () => {
   const [bulkTargetBatch, setBulkTargetBatch] = useState("");
   const [bulkReason, setBulkReason] = useState("");
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [bulkNewStartTime, setBulkNewStartTime] = useState("");
+  const [bulkNewEndTime, setBulkNewEndTime] = useState("");
 
   const getCourseShortName = (courseName) => {
   if (!courseName) return "";
@@ -187,8 +189,29 @@ const FacultyList = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
+
       if (data.success) {
-        setBridgeBatchesData(data.data || []);
+        const bridgeBatches = data.data || [];
+
+        // by-faculty only returns raw studentIds — fetch the populated
+        // student objects per bridge batch, same endpoint the attendance
+        // page uses, so names/studentId/courses exist for selection & transfer.
+        const enrichedBridgeBatches = await Promise.all(
+          bridgeBatches.map(async (b) => {
+            try {
+              const studentsRes = await fetch(`${API_BASE}/api/bridge-batch/${b._id}/students`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const studentsData = await studentsRes.json();
+              const fullStudents = studentsData.success ? (studentsData.data?.students || []) : [];
+              return { ...b, studentIds: fullStudents };
+            } catch {
+              return b; // keep raw batch if the per-batch fetch fails
+            }
+          })
+        );
+
+        setBridgeBatchesData(enrichedBridgeBatches);
       }
       setBridgeFetched(true);
     } catch (err) {
@@ -619,6 +642,7 @@ const toggleStudentSelection = (student, batch, fac) => {
         student,
         batchId: batch._id,
         batchName: batch.batchName || batch.name,
+        batchType: batch.batchType || "regular",
         facultyId: fac.facultyId,
         facultyName: fac.facultyName,
       };
@@ -640,6 +664,7 @@ const toggleSelectAllInBatch = (batch, fac) => {
           student: s,
           batchId: batch._id,
           batchName: batch.batchName || batch.name,
+          batchType: batch.batchType || "regular",
           facultyId: fac.facultyId,
           facultyName: fac.facultyName,
         };
@@ -652,33 +677,73 @@ const toggleSelectAllInBatch = (batch, fac) => {
 const clearSelection = () => setSelectedStudents({});
 
 const handleBulkTransferSubmit = async () => {
-  const studentIds = Object.keys(selectedStudents);
-  if (studentIds.length === 0) return;
-  if (!bulkTargetFaculty || !bulkTargetBatch) {
-    alert("Please select target teacher and batch");
+  const selections = Object.values(selectedStudents);
+  if (selections.length === 0) return;
+  if (!bulkTargetFaculty) {
+    alert("Please select target teacher");
     return;
   }
+
+  const bridgeSelections = selections.filter((s) => s.batchType === "bridge");
+  const regularSelections = selections.filter((s) => s.batchType !== "bridge");
+
+  if (bridgeSelections.length > 0 && regularSelections.length > 0) {
+    alert("Please transfer bridge batch students and regular batch students separately — they use different transfer flows.");
+    return;
+  }
+
   setBulkSubmitting(true);
   try {
-    const response = await batchTransferAPI.bulkTransfer({
-      studentIds,
-      newTeacherId: bulkTargetFaculty,
-      newBatch: bulkTargetBatch,
-      transferReason: bulkReason || "Bulk faculty/batch reassignment",
-    });
-    if (response.data.success) {
+    if (bridgeSelections.length > 0) {
+      // Bridge batch transfer: whole batch moves to the new teacher, roster untouched.
+      // Timing only changes if the admin filled both new time fields.
+      const bridgeBatchIds = [...new Set(bridgeSelections.map((s) => s.batchId))];
+
+      const results = await Promise.all(
+        bridgeBatchIds.map((bridgeBatchId) =>
+          batchTransferAPI.transferBridgeBatch(bridgeBatchId, {
+            newTeacherId: bulkTargetFaculty,
+            transferReason: bulkReason || "Bridge batch reassignment",
+            ...(bulkNewStartTime && bulkNewEndTime
+              ? { newStartTime: bulkNewStartTime, newEndTime: bulkNewEndTime }
+              : {}),
+          })
+        )
+      );
+
+      const failed = results.filter((r) => !r.data.success);
+      alert(`✅ ${results.length - failed.length} bridge batch(es) transferred successfully.${failed.length ? ` ${failed.length} failed.` : ""}`);
+    } else {
+      if (!bulkTargetBatch) {
+        alert("Please select target batch");
+        setBulkSubmitting(false);
+        return;
+      }
+      const studentIds = regularSelections.map((s) => s.student._id);
+      const response = await batchTransferAPI.bulkTransfer({
+        studentIds,
+        newTeacherId: bulkTargetFaculty,
+        newBatch: bulkTargetBatch,
+        transferReason: bulkReason || "Bulk faculty/batch reassignment",
+      });
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Bulk transfer failed");
+      }
       const { success = [], failed = [] } = response.data.data || {};
       alert(`✅ ${success.length} student(s) transferred successfully.${failed.length ? ` ${failed.length} failed.` : ""}`);
-      setShowBulkModal(false);
-      setBulkTargetFaculty("");
-      setBulkTargetBatch("");
-      setBulkReason("");
-      clearSelection();
-      setBatchesFetched(false);
-      await fetchAllBatches(faculty);
-    } else {
-      throw new Error(response.data.message || "Bulk transfer failed");
     }
+
+    setShowBulkModal(false);
+    setBulkTargetFaculty("");
+    setBulkTargetBatch("");
+    setBulkReason("");
+    setBulkNewStartTime("");
+    setBulkNewEndTime("");
+    clearSelection();
+    setBatchesFetched(false);
+    setBridgeFetched(false);
+    await fetchAllBatches(faculty);
+    await fetchBridgeBatches();
   } catch (err) {
     alert(err.response?.data?.message || err.message || "Bulk transfer failed");
   } finally {
@@ -984,11 +1049,11 @@ const handleBulkTransferSubmit = async () => {
                                   <Clock size={14} /><span>Mark as On Leave</span>
                                 </button>
                               )} */}
-                              {facultyMember.status === "on-leave" && (
+                              {/* {facultyMember.status === "on-leave" && (
                                 <button className="dropdown-item" onClick={() => { handleActivateFaculty(facultyMember); setOpenDropdown(null); }}>
                                   <UserCheck size={14} /><span>Mark as Active</span>
                                 </button>
-                              )}
+                              )} */}
                               {facultyMember.email && (
                                 <button className="dropdown-item" onClick={() => { window.location.href = `mailto:${facultyMember.email}`; setOpenDropdown(null); }}>
                                   <Mail size={14} /><span>Send Email</span>
@@ -1285,20 +1350,40 @@ const handleBulkTransferSubmit = async () => {
           </select>
         </div>
 
-        <div className="fba-modal-field">
-          <label>New Batch *</label>
-          <select value={bulkTargetBatch} onChange={(e) => setBulkTargetBatch(e.target.value)}>
-            <option value="">Select Batch</option>
-            {setupBatches.map((b) => {
-              const displayName = b.displayName || `${b.startTime || ""} to ${b.endTime || ""}`.trim();
-              return (
-                <option key={b._id} value={b._id}>
-                  {b.batchName} {displayName ? `(${displayName})` : ""}
-                </option>
-              );
-            })}
-          </select>
-        </div>
+        {Object.values(selectedStudents).some((s) => s.batchType === "bridge") ? (
+          <div className="fba-modal-field">
+            <label>New Batch Timing (optional — leave blank to keep current time)</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                type="time"
+                value={bulkNewStartTime}
+                onChange={(e) => setBulkNewStartTime(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <input
+                type="time"
+                value={bulkNewEndTime}
+                onChange={(e) => setBulkNewEndTime(e.target.value)}
+                style={{ flex: 1 }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="fba-modal-field">
+            <label>New Batch *</label>
+            <select value={bulkTargetBatch} onChange={(e) => setBulkTargetBatch(e.target.value)}>
+              <option value="">Select Batch</option>
+              {setupBatches.map((b) => {
+                const displayName = b.displayName || `${b.startTime || ""} to ${b.endTime || ""}`.trim();
+                return (
+                  <option key={b._id} value={b._id}>
+                    {b.batchName} {displayName ? `(${displayName})` : ""}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        )}
 
         <div className="fba-modal-field">
           <label>Reason (optional)</label>
