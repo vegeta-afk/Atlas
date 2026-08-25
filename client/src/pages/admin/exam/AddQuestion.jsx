@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import {
   ArrowLeft, Save, Plus, X, BookOpen, FileText,
-  CheckCircle, AlertCircle, Trash2, Copy, List, Eye
+  CheckCircle, AlertCircle, Trash2, Copy, List, Eye,
+  Upload, Download, FileSpreadsheet
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { questionAPI, examCourseAPI } from '../../../services/examAPI';
@@ -15,7 +17,7 @@ const AddQuestion = () => {
   const [topicsBySemester, setTopicsBySemester] = useState({});
   const [availableTopics, setAvailableTopics] = useState([]);
   const basePath = useBasePath();
-  
+
   // Course selection (shared for all questions)
   const [courseSelection, setCourseSelection] = useState({
     courseId: '',
@@ -38,6 +40,11 @@ const AddQuestion = () => {
 
   // List of all questions to be submitted
   const [questionList, setQuestionList] = useState([]);
+
+  // Excel bulk upload state
+  const [uploadingExcel, setUploadingExcel] = useState(false);
+  const [uploadErrors, setUploadErrors] = useState([]);
+  const [uploadSummary, setUploadSummary] = useState(null);
 
   // Load courses on mount
   useEffect(() => {
@@ -65,67 +72,67 @@ const AddQuestion = () => {
   };
 
   const loadCourseTopics = async (courseId) => {
-  try {
-    console.log(`🔍 AddQuestion - Loading topics for course: ${courseId}`);
-    
-    const response = await questionAPI.getCourseTopics(courseId);
-    
-    console.log('📦 Course API response:', response);
-    
-    if (response.success) {
-      const course = response.data;
-      console.log('📚 Full course data:', course);
-      
-      // Extract syllabus from course - check different possible structures
-      const syllabus = course.syllabus || course.syllabusData || course.data?.syllabus || [];
-      console.log('📖 Extracted syllabus:', syllabus);
-      
-      // Extract topics from syllabus
-      const topics = [];
-      const topicsBySemester = {};
-      
-      if (Array.isArray(syllabus)) {
-        syllabus.forEach((semester, index) => {
-          if (semester && semester.topics && Array.isArray(semester.topics)) {
-            const semesterName = semester.name || `Semester ${index + 1}`;
-            topicsBySemester[semesterName] = [];
-            
-            semester.topics.forEach(topic => {
-              if (topic && topic.name) {
-                topics.push({
-                  semester: semesterName,
-                  topic: topic.name,
-                  subtopics: topic.subtopics ? topic.subtopics.map(st => st.name) : []
-                });
-                topicsBySemester[semesterName].push(topic.name);
-              }
-            });
-          }
-        });
+    try {
+      console.log(`🔍 AddQuestion - Loading topics for course: ${courseId}`);
+
+      const response = await questionAPI.getCourseTopics(courseId);
+
+      console.log('📦 Course API response:', response);
+
+      if (response.success) {
+        const course = response.data;
+        console.log('📚 Full course data:', course);
+
+        // Extract syllabus from course - check different possible structures
+        const syllabus = course.syllabus || course.syllabusData || course.data?.syllabus || [];
+        console.log('📖 Extracted syllabus:', syllabus);
+
+        // Extract topics from syllabus
+        const topics = [];
+        const topicsBySemester = {};
+
+        if (Array.isArray(syllabus)) {
+          syllabus.forEach((semester, index) => {
+            if (semester && semester.topics && Array.isArray(semester.topics)) {
+              const semesterName = semester.name || `Semester ${index + 1}`;
+              topicsBySemester[semesterName] = [];
+
+              semester.topics.forEach(topic => {
+                if (topic && topic.name) {
+                  topics.push({
+                    semester: semesterName,
+                    topic: topic.name,
+                    subtopics: topic.subtopics ? topic.subtopics.map(st => st.name) : []
+                  });
+                  topicsBySemester[semesterName].push(topic.name);
+                }
+              });
+            }
+          });
+        }
+
+        console.log('✅ Processed topics:', topics);
+        console.log('✅ Topics by semester:', topicsBySemester);
+
+        setTopicsBySemester(topicsBySemester);
+        setAvailableTopics(topics);
+      } else {
+        console.error('❌ API response not successful:', response);
+        toast.error('Failed to load course structure');
       }
-      
-      console.log('✅ Processed topics:', topics);
-      console.log('✅ Topics by semester:', topicsBySemester);
-      
-      setTopicsBySemester(topicsBySemester);
-      setAvailableTopics(topics);
-    } else {
-      console.error('❌ API response not successful:', response);
-      toast.error('Failed to load course structure');
+    } catch (error) {
+      console.error('❌ Load course topics error:', error);
+      console.error('❌ Error details:', error.response?.data);
+      toast.error('Failed to load course topics: ' + (error.response?.data?.message || error.message));
     }
-  } catch (error) {
-    console.error('❌ Load course topics error:', error);
-    console.error('❌ Error details:', error.response?.data);
-    toast.error('Failed to load course topics: ' + (error.response?.data?.message || error.message));
-  }
-};
+  };
 
   // Handle course selection changes
   const handleCourseSelectionChange = (e) => {
     const { name, value } = e.target;
     setCourseSelection(prev => {
       const newSelection = { ...prev, [name]: value };
-      
+
       // Clear dependent fields
       if (name === 'courseId') {
         newSelection.semester = '';
@@ -134,7 +141,7 @@ const AddQuestion = () => {
       if (name === 'semester') {
         newSelection.topic = '';
       }
-      
+
       return newSelection;
     });
   };
@@ -147,7 +154,7 @@ const AddQuestion = () => {
 
   const handleOptionChange = (index, field, value) => {
     const newOptions = [...currentQuestion.options];
-    
+
     if (field === 'isCorrect') {
       // If marking correct, unmark others
       if (currentQuestion.questionType === 'mcq' && value === true) {
@@ -159,7 +166,7 @@ const AddQuestion = () => {
     } else {
       newOptions[index][field] = value;
     }
-    
+
     setCurrentQuestion(prev => ({ ...prev, options: newOptions }));
   };
 
@@ -222,7 +229,7 @@ const AddQuestion = () => {
 
     // Add to list
     setQuestionList(prev => [...prev, questionToAdd]);
-    
+
     // Reset current question (keep course selection)
     setCurrentQuestion({
       questionText: '',
@@ -265,59 +272,195 @@ const AddQuestion = () => {
     return true;
   };
 
-  // Submit all questions in bulk
- const submitBulkQuestions = async () => {
-  if (!validateAllQuestions()) return;
-  
-  setLoading(true);
+  // ---------------------------------------------------------------------
+  // Excel bulk upload
+  // ---------------------------------------------------------------------
 
-  try {
-    // Prepare questions array
-    const questionsToSubmit = questionList.map(q => ({
-      questionText: q.questionText,
-      questionType: q.questionType,
-      options: q.options,
-      correctAnswer: q.correctAnswer,
-      marks: q.marks,
-      courseId: q.courseId,
-      semester: q.semester,
-      topic: q.topic,
-      subtopic: q.subtopic || ''
-    }));
+  // Accepts variations like "MCQ", "Multiple Choice", "True/False", "Short Answer"
+  const normalizeQuestionType = (raw) => {
+    const t = (raw || '').toString().trim().toLowerCase().replace(/[\s/_-]/g, '');
+    if (t === 'mcq' || t === 'multiplechoice') return 'mcq';
+    if (t === 'truefalse' || t === 'tf') return 'truefalse';
+    if (t === 'shortanswer' || t === 'short' || t === 'shortansewr') return 'shortanswer';
+    return null;
+  };
 
-    console.log('📤 Submitting bulk questions:', questionsToSubmit);
+  const parseExcelRows = (rows) => {
+    const parsed = [];
+    const errors = [];
 
-    // Send just the array, not wrapped in another object
-    const response = await questionAPI.bulkAddQuestions(questionsToSubmit);
-    
-    if (response.success) {
-      toast.success(`Successfully added ${questionList.length} questions!`);
-      // Clear everything
-      setQuestionList([]);
-      setCourseSelection({
-        courseId: '',
-        semester: '',
-        topic: '',
-        subtopic: ''
-      });
-      navigate(`${basePath}/exam/question-bank`);
-    } else {
-      toast.error(response.message || 'Failed to add questions');
+    rows.forEach((row, i) => {
+      const rowNum = i + 2; // header is row 1 in the sheet
+      const questionText = (row['Question Text'] || '').toString().trim();
+      const type = normalizeQuestionType(row['Question Type']);
+      const marks = parseInt(row['Marks']) || 1;
+      const subtopicCell = (row['Subtopic'] || '').toString().trim();
+
+      if (!questionText) {
+        errors.push(`Row ${rowNum}: missing Question Text — skipped`);
+        return;
+      }
+      if (!type) {
+        errors.push(`Row ${rowNum}: unrecognized Question Type "${row['Question Type'] || ''}" — skipped`);
+        return;
+      }
+
+      const base = {
+        questionText,
+        questionType: type,
+        marks,
+        courseId: courseSelection.courseId,
+        semester: courseSelection.semester,
+        topic: courseSelection.topic,
+        subtopic: subtopicCell || courseSelection.subtopic || ''
+      };
+
+      if (type === 'mcq') {
+        const optionCols = ['Option A', 'Option B', 'Option C', 'Option D'];
+        const options = optionCols
+          .map(col => (row[col] || '').toString().trim())
+          .filter(text => text !== '')
+          .map(text => ({ text, isCorrect: false }));
+
+        if (options.length < 2) {
+          errors.push(`Row ${rowNum}: MCQ needs at least 2 filled options — skipped`);
+          return;
+        }
+
+        const letter = (row['Correct Answer'] || '').toString().trim().toUpperCase();
+        const idx = letter.charCodeAt(0) - 65; // A -> 0, B -> 1 ...
+
+        if (letter.length !== 1 || idx < 0 || idx >= options.length) {
+          errors.push(`Row ${rowNum}: Correct Answer "${row['Correct Answer'] || ''}" doesn't match a filled option — skipped`);
+          return;
+        }
+
+        options[idx].isCorrect = true;
+        parsed.push({ ...base, options });
+      } else if (type === 'truefalse') {
+        const val = (row['Correct Answer'] || '').toString().trim().toLowerCase();
+        if (val !== 'true' && val !== 'false') {
+          errors.push(`Row ${rowNum}: Correct Answer must be "True" or "False" — skipped`);
+          return;
+        }
+        parsed.push({ ...base, correctAnswer: val === 'true' ? 'True' : 'False' });
+      } else {
+        const val = (row['Correct Answer'] || '').toString().trim();
+        if (!val) {
+          errors.push(`Row ${rowNum}: missing Correct Answer — skipped`);
+          return;
+        }
+        parsed.push({ ...base, correctAnswer: val });
+      }
+    });
+
+    return { parsed, errors };
+  };
+
+  const handleExcelUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!courseSelection.courseId || !courseSelection.semester || !courseSelection.topic) {
+      toast.error('Please select course, semester and topic before uploading');
+      e.target.value = '';
+      return;
     }
-  } catch (error) {
-    console.error('Bulk add questions error:', error);
-    console.error('Error response:', error.response?.data);
-    toast.error(error.response?.data?.message || 'Failed to add questions');
-  } finally {
-    setLoading(false);
-  }
-};
+
+    setUploadingExcel(true);
+    setUploadErrors([]);
+    setUploadSummary(null);
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+      if (rows.length === 0) {
+        toast.error('The sheet appears to be empty');
+        return;
+      }
+
+      const { parsed, errors } = parseExcelRows(rows);
+
+      if (parsed.length > 0) {
+        setQuestionList(prev => [...prev, ...parsed]);
+      }
+
+      setUploadSummary({ total: rows.length, added: parsed.length, failed: errors.length });
+      setUploadErrors(errors);
+
+      if (parsed.length > 0) {
+        toast.success(`Added ${parsed.length} question(s) from Excel`);
+      }
+      if (errors.length > 0) {
+        toast.error(`${errors.length} row(s) skipped — see details below`);
+      }
+    } catch (error) {
+      console.error('Excel parse error:', error);
+      toast.error('Could not read that file. Make sure it is a valid .xlsx file.');
+    } finally {
+      setUploadingExcel(false);
+      e.target.value = '';
+    }
+  };
+
+  // Submit all questions in bulk
+  const submitBulkQuestions = async () => {
+    if (!validateAllQuestions()) return;
+
+    setLoading(true);
+
+    try {
+      // Prepare questions array
+      const questionsToSubmit = questionList.map(q => ({
+        questionText: q.questionText,
+        questionType: q.questionType,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        marks: q.marks,
+        courseId: q.courseId,
+        semester: q.semester,
+        topic: q.topic,
+        subtopic: q.subtopic || ''
+      }));
+
+      console.log('📤 Submitting bulk questions:', questionsToSubmit);
+
+      // Send just the array, not wrapped in another object
+      const response = await questionAPI.bulkAddQuestions(questionsToSubmit);
+
+      if (response.success) {
+        toast.success(`Successfully added ${questionList.length} questions!`);
+        // Clear everything
+        setQuestionList([]);
+        setUploadErrors([]);
+        setUploadSummary(null);
+        setCourseSelection({
+          courseId: '',
+          semester: '',
+          topic: '',
+          subtopic: ''
+        });
+        navigate(`${basePath}/exam/question-bank`);
+      } else {
+        toast.error(response.message || 'Failed to add questions');
+      }
+    } catch (error) {
+      console.error('Bulk add questions error:', error);
+      console.error('Error response:', error.response?.data);
+      toast.error(error.response?.data?.message || 'Failed to add questions');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Submit single question
   const submitSingleQuestion = async () => {
     // Add current question to list first
     addToQuestionList();
-    
+
     // Then submit immediately if only one question
     if (questionList.length === 1) {
       setLoading(true);
@@ -469,12 +612,82 @@ const AddQuestion = () => {
                 <div className="flex items-center gap-2 text-blue-800">
                   <AlertCircle size={16} />
                   <span className="text-sm">
-                    <span className="font-medium">Selected:</span> {courseSelection.courseId ? courses.find(c => c._id === courseSelection.courseId)?.courseShortName : 'None'} 
+                    <span className="font-medium">Selected:</span> {courseSelection.courseId ? courses.find(c => c._id === courseSelection.courseId)?.courseShortName : 'None'}
                     {courseSelection.semester && ` • ${courseSelection.semester}`}
                     {courseSelection.topic && ` • ${courseSelection.topic}`}
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Card 1.5: Bulk Upload via Excel */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-orange-50 rounded-lg">
+                <FileSpreadsheet className="text-orange-600" size={20} />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-800">
+                Bulk Upload via Excel
+              </h2>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">
+                Fill the template with your questions, then upload it here. Rows are added to
+                the list on the right under the Course/Semester/Topic selected above — nothing
+                is saved until you press Submit.
+              </p>
+
+              <a
+                href="/templates/question_upload_template.xlsx"
+                download
+                className="flex items-center justify-center gap-2 w-full py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
+              >
+                <Download size={16} />
+                Download Template
+              </a>
+
+              <label
+                className={`flex items-center justify-center gap-2 w-full py-2 rounded-lg text-sm cursor-pointer ${
+                  !courseSelection.topic
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-orange-600 text-white hover:bg-orange-700'
+                }`}
+              >
+                <Upload size={16} />
+                {uploadingExcel ? 'Parsing...' : 'Upload Excel File'}
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleExcelUpload}
+                  disabled={!courseSelection.topic || uploadingExcel}
+                  className="hidden"
+                />
+              </label>
+
+              {!courseSelection.topic && (
+                <p className="text-xs text-gray-400 text-center">
+                  Select Course, Semester and Topic above first
+                </p>
+              )}
+
+              {uploadSummary && (
+                <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700">
+                  Read {uploadSummary.total} row(s) — added {uploadSummary.added}, skipped {uploadSummary.failed}.
+                </div>
+              )}
+
+              {uploadErrors.length > 0 && (
+                <div className="p-3 bg-red-50 rounded-lg max-h-40 overflow-y-auto">
+                  <p className="text-xs font-medium text-red-800 mb-1">Skipped rows:</p>
+                  <ul className="text-xs text-red-700 space-y-0.5 list-disc list-inside">
+                    {uploadErrors.map((err, i) => (
+                      <li key={i}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 
@@ -504,7 +717,7 @@ const AddQuestion = () => {
                 <List className="mx-auto text-gray-400 mb-3" size={40} />
                 <p className="text-gray-500">No questions added yet</p>
                 <p className="text-sm text-gray-400 mt-1">
-                  Add questions using the form
+                  Add questions using the form or upload an Excel file
                 </p>
               </div>
             ) : (
@@ -574,7 +787,7 @@ const AddQuestion = () => {
                   Add New Question
                 </h2>
               </div>
-              
+
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -729,8 +942,8 @@ const AddQuestion = () => {
                       required
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder={
-                        currentQuestion.questionType === 'truefalse' 
-                          ? 'Enter "True" or "False"' 
+                        currentQuestion.questionType === 'truefalse'
+                          ? 'Enter "True" or "False"'
                           : 'Enter the correct answer'
                       }
                     />
