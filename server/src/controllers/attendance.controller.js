@@ -1855,13 +1855,16 @@ exports.getBatchCourseProgress = async (req, res) => {
       .populate('assignedStudents.student', 'studentId fullName courseCode course additionalCourses')
       .lean();
 
-    const batchCourseMap = {};
+    // batchMap[batchId] = { batchInfo, teacherMap: { teacherId: { teacherName, courses: { courseId: Set(studentIds) } } } }
+    const batchMap = {};
 
     teacherBatches.forEach((tb) => {
-      if (!tb.batch) return;
+      if (!tb.batch || !tb.teacher) return;
       const bId = tb.batch._id.toString();
-      if (!batchCourseMap[bId]) {
-        batchCourseMap[bId] = {
+      const tId = tb.teacher._id.toString();
+
+      if (!batchMap[bId]) {
+        batchMap[bId] = {
           batchInfo: {
             _id: tb.batch._id,
             batchName: tb.batch.batchName,
@@ -1869,11 +1872,12 @@ exports.getBatchCourseProgress = async (req, res) => {
             startTime: tb.batch.startTime,
             endTime: tb.batch.endTime,
           },
-          teachers: new Set(),
-          courses: {},
+          teacherMap: {},
         };
       }
-      if (tb.teacher?.name) batchCourseMap[bId].teachers.add(tb.teacher.name);
+      if (!batchMap[bId].teacherMap[tId]) {
+        batchMap[bId].teacherMap[tId] = { teacherName: tb.teacher.name || 'Unknown', courses: {} };
+      }
 
       const bIdStr = bId;
       const activeStudents = (tb.assignedStudents || []).filter((s) => s.isActive && s.student);
@@ -1891,134 +1895,154 @@ exports.getBatchCourseProgress = async (req, res) => {
         }
 
         if (applicableCourseId) {
-          if (!batchCourseMap[bId].courses[applicableCourseId]) {
-            batchCourseMap[bId].courses[applicableCourseId] = { studentIds: new Set() };
-          }
-          batchCourseMap[bId].courses[applicableCourseId].studentIds.add(student._id.toString());
+          const courses = batchMap[bId].teacherMap[tId].courses;
+          if (!courses[applicableCourseId]) courses[applicableCourseId] = new Set();
+          courses[applicableCourseId].add(student._id.toString());
         }
       });
     });
 
     const allCourseIds = new Set();
-    Object.values(batchCourseMap).forEach((b) => Object.keys(b.courses).forEach((cid) => allCourseIds.add(cid)));
+    Object.values(batchMap).forEach((b) =>
+      Object.values(b.teacherMap).forEach((t) => Object.keys(t.courses).forEach((cid) => allCourseIds.add(cid)))
+    );
     const courses = await Course.find({ _id: { $in: [...allCourseIds] } }).select('courseFullName syllabus').lean();
     const courseMap = {};
     courses.forEach((c) => { courseMap[c._id.toString()] = c; });
 
     const result = [];
 
-    for (const [bId, bData] of Object.entries(batchCourseMap)) {
-      const courseResults = [];
+    for (const [bId, bData] of Object.entries(batchMap)) {
+      const teacherGroups = [];
+      let batchStudentCount = 0;
+      const batchCourseIds = new Set();
 
-      for (const [cid, cData] of Object.entries(bData.courses)) {
-        const course = courseMap[cid];
-        if (!course) continue;
-        const studentIds = [...cData.studentIds];
+      for (const [tId, tData] of Object.entries(bData.teacherMap)) {
+        const courseResults = [];
 
-        const completions = await TopicCompletion.find({
-          batchId: bId, courseId: cid, studentIds: { $in: studentIds },
-        }).select('completedSubtopicKeys subtopicCompletions studentIds date teacherId').lean();
+        for (const [cid, studentIdSet] of Object.entries(tData.courses)) {
+          const course = courseMap[cid];
+          if (!course) continue;
+          // Only students CURRENTLY assigned to THIS teacher for THIS course — this is
+          // the key change. A transferred student's history still exists on their own
+          // TopicCompletion docs (keyed by studentId), so it follows them here to their
+          // new teacher's group; the old teacher's group simply no longer includes them.
+          const studentIds = [...studentIdSet];
+          batchStudentCount += studentIds.length;
+          batchCourseIds.add(cid);
 
-        // Collect every teacherId we'll need to resolve to a name
-        const teacherIdsNeeded = new Set();
+          const completions = await TopicCompletion.find({
+            batchId: bId, courseId: cid, studentIds: { $in: studentIds },
+          }).select('completedSubtopicKeys subtopicCompletions studentIds date teacherId').lean();
 
-        const subtopicTaught = {}, subtopicCompleted = {};
-        const subtopicDatesSet = {};
-        const subtopicLastTeacher = {}; // subKey -> teacherId (from most recent daily doc)
-        const subtopicCompletionInfo = {}; // subKey -> { completedDate, teacherId }
+          const teacherIdsNeeded = new Set();
+          const subtopicTaught = {}, subtopicCompleted = {};
+          const subtopicDatesSet = {};
+          const subtopicLastTeacher = {};
+          const subtopicCompletionInfo = {};
 
-        studentIds.forEach((sid) => { subtopicTaught[sid] = new Set(); subtopicCompleted[sid] = new Set(); });
+          studentIds.forEach((sid) => { subtopicTaught[sid] = new Set(); subtopicCompleted[sid] = new Set(); });
 
-        completions.forEach((c) => {
-          const isSentinel = new Date(c.date).getTime() === SENTINEL_COMPLETION_DATE.getTime();
-          (c.studentIds || []).forEach((sid) => {
-            const sidStr = sid.toString();
-            if (!subtopicTaught[sidStr]) return;
-            (c.completedSubtopicKeys || []).forEach((k) => {
-              if (isSentinel) {
-                subtopicCompleted[sidStr].add(k);
-              } else {
-                subtopicTaught[sidStr].add(k);
-                if (!subtopicDatesSet[k]) subtopicDatesSet[k] = new Set();
-                subtopicDatesSet[k].add(new Date(c.date).toISOString().split('T')[0]);
-                if (c.teacherId) {
-                  subtopicLastTeacher[k] = c.teacherId.toString();
-                  teacherIdsNeeded.add(c.teacherId.toString());
+          completions.forEach((c) => {
+            const isSentinel = new Date(c.date).getTime() === SENTINEL_COMPLETION_DATE.getTime();
+            (c.studentIds || []).forEach((sid) => {
+              const sidStr = sid.toString();
+              if (!subtopicTaught[sidStr]) return;
+              (c.completedSubtopicKeys || []).forEach((k) => {
+                if (isSentinel) {
+                  subtopicCompleted[sidStr].add(k);
+                } else {
+                  subtopicTaught[sidStr].add(k);
+                  if (!subtopicDatesSet[k]) subtopicDatesSet[k] = new Set();
+                  subtopicDatesSet[k].add(new Date(c.date).toISOString().split('T')[0]);
+                  if (c.teacherId) {
+                    subtopicLastTeacher[k] = c.teacherId.toString();
+                    teacherIdsNeeded.add(c.teacherId.toString());
+                  }
                 }
-              }
+              });
+            });
+            if (isSentinel) {
+              (c.subtopicCompletions || []).forEach((sc) => {
+                subtopicCompletionInfo[sc.subtopicKey] = {
+                  completedDate: sc.completedDate,
+                  teacherId: sc.teacherId ? sc.teacherId.toString() : null,
+                };
+                if (sc.teacherId) teacherIdsNeeded.add(sc.teacherId.toString());
+              });
+            }
+          });
+
+          const teacherDocs = teacherIdsNeeded.size > 0
+            ? await User.find({ _id: { $in: [...teacherIdsNeeded] } }).select('name').lean()
+            : [];
+          const teacherNameMap = {};
+          teacherDocs.forEach((t) => { teacherNameMap[t._id.toString()] = t.name; });
+
+          let totalSubtopics = 0, completedSubtopics = 0;
+          const subtopicDetails = [];
+
+          (course.syllabus || []).forEach((sem, sIdx) => {
+            (sem.topics || []).forEach((topic, tIdx) => {
+              (topic.subtopics || []).forEach((sub, subIdx) => {
+                totalSubtopics++;
+                const subKey = `${sIdx}_${tIdx}_${subIdx}`;
+                const sCompleted = studentIds.length > 0 && studentIds.every((sid) => subtopicCompleted[sid]?.has(subKey));
+                const sTaught = studentIds.some((sid) => subtopicTaught[sid]?.has(subKey));
+                if (sCompleted) completedSubtopics++;
+
+                if (sCompleted || sTaught) {
+                  const dates = subtopicDatesSet[subKey] ? [...subtopicDatesSet[subKey]].sort() : [];
+                  const completionInfo = subtopicCompletionInfo[subKey];
+                  subtopicDetails.push({
+                    subtopicKey: subKey,
+                    topicName: topic.name,
+                    subtopicName: sub.name,
+                    status: sCompleted ? 'completed' : 'in_progress',
+                    taughtDaysCount: dates.length,
+                    startedDate: dates[0] || null,
+                    lastTaughtDate: dates[dates.length - 1] || null,
+                    completedDate: sCompleted ? (completionInfo?.completedDate || null) : null,
+                    facultyName: sCompleted
+                      ? (completionInfo?.teacherId ? teacherNameMap[completionInfo.teacherId] || 'Unknown' : 'Unknown')
+                      : (subtopicLastTeacher[subKey] ? teacherNameMap[subtopicLastTeacher[subKey]] || 'Unknown' : 'Unknown'),
+                  });
+                }
+              });
             });
           });
-          if (isSentinel) {
-            (c.subtopicCompletions || []).forEach((sc) => {
-              subtopicCompletionInfo[sc.subtopicKey] = {
-                completedDate: sc.completedDate,
-                teacherId: sc.teacherId ? sc.teacherId.toString() : null,
-              };
-              if (sc.teacherId) teacherIdsNeeded.add(sc.teacherId.toString());
-            });
-          }
-        });
 
-        const teacherDocs = teacherIdsNeeded.size > 0
-          ? await User.find({ _id: { $in: [...teacherIdsNeeded] } }).select('name').lean()
-          : [];
-        const teacherNameMap = {};
-        teacherDocs.forEach((t) => { teacherNameMap[t._id.toString()] = t.name; });
-
-        let totalSubtopics = 0, completedSubtopics = 0;
-        const subtopicDetails = [];
-
-        (course.syllabus || []).forEach((sem, sIdx) => {
-          (sem.topics || []).forEach((topic, tIdx) => {
-            (topic.subtopics || []).forEach((sub, subIdx) => {
-              totalSubtopics++;
-              const subKey = `${sIdx}_${tIdx}_${subIdx}`;
-              const sCompleted = studentIds.length > 0 && studentIds.every((sid) => subtopicCompleted[sid]?.has(subKey));
-              const sTaught = studentIds.some((sid) => subtopicTaught[sid]?.has(subKey));
-              if (sCompleted) completedSubtopics++;
-
-              if (sCompleted || sTaught) {
-                const dates = subtopicDatesSet[subKey] ? [...subtopicDatesSet[subKey]].sort() : [];
-                const completionInfo = subtopicCompletionInfo[subKey];
-                subtopicDetails.push({
-                  subtopicKey: subKey,
-                  topicName: topic.name,
-                  subtopicName: sub.name,
-                  status: sCompleted ? 'completed' : 'in_progress',
-                  taughtDaysCount: dates.length,
-                  startedDate: dates[0] || null,
-                  lastTaughtDate: dates[dates.length - 1] || null,
-                  completedDate: sCompleted ? (completionInfo?.completedDate || null) : null,
-                  facultyName: sCompleted
-                    ? (completionInfo?.teacherId ? teacherNameMap[completionInfo.teacherId] || 'Unknown' : 'Unknown')
-                    : (subtopicLastTeacher[subKey] ? teacherNameMap[subtopicLastTeacher[subKey]] || 'Unknown' : 'Unknown'),
-                });
-              }
-            });
+          subtopicDetails.sort((a, b) => {
+            if (a.status !== b.status) return a.status === 'in_progress' ? -1 : 1;
+            return new Date(b.lastTaughtDate || 0) - new Date(a.lastTaughtDate || 0);
           });
-        });
 
-        subtopicDetails.sort((a, b) => {
-          if (a.status !== b.status) return a.status === 'in_progress' ? -1 : 1;
-          return new Date(b.lastTaughtDate || 0) - new Date(a.lastTaughtDate || 0);
-        });
+          courseResults.push({
+            courseId: cid,
+            courseName: course.courseFullName,
+            totalSubtopics,
+            completedSubtopics,
+            progressPercent: totalSubtopics > 0 ? Math.round((completedSubtopics / totalSubtopics) * 100) : 0,
+            subtopicDetails,
+            studentCount: studentIds.length,
+          });
+        }
 
-        courseResults.push({
-          courseId: cid,
-          courseName: course.courseFullName,
-          totalSubtopics,
-          completedSubtopics,
-          progressPercent: totalSubtopics > 0 ? Math.round((completedSubtopics / totalSubtopics) * 100) : 0,
-          subtopicDetails,
-          studentCount: studentIds.length,
+        teacherGroups.push({
+          teacherName: tData.teacherName,
+          courses: courseResults,
         });
       }
+
+      teacherGroups.sort((a, b) => a.teacherName.localeCompare(b.teacherName));
 
       result.push({
         batchId: bId,
         ...bData.batchInfo,
-        teachers: [...bData.teachers],
-        courses: courseResults,
+        teachers: teacherGroups.map((t) => t.teacherName),
+        teacherGroups,
+        courseCount: batchCourseIds.size,
+        studentCount: batchStudentCount,
       });
     }
 

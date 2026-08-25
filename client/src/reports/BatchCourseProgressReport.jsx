@@ -100,10 +100,10 @@ const BatchCourseProgressReport = () => {
                       {batch.displayName || `${formatTime(batch.startTime)} - ${formatTime(batch.endTime)}`}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {batch.teachers.join(", ") || "No teacher"} · {batch.courses.length} course{batch.courses.length !== 1 ? "s" : ""}
+                      {batch.teachers.join(", ") || "No teacher"} · {batch.courseCount} course{batch.courseCount !== 1 ? "s" : ""}
                       {" · "}
                       <span className="inline-flex items-center gap-1">
-                        <Users size={11} /> {batch.courses.reduce((sum, c) => sum + c.studentCount, 0)}
+                        <Users size={11} /> {batch.studentCount}
                       </span>
                     </p>
                   </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { attendanceReportAPI } from "../services/api";
 import { RefreshCw, AlertCircle, ArrowLeft, BookOpen, Users, CheckCircle2, Clock, User, ChevronRight } from "lucide-react";
@@ -23,7 +23,7 @@ const BatchCourseProgressDetail = () => {
   const [batch, setBatch] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedTeacher, setSelectedTeacher] = useState(null);
+  const [selectedTeacher, setSelectedTeacher] = useState(null); // teacherName string
 
   const fetchProgress = async () => {
     setLoading(true);
@@ -44,42 +44,11 @@ const BatchCourseProgressDetail = () => {
   };
 
   useEffect(() => {
-    setSelectedTeacher(null); // reset teacher selection whenever the batch changes
+    setSelectedTeacher(null);
     fetchProgress();
   }, [batchId]);
 
-  // Tally, per teacher name: how many subtopic rows they've touched across every
-  // course in this batch, plus how many of those are completed. Starts from the
-  // batch's assigned teacher list (so someone with 0 taught still shows a card),
-  // then folds in facultyName from every subtopic row (covers substitutes too).
-  const teacherStats = useMemo(() => {
-    if (!batch) return [];
-    const map = {};
-    (batch.teachers || []).forEach((name) => {
-      if (!map[name]) map[name] = { name, taught: 0, completed: 0 };
-    });
-    batch.courses.forEach((c) => {
-      c.subtopicDetails.forEach((sub) => {
-        const name = sub.facultyName || "Unknown";
-        if (!map[name]) map[name] = { name, taught: 0, completed: 0 };
-        map[name].taught += 1;
-        if (sub.status === "completed") map[name].completed += 1;
-      });
-    });
-    return Object.values(map).sort((a, b) => b.taught - a.taught || a.name.localeCompare(b.name));
-  }, [batch]);
-
-  // Once a teacher is picked, narrow every course down to just the rows they taught.
-  // Courses with zero matching rows are dropped rather than shown empty.
-  const filteredCourses = useMemo(() => {
-    if (!batch || !selectedTeacher) return [];
-    return batch.courses
-      .map((c) => ({
-        ...c,
-        subtopicDetails: c.subtopicDetails.filter((s) => (s.facultyName || "Unknown") === selectedTeacher),
-      }))
-      .filter((c) => c.subtopicDetails.length > 0);
-  }, [batch, selectedTeacher]);
+  const selectedGroup = batch?.teacherGroups?.find((t) => t.teacherName === selectedTeacher) || null;
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -100,7 +69,7 @@ const BatchCourseProgressDetail = () => {
               {selectedTeacher ? (
                 <>Showing progress taught by <span className="font-medium text-gray-700">{selectedTeacher}</span></>
               ) : (
-                <>{batch.teachers.join(", ") || "No teacher"} · {batch.courses.length} course{batch.courses.length !== 1 ? "s" : ""}</>
+                <>{batch.teachers.join(", ") || "No teacher"} · {batch.courseCount} course{batch.courseCount !== 1 ? "s" : ""}</>
               )}
             </p>
           )}
@@ -144,63 +113,64 @@ const BatchCourseProgressDetail = () => {
 
       {/* ===== STEP 1: TEACHER CARDS ===== */}
       {!loading && !error && batch && !selectedTeacher && (
-        teacherStats.length === 0 ? (
+        (batch.teacherGroups || []).length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-100 p-16 text-center text-gray-400">
             <Users size={48} className="mx-auto mb-3" />
             <h3 className="text-gray-600 font-medium">No teachers found for this batch</h3>
           </div>
         ) : (
           <div className="space-y-2">
-            {teacherStats.map((t) => (
-              <button
-                key={t.name}
-                onClick={() => setSelectedTeacher(t.name)}
-                className="w-full flex items-center justify-between px-5 py-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:bg-gray-50 hover:border-indigo-200 transition text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
-                    <User size={18} />
+            {batch.teacherGroups.map((t) => {
+              const studentCount = t.courses.reduce((sum, c) => sum + c.studentCount, 0);
+              const totalSub = t.courses.reduce((sum, c) => sum + c.totalSubtopics, 0);
+              const doneSub = t.courses.reduce((sum, c) => sum + c.completedSubtopics, 0);
+              return (
+                <button
+                  key={t.teacherName}
+                  onClick={() => setSelectedTeacher(t.teacherName)}
+                  className="w-full flex items-center justify-between px-5 py-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:bg-gray-50 hover:border-indigo-200 transition text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
+                      <User size={18} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-800">{t.teacherName}</p>
+                      <p className="text-xs text-gray-500">
+                        {t.courses.length} course{t.courses.length !== 1 ? "s" : ""} · {studentCount} student{studentCount !== 1 ? "s" : ""}
+                        {totalSub > 0 && ` · ${doneSub}/${totalSub} done`}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-800">{t.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {t.taught > 0
-                        ? `${t.completed}/${t.taught} subtopics completed`
-                        : "Nothing taught yet"}
-                    </p>
-                  </div>
-                </div>
-                <ChevronRight size={18} className="text-gray-400" />
-              </button>
-            ))}
+                  <ChevronRight size={18} className="text-gray-400" />
+                </button>
+              );
+            })}
           </div>
         )
       )}
 
       {/* ===== STEP 2: SELECTED TEACHER'S COURSE TABLES ===== */}
-      {!loading && !error && batch && selectedTeacher && (
+      {!loading && !error && batch && selectedTeacher && selectedGroup && (
         <div className="space-y-6">
-          {filteredCourses.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-100 p-16 text-center text-gray-400">
-              <BookOpen size={48} className="mx-auto mb-3" />
-              <h3 className="text-gray-600 font-medium">Nothing taught by {selectedTeacher} yet</h3>
-            </div>
-          ) : (
-            filteredCourses.map((c) => (
-              <div key={c.courseId} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <BookOpen size={16} className="text-indigo-500" />
-                    <span className="font-semibold text-gray-800">{c.courseName}</span>
-                    <span className="flex items-center gap-1 text-xs text-gray-400 ml-2">
-                      <Users size={12} /> {c.studentCount} students
-                    </span>
-                  </div>
-                  <span className="text-sm font-semibold text-indigo-600">
-                    {c.completedSubtopics}/{c.totalSubtopics} done ({c.progressPercent}%)
+          {selectedGroup.courses.map((c) => (
+            <div key={c.courseId} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <BookOpen size={16} className="text-indigo-500" />
+                  <span className="font-semibold text-gray-800">{c.courseName}</span>
+                  <span className="flex items-center gap-1 text-xs text-gray-400 ml-2">
+                    <Users size={12} /> {c.studentCount} students
                   </span>
                 </div>
+                <span className="text-sm font-semibold text-indigo-600">
+                  {c.completedSubtopics}/{c.totalSubtopics} done ({c.progressPercent}%)
+                </span>
+              </div>
 
+              {c.subtopicDetails.length === 0 ? (
+                <p className="px-5 py-6 text-sm text-gray-400 italic">Nothing taught yet for this course.</p>
+              ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -239,9 +209,9 @@ const BatchCourseProgressDetail = () => {
                     </tbody>
                   </table>
                 </div>
-              </div>
-            ))
-          )}
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>
