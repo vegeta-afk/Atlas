@@ -1380,71 +1380,79 @@ const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
                       </div>
                     </div>
 
-                    <div className="p-4 space-y-2">
-                      {allTopics.map((topic) => (
-                        <div key={topic.key}>
-                          <div className="flex items-center gap-2">
-                            {topic.completed ? (
-                              <CheckCircle size={16} className="text-green-600 flex-shrink-0" />
-                            ) : topic.inProgress ? (
-                              <Clock size={16} className="text-amber-500 flex-shrink-0" />
-                            ) : (
-                              <XCircle size={16} className="text-gray-300 flex-shrink-0" />
-                            )}
-                            <span className={`text-sm ${
-                              topic.completed ? "text-gray-800 font-medium"
-                              : topic.inProgress ? "text-amber-700 font-medium"
-                              : "text-gray-400"
-                            }`}>
-                              {topic.name}
-                            </span>
-                            {topic.facultyName && (
-                              <span className="text-xs text-gray-400 ml-1">— {topic.facultyName}</span>
-                            )}
-                            {(topic.startDate || topic.daysCount > 0) && (
-                              <span className="text-[11px] text-gray-400 ml-1">
-                                {topic.startDate && formatDate(topic.startDate)}
-                                {topic.endDate && ` → ${formatDate(topic.endDate)}`}
-                                {!topic.endDate && topic.lastTaughtDate && ` → ongoing`}
-                                {topic.daysCount > 0 && ` (${topic.daysCount} day${topic.daysCount !== 1 ? "s" : ""})`}
-                              </span>
-                            )}
-                          </div>
-                          {topic.subtopics?.length > 0 && (
-                            <div className="pl-6 mt-1 space-y-1">
-                              {topic.subtopics.map((sub) => (
-                                <div key={sub.key} className="flex items-center gap-2">
-                                  {sub.completed ? (
-                                    <CheckCircle size={13} className="text-green-500 flex-shrink-0" />
-                                  ) : sub.inProgress ? (
-                                    <Clock size={13} className="text-amber-500 flex-shrink-0" />
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wide">
+                            <th className="py-2 pl-4 pr-2 font-medium">Status</th>
+                            <th className="py-2 px-2 font-medium">Topic / Subtopic</th>
+                            <th className="py-2 px-2 font-medium">Faculty</th>
+                            <th className="py-2 px-2 font-medium">Start</th>
+                            <th className="py-2 px-2 font-medium">End</th>
+                            <th className="py-2 pr-4 pl-2 font-medium text-right">Days</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {allTopics.map((topic) => (
+                            <React.Fragment key={topic.key}>
+                              <tr className="border-b border-gray-50 hover:bg-gray-50">
+                                <td className="py-2 pl-4 pr-2">
+                                  {topic.completed ? (
+                                    <CheckCircle size={15} className="text-green-600" />
+                                  ) : topic.inProgress ? (
+                                    <Clock size={15} className="text-amber-500" />
                                   ) : (
-                                    <XCircle size={13} className="text-gray-200 flex-shrink-0" />
+                                    <XCircle size={15} className="text-gray-300" />
                                   )}
-                                  <span className={`text-xs ${
+                                </td>
+                                <td className={`py-2 px-2 ${
+                                  topic.completed ? "text-gray-800 font-medium"
+                                  : topic.inProgress ? "text-amber-700 font-medium"
+                                  : "text-gray-400"
+                                }`}>
+                                  {topic.name}
+                                </td>
+                                <td className="py-2 px-2 text-gray-500 text-xs">{topic.facultyName || "—"}</td>
+                                <td className="py-2 px-2 text-gray-500 text-xs">{topic.startDate ? formatDate(topic.startDate) : "—"}</td>
+                                <td className="py-2 px-2 text-gray-500 text-xs">
+                                  {topic.endDate ? formatDate(topic.endDate) : topic.lastTaughtDate ? "ongoing" : "—"}
+                                </td>
+                                <td className="py-2 pr-4 pl-2 text-gray-500 text-xs text-right">
+                                  {topic.daysCount > 0 ? topic.daysCount : "—"}
+                                </td>
+                              </tr>
+                              {topic.subtopics?.map((sub) => (
+                                <tr key={sub.key} className="border-b border-gray-50 hover:bg-gray-50">
+                                  <td className="py-1.5 pl-8 pr-2">
+                                    {sub.completed ? (
+                                      <CheckCircle size={13} className="text-green-500" />
+                                    ) : sub.inProgress ? (
+                                      <Clock size={13} className="text-amber-500" />
+                                    ) : (
+                                      <XCircle size={13} className="text-gray-200" />
+                                    )}
+                                  </td>
+                                  <td className={`py-1.5 px-2 text-xs ${
                                     sub.completed ? "text-gray-700"
                                     : sub.inProgress ? "text-amber-600"
                                     : "text-gray-400"
                                   }`}>
                                     {sub.name}
-                                  </span>
-                                  {sub.facultyName && (
-                                    <span className="text-[11px] text-gray-400 ml-1">— {sub.facultyName}</span>
-                                  )}
-                                  {(sub.startDate || sub.daysCount > 0) && (
-                                    <span className="text-[10px] text-gray-400 ml-1">
-                                      {sub.startDate && formatDate(sub.startDate)}
-                                      {sub.endDate && ` → ${formatDate(sub.endDate)}`}
-                                      {!sub.endDate && sub.lastTaughtDate && ` → ongoing`}
-                                      {sub.daysCount > 0 && ` (${sub.daysCount}d)`}
-                                    </span>
-                                  )}
-                                </div>
+                                  </td>
+                                  <td className="py-1.5 px-2 text-gray-400 text-xs">{sub.facultyName || "—"}</td>
+                                  <td className="py-1.5 px-2 text-gray-400 text-xs">{sub.startDate ? formatDate(sub.startDate) : "—"}</td>
+                                  <td className="py-1.5 px-2 text-gray-400 text-xs">
+                                    {sub.endDate ? formatDate(sub.endDate) : sub.lastTaughtDate ? "ongoing" : "—"}
+                                  </td>
+                                  <td className="py-1.5 pr-4 pl-2 text-gray-400 text-xs text-right">
+                                    {sub.daysCount > 0 ? sub.daysCount : "—"}
+                                  </td>
+                                </tr>
                               ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 );
