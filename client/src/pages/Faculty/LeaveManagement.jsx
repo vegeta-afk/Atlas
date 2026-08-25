@@ -46,6 +46,7 @@ const [newToDate, setNewToDate] = useState("");
   const [approveTarget, setApproveTarget] = useState(null);
 const [approvedFrom, setApprovedFrom] = useState("");
 const [approvedTo, setApprovedTo] = useState("");
+const [dateFilterStatus, setDateFilterStatus] = useState("approved"); // "approved" | "pending"
   const [approveBatches, setApproveBatches] = useState([]);
   const [facultyOptions, setFacultyOptions] = useState([]);
   const [assignments, setAssignments] = useState({}); // { batchId: substituteFacultyUserId }
@@ -209,13 +210,25 @@ const handleExtend = async () => {
 
 const displayedLeaves = React.useMemo(() => {
   let list = [...leaves];
+
   if (statusFilter === "approved") {
     list.sort((a, b) => new Date(b.approvedDate || 0) - new Date(a.approvedDate || 0));
-if (approvedFrom) list = list.filter((l) => l.approvedDate && new Date(l.approvedDate) >= new Date(approvedFrom));
-if (approvedTo) list = list.filter((l) => l.approvedDate && new Date(l.approvedDate) <= new Date(approvedTo + "T23:59:59"));
   }
+
+  if (statusFilter === "all" && (approvedFrom || approvedTo)) {
+    list = list.filter((l) => {
+      if (l.status !== dateFilterStatus) return false;
+      const dateToCheck = dateFilterStatus === "approved" ? l.approvedDate : l.createdAt;
+      if (!dateToCheck) return false;
+      const d = new Date(dateToCheck);
+      if (approvedFrom && d < new Date(approvedFrom)) return false;
+      if (approvedTo && d > new Date(approvedTo + "T23:59:59")) return false;
+      return true;
+    });
+  }
+
   return list;
-}, [leaves, statusFilter, approvedFrom, approvedTo]);
+}, [leaves, statusFilter, approvedFrom, approvedTo, dateFilterStatus]);
 
 const filters = ["pending", "approved", "rejected", "all"];
 
@@ -236,9 +249,17 @@ const filters = ["pending", "approved", "rejected", "all"];
             {f}
           </button>
         ))}
-        {statusFilter === "approved" && (
-          <div className="flex items-center gap-2 ml-4">
-            <label className="text-xs text-gray-500">Approved From</label>
+        {statusFilter === "all" && (
+          <div className="flex items-center gap-2 ml-4 flex-wrap">
+            <select
+              value={dateFilterStatus}
+              onChange={(e) => setDateFilterStatus(e.target.value)}
+              className="px-2 py-1.5 border border-gray-200 rounded-lg text-sm"
+            >
+              <option value="approved">Approved</option>
+              <option value="pending">Pending</option>
+            </select>
+            <label className="text-xs text-gray-500">From</label>
             <input
               type="date"
               value={approvedFrom}
