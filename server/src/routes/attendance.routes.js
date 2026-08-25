@@ -25,6 +25,7 @@ router.post('/qr/scan', authorize('student'), attendanceController.scanQR);
 router.get('/course-topics', authorize('teacher', 'admin', 'instructor'), attendanceController.getCourseTopics);
 router.post('/topics/save', authorize('teacher', 'admin', 'instructor'), attendanceController.saveTopicCompletion);
 router.post('/topics/complete', protect, attendanceController.completeSubtopic);
+router.post('/topics/complete-topic', protect, attendanceController.completeTopic);
 router.get('/batch-course-progress', protect, attendanceController.getBatchCourseProgress);
 router.get('/batch-topic-board', protect, attendanceController.getBatchTopicBoard);
 router.get('/student/:studentId/topic-progress', authorize('teacher', 'admin', 'instructor', 'student'), attendanceController.getStudentTopicProgress);
