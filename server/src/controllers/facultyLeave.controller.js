@@ -89,9 +89,35 @@ exports.getFacultyBatchesForLeave = async (req, res) => {
     const onLeaveUser = await User.findOne({ facultyId: leave.faculty, role: 'instructor' });
     if (!onLeaveUser) return res.status(404).json({ success: false, message: 'Faculty login account not found' });
 
-    const batches = await TeacherBatch.find({ teacher: onLeaveUser._id, isActive: true })
+    const toMinutes = (timeStr) => {
+      if (!timeStr) return null;
+      const [h, m] = timeStr.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    const teacherBatches = await TeacherBatch.find({ teacher: onLeaveUser._id, isActive: true })
       .populate('batch', 'batchName displayName startTime endTime')
       .lean();
+
+    const batches = teacherBatches
+      .filter((tb) => tb.batch)
+      .map((tb) => {
+        const studentCount = tb.assignedStudents.filter((s) => s.isActive).length;
+        return {
+          batchId: tb.batch._id,
+          batchName: tb.batch.displayName || tb.batch.batchName,
+          timing: `${tb.batch.startTime} - ${tb.batch.endTime}`,
+          studentCount,
+          startMinutes: toMinutes(tb.batch.startTime),
+        };
+      })
+      .filter((b) => b.studentCount > 0) // only batches actually in use need a substitute
+      .sort((a, b) => {
+        if (a.startMinutes === null) return 1;
+        if (b.startMinutes === null) return -1;
+        return a.startMinutes - b.startMinutes;
+      })
+      .map(({ startMinutes, ...b }) => b); // drop the internal sort key before responding
 
     const facultyOptions = await User.find({ role: 'instructor', _id: { $ne: onLeaveUser._id } })
       .select('name facultyId')
@@ -99,15 +125,7 @@ exports.getFacultyBatchesForLeave = async (req, res) => {
 
     res.json({
       success: true,
-      data: {
-        batches: batches.filter(tb => tb.batch).map((tb) => ({
-          batchId: tb.batch._id,
-          batchName: tb.batch.displayName || tb.batch.batchName,
-          timing: `${tb.batch.startTime} - ${tb.batch.endTime}`,
-          studentCount: tb.assignedStudents.filter(s => s.isActive).length,
-        })),
-        facultyOptions,
-      },
+      data: { batches, facultyOptions },
     });
   } catch (error) {
     console.error('Get faculty batches for leave error:', error);

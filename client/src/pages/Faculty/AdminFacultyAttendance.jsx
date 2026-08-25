@@ -92,6 +92,16 @@ const AdminFacultyAttendance = () => {
     return () => clearInterval(interval);
   }, [activeQR]);
 
+  // Auto-refresh the QR every 30s so it never sits expired at reception
+  // waiting for someone to notice and tap "Refresh".
+  useEffect(() => {
+    if (!activeQR) return;
+    const refreshInterval = setInterval(() => {
+      generateQR();
+    }, 30000);
+    return () => clearInterval(refreshInterval);
+  }, [activeQR]);
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-5xl mx-auto space-y-6">

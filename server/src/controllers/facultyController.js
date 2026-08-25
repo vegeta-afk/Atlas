@@ -1809,6 +1809,7 @@ exports.getFacultyFreeBatches = async (req, res) => {
     // ── Get TeacherBatch records for this faculty ──
     const TeacherBatch = require("../models/TeacherBatch");
     let occupiedBatchIds = new Set();
+    let occupiedBridgeRanges = []; // [{ start, end }] in minutes-from-midnight
 
     if (facultyUser) {
       const teacherBatches = await TeacherBatch.find({
@@ -1829,11 +1830,31 @@ exports.getFacultyFreeBatches = async (req, res) => {
           occupiedBatchIds.add(tb.batch.toString());
         }
       });
+
+      // ── Bridge batches don't map to a Setup.Batch._id, so exclude by
+      // time-range overlap instead of ID match — same active-status filter
+      // used elsewhere (active / ready_to_merge = still ongoing work).
+      const BridgeBatch = require("../models/BridgeBatch");
+      const bridgeBatches = await BridgeBatch.find({
+        tempFacultyId: facultyUser._id,
+        status: { $in: ["active", "ready_to_merge"] },
+      }).select("timeSlot").lean();
+
+      occupiedBridgeRanges = bridgeBatches
+        .map(bb => ({
+          start: toMinutes(bb.timeSlot?.startTime),
+          end: toMinutes(bb.timeSlot?.endTime),
+        }))
+        .filter(r => r.start !== null && r.end !== null);
     }
 
-    // ── Free = in shift + not occupied ──
+    const overlapsBridge = (bStart, bEnd) =>
+      occupiedBridgeRanges.some(r => bStart < r.end && bEnd > r.start);
+
+    // ── Free = in shift + not occupied by a regular batch + not occupied by a bridge batch ──
     const freeBatches = batchesInShift
       .filter(b => !occupiedBatchIds.has(b._id.toString()))
+      .filter(b => !overlapsBridge(toMinutes(b.startTime), toMinutes(b.endTime)))
       .sort((a, b) => {
         const aMin = toMinutes(a.startTime);
         const bMin = toMinutes(b.startTime);
