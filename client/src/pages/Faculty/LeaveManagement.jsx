@@ -215,16 +215,23 @@ const displayedLeaves = React.useMemo(() => {
     list.sort((a, b) => new Date(b.approvedDate || 0) - new Date(a.approvedDate || 0));
   }
 
-  if (statusFilter === "all" && (approvedFrom || approvedTo)) {
-    list = list.filter((l) => {
-      if (l.status !== dateFilterStatus) return false;
-      const dateToCheck = dateFilterStatus === "approved" ? l.approvedDate : l.createdAt;
-      if (!dateToCheck) return false;
-      const d = new Date(dateToCheck);
-      if (approvedFrom && d < new Date(approvedFrom)) return false;
-      if (approvedTo && d > new Date(approvedTo + "T23:59:59")) return false;
-      return true;
-    });
+  if (statusFilter === "all") {
+    list = list.filter((l) => l.status === dateFilterStatus);
+
+    if (dateFilterStatus === "approved" || dateFilterStatus === "rejected") {
+      list.sort((a, b) => new Date(b.approvedDate || 0) - new Date(a.approvedDate || 0));
+    }
+
+    if (approvedFrom || approvedTo) {
+      list = list.filter((l) => {
+        const dateToCheck = dateFilterStatus === "pending" ? l.createdAt : l.approvedDate;
+        if (!dateToCheck) return false;
+        const d = new Date(dateToCheck);
+        if (approvedFrom && d < new Date(approvedFrom)) return false;
+        if (approvedTo && d > new Date(approvedTo + "T23:59:59")) return false;
+        return true;
+      });
+    }
   }
 
   return list;
@@ -258,6 +265,7 @@ const filters = ["pending", "approved", "rejected", "all"];
             >
               <option value="approved">Approved</option>
               <option value="pending">Pending</option>
+              <option value="rejected">Rejected</option>
             </select>
             <label className="text-xs text-gray-500">From</label>
             <input
