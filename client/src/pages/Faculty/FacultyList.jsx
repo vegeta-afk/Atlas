@@ -1236,8 +1236,9 @@ const handleBulkTransferSubmit = async () => {
                               <div className="fba-batch-grid">
                                 {f.batches.map((batch, idx) => {
   const studentCount = batch.studentCount ?? batch.students?.length ?? 0;
+  const isBridge = batch.batchType === "bridge";
   return (
-    <div key={batch._id || idx} className="fba-batch-card">
+    <div key={batch._id || idx} className="fba-batch-card" style={{ position: "relative" }}>
       <div
         className="fba-card-header"
         style={{ cursor: studentCount > 0 ? "pointer" : "default" }}
@@ -1249,11 +1250,6 @@ const handleBulkTransferSubmit = async () => {
   {batch.startTime && batch.endTime
     ? `${formatTimeRange(batch.startTime)} to ${formatTimeRange(batch.endTime)}`
     : batch.batchName || batch.name || `Batch ${idx + 1}`}
-  {batch.batchType === "bridge" && (
-    <span style={{ marginLeft: 6, fontSize: 10, padding: "2px 6px", borderRadius: 8, background: "#f3e8ff", color: "#7e22ce", fontWeight: 700 }}>
-      BRIDGE
-    </span>
-  )}
 </span>
           <span className="fba-batch-course">
             {batch.courseAssigned || f.courseAssigned || "N/A"}
@@ -1265,6 +1261,22 @@ const handleBulkTransferSubmit = async () => {
         </span>
         {studentCount > 0 && <ChevronDown size={14} className="fba-chevron" style={{ marginLeft: 8 }} />}
       </div>
+      <span
+        style={{
+          position: "absolute",
+          bottom: 6,
+          right: 8,
+          fontSize: 9,
+          padding: "2px 7px",
+          borderRadius: 8,
+          fontWeight: 700,
+          letterSpacing: 0.3,
+          background: isBridge ? "#f3e8ff" : "#e0f2fe",
+          color: isBridge ? "#7e22ce" : "#0369a1",
+        }}
+      >
+        {isBridge ? "BRIDGE" : "REGULAR"}
+      </span>
     </div>
   );
 })}
