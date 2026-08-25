@@ -199,7 +199,7 @@ function App() {
           <Route path="attendance" element={<AttendanceReportList />} />
           <Route path="attendance-monthly" element={<MonthlyAttendanceReport />} />
           <Route path="batch-course-progress" element={<BatchCourseProgressReport />} />
-          <Route path="batch-course-progress/:batchTime" element={<BatchCourseProgressDetail />} />
+          <Route path="batch-course-progress/:batchId" element={<BatchCourseProgressDetail />} />
           <Route path="batch-topic-board" element={<BatchTopicBoard />} />
           <Route path="test-eligibility" element={<TestEligibilityReport />} />
           <Route path="leave-batch-report" element={<LeaveBatchReport />} />
