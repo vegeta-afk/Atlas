@@ -1465,6 +1465,7 @@ exports.getCourseTopics = async (req, res) => {
       const topicTaught = {}, topicCompleted = {};
       const subtopicTaught = {}, subtopicCompleted = {};
       const subtopicTaughtDates = {}; // subKey -> Set of ISO date strings
+      const topicTaughtDates = {};    // topicKey -> Set of ISO date strings
 
       studentIds.forEach((sid) => {
         topicTaught[sid] = new Set(); topicCompleted[sid] = new Set();
@@ -1478,8 +1479,13 @@ exports.getCourseTopics = async (req, res) => {
           if (!topicTaught[sidStr]) return;
 
           (c.completedTopicKeys || []).forEach((k) => {
-            if (isSentinel) topicCompleted[sidStr].add(k);
-            else topicTaught[sidStr].add(k);
+            if (isSentinel) {
+              topicCompleted[sidStr].add(k);
+            } else {
+              topicTaught[sidStr].add(k);
+              if (!topicTaughtDates[k]) topicTaughtDates[k] = new Set();
+              topicTaughtDates[k].add(new Date(c.date).toISOString().split('T')[0]);
+            }
           });
 
           (c.completedSubtopicKeys || []).forEach((k) => {
@@ -1507,6 +1513,7 @@ exports.getCourseTopics = async (req, res) => {
             semesterName: sem.name,
             completed: tCompleted,
             inProgress: !tCompleted && tTaught,
+            taughtDaysCount: topicTaughtDates[topicKey]?.size || 0,
             subtopics: (topic.subtopics || []).map((sub, subIdx) => {
               const subKey = `${sIdx}_${tIdx}_${subIdx}`;
               const sCompleted = studentIds.length > 0 && studentIds.every((sid) => subtopicCompleted[sid]?.has(subKey));
@@ -1617,6 +1624,50 @@ exports.completeSubtopic = async (req, res) => {
   }
 };
 
+// Faculty explicitly marks a NO-SUBTOPIC topic as fully, permanently completed —
+// same sentinel-doc pattern as completeSubtopic, but for completedTopicKeys.
+exports.completeTopic = async (req, res) => {
+  try {
+    const { batchId, courseId, studentIds, topicKey, teacherBatchId } = req.body;
+    const teacherId = req.user.id;
+
+    if (!batchId || !courseId || !topicKey || !Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'batchId, courseId, studentIds and topicKey are required' });
+    }
+
+    const teacherBatch = await resolveTeacherBatchForAction(teacherId, batchId, teacherBatchId);
+    if (!teacherBatch) {
+      return res.status(403).json({ success: false, message: 'You are not assigned to this batch' });
+    }
+
+    const existing = await TopicCompletion.findOne({ batchId, courseId, date: SENTINEL_COMPLETION_DATE }).lean();
+    if (existing?.completedTopicKeys?.includes(topicKey)) {
+      return res.status(400).json({ success: false, message: 'This topic is already marked completed' });
+    }
+
+    await TopicCompletion.findOneAndUpdate(
+      { batchId, courseId, date: SENTINEL_COMPLETION_DATE },
+      {
+        $set: { teacherId },
+        $addToSet: {
+          completedTopicKeys: topicKey,
+          studentIds: { $each: studentIds },
+        },
+        $push: {
+          topicCompletions: { topicKey, completedDate: new Date(), teacherId },
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    res.json({ success: true, message: 'Topic marked as fully completed' });
+  } catch (error) {
+    console.error('Error in completeTopic:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
 // 8. Get a student's syllabus completion status for ViewStudent page
 exports.getStudentTopicProgress = async (req, res) => {
   try {
@@ -1635,28 +1686,152 @@ exports.getStudentTopicProgress = async (req, res) => {
     const completions = await TopicCompletion.find({
       courseId,
       studentIds: studentId,
-    }).select('completedTopicKeys completedSubtopicKeys').lean();
+    }).select('completedTopicKeys completedSubtopicKeys subtopicCompletions topicCompletions date teacherId').lean();
 
     const completedTopicKeys = new Set();
     const completedSubtopicKeys = new Set();
+    const taughtTopicKeys = new Set();   // touched on a daily (non-sentinel) doc — "in progress"
+    const taughtSubtopicKeys = new Set();
+
+    const lastTeacherForTopic = {};      // topicKey -> teacherId, from most recent daily doc
+    const lastTeacherForSubtopic = {};   // subKey -> teacherId
+    const completionTeacherForTopic = {};    // topicKey -> teacherId, from topicCompletions[]
+    const completionTeacherForSubtopic = {}; // subKey -> teacherId, from subtopicCompletions[]
+
+    const topicTaughtDates = {};     // topicKey -> Set of ISO date strings (from daily docs)
+    const subtopicTaughtDates = {};  // subKey -> Set of ISO date strings (from daily docs)
+    const completedDateForTopic = {};    // topicKey -> completedDate, from topicCompletions[]
+    const completedDateForSubtopic = {}; // subKey -> completedDate, from subtopicCompletions[]
+
+    const teacherIdsNeeded = new Set();
+
     completions.forEach((c) => {
-      (c.completedTopicKeys || []).forEach((k) => completedTopicKeys.add(k));
-      (c.completedSubtopicKeys || []).forEach((k) => completedSubtopicKeys.add(k));
+      const isSentinel = new Date(c.date).getTime() === SENTINEL_COMPLETION_DATE.getTime();
+
+      if (isSentinel) {
+        (c.completedTopicKeys || []).forEach((k) => completedTopicKeys.add(k));
+        (c.completedSubtopicKeys || []).forEach((k) => completedSubtopicKeys.add(k));
+        (c.topicCompletions || []).forEach((tc) => {
+          completedDateForTopic[tc.topicKey] = tc.completedDate;
+          if (tc.teacherId) {
+            completionTeacherForTopic[tc.topicKey] = tc.teacherId.toString();
+            teacherIdsNeeded.add(tc.teacherId.toString());
+          }
+        });
+        (c.subtopicCompletions || []).forEach((sc) => {
+          completedDateForSubtopic[sc.subtopicKey] = sc.completedDate;
+          if (sc.teacherId) {
+            completionTeacherForSubtopic[sc.subtopicKey] = sc.teacherId.toString();
+            teacherIdsNeeded.add(sc.teacherId.toString());
+          }
+        });
+      } else {
+        const dayStr = new Date(c.date).toISOString().split('T')[0];
+        (c.completedTopicKeys || []).forEach((k) => {
+          taughtTopicKeys.add(k);
+          if (!topicTaughtDates[k]) topicTaughtDates[k] = new Set();
+          topicTaughtDates[k].add(dayStr);
+          if (c.teacherId) {
+            lastTeacherForTopic[k] = c.teacherId.toString();
+            teacherIdsNeeded.add(c.teacherId.toString());
+          }
+        });
+        (c.completedSubtopicKeys || []).forEach((k) => {
+          taughtSubtopicKeys.add(k);
+          if (!subtopicTaughtDates[k]) subtopicTaughtDates[k] = new Set();
+          subtopicTaughtDates[k].add(dayStr);
+          if (c.teacherId) {
+            lastTeacherForSubtopic[k] = c.teacherId.toString();
+            teacherIdsNeeded.add(c.teacherId.toString());
+          }
+        });
+      }
     });
+
+    const teacherDocs = teacherIdsNeeded.size > 0
+      ? await User.find({ _id: { $in: [...teacherIdsNeeded] } }).select('name').lean()
+      : [];
+    const teacherNameMap = {};
+    teacherDocs.forEach((t) => { teacherNameMap[t._id.toString()] = t.name; });
 
     const syllabusStatus = [];
     (course.syllabus || []).forEach((sem, sIdx) => {
       (sem.topics || []).forEach((topic, tIdx) => {
         const topicKey = `${sIdx}_${tIdx}`;
+
+        const subtopics = (topic.subtopics || []).map((sub, subIdx) => {
+          const subKey = `${sIdx}_${tIdx}_${subIdx}`;
+          const completed = completedSubtopicKeys.has(subKey);
+          const inProgress = !completed && taughtSubtopicKeys.has(subKey);
+          const teacherId = completed
+            ? completionTeacherForSubtopic[subKey]
+            : lastTeacherForSubtopic[subKey];
+
+          const taughtDates = subtopicTaughtDates[subKey] ? [...subtopicTaughtDates[subKey]].sort() : [];
+          const startDate = taughtDates[0] || null;
+          const endDate = completed ? (completedDateForSubtopic[subKey] || null) : null;
+          const lastTaughtDate = !completed ? (taughtDates[taughtDates.length - 1] || null) : null;
+
+          return {
+            key: subKey,
+            name: sub.name,
+            completed,
+            inProgress,
+            facultyName: teacherId ? (teacherNameMap[teacherId] || 'Unknown') : null,
+            startDate,
+            endDate,
+            lastTaughtDate,
+            daysCount: taughtDates.length,
+          };
+        });
+
+        let completed, inProgress, facultyName, startDate, endDate, lastTaughtDate, daysCount;
+        if (subtopics.length > 0) {
+          completed = subtopics.every((s) => s.completed);
+          inProgress = !completed && subtopics.some((s) => s.completed || s.inProgress);
+          const activeSub = subtopics.find((s) => s.inProgress) || [...subtopics].reverse().find((s) => s.completed);
+          facultyName = activeSub?.facultyName || null;
+
+          const allStarts = subtopics.map((s) => s.startDate).filter(Boolean).sort();
+          const allEnds = subtopics.map((s) => s.endDate).filter(Boolean).sort();
+          const dedupedDays = new Set();
+          subtopics.forEach((s) => {
+            (subtopicTaughtDates[s.key] || []).forEach((d) => dedupedDays.add(d));
+          });
+          startDate = allStarts[0] || null;
+          endDate = completed ? (allEnds[allEnds.length - 1] || null) : null;
+          lastTaughtDate = !completed
+            ? (subtopics.map((s) => s.lastTaughtDate).filter(Boolean).sort().pop() || null)
+            : null;
+          daysCount = dedupedDays.size;
+        } else {
+          // Topic has no subtopics — its own dropdown activity is the only signal.
+          // Now that completeTopic writes to the sentinel doc's topicCompletions[],
+          // this can reach completed:true with a real endDate, same as subtopics.
+          completed = completedTopicKeys.has(topicKey);
+          inProgress = !completed && taughtTopicKeys.has(topicKey);
+          const teacherId = completed ? completionTeacherForTopic[topicKey] : lastTeacherForTopic[topicKey];
+          facultyName = teacherId ? (teacherNameMap[teacherId] || 'Unknown') : null;
+
+          const taughtDates = topicTaughtDates[topicKey] ? [...topicTaughtDates[topicKey]].sort() : [];
+          startDate = taughtDates[0] || null;
+          endDate = completed ? (completedDateForTopic[topicKey] || null) : null;
+          lastTaughtDate = !completed ? (taughtDates[taughtDates.length - 1] || null) : null;
+          daysCount = taughtDates.length;
+        }
+
         syllabusStatus.push({
           key: topicKey,
           name: topic.name,
           semesterName: sem.name,
-          completed: completedTopicKeys.has(topicKey),
-          subtopics: (topic.subtopics || []).map((sub, subIdx) => {
-            const subKey = `${sIdx}_${tIdx}_${subIdx}`;
-            return { key: subKey, name: sub.name, completed: completedSubtopicKeys.has(subKey) };
-          }),
+          completed,
+          inProgress,
+          facultyName,
+          startDate,
+          endDate,
+          lastTaughtDate,
+          daysCount,
+          subtopics,
         });
       });
     });

@@ -15,6 +15,13 @@ const topicCompletionSchema = new mongoose.Schema(
         teacherId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
       },
     ],
+    topicCompletions: [
+      {
+        topicKey: { type: String },
+        completedDate: { type: Date },
+        teacherId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      },
+    ],
     studentIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Student" }],
   },
   { timestamps: true }

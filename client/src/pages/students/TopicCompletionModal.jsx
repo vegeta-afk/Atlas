@@ -35,6 +35,11 @@ const TopicCompletionModal = ({ batchId, teacherBatchId, date, courseGroups, onC
         result.data.forEach(c => {
           map[c.courseId] = c.topics;
           c.topics.forEach(topic => {
+            if (topic.subtopics.length === 0) {
+              // No-subtopic topic: it gets its own dropdown entry, same id shape as a subtopic's
+              const topicId = `${c.courseId}_${topic.key}`;
+              initialStatus[topicId] = topic.completed ? "completed" : (topic.inProgress ? "in_progress" : "not_started");
+            }
             topic.subtopics.forEach(sub => {
               const id = `${c.courseId}_${sub.key}`;
               // Default the dropdown to whatever the DB actually says today — fixes the "resets to blank" bug
@@ -125,8 +130,8 @@ const TopicCompletionModal = ({ batchId, teacherBatchId, date, courseGroups, onC
   };
 
   const hasAnySelection = () => {
-    const anySubInProgress = Object.values(subStatus).some(s => s === "in_progress");
-    return Object.values(checkedTopics).some(Boolean) || anySubInProgress;
+    const anyInProgress = Object.values(subStatus).some(s => s === "in_progress");
+    return anyInProgress;
   };
 
   const handleSave = async () => {
@@ -137,10 +142,19 @@ const TopicCompletionModal = ({ batchId, teacherBatchId, date, courseGroups, onC
 
       // Persist any subtopics newly marked "Completed" this session
       // (used to fire instantly on dropdown change — now deferred to here)
-      const completionCalls = [];
+      const completionCalls = [];       // subtopics being marked completed this session
+      const topicCompletionCalls = [];  // no-subtopic topics being marked completed this session
       courseGroups.forEach(group => {
         const topics = topicsByCourse[group.courseId] || [];
         topics.forEach(topic => {
+          if (topic.subtopics.length === 0) {
+            const topicId = `${group.courseId}_${topic.key}`;
+            // topic.completed reflects the ORIGINAL server state from fetch time
+            if (subStatus[topicId] === "completed" && !topic.completed) {
+              topicCompletionCalls.push({ group, topicKey: topic.key });
+            }
+            return;
+          }
           topic.subtopics.forEach(sub => {
             const id = `${group.courseId}_${sub.key}`;
             // sub.completed reflects the ORIGINAL server state from fetch time,
@@ -152,20 +166,35 @@ const TopicCompletionModal = ({ batchId, teacherBatchId, date, courseGroups, onC
         });
       });
 
-      if (completionCalls.length > 0) {
-        const results = await Promise.all(completionCalls.map(({ group, subKey }) =>
-          fetch(`${BASE_URL}/api/attendance/topics/complete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({
-              batchId,
-              teacherBatchId,
-              courseId: group.courseId,
-              studentIds: group.studentIds,
-              subtopicKey: subKey,
-            })
-          }).then(r => r.json())
-        ));
+      if (completionCalls.length > 0 || topicCompletionCalls.length > 0) {
+        const results = await Promise.all([
+          ...completionCalls.map(({ group, subKey }) =>
+            fetch(`${BASE_URL}/api/attendance/topics/complete`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({
+                batchId,
+                teacherBatchId,
+                courseId: group.courseId,
+                studentIds: group.studentIds,
+                subtopicKey: subKey,
+              })
+            }).then(r => r.json())
+          ),
+          ...topicCompletionCalls.map(({ group, topicKey }) =>
+            fetch(`${BASE_URL}/api/attendance/topics/complete-topic`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({
+                batchId,
+                teacherBatchId,
+                courseId: group.courseId,
+                studentIds: group.studentIds,
+                topicKey,
+              })
+            }).then(r => r.json())
+          ),
+        ]);
         const failed = results.find(r => !r.success);
         if (failed) {
           alert('Error marking complete: ' + failed.message);
@@ -180,8 +209,11 @@ const TopicCompletionModal = ({ batchId, teacherBatchId, date, courseGroups, onC
         const completedSubtopicKeys = [];
         topics.forEach(topic => {
           if (topic.subtopics.length === 0) {
-            // No subtopics — rely on the manual checkbox
-            if (checkedTopics[`${group.courseId}_${topic.key}`]) {
+            const topicId = `${group.courseId}_${topic.key}`;
+            const status = subStatus[topicId];
+            // "in_progress" (or just-completed this session) = taught today, log it on the daily doc.
+            // "completed" is separately handled via topicCompletionCalls above (sentinel doc).
+            if (status === "in_progress" || status === "completed") {
               completedTopicKeys.push(topic.key);
             }
           } else if (isTopicAutoCompleted(group, topic)) {
@@ -363,20 +395,38 @@ const TopicCompletionModal = ({ batchId, teacherBatchId, date, courseGroups, onC
                                       ) : null}
                                     </div>
                                   ) : (
-                                    <label className="flex items-center gap-2 cursor-pointer flex-1">
-                                      <input
-                                        type="checkbox"
-                                        checked={topicChecked}
-                                        onChange={() => toggleTopic(group.courseId, topic.key)}
-                                        className="w-5 h-5 rounded-full accent-blue-600"
-                                      />
-                                      <span className="text-sm font-medium text-gray-800">{topic.name}</span>
-                                      {topic.completed && (
-                                        <span className="text-[10px] px-2 py-0.5 bg-green-50 text-green-600 rounded-full">
-                                          ✓ Completed
-                                        </span>
-                                      )}
-                                    </label>
+                                    (() => {
+                                      const topicId = `${group.courseId}_${topic.key}`;
+                                      const status = subStatus[topicId] || "not_started";
+                                      return (
+                                        <div className="flex items-center justify-between gap-2 flex-1">
+                                          <span className={`text-sm font-medium ${status === "completed" ? "text-gray-400" : "text-gray-800"}`}>
+                                            {topic.name}
+                                            {status === "in_progress" && topic.taughtDaysCount > 0 && (
+                                              <span className="ml-2 text-[10px] text-amber-600">
+                                                ({topic.taughtDaysCount} day{topic.taughtDaysCount !== 1 ? "s" : ""} so far)
+                                              </span>
+                                            )}
+                                          </span>
+                                          <select
+                                            value={status === "not_started" ? "" : status}
+                                            disabled={topic.completed || saving}
+                                            onChange={(e) => handleStatusChange(group, topic.key, e.target.value)}
+                                            className={`text-xs border rounded-md px-2 py-1 font-medium cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 ${
+                                              status === "completed"
+                                                ? "bg-green-50 text-green-700 border-green-200"
+                                                : status === "in_progress"
+                                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                                : "bg-gray-50 text-gray-500 border-gray-200"
+                                            }`}
+                                          >
+                                            <option value="" disabled>Select status</option>
+                                            <option value="in_progress">In Progress</option>
+                                            <option value="completed">Completed</option>
+                                          </select>
+                                        </div>
+                                      );
+                                    })()
                                   )}
                                   {topic.subtopics.length > 0 && (
                                     <button

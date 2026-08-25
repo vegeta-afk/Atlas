@@ -1386,12 +1386,29 @@ const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
                           <div className="flex items-center gap-2">
                             {topic.completed ? (
                               <CheckCircle size={16} className="text-green-600 flex-shrink-0" />
+                            ) : topic.inProgress ? (
+                              <Clock size={16} className="text-amber-500 flex-shrink-0" />
                             ) : (
                               <XCircle size={16} className="text-gray-300 flex-shrink-0" />
                             )}
-                            <span className={`text-sm ${topic.completed ? "text-gray-800 font-medium" : "text-gray-400"}`}>
+                            <span className={`text-sm ${
+                              topic.completed ? "text-gray-800 font-medium"
+                              : topic.inProgress ? "text-amber-700 font-medium"
+                              : "text-gray-400"
+                            }`}>
                               {topic.name}
                             </span>
+                            {topic.facultyName && (
+                              <span className="text-xs text-gray-400 ml-1">— {topic.facultyName}</span>
+                            )}
+                            {(topic.startDate || topic.daysCount > 0) && (
+                              <span className="text-[11px] text-gray-400 ml-1">
+                                {topic.startDate && formatDate(topic.startDate)}
+                                {topic.endDate && ` → ${formatDate(topic.endDate)}`}
+                                {!topic.endDate && topic.lastTaughtDate && ` → ongoing`}
+                                {topic.daysCount > 0 && ` (${topic.daysCount} day${topic.daysCount !== 1 ? "s" : ""})`}
+                              </span>
+                            )}
                           </div>
                           {topic.subtopics?.length > 0 && (
                             <div className="pl-6 mt-1 space-y-1">
@@ -1399,12 +1416,29 @@ const additionalBalance = Math.max(0, additionalTotalFee - additionalPaid);
                                 <div key={sub.key} className="flex items-center gap-2">
                                   {sub.completed ? (
                                     <CheckCircle size={13} className="text-green-500 flex-shrink-0" />
+                                  ) : sub.inProgress ? (
+                                    <Clock size={13} className="text-amber-500 flex-shrink-0" />
                                   ) : (
                                     <XCircle size={13} className="text-gray-200 flex-shrink-0" />
                                   )}
-                                  <span className={`text-xs ${sub.completed ? "text-gray-700" : "text-gray-400"}`}>
+                                  <span className={`text-xs ${
+                                    sub.completed ? "text-gray-700"
+                                    : sub.inProgress ? "text-amber-600"
+                                    : "text-gray-400"
+                                  }`}>
                                     {sub.name}
                                   </span>
+                                  {sub.facultyName && (
+                                    <span className="text-[11px] text-gray-400 ml-1">— {sub.facultyName}</span>
+                                  )}
+                                  {(sub.startDate || sub.daysCount > 0) && (
+                                    <span className="text-[10px] text-gray-400 ml-1">
+                                      {sub.startDate && formatDate(sub.startDate)}
+                                      {sub.endDate && ` → ${formatDate(sub.endDate)}`}
+                                      {!sub.endDate && sub.lastTaughtDate && ` → ongoing`}
+                                      {sub.daysCount > 0 && ` (${sub.daysCount}d)`}
+                                    </span>
+                                  )}
                                 </div>
                               ))}
                             </div>
