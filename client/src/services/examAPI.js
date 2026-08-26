@@ -37,6 +37,19 @@ export const questionAPI = {
   deleteQuestion: async (questionId) => {
     const response = await api.delete(`/exam/questions/${questionId}`);
     return response.data;
+  },
+
+  checkSimilarTopics: async (topic, subtopic, excludeCourseId) => {
+    const params = { topic };
+    if (subtopic) params.subtopic = subtopic;
+    if (excludeCourseId) params.excludeCourseId = excludeCourseId;
+    const response = await api.get('/exam/questions/similar-topics', { params });
+    return response.data;
+  },
+
+  importQuestions: async (payload) => {
+    const response = await api.post('/exam/questions/import', payload);
+    return response.data;
   }
 };
 

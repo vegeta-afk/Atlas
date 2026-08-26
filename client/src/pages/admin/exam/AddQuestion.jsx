@@ -46,6 +46,11 @@ const AddQuestion = () => {
   const [uploadErrors, setUploadErrors] = useState([]);
   const [uploadSummary, setUploadSummary] = useState(null);
 
+  // Cross-course question reuse
+  const [similarMatches, setSimilarMatches] = useState([]);
+  const [checkingSimilar, setCheckingSimilar] = useState(false);
+  const [importingKey, setImportingKey] = useState(null); // courseId_semester currently importing, or null
+
   // Load courses on mount
   useEffect(() => {
     loadCourses();
@@ -58,6 +63,65 @@ const AddQuestion = () => {
       const course = courses.find(c => c._id === courseSelection.courseId);
     }
   }, [courseSelection.courseId, courses]);
+
+  // Check for the same topic/subtopic already having questions in OTHER courses
+  useEffect(() => {
+    if (!courseSelection.topic) {
+      setSimilarMatches([]);
+      return;
+    }
+
+    let cancelled = false;
+    const check = async () => {
+      setCheckingSimilar(true);
+      try {
+        const response = await questionAPI.checkSimilarTopics(
+          courseSelection.topic,
+          courseSelection.subtopic,
+          courseSelection.courseId
+        );
+        if (!cancelled && response.success) {
+          setSimilarMatches(response.data.matches || []);
+        }
+      } catch (error) {
+        console.error('Check similar topics error:', error);
+        if (!cancelled) setSimilarMatches([]);
+      } finally {
+        if (!cancelled) setCheckingSimilar(false);
+      }
+    };
+
+    check();
+    return () => { cancelled = true; };
+  }, [courseSelection.courseId, courseSelection.topic, courseSelection.subtopic]);
+
+  const handleImportFromCourse = async (match) => {
+    const key = `${match.courseId}_${match.semester}`;
+    setImportingKey(key);
+    try {
+      const response = await questionAPI.importQuestions({
+        sourceCourseId: match.courseId,
+        sourceSemester: match.semester,
+        sourceTopic: courseSelection.topic,
+        sourceSubtopic: match.subtopic,
+        targetCourseId: courseSelection.courseId,
+        targetSemester: courseSelection.semester,
+        targetTopic: courseSelection.topic,
+        targetSubtopic: courseSelection.subtopic
+      });
+      if (response.success) {
+        toast.success(response.message || 'Questions imported');
+        setSimilarMatches(prev => prev.filter(m => `${m.courseId}_${m.semester}` !== key));
+      } else {
+        toast.error(response.message || 'Import failed');
+      }
+    } catch (error) {
+      console.error('Import questions error:', error);
+      toast.error(error.response?.data?.message || 'Import failed');
+    } finally {
+      setImportingKey(null);
+    }
+  };
 
   const loadCourses = async () => {
     try {
@@ -618,6 +682,34 @@ const AddQuestion = () => {
                   </span>
                 </div>
               </div>
+
+              {checkingSimilar && (
+                <div className="text-xs text-gray-400 text-center py-1">Checking other courses for this topic...</div>
+              )}
+
+              {!checkingSimilar && similarMatches.length > 0 && (
+                <div className="space-y-2">
+                  {similarMatches.map(match => {
+                    const key = `${match.courseId}_${match.semester}`;
+                    return (
+                      <div key={key} className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-sm text-amber-900">
+                          <span className="font-semibold">{match.count} question{match.count !== 1 ? 's' : ''}</span> found under "{courseSelection.topic}"
+                          {match.subtopic && ` → ${match.subtopic}`} in <span className="font-medium">{match.courseName}</span> ({match.semester}).
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => handleImportFromCourse(match)}
+                          disabled={importingKey === key}
+                          className="mt-2 px-3 py-1.5 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                        >
+                          {importingKey === key ? 'Importing...' : `Import into ${courses.find(c => c._id === courseSelection.courseId)?.courseShortName || 'this course'}`}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 

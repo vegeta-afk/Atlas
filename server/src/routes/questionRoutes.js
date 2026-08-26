@@ -19,4 +19,8 @@ router.post('/bulk', authorize('admin', 'faculty'), questionController.bulkAddQu
 // Course topics
 router.get('/courses/:courseId/topics', authorize('admin', 'faculty'), questionController.getCourseTopics);
 
+// Cross-course topic reuse
+router.get('/similar-topics', authorize('admin', 'faculty'), questionController.checkSimilarTopics);
+router.post('/import', authorize('admin', 'faculty'), questionController.importQuestions);
+
 module.exports = router;

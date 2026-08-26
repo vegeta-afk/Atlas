@@ -347,6 +347,135 @@ exports.getCourseTopics = async (req, res) => {
   }
 };
 
+// @desc    Check if questions already exist under this topic/subtopic in OTHER courses
+// @route   GET /api/exam/questions/similar-topics?topic=X&subtopic=Y&excludeCourseId=Z
+// @access  Private (Admin/Faculty)
+exports.checkSimilarTopics = async (req, res) => {
+  try {
+    const { topic, subtopic, excludeCourseId } = req.query;
+
+    if (!topic) {
+      return res.status(400).json({ success: false, message: "topic is required" });
+    }
+
+    const match = {
+      topic: topic.trim(),
+      isActive: true
+    };
+    // Subtopic-aware: if a subtopic was selected, only match that exact subtopic.
+    // If not, only match questions that ALSO have no subtopic (whole-topic questions).
+    match.subtopic = (subtopic || "").trim();
+
+    if (excludeCourseId) {
+      match.courseId = { $ne: excludeCourseId };
+    }
+
+    const questions = await Question.find(match)
+      .select('courseId semester topic subtopic')
+      .populate('courseId', 'courseFullName')
+      .lean();
+
+    // Group by courseId + semester (a course could have the same topic name
+    // in more than one semester in theory, so keep them separate)
+    const groups = {};
+    questions.forEach(q => {
+      if (!q.courseId) return;
+      const cid = q.courseId._id.toString();
+      const key = `${cid}_${q.semester}`;
+      if (!groups[key]) {
+        groups[key] = {
+          courseId: cid,
+          courseName: q.courseId.courseFullName || 'Unknown Course',
+          semester: q.semester,
+          subtopic: q.subtopic || "",
+          count: 0
+        };
+      }
+      groups[key].count += 1;
+    });
+
+    const matches = Object.values(groups).sort((a, b) => b.count - a.count);
+
+    res.json({
+      success: true,
+      data: { matches, totalFound: questions.length }
+    });
+
+  } catch (error) {
+    console.error("Check similar topics error:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+// @desc    Import (duplicate) questions from another course's matching topic into the target selection
+// @route   POST /api/exam/questions/import
+// @access  Private (Admin/Faculty)
+exports.importQuestions = async (req, res) => {
+  try {
+    const {
+      sourceCourseId,
+      sourceSemester,
+      sourceTopic,
+      sourceSubtopic,
+      targetCourseId,
+      targetSemester,
+      targetTopic,
+      targetSubtopic
+    } = req.body;
+
+    if (!sourceCourseId || !sourceSemester || !sourceTopic || !targetCourseId || !targetSemester || !targetTopic) {
+      return res.status(400).json({
+        success: false,
+        message: "sourceCourseId, sourceSemester, sourceTopic, targetCourseId, targetSemester, and targetTopic are required"
+      });
+    }
+
+    const targetCourse = await Course.findById(targetCourseId);
+    if (!targetCourse) {
+      return res.status(404).json({ success: false, message: "Target course not found" });
+    }
+
+    const sourceQuestions = await Question.find({
+      courseId: sourceCourseId,
+      semester: sourceSemester,
+      topic: sourceTopic.trim(),
+      subtopic: (sourceSubtopic || "").trim(),
+      isActive: true
+    }).lean();
+
+    if (sourceQuestions.length === 0) {
+      return res.status(404).json({ success: false, message: "No matching questions found to import" });
+    }
+
+    const duplicates = sourceQuestions.map(q => ({
+      questionText: q.questionText,
+      questionType: q.questionType,
+      options: q.questionType === 'mcq' ? q.options : undefined,
+      correctAnswer: q.questionType !== 'mcq' ? q.correctAnswer : undefined,
+      marks: q.marks,
+      difficulty: q.difficulty || 'medium',
+      courseId: targetCourseId,
+      semester: targetSemester,
+      topic: targetTopic.trim(),
+      subtopic: (targetSubtopic || "").trim(),
+      createdBy: req.user.id,
+      isActive: true
+    }));
+
+    const inserted = await Question.insertMany(duplicates);
+
+    res.status(201).json({
+      success: true,
+      message: `Imported ${inserted.length} question(s) into ${targetCourse.courseFullName}`,
+      data: { importedCount: inserted.length }
+    });
+
+  } catch (error) {
+    console.error("Import questions error:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
 // @desc    Bulk add questions
 // @route   POST /api/exam/questions/bulk
 // @access  Private (Admin/Faculty)
