@@ -88,6 +88,13 @@ getRegularTopics: async (facultyId, batchIds, courseIds) => {
     return response.data;
 },
 
+getRegularStudents: async (facultyId, batchIds, courseIds) => {
+    const params = { facultyId, batchIds: (batchIds || []).join(',') };
+    if (courseIds && courseIds.length > 0) params.courseIds = courseIds.join(',');
+    const response = await api.get(`/exam/tests/regular/students`, { params });
+    return response.data;
+},
+
   
   // Generate question pool
   generateQuestionPool: async (testId) => {

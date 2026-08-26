@@ -107,6 +107,8 @@ const testSchema = new mongoose.Schema({
     ref: 'Student'
   }],
 
+  eligibleStudentIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Student' }],
+
   manuallyDueStudentIds: [{
   type: mongoose.Schema.Types.ObjectId,
   ref: 'Student'

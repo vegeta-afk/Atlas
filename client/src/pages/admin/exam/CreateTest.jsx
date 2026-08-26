@@ -38,6 +38,8 @@ const CreateTest = () => {
   const [regularCourses, setRegularCourses] = useState([]); // courses available in selected faculty+batch, with student counts
   const [regularTopics, setRegularTopics] = useState([]);
   const [loadingRegularTopics, setLoadingRegularTopics] = useState(false);
+  const [courseStudents, setCourseStudents] = useState([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -51,6 +53,7 @@ const CreateTest = () => {
     selectedSemesters: [],
     selectedTopics: [],
     subtopicSelections: {}, // regular mode — { [topicName]: [selected subtopic names] }
+    selectedStudentIds: [], // regular mode — explicit eligible student list
     totalQuestionsInPool: '',
     questionsPerStudent: '',
     duration: '',
@@ -95,9 +98,14 @@ const CreateTest = () => {
 
   const loadFacultyBatches = async (facultyId) => {
     try {
-      const response = await facultyAPI.getFacultyBatches(facultyId, { includeEmpty: 'true' });
+      const response = await facultyAPI.getFacultyBatches(facultyId, { includeEmpty: 'false' });
       if (response.data.success) {
-        setFacultyBatches(response.data.data.batches || []);
+        const allBatches = response.data.data.batches || [];
+        // Exam creation only wants active regular batches with actual students —
+        // exclude bridge (temporary) batches entirely, and belt-and-suspenders
+        // filter out any 0-student batch even if the backend ever sends one.
+        const eligibleBatches = allBatches.filter(b => !b.isTemporary && b.totalStudents > 0);
+        setFacultyBatches(eligibleBatches);
       } else {
         setFacultyBatches([]);
       }
@@ -151,6 +159,29 @@ const CreateTest = () => {
     }
   };
 
+  // ── Step 2b (Regular mode): load students grouped by course for the picker ──
+  const loadRegularStudents = async (facultyId, batchIds, courseIds) => {
+    setLoadingStudents(true);
+    try {
+      const response = await testAPI.getRegularStudents(facultyId, batchIds, courseIds);
+      if (response.success) {
+        const courses = response.data.courses || [];
+        setCourseStudents(courses);
+        const allIds = courses.flatMap(c => c.students.map(s => s._id));
+        setFormData(prev => ({ ...prev, selectedStudentIds: allIds }));
+      } else {
+        toast.error(response.message || 'Failed to load students');
+        setCourseStudents([]);
+      }
+    } catch (error) {
+      console.error('Load regular students error:', error);
+      toast.error(error.response?.data?.message || 'Failed to load students for this selection');
+      setCourseStudents([]);
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
   // Load course topics when course is selected (Semester mode)
   useEffect(() => {
     if (examMode === 'semester' && formData.courseId) {
@@ -170,13 +201,15 @@ const CreateTest = () => {
     }
   }, [examMode, formData.facultyId, formData.batchIds]);
 
-  // Regular mode: course(s) selected → load their deduplicated taught topics
+  // Regular mode: course(s) selected → load their deduplicated taught topics + eligible students
   useEffect(() => {
     if (examMode === 'regular' && formData.facultyId && formData.batchIds.length > 0 && formData.selectedCourseIds.length > 0) {
       loadRegularTopics(formData.facultyId, formData.batchIds, formData.selectedCourseIds);
+      loadRegularStudents(formData.facultyId, formData.batchIds, formData.selectedCourseIds);
     } else if (examMode === 'regular' && formData.selectedCourseIds.length === 0) {
       setRegularTopics([]);
-      setFormData(prev => ({ ...prev, selectedTopics: [] }));
+      setCourseStudents([]);
+      setFormData(prev => ({ ...prev, selectedTopics: [], selectedStudentIds: [] }));
     }
   }, [examMode, formData.selectedCourseIds]);
 
@@ -443,6 +476,32 @@ const CreateTest = () => {
     setFormData(prev => ({ ...prev, selectedTopics: [], subtopicSelections: {} }));
   };
 
+  const handleStudentToggle = (studentId) => {
+    setFormData(prev => {
+      const isSelected = prev.selectedStudentIds.includes(studentId);
+      return {
+        ...prev,
+        selectedStudentIds: isSelected
+          ? prev.selectedStudentIds.filter(id => id !== studentId)
+          : [...prev.selectedStudentIds, studentId]
+      };
+    });
+  };
+
+  const selectAllStudentsInCourse = (courseStudentIds) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedStudentIds: [...new Set([...prev.selectedStudentIds, ...courseStudentIds])]
+    }));
+  };
+
+  const deselectAllStudentsInCourse = (courseStudentIds) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedStudentIds: prev.selectedStudentIds.filter(id => !courseStudentIds.includes(id))
+    }));
+  };
+
   const validateForm = () => {
     return true;
   };
@@ -464,6 +523,10 @@ const CreateTest = () => {
       }
       if (formData.selectedTopics.length === 0) {
         toast.error('Please select at least one topic');
+        return;
+      }
+      if (formData.selectedStudentIds.length === 0) {
+        toast.error('Please select at least one eligible student');
         return;
       }
     }
@@ -734,6 +797,61 @@ const CreateTest = () => {
                       <p className="text-xs text-gray-500 mt-1">
                         This batch has students from multiple courses mixed together — only students enrolled
                         in the selected course(s) will see this exam.
+                      </p>
+                    </div>
+                  )}
+
+                  {formData.selectedCourseIds.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Eligible Students *
+                      </label>
+                      {loadingStudents ? (
+                        <div className="text-center py-6">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                          <p className="mt-2 text-gray-500 text-sm">Loading students...</p>
+                        </div>
+                      ) : courseStudents.length === 0 ? (
+                        <p className="text-sm text-gray-500 py-2">No students found for this selection</p>
+                      ) : (
+                        <div className="border border-gray-200 rounded-lg divide-y max-h-80 overflow-y-auto">
+                          {courseStudents.map(course => {
+                            const ids = course.students.map(s => s._id);
+                            const selectedCount = ids.filter(id => formData.selectedStudentIds.includes(id)).length;
+                            return (
+                              <div key={course.courseId} className="p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="font-medium text-sm text-gray-800">
+                                    {course.courseName} <span className="text-gray-500 font-normal">({selectedCount}/{ids.length} selected)</span>
+                                  </span>
+                                  <div className="flex gap-2">
+                                    <button type="button" onClick={() => selectAllStudentsInCourse(ids)}
+                                      className="text-xs text-blue-600 hover:underline">Select all</button>
+                                    <button type="button" onClick={() => deselectAllStudentsInCourse(ids)}
+                                      className="text-xs text-gray-500 hover:underline">Clear</button>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                                  {course.students.map(s => (
+                                    <label key={s._id} className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-gray-50 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={formData.selectedStudentIds.includes(s._id)}
+                                        onChange={() => handleStudentToggle(s._id)}
+                                        className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+                                      />
+                                      <span className="text-gray-700">{s.fullName}</span>
+                                      <span className="text-gray-400 text-xs">({s.studentId})</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">
+                        Uncheck any student who shouldn't take this exam.
                       </p>
                     </div>
                   )}

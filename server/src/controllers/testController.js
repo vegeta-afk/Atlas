@@ -20,6 +20,7 @@ exports.createTest = async (req, res) => {
       facultyId,         // regular mode
       batchId, 
       selectedCourseIds,          // both modes (required for regular, optional for semester)
+      selectedStudentIds, // regular mode — explicit final list of eligible students from picker step
       topicSelections,   // regular mode — [{ topic, subtopics: null | [names] }] for subtopic-level filtering
       totalQuestionsInPool,
       questionsPerStudent,
@@ -98,6 +99,21 @@ exports.createTest = async (req, res) => {
         return res.status(e.status || 400).json({ success: false, message: e.message });
       }
 
+      let cleanEligibleStudentIds = [];
+      if (selectedStudentIds && selectedStudentIds.length > 0) {
+        const { courseGroupMap } = await getRegularBatchCourseGroupsMulti(facultyId, cleanBatchIds);
+        const validIds = new Set();
+        Object.entries(courseGroupMap).forEach(([cid, pairSet]) => {
+          if (!selectedCourseIds.includes(cid)) return;
+          [...pairSet].forEach(p => validIds.add(p.split('|')[0]));
+        });
+        cleanEligibleStudentIds = selectedStudentIds.filter(id => validIds.has(id));
+
+        if (cleanEligibleStudentIds.length === 0) {
+          return res.status(400).json({ success: false, message: "No valid students selected for this exam" });
+        }
+      }
+
       const orConditions = (topicSelections && topicSelections.length > 0)
         ? topicSelections.map(sel =>
             (!sel.subtopics || sel.subtopics.length === 0)
@@ -164,6 +180,7 @@ exports.createTest = async (req, res) => {
       allowMultipleAttempts: allowMultipleAttempts || false,
       batchId: cleanBatchIds[0] || null, // legacy — first batch only
       batchIds: cleanBatchIds,
+      eligibleStudentIds: mode === 'regular' ? cleanEligibleStudentIds : [],
       createdBy: req.user.id,
       createdByName: req.user.name,
       questionPool: questionIds,
@@ -488,33 +505,40 @@ exports.startTest = async (req, res) => {
       }
     }
 
-    // Strict check: regular-mode tests require explicit TeacherBatch assignmen
+    // Regular-mode eligibility: explicit list is the source of truth when present;
+    // old tests (created before this feature) fall back to TeacherBatch/course derivation.
+    if (test.examMode === 'regular') {
+      if (test.eligibleStudentIds && test.eligibleStudentIds.length > 0) {
+        const isEligible = test.eligibleStudentIds.some(id => id.toString() === student._id.toString());
+        if (!isEligible) {
+          return res.status(403).json({ success: false, message: "You are not eligible for this exam" });
+        }
+      } else {
+        const testTeacherBatchIds = (test.teacherBatchIds && test.teacherBatchIds.length > 0
+          ? test.teacherBatchIds
+          : [test.teacherBatchId]
+        ).filter(Boolean);
 
-    // Strict check: regular-mode tests require explicit TeacherBatch assignment
-    // Strict check: regular-mode tests require explicit TeacherBatch assignment + course match
-    const testTeacherBatchIds = (test.teacherBatchIds && test.teacherBatchIds.length > 0
-      ? test.teacherBatchIds
-      : [test.teacherBatchId]
-    ).filter(Boolean);
+        if (testTeacherBatchIds.length > 0) {
+          const TeacherBatch = require('../models/TeacherBatch');
+          const tbs = await TeacherBatch.find({ _id: { $in: testTeacherBatchIds } }).select('assignedStudents batch').lean();
 
-    if (test.examMode === 'regular' && testTeacherBatchIds.length > 0) {
-      const TeacherBatch = require('../models/TeacherBatch');
-      const tbs = await TeacherBatch.find({ _id: { $in: testTeacherBatchIds } }).select('assignedStudents batch').lean();
+          const matchedTb = tbs.find(tb => (tb.assignedStudents || []).some(as =>
+            as && as.student && as.student.toString() === student._id.toString() &&
+            (as.isActive !== undefined ? as.isActive : true)
+          ));
 
-      const matchedTb = tbs.find(tb => (tb.assignedStudents || []).some(as =>
-        as && as.student && as.student.toString() === student._id.toString() &&
-        (as.isActive !== undefined ? as.isActive : true)
-      ));
+          if (!matchedTb) {
+            return res.status(403).json({ success: false, message: "You are not assigned to this exam" });
+          }
 
-      if (!matchedTb) {
-        return res.status(403).json({ success: false, message: "You are not assigned to this exam" });
-      }
-
-      if (test.relevantCourseIds && test.relevantCourseIds.length > 0) {
-        const studentCourseId = exports.resolveStudentCourseIdForBatch(student, matchedTb.batch);
-        const matches = studentCourseId && test.relevantCourseIds.some(cid => cid.toString() === studentCourseId);
-        if (!matches) {
-          return res.status(403).json({ success: false, message: "This exam is not for your course" });
+          if (test.relevantCourseIds && test.relevantCourseIds.length > 0) {
+            const studentCourseId = exports.resolveStudentCourseIdForBatch(student, matchedTb.batch);
+            const matches = studentCourseId && test.relevantCourseIds.some(cid => cid.toString() === studentCourseId);
+            if (!matches) {
+              return res.status(403).json({ success: false, message: "This exam is not for your course" });
+            }
+          }
         }
       }
     }
@@ -1028,6 +1052,12 @@ exports.getStudentTests = async (req, res) => {
       relevantTeacherBatches.forEach(tb => { tbMap[tb._id.toString()] = tb; });
 
       regularTests.forEach(t => {
+        if (t.eligibleStudentIds && t.eligibleStudentIds.length > 0) {
+          const isEligible = t.eligibleStudentIds.some(id => id.toString() === student._id.toString());
+          if (isEligible) allowedRegularTestIds.add(t._id.toString());
+          return;
+        }
+
         const testTeacherBatchIds = (t.teacherBatchIds && t.teacherBatchIds.length > 0
           ? t.teacherBatchIds
           : [t.teacherBatchId]
@@ -1525,6 +1555,50 @@ function resolveStudentCourseIdForBatch(student, batchId) {
   return applicableCourseId;
 }
 
+exports.getRegularExamStudents = async (req, res) => {
+  try {
+    const { facultyId, batchIds, courseIds } = req.query;
+    if (!facultyId || !batchIds) {
+      return res.status(400).json({ success: false, message: 'facultyId and batchIds are required' });
+    }
+    if (!courseIds) {
+      return res.status(400).json({ success: false, message: 'courseIds is required — select at least one course' });
+    }
+
+    const batchIdList = batchIds.split(',').filter(Boolean);
+    const selectedCourseIds = courseIds.split(',').filter(Boolean);
+
+    const { courseGroupMap, courseMap } = await getRegularBatchCourseGroupsMulti(facultyId, batchIdList);
+
+    const entries = Object.entries(courseGroupMap).filter(([cid]) => selectedCourseIds.includes(cid));
+    if (entries.length === 0) {
+      return res.status(400).json({ success: false, message: 'No matching courses found for this selection' });
+    }
+
+    const courses = [];
+    for (const [cid, pairSet] of entries) {
+      const studentIds = [...new Set([...pairSet].map(p => p.split('|')[0]))];
+      const students = await Student.find({ _id: { $in: studentIds } })
+        .select('studentId fullName')
+        .sort({ fullName: 1 })
+        .lean();
+
+      courses.push({
+        courseId: cid,
+        courseName: courseMap[cid]?.courseFullName || 'Unknown Course',
+        students: students.map(s => ({ _id: s._id, studentId: s.studentId, fullName: s.fullName }))
+      });
+    }
+
+    courses.sort((a, b) => a.courseName.localeCompare(b.courseName));
+
+    res.json({ success: true, data: { courses } });
+  } catch (error) {
+    console.error('Get regular exam students error:', error);
+    res.status(error.status || 500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
 exports.getRegularExamCourses = async (req, res) => {
   try {
     const { facultyId, batchIds } = req.query;
@@ -1695,9 +1769,14 @@ exports.getTestEligibilityReport = async (req, res) => {
       : [test.teacherBatchId]
     ).filter(Boolean);
 
-    if (test.examMode === 'regular' && eligTeacherBatchIds.length > 0) {
-      // Regular mode: eligible = union of assignedStudents across all selected TeacherBatches,
-      // each resolved against their own batch for the course-level check
+    if (test.examMode === 'regular' && test.eligibleStudentIds && test.eligibleStudentIds.length > 0) {
+      // New-style: explicit list from the student picker is the source of truth
+      eligibleStudents = await Student.find({ _id: { $in: test.eligibleStudentIds } })
+        .select('studentId fullName courseCode additionalCourses')
+        .lean();
+    } else if (test.examMode === 'regular' && eligTeacherBatchIds.length > 0) {
+      // Old tests without an explicit list: eligible = union of assignedStudents
+      // across all selected TeacherBatches, each resolved against their own batch
       const TeacherBatch = require('../models/TeacherBatch');
       const tbs = await TeacherBatch.find({ _id: { $in: eligTeacherBatchIds } }).select('assignedStudents batch').lean();
 
@@ -1823,7 +1902,9 @@ exports.getTestEligibilityReport = async (req, res) => {
           let courseShortName = null;
           if (test.examMode === 'regular') {
             const batchForStudent = studentToBatch?.get(s._id.toString());
-            const cid = exports.resolveStudentCourseIdForBatch(s, batchForStudent);
+            const cid = batchForStudent
+              ? exports.resolveStudentCourseIdForBatch(s, batchForStudent)
+              : (s.courseCode ? s.courseCode.toString() : null);
             courseShortName = cid ? courseShortNameMap[cid] : null;
           } else {
             const matchedAdditional = (s.additionalCourses || []).find(
