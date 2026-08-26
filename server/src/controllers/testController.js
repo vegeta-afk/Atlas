@@ -77,7 +77,7 @@ exports.createTest = async (req, res) => {
       });
     }
 
-    let matchingQuestions, courseIdForTest = null, courseNameForTest = "", relevantCourseIds = [], facultyIdForTest = null, teacherBatchIdForTest = null;
+        let matchingQuestions, courseIdForTest = null, courseNameForTest = "", relevantCourseIds = [], facultyIdForTest = null, teacherBatchIdForTest = null, cleanEligibleStudentIds = [];
 
     if (mode === 'semester') {
       if (!courseId || !selectedSemesters || selectedSemesters.length === 0) {
@@ -126,8 +126,7 @@ exports.createTest = async (req, res) => {
         return res.status(e.status || 400).json({ success: false, message: e.message });
       }
 
-      let cleanEligibleStudentIds = [];
-      if (selectedStudentIds && selectedStudentIds.length > 0) {
+            if (selectedStudentIds && selectedStudentIds.length > 0) {
         const { courseGroupMap } = await getRegularBatchCourseGroupsMulti(facultyId, cleanBatchIds);
         const validIds = new Set();
         Object.entries(courseGroupMap).forEach(([cid, pairSet]) => {
