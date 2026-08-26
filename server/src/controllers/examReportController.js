@@ -87,6 +87,8 @@ exports.getUpcomingExamReport = async (req, res) => {
     students.forEach(student => {
       const sid = student._id.toString();
       const dueKeys = new Set(student.manuallyDueExamKeys || []);
+      const overrideMap = {};
+      (student.manualExamDateOverrides || []).forEach(o => { overrideMap[o.key] = o.examDate; });
 
       // ══════════════════════════════════════════════
       // PRIMARY COURSE
@@ -112,9 +114,15 @@ exports.getUpcomingExamReport = async (req, res) => {
         });
 
         examMonths.forEach((monthNum, index) => {
-          const examDate = new Date(startDate);
+          const overrideKey = `${cid}_${index + 1}`;
+          const hasDateOverride = !!overrideMap[overrideKey];
+
+          let examDate = new Date(startDate);
           examDate.setMonth(startDate.getMonth() + monthNum - 1);
           examDate.setDate(15);
+          if (hasDateOverride) {
+            examDate = new Date(overrideMap[overrideKey]);
+          }
 
           const diffTime = examDate - today;
           const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -122,7 +130,7 @@ exports.getUpcomingExamReport = async (req, res) => {
           const matchedSubmission = submissionByExamIndex[index] || null;
           const isCompleted = !!matchedSubmission;
           const isOverdue = !isCompleted && daysLeft < 0;
-          const isManuallyDue = !isCompleted && dueKeys.has(`${cid}_${index + 1}`);
+          const isManuallyDue = !isCompleted && !hasDateOverride && dueKeys.has(overrideKey);
 
           const feeEntry = (student.feeSchedule || []).find(f => f.monthNumber === monthNum);
           const examFeeAmount = feeEntry?.examFee || 0;
@@ -179,6 +187,7 @@ exports.getUpcomingExamReport = async (req, res) => {
               admissionDate: student.admissionDate,
               dateOfJoining: student.admissionDate ? new Date(student.admissionDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : "N/A",
               courseType: "primary",
+              hasDateOverride,
             });
           }
         });
@@ -212,16 +221,22 @@ exports.getUpcomingExamReport = async (req, res) => {
         });
 
         acExamMonths.forEach((monthNum, index) => {
-          const examDate = new Date(acStartDate);
+          const overrideKey = `${acCid}_${index + 1}`;
+          const hasDateOverride = !!overrideMap[overrideKey];
+
+          let examDate = new Date(acStartDate);
           examDate.setMonth(acStartDate.getMonth() + monthNum - 1);
           examDate.setDate(15);
+          if (hasDateOverride) {
+            examDate = new Date(overrideMap[overrideKey]);
+          }
 
           const daysLeft = Math.ceil((examDate - today) / (1000 * 60 * 60 * 24));
 
           const matchedSubmission = acSubmissionByExamIndex[index] || null;
           const isCompleted = !!matchedSubmission;
           const isOverdue = !isCompleted && daysLeft < 0;
-          const isManuallyDue = !isCompleted && dueKeys.has(`${acCid}_${index + 1}`);
+          const isManuallyDue = !isCompleted && !hasDateOverride && dueKeys.has(overrideKey);
 
           const feeEntry = (ac.feeSchedule || []).find(f => f.monthNumber === monthNum);
           const examFeeAmount = feeEntry?.examFee || 0;
@@ -278,6 +293,7 @@ exports.getUpcomingExamReport = async (req, res) => {
               admissionDate: student.admissionDate,
               dateOfJoining: student.admissionDate ? new Date(student.admissionDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : "N/A",
               courseType: "additional",
+              hasDateOverride,
             });
           }
         });
@@ -396,6 +412,53 @@ exports.toggleExamDueStatus = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Toggle exam due status error:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+// @desc    Set a custom exam date for a student's exam slot — extends/changes it,
+//          and clears "Due" status for that slot since the countdown restarts.
+// @route   PUT /api/reports/exams/upcoming/set-exam-date
+// @access  Private (Admin)
+exports.setExamDateOverride = async (req, res) => {
+  try {
+    const { studentId, courseId, examNumber, examDate } = req.body;
+
+    if (!studentId || !courseId || !examNumber || !examDate) {
+      return res.status(400).json({
+        success: false,
+        message: "studentId, courseId, examNumber, and examDate are required"
+      });
+    }
+
+    const parsedDate = new Date(examDate);
+    if (isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ success: false, message: "Invalid examDate" });
+    }
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    const key = `${courseId}_${examNumber}`;
+
+    const existingOverrides = (student.manualExamDateOverrides || []).filter(o => o.key !== key);
+    existingOverrides.push({ key, examDate: parsedDate });
+    student.manualExamDateOverrides = existingOverrides;
+
+    // New date drives the countdown fresh — old manual "Due" flag no longer applies
+    student.manuallyDueExamKeys = (student.manuallyDueExamKeys || []).filter(k => k !== key);
+
+    await student.save();
+
+    res.json({
+      success: true,
+      message: "Exam date updated",
+      data: { studentId, courseId, examNumber, examDate: parsedDate }
+    });
+  } catch (error) {
+    console.error("❌ Set exam date override error:", error);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };

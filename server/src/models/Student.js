@@ -306,6 +306,15 @@ otherFeeDate: Date,
     type: String
   }],
 
+  // Manual exam-date overrides — lets admin push out an individual exam date
+  // (e.g. extend a Due student's exam by a month). Keyed the same way as
+  // manuallyDueExamKeys: "<courseId>_<examNumber>". Setting one clears the
+  // matching manuallyDueExamKeys entry (see setExamDateOverride controller).
+  manualExamDateOverrides: [{
+    key: { type: String, required: true },
+    examDate: { type: Date, required: true }
+  }],
+
     // Payment History (Primary Course)
     paymentHistory: [
       {

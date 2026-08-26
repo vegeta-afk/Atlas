@@ -409,6 +409,8 @@ export const examReportAPI = {
 
   toggleExamDue: (data) => api.put('/reports/exams/upcoming/mark-due', data),
 
+  setExamDate: (data) => api.put('/reports/exams/upcoming/set-exam-date', data),
+
   exportUpcomingExamReport: () =>
     api.get("/reports/exams/upcoming/export", { responseType: 'blob' }),
 

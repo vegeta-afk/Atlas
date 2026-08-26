@@ -253,6 +253,36 @@ const UpcomingExamReport = () => {
     }
   };
 
+  const handleChangeExamDate = async (exam) => {
+    const currentDateStr = exam.examDate ? new Date(exam.examDate).toISOString().split('T')[0] : '';
+    const input = window.prompt(
+      `Enter new exam date for ${exam.studentName} (YYYY-MM-DD):`,
+      currentDateStr
+    );
+    if (!input) return;
+
+    const parsed = new Date(input);
+    if (isNaN(parsed.getTime())) {
+      alert('Invalid date. Please use YYYY-MM-DD format.');
+      return;
+    }
+
+    try {
+      const response = await examReportAPI.setExamDate({
+        studentId: exam.studentId,
+        courseId: exam.courseId,
+        examNumber: exam.examNumber,
+        examDate: input
+      });
+      if (response?.data?.success) {
+        fetchReportData();
+      }
+    } catch (err) {
+      console.error("Set exam date error:", err);
+      alert(err.response?.data?.message || "Failed to update exam date");
+    }
+  };
+
   // Calculate showing range
   const start = ((pagination.page - 1) * pagination.limit) + 1;
   const end = Math.min(start + exams.length - 1, pagination.total);
@@ -560,19 +590,29 @@ const UpcomingExamReport = () => {
                         {exam.daysLeft}
                       </span>
                     </td>
-                    <td className="px-4 py-4">
-                      {exam.isCompleted ? (
-                        getStatusBadge(exam.status, exam.daysLeft)
-                      ) : (
-                        <button
-                          onClick={() => handleStatusClick(exam)}
-                          className="cursor-pointer hover:opacity-75 transition-opacity"
-                          title={exam.status === "Due" ? "Click to remove Due status" : "Click to mark as Due"}
-                        >
-                          {getStatusBadge(exam.status, exam.daysLeft)}
-                          
-                        </button>
-                      )}
+                     <td className="px-4 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        {exam.isCompleted ? (
+                          getStatusBadge(exam.status, exam.daysLeft)
+                        ) : (
+                          <button
+                            onClick={() => handleStatusClick(exam)}
+                            className="cursor-pointer hover:opacity-75 transition-opacity"
+                            title={exam.status === "Due" ? "Click to remove Due status" : "Click to mark as Due"}
+                          >
+                            {getStatusBadge(exam.status, exam.daysLeft)}
+                          </button>
+                        )}
+                        {!exam.isCompleted && exam.status === "Due" && (
+                          <button
+                            onClick={() => handleChangeExamDate(exam)}
+                            className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-blue-600 transition-colors"
+                            title="Change exam date"
+                          >
+                            <Calendar size={16} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
