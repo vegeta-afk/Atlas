@@ -9,9 +9,6 @@ router.use(protect);
 // Apply authorize to EACH route (clean and clear)
 router.post('/', authorize('admin', 'faculty'), questionController.addQuestion);
 router.get('/', authorize('admin', 'faculty'), questionController.getQuestions);
-router.get('/:id', authorize('admin', 'faculty'), questionController.getQuestion);
-router.put('/:id', authorize('admin', 'faculty'), questionController.updateQuestion);
-router.delete('/:id', authorize('admin', 'faculty'), questionController.deleteQuestion);
 
 // Bulk operations
 router.post('/bulk', authorize('admin', 'faculty'), questionController.bulkAddQuestions);
@@ -19,8 +16,14 @@ router.post('/bulk', authorize('admin', 'faculty'), questionController.bulkAddQu
 // Course topics
 router.get('/courses/:courseId/topics', authorize('admin', 'faculty'), questionController.getCourseTopics);
 
-// Cross-course topic reuse
+// Cross-course topic reuse — must stay ABOVE the /:id routes below,
+// or GET /similar-topics gets swallowed by GET /:id (treated as an id, causes a 500)
 router.get('/similar-topics', authorize('admin', 'faculty'), questionController.checkSimilarTopics);
 router.post('/import', authorize('admin', 'faculty'), questionController.importQuestions);
+
+// Dynamic /:id routes LAST
+router.get('/:id', authorize('admin', 'faculty'), questionController.getQuestion);
+router.put('/:id', authorize('admin', 'faculty'), questionController.updateQuestion);
+router.delete('/:id', authorize('admin', 'faculty'), questionController.deleteQuestion);
 
 module.exports = router;
