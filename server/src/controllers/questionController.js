@@ -358,22 +358,29 @@ exports.checkSimilarTopics = async (req, res) => {
       return res.status(400).json({ success: false, message: "topic is required" });
     }
 
+    const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Case-insensitive, whitespace-tolerant match — topic/subtopic text is typed
+    // independently per course, so casing/spacing can differ even when it's
+    // "the same" topic to a human.
     const match = {
-      topic: topic.trim(),
+      topic: { $regex: `^${escapeRegex(topic.trim())}$`, $options: 'i' },
       isActive: true
     };
-    // Subtopic-aware: if a subtopic was selected, only match that exact subtopic.
-    // If not, only match questions that ALSO have no subtopic (whole-topic questions).
-    match.subtopic = (subtopic || "").trim();
+    match.subtopic = { $regex: `^${escapeRegex((subtopic || "").trim())}$`, $options: 'i' };
 
     if (excludeCourseId) {
       match.courseId = { $ne: excludeCourseId };
     }
 
+    console.log('🔍 checkSimilarTopics query:', JSON.stringify(match));
+
     const questions = await Question.find(match)
       .select('courseId semester topic subtopic')
       .populate('courseId', 'courseFullName')
       .lean();
+
+    console.log(`🔍 checkSimilarTopics found ${questions.length} question(s)`);
 
     // Group by courseId + semester (a course could have the same topic name
     // in more than one semester in theory, so keep them separate)
