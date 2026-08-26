@@ -51,6 +51,9 @@ const UpcomingExamReport = () => {
     total: 0,
     totalPages: 1,
   });
+  const [dateModalExam, setDateModalExam] = useState(null); // the exam row being edited, or null when closed
+  const [dateModalValue, setDateModalValue] = useState("");
+  const [savingDate, setSavingDate] = useState(false);
 
   // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -253,33 +256,45 @@ const UpcomingExamReport = () => {
     }
   };
 
-  const handleChangeExamDate = async (exam) => {
+  const openChangeExamDateModal = (exam) => {
     const currentDateStr = exam.examDate ? new Date(exam.examDate).toISOString().split('T')[0] : '';
-    const input = window.prompt(
-      `Enter new exam date for ${exam.studentName} (YYYY-MM-DD):`,
-      currentDateStr
-    );
-    if (!input) return;
+    setDateModalExam(exam);
+    setDateModalValue(currentDateStr);
+  };
 
-    const parsed = new Date(input);
+  const closeChangeExamDateModal = () => {
+    if (savingDate) return; // don't allow closing mid-save
+    setDateModalExam(null);
+    setDateModalValue("");
+  };
+
+  const submitChangeExamDate = async () => {
+    if (!dateModalExam || !dateModalValue) return;
+
+    const parsed = new Date(dateModalValue);
     if (isNaN(parsed.getTime())) {
-      alert('Invalid date. Please use YYYY-MM-DD format.');
+      alert('Invalid date.');
       return;
     }
 
+    setSavingDate(true);
     try {
       const response = await examReportAPI.setExamDate({
-        studentId: exam.studentId,
-        courseId: exam.courseId,
-        examNumber: exam.examNumber,
-        examDate: input
+        studentId: dateModalExam.studentId,
+        courseId: dateModalExam.courseId,
+        examNumber: dateModalExam.examNumber,
+        examDate: dateModalValue
       });
       if (response?.data?.success) {
+        setDateModalExam(null);
+        setDateModalValue("");
         fetchReportData();
       }
     } catch (err) {
       console.error("Set exam date error:", err);
       alert(err.response?.data?.message || "Failed to update exam date");
+    } finally {
+      setSavingDate(false);
     }
   };
 
@@ -605,7 +620,7 @@ const UpcomingExamReport = () => {
                         )}
                         {!exam.isCompleted && exam.status === "Due" && (
                           <button
-                            onClick={() => handleChangeExamDate(exam)}
+                            onClick={() => openChangeExamDateModal(exam)}
                             className="p-1 rounded hover:bg-gray-100 text-gray-500 hover:text-blue-600 transition-colors"
                             title="Change exam date"
                           >
@@ -654,6 +669,62 @@ const UpcomingExamReport = () => {
             >
               Next
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Change Exam Date Modal */}
+      {dateModalExam && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={closeChangeExamDateModal}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                <Calendar size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Change Exam Date</h3>
+                <p className="text-sm text-gray-500">{dateModalExam.studentName} — Exam {dateModalExam.examNumber}</p>
+              </div>
+            </div>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              New exam date
+            </label>
+            <input
+              type="date"
+              value={dateModalValue}
+              onChange={(e) => setDateModalValue(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-1"
+              autoFocus
+            />
+            <p className="text-xs text-gray-500 mb-6">
+              This will remove the "Due" status and recalculate days left from the new date.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeChangeExamDateModal}
+                disabled={savingDate}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitChangeExamDate}
+                disabled={savingDate || !dateModalValue}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {savingDate ? 'Saving...' : 'Save'}
+              </button>
+            </div>
           </div>
         </div>
       )}
