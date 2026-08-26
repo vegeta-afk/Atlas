@@ -26,5 +26,6 @@ router.get("/upcoming/export", examReportController.exportUpcomingExamReport);
 router.get("/stats", examReportController.getExamStats);
 
 router.put('/upcoming/mark-due', authorize('admin', 'faculty', 'instructor'), examReportController.toggleExamDueStatus);
+router.put('/upcoming/set-exam-date', authorize('admin', 'faculty', 'instructor'), examReportController.setExamDateOverride);
 
 module.exports = router;
