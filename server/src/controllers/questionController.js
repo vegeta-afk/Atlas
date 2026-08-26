@@ -359,15 +359,22 @@ exports.checkSimilarTopics = async (req, res) => {
     }
 
     const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const trimmedSubtopic = (subtopic || "").trim();
 
-    // Case-insensitive, whitespace-tolerant match — topic/subtopic text is typed
-    // independently per course, so casing/spacing can differ even when it's
-    // "the same" topic to a human.
+    // Case-insensitive, whitespace-tolerant topic match.
     const match = {
       topic: { $regex: `^${escapeRegex(topic.trim())}$`, $options: 'i' },
       isActive: true
     };
-    match.subtopic = { $regex: `^${escapeRegex((subtopic || "").trim())}$`, $options: 'i' };
+
+    // Only constrain by subtopic if the user actually selected one on the
+    // current (target) course. If they're on "whole topic" (empty), match
+    // ALL questions under this topic in other courses regardless of each
+    // question's individual subtopic — those questions get tagged all
+    // kinds of subtopics one-by-one, they're not all "no subtopic".
+    if (trimmedSubtopic) {
+      match.subtopic = { $regex: `^${escapeRegex(trimmedSubtopic)}$`, $options: 'i' };
+    }
 
     if (excludeCourseId) {
       match.courseId = { $ne: excludeCourseId };
@@ -382,8 +389,8 @@ exports.checkSimilarTopics = async (req, res) => {
 
     console.log(`🔍 checkSimilarTopics found ${questions.length} question(s)`);
 
-    // Group by courseId + semester (a course could have the same topic name
-    // in more than one semester in theory, so keep them separate)
+    // Group by courseId + semester only — a single import pulls in every
+    // subtopic variant under this topic from that course/semester at once.
     const groups = {};
     questions.forEach(q => {
       if (!q.courseId) return;
@@ -394,7 +401,6 @@ exports.checkSimilarTopics = async (req, res) => {
           courseId: cid,
           courseName: q.courseId.courseFullName || 'Unknown Course',
           semester: q.semester,
-          subtopic: q.subtopic || "",
           count: 0
         };
       }
@@ -423,11 +429,10 @@ exports.importQuestions = async (req, res) => {
       sourceCourseId,
       sourceSemester,
       sourceTopic,
-      sourceSubtopic,
+      sourceSubtopic, // optional — only set when the target course had a specific subtopic selected
       targetCourseId,
       targetSemester,
-      targetTopic,
-      targetSubtopic
+      targetTopic
     } = req.body;
 
     if (!sourceCourseId || !sourceSemester || !sourceTopic || !targetCourseId || !targetSemester || !targetTopic) {
@@ -442,18 +447,26 @@ exports.importQuestions = async (req, res) => {
       return res.status(404).json({ success: false, message: "Target course not found" });
     }
 
-    const sourceQuestions = await Question.find({
+    const query = {
       courseId: sourceCourseId,
       semester: sourceSemester,
       topic: sourceTopic.trim(),
-      subtopic: (sourceSubtopic || "").trim(),
       isActive: true
-    }).lean();
+    };
+    const trimmedSourceSubtopic = (sourceSubtopic || "").trim();
+    if (trimmedSourceSubtopic) {
+      query.subtopic = trimmedSourceSubtopic;
+    }
+
+    const sourceQuestions = await Question.find(query).lean();
 
     if (sourceQuestions.length === 0) {
       return res.status(404).json({ success: false, message: "No matching questions found to import" });
     }
 
+    // Preserve each question's own subtopic — a topic can have questions tagged
+    // to several different subtopics, and flattening them to one value would
+    // lose that structure.
     const duplicates = sourceQuestions.map(q => ({
       questionText: q.questionText,
       questionType: q.questionType,
@@ -464,7 +477,7 @@ exports.importQuestions = async (req, res) => {
       courseId: targetCourseId,
       semester: targetSemester,
       topic: targetTopic.trim(),
-      subtopic: (targetSubtopic || "").trim(),
+      subtopic: q.subtopic || "",
       createdBy: req.user.id,
       isActive: true
     }));
