@@ -61,11 +61,18 @@ const testSchema = new mongoose.Schema({
     required: [true, "Total questions in pool is required"],
     min: [1, "Minimum 1 question required"]
   },
-  questionsPerStudent: {
+    questionsPerStudent: {
     type: Number,
     required: [true, "Questions per student is required"],
     min: [1, "Minimum 1 question per student"]
   },
+  
+  topicQuestionCounts: {
+    type: Object,
+    default: {}
+  },
+
+
   duration: {
     type: Number, // in minutes
     required: [true, "Duration is required"],

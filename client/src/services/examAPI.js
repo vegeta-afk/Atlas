@@ -15,6 +15,12 @@ export const questionAPI = {
     return response.data;
   },
 
+    // Get single question by ID
+  getQuestion: async (questionId) => {
+    const response = await api.get(`/exam/questions/${questionId}`);
+    return response.data;
+  },
+
   // Get course topics
  getCourseTopics: async (courseId) => {
   const response = await api.get(`/courses/${courseId}`);

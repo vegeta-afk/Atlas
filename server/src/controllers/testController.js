@@ -5,6 +5,31 @@ const TestSession = require('../models/TestSession');
 const Student = require('../models/Student');
 const TestSubmission = require('../models/TestSubmission');
 
+
+// Collapse duplicate questions down to ONE representative each. Duplicates arise from
+// "Import to course" copying the same question verbatim into another course — same
+// topic + same text should never be counted or drawn twice, even though they're
+// separate documents with separate _ids across courses.
+function dedupeQuestionsByText(questions) {
+  const seen = new Map(); // "topic|normalized text" -> representative question doc
+  questions.forEach(q => {
+    const key = `${q.topic}|${(q.questionText || '').trim().toLowerCase()}`;
+    if (!seen.has(key)) seen.set(key, q);
+  });
+  return [...seen.values()];
+}
+
+// Deterministic seeded shuffle (same student + same test = same order every load).
+// Pulled out of startTest so it can be reused for per-topic sub-shuffles too.
+function seededShuffle(arr, seedVal) {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor((seedVal % (i + 1)) + i) % copy.length;
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 /// @desc    Create a new test (AUTO-GENERATES question pool immediately)
 // @route   POST /api/exam/tests
 // @access  Private (Admin/Faculty)
@@ -24,6 +49,7 @@ exports.createTest = async (req, res) => {
       topicSelections,   // regular mode — [{ topic, subtopics: null | [names] }] for subtopic-level filtering
       totalQuestionsInPool,
       questionsPerStudent,
+      topicQuestionCounts, // optional — { [topicName]: number }, only when 2+ topics selected
       duration,
       maxMarks,
       scheduledDate,
@@ -66,12 +92,13 @@ exports.createTest = async (req, res) => {
         return res.status(404).json({ success: false, message: "Course not found" });
       }
 
-      matchingQuestions = await Question.find({
+      const rawMatching = await Question.find({
         courseId,
         semester: { $in: selectedSemesters },
         topic: { $in: selectedTopics },
         isActive: true
-      }).select('_id');
+      }).select('_id topic questionText');
+      matchingQuestions = dedupeQuestionsByText(rawMatching);
 
       courseIdForTest = courseId;
       courseNameForTest = course.courseFullName;
@@ -122,11 +149,12 @@ exports.createTest = async (req, res) => {
           )
         : selectedTopics.map(t => ({ topic: t }));
 
-      matchingQuestions = await Question.find({
+      const rawMatching = await Question.find({
         courseId: { $in: context.courseIds },
         $or: orConditions,
         isActive: true
-      }).select('_id');
+      }).select('_id topic questionText');
+      matchingQuestions = dedupeQuestionsByText(rawMatching);
 
       courseNameForTest = context.courses.map(c => c.name).join(' + ');
       relevantCourseIds = context.courseIds;
@@ -137,10 +165,36 @@ exports.createTest = async (req, res) => {
     if (matchingQuestions.length < totalQuestionsInPool) {
       return res.status(400).json({
         success: false,
-        message: `Only ${matchingQuestions.length} questions found for selected topics. Need ${totalQuestionsInPool}. Add more questions or lower the pool size.`,
+        message: `Only ${matchingQuestions.length} unique questions found for selected topics. Need ${totalQuestionsInPool}. Add more questions or lower the pool size.`,
         available: matchingQuestions.length,
         required: totalQuestionsInPool
       });
+    }
+
+    // Validate per-topic quota, if the admin set one (2+ topics selected)
+    if (topicQuestionCounts && Object.keys(topicQuestionCounts).length > 0) {
+      const requestedTotal = Object.values(topicQuestionCounts).reduce((a, b) => a + Number(b || 0), 0);
+      if (requestedTotal !== Number(questionsPerStudent)) {
+        return res.status(400).json({
+          success: false,
+          message: `Per-topic question counts add up to ${requestedTotal}, but Questions Per Student is ${questionsPerStudent}. They must match.`
+        });
+      }
+
+      const availableByTopic = {};
+      matchingQuestions.forEach(q => {
+        availableByTopic[q.topic] = (availableByTopic[q.topic] || 0) + 1;
+      });
+
+      for (const [topic, needed] of Object.entries(topicQuestionCounts)) {
+        const have = availableByTopic[topic] || 0;
+        if (have < needed) {
+          return res.status(400).json({
+            success: false,
+            message: `Only ${have} unique question(s) available for topic "${topic}", but ${needed} were requested per student.`
+          });
+        }
+      }
     }
 
     const shuffled = [...matchingQuestions];
@@ -185,6 +239,7 @@ exports.createTest = async (req, res) => {
       createdByName: req.user.name,
       questionPool: questionIds,
       questionPoolCount: questionIds.length,
+      topicQuestionCounts: topicQuestionCounts || {},
       status: 'active'
     });
 
@@ -560,16 +615,36 @@ exports.startTest = async (req, res) => {
     }
 
     const questionPool = await Question.find({ _id: { $in: test.questionPool } });
-
-    const shuffledQuestions = [...questionPool];
     const seed = stringToNumericSeed(req.user.studentId + test._id.toString());
 
-    for (let i = shuffledQuestions.length - 1; i > 0; i--) {
-      const j = Math.floor((seed % (i + 1)) + i) % shuffledQuestions.length;
-      [shuffledQuestions[i], shuffledQuestions[j]] = [shuffledQuestions[j], shuffledQuestions[i]];
-    }
+    let studentQuestions;
+    const hasTopicQuotas = test.topicQuestionCounts && Object.keys(test.topicQuestionCounts).length > 0;
 
-    const studentQuestions = shuffledQuestions.slice(0, test.questionsPerStudent);
+    if (hasTopicQuotas) {
+      // Pull exactly the allocated count from each topic's own slice of the pool,
+      // instead of one flat random draw — guarantees the split the admin set
+      // (e.g. 10 from Topic A, 10 from Topic B) instead of it landing all on one.
+      const byTopic = {};
+      questionPool.forEach(q => {
+        if (!byTopic[q.topic]) byTopic[q.topic] = [];
+        byTopic[q.topic].push(q);
+      });
+
+      studentQuestions = [];
+      Object.entries(test.topicQuestionCounts).forEach(([topic, count], idx) => {
+        const topicQuestions = byTopic[topic] || [];
+        const topicSeed = seed + idx * 7919; // vary seed per topic so draws aren't identically ordered
+        const shuffledTopicQuestions = seededShuffle(topicQuestions, topicSeed);
+        studentQuestions.push(...shuffledTopicQuestions.slice(0, count));
+      });
+
+      if (test.shuffleQuestions) {
+        studentQuestions = seededShuffle(studentQuestions, seed);
+      }
+    } else {
+      const shuffledQuestions = seededShuffle(questionPool, seed);
+      studentQuestions = shuffledQuestions.slice(0, test.questionsPerStudent);
+    }
 
     if (test.shuffleOptions) {
       studentQuestions.forEach(question => {
@@ -983,11 +1058,17 @@ exports.getAvailableQuestions = async (req, res) => {
       });
     }
 
-    const count = await Question.countDocuments(query);
+    const rawQuestions = await Question.find(query).select('topic questionText').lean();
+    const deduped = dedupeQuestionsByText(rawQuestions);
+
+    const byTopic = {};
+    deduped.forEach(q => {
+      byTopic[q.topic] = (byTopic[q.topic] || 0) + 1;
+    });
 
     res.json({
       success: true,
-      data: { availableQuestions: count }
+      data: { availableQuestions: deduped.length, byTopic }
     });
 
   } catch (error) {

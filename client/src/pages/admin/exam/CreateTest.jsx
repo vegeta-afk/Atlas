@@ -29,6 +29,7 @@ const CreateTest = () => {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [courseTopics, setCourseTopics] = useState([]);
   const [availableQuestions, setAvailableQuestions] = useState(0);
+  const [availableByTopic, setAvailableByTopic] = useState({}); // { [topicName]: count } — from backend, dedup-aware
   const basePath = useBasePath();
 
   // ── Exam mode + Regular-mode state ──
@@ -53,6 +54,7 @@ const CreateTest = () => {
     selectedSemesters: [],
     selectedTopics: [],
     subtopicSelections: {}, // regular mode — { [topicName]: [selected subtopic names] }
+    topicQuestionCounts: {}, // both modes — { [topicName]: number }, only used when 2+ topics selected
     selectedStudentIds: [], // regular mode — explicit eligible student list
     totalQuestionsInPool: '',
     questionsPerStudent: '',
@@ -268,6 +270,7 @@ const CreateTest = () => {
       if (response.success) {
         const count = response.data.availableQuestions;
         setAvailableQuestions(count);
+        setAvailableByTopic(response.data.byTopic || {});
         setFormData(prev => ({ ...prev, totalQuestionsInPool: String(count) }));
       }
     } catch (error) {
@@ -297,6 +300,7 @@ const CreateTest = () => {
       if (response.success) {
         const count = response.data.availableQuestions;
         setAvailableQuestions(count);
+        setAvailableByTopic(response.data.byTopic || {});
         setFormData(prev => ({ ...prev, totalQuestionsInPool: String(count) }));
       }
     } catch (error) {
@@ -315,6 +319,40 @@ const CreateTest = () => {
       calculateRegularAvailableQuestions();
     }
   }, [examMode, formData.selectedCourseIds, formData.selectedTopics, formData.subtopicSelections]);
+
+  // ── Auto-distribute questionsPerStudent evenly across selected topics whenever
+  // the topic set or the per-student count changes — mode-agnostic, works for both.
+  // User can then override individual topic values by hand.
+  useEffect(() => {
+    if (formData.selectedTopics.length < 2 || !formData.questionsPerStudent) return;
+    const perStudent = parseInt(formData.questionsPerStudent, 10);
+    if (!perStudent) return;
+
+    setFormData(prev => {
+      const currentTopics = Object.keys(prev.topicQuestionCounts);
+      const sameTopics = currentTopics.length === prev.selectedTopics.length &&
+        currentTopics.every(t => prev.selectedTopics.includes(t));
+      if (sameTopics) return prev; // don't clobber manual edits when topic set hasn't actually changed
+
+      const base = Math.floor(perStudent / prev.selectedTopics.length);
+      const remainder = perStudent % prev.selectedTopics.length;
+      const counts = {};
+      prev.selectedTopics.forEach((t, i) => {
+        counts[t] = base + (i < remainder ? 1 : 0);
+      });
+      return { ...prev, topicQuestionCounts: counts };
+    });
+  }, [formData.selectedTopics, formData.questionsPerStudent]);
+
+  const handleTopicCountChange = (topicName, value) => {
+    const num = Math.max(0, parseInt(value, 10) || 0);
+    setFormData(prev => ({
+      ...prev,
+      topicQuestionCounts: { ...prev.topicQuestionCounts, [topicName]: num }
+    }));
+  };
+
+  const topicCountsTotal = Object.values(formData.topicQuestionCounts).reduce((a, b) => a + b, 0);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -367,7 +405,8 @@ const CreateTest = () => {
       selectedCourseIds: [],
       selectedSemesters: [],
       selectedTopics: [],
-      subtopicSelections: {}
+      subtopicSelections: {},
+      topicQuestionCounts: {}
     }));
     setCourseTopics([]);
     setRegularTopics([]);
@@ -375,6 +414,7 @@ const CreateTest = () => {
     setFacultyBatches([]);
     setSelectedCourse(null);
     setAvailableQuestions(0);
+    setAvailableByTopic({});
   };
 
   // ── Faculty change (Regular mode) ──
@@ -535,6 +575,14 @@ const CreateTest = () => {
       return;
     }
 
+    if (formData.selectedTopics.length > 1) {
+      const total = Object.values(formData.topicQuestionCounts).reduce((a, b) => a + b, 0);
+      if (total !== parseInt(formData.questionsPerStudent, 10)) {
+        toast.error(`Per-topic question counts add up to ${total}, but Questions Per Student is ${formData.questionsPerStudent}. They must match.`);
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -545,7 +593,8 @@ const CreateTest = () => {
         duration: parseInt(formData.duration),
         maxMarks: formData.maxMarks ? parseInt(formData.maxMarks) : 100,
         scheduledDate: new Date(formData.scheduledDate).toISOString(),
-        topicSelections: examMode === 'regular' ? buildTopicSelections() : undefined
+        topicSelections: examMode === 'regular' ? buildTopicSelections() : undefined,
+        topicQuestionCounts: formData.selectedTopics.length > 1 ? formData.topicQuestionCounts : undefined
       };
 
       if (!submitData.batchIds || submitData.batchIds.length === 0) {
@@ -1247,6 +1296,44 @@ const CreateTest = () => {
                 </div>
               </div>
             </div>
+
+            {formData.selectedTopics.length > 1 && (
+              <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-purple-900">Questions per topic</span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    topicCountsTotal === parseInt(formData.questionsPerStudent || 0)
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {topicCountsTotal} / {formData.questionsPerStudent || 0} allocated
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {formData.selectedTopics.map(topicName => (
+                    <div key={topicName} className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-gray-700 flex-1">
+                        {topicName}
+                        {availableByTopic[topicName] !== undefined && (
+                          <span className="text-xs text-gray-400 ml-1">({availableByTopic[topicName]} available)</span>
+                        )}
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        max={availableByTopic[topicName] ?? undefined}
+                        value={formData.topicQuestionCounts[topicName] ?? 0}
+                        onChange={(e) => handleTopicCountChange(topicName, e.target.value)}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-purple-700 mt-2">
+                  Must add up to exactly {formData.questionsPerStudent || 'the'} Questions Per Student.
+                </p>
+              </div>
+            )}
 
             {availableQuestions > 0 && (
               <div className={`p-3 rounded-lg ${availableQuestions >= formData.totalQuestionsInPool ? 'bg-green-50' : 'bg-yellow-50'}`}>

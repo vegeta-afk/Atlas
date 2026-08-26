@@ -67,6 +67,7 @@ import QuestionBank from './pages/admin/exam/QuestionBank';
 import ManageTests from './pages/admin/exam/ManageTests';
 import ExamResults from './pages/admin/exam/ExamResults';
 import AddQuestion from './pages/admin/exam/AddQuestion';
+import EditQuestion from './pages/admin/exam/EditQuestion';
 import EditTest from './pages/admin/exam/EditTest';
 import TestPreview from './pages/admin/exam/TestPreview';
 import StudentExamPage from "./pages/student/StudentExamPage";
@@ -183,6 +184,7 @@ function App() {
           <Route path="create-test" element={<CreateTest />} />
           <Route path="question-bank" element={<QuestionBank />} />
           <Route path="question-bank/add" element={<AddQuestion />} />
+          <Route path="question-bank/edit/:id" element={<EditQuestion />} />
           <Route path="manage-tests" element={<ManageTests />} />
           <Route path="results/:testId" element={<ExamResults />} />
           <Route path="edit-test/:testId" element={<EditTest />} />
@@ -251,6 +253,7 @@ function App() {
           <Route path="create-test" element={<CreateTest />} />
           <Route path="question-bank" element={<QuestionBank />} />
           <Route path="question-bank/add" element={<AddQuestion />} />
+          <Route path="question-bank/edit/:id" element={<EditQuestion />} />
           <Route path="manage-tests" element={<ManageTests />} />
           <Route path="results/:testId" element={<ExamResults />} />
           <Route path="edit-test/:testId" element={<EditTest />} />

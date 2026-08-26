@@ -25,6 +25,7 @@ const QuestionBank = () => {
     isActive: 'true'
   });
   const [totalPages, setTotalPages] = useState(1);
+  const [viewingQuestion, setViewingQuestion] = useState(null);
   const [courses, setCourses] = useState([]);
   const [availableFilters, setAvailableFilters] = useState({
     semesters: [],
@@ -68,12 +69,14 @@ const QuestionBank = () => {
         setQuestions(response.data);
         setTotalPages(response.totalPages);
         
-        // Calculate total questions and marks
-        const totalQ = response.data.length;
+        // totalQuestions uses the backend's actual match count (response.total), not
+        // response.data.length — that's only the current page (capped at filters.limit).
+        // totalMarks still only sums THIS page's questions — a true across-all-pages sum
+        // would need the backend to return an aggregate; see note below if you want that.
         const totalM = response.data.reduce((sum, q) => sum + (q.marks || 0), 0);
         
         setSummary({
-          totalQuestions: totalQ,
+          totalQuestions: response.total ?? response.data.length,
           totalMarks: totalM
         });
         
@@ -210,7 +213,7 @@ const QuestionBank = () => {
                     summary.totalMarks
                   )}
                 </p>
-                <span className="text-xs text-gray-500">combined value</span>
+                <span className="text-xs text-gray-500">on current page</span>
               </div>
             </div>
           </div>
@@ -362,11 +365,17 @@ const QuestionBank = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                      #
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Question
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Course & Topic
+                      Course
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Topic
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Type
@@ -383,8 +392,12 @@ const QuestionBank = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {questions.map((question) => (
+                  {questions.map((question, index) => (
                     <tr key={question._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {(filters.page - 1) * filters.limit + index + 1}
+                      </td>
+
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900 font-medium line-clamp-2">
                           {question.questionText}
@@ -394,13 +407,19 @@ const QuestionBank = () => {
                           {new Date(question.createdAt).toLocaleDateString()}
                         </div>
                       </td>
-                      
+
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">
                           {question.courseId?.courseShortName || 'N/A'}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {question.semester} • {question.topic}
+                        <div className="text-xs text-gray-500">
+                          {question.semester}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900">
+                          {question.topic}
                         </div>
                         {question.subtopic && (
                           <div className="text-xs text-gray-400">
@@ -408,7 +427,7 @@ const QuestionBank = () => {
                           </div>
                         )}
                       </td>
-                      
+
                       <td className="px-6 py-4">
                         {getTypeBadge(question.questionType)}
                       </td>
@@ -456,19 +475,19 @@ const QuestionBank = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => {/* View details */}}
+                            onClick={() => setViewingQuestion(question)}
                             className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
                             title="View"
                           >
                             <Eye size={18} />
                           </button>
-                          <button
-                            onClick={() => {/* Edit */}}
-                            className="p-1.5 text-green-600 hover:text-green-800 hover:bg-green-50 rounded"
+                          <Link
+                            to={`${basePath}/exam/question-bank/edit/${question._id}`}
+                            className="p-1.5 text-green-600 hover:text-green-800 hover:bg-green-50 rounded inline-block"
                             title="Edit"
                           >
                             <Edit2 size={18} />
-                          </button>
+                          </Link>
                           <button
                             onClick={() => deleteQuestion(question._id)}
                             className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
@@ -513,6 +532,111 @@ const QuestionBank = () => {
           </>
         )}
       </div>
+
+      {/* View Question Modal */}
+      {viewingQuestion && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setViewingQuestion(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-semibold text-gray-800">Question Details</h3>
+              <button
+                onClick={() => setViewingQuestion(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase mb-1">Question</p>
+                <p className="text-gray-900">{viewingQuestion.questionText}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase mb-1">Course</p>
+                  <p className="text-gray-900">{viewingQuestion.courseId?.courseShortName || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase mb-1">Semester</p>
+                  <p className="text-gray-900">{viewingQuestion.semester}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase mb-1">Topic</p>
+                  <p className="text-gray-900">{viewingQuestion.topic}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase mb-1">Subtopic</p>
+                  <p className="text-gray-900">{viewingQuestion.subtopic || '—'}</p>
+                </div>
+              </div>
+
+              {viewingQuestion.questionType === 'mcq' && viewingQuestion.options?.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase mb-2">Options</p>
+                  <div className="space-y-2">
+                    {viewingQuestion.options.map((opt, i) => (
+                      <div
+                        key={i}
+                        className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${
+                          opt.isCorrect ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-gray-50 text-gray-700'
+                        }`}
+                      >
+                        {opt.isCorrect && <CheckCircle size={14} />}
+                        {opt.text}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {viewingQuestion.questionType !== 'mcq' && viewingQuestion.correctAnswer && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase mb-1">Correct Answer</p>
+                  <p className="text-gray-900">{viewingQuestion.correctAnswer}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-4 pt-2 border-t">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase mb-1">Type</p>
+                  {getTypeBadge(viewingQuestion.questionType)}
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase mb-1">Marks</p>
+                  <p className="text-gray-900">{viewingQuestion.marks}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase mb-1">Difficulty</p>
+                  <p className="text-gray-900 capitalize">{viewingQuestion.difficulty || 'medium'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setViewingQuestion(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+              <Link
+                to={`${basePath}/exam/question-bank/edit/${viewingQuestion._id}`}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Edit Question
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
