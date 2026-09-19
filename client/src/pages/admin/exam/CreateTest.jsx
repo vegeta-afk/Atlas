@@ -243,7 +243,7 @@ const CreateTest = () => {
         setCourseTopics(topics);
 
         const semesters = [...new Set(topics.map(t => t.semester))];
-        const topicNames = topics.map(t => t.topic).filter(t => t);
+        const topicNames = [...new Set(topics.map(t => t.topic).filter(Boolean))];
 
         setFormData(prev => ({
           ...prev,
@@ -352,7 +352,9 @@ const CreateTest = () => {
     }));
   };
 
-  const topicCountsTotal = Object.values(formData.topicQuestionCounts).reduce((a, b) => a + b, 0);
+const topicCountsTotal = formData.selectedTopics.reduce(
+  (sum, t) => sum + (formData.topicQuestionCounts[t] || 0), 0
+);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -434,14 +436,25 @@ const CreateTest = () => {
   };
 
   const handleSemesterToggle = (semester) => {
-    setFormData(prev => {
-      const isSelected = prev.selectedSemesters.includes(semester);
-      const newSemesters = isSelected
-        ? prev.selectedSemesters.filter(s => s !== semester)
-        : [...prev.selectedSemesters, semester];
-      return { ...prev, selectedSemesters: newSemesters };
-    });
-  };
+  setFormData(prev => {
+    const isSelected = prev.selectedSemesters.includes(semester);
+    const newSemesters = isSelected
+      ? prev.selectedSemesters.filter(s => s !== semester)
+      : [...prev.selectedSemesters, semester];
+
+    const topicsOf = (sem) =>
+      courseTopics.filter(t => t.semester === sem).map(t => t.topic);
+
+    const newTopics = isSelected
+      ? (() => {
+          const stillValid = new Set(newSemesters.flatMap(topicsOf));
+          return prev.selectedTopics.filter(t => stillValid.has(t));
+        })()
+      : [...new Set([...prev.selectedTopics, ...topicsOf(semester)])];
+
+    return { ...prev, selectedSemesters: newSemesters, selectedTopics: newTopics };
+  });
+};
 
   const handleTopicToggle = (topic) => {
     setFormData(prev => {
@@ -495,14 +508,23 @@ const CreateTest = () => {
   };
 
   const selectAllSemesters = () => {
-    const allSemesters = [...new Set(courseTopics.map(t => t.semester))];
-    setFormData(prev => ({ ...prev, selectedSemesters: allSemesters }));
-  };
+  setFormData(prev => ({
+    ...prev,
+    selectedSemesters: [...new Set(courseTopics.map(t => t.semester))],
+    selectedTopics: [...new Set(courseTopics.map(t => t.topic))]
+  }));
+};
 
-  const selectAllTopics = () => {
-    const allTopics = courseTopics.map(t => t.topic);
-    setFormData(prev => ({ ...prev, selectedTopics: allTopics }));
-  };
+const selectAllTopics = () => {
+  setFormData(prev => ({
+    ...prev,
+    selectedTopics: [...new Set(
+      courseTopics
+        .filter(t => prev.selectedSemesters.includes(t.semester))
+        .map(t => t.topic)
+    )]
+  }));
+};
 
   const selectAllRegularTopics = () => {
     setFormData(prev => ({
@@ -576,12 +598,11 @@ const CreateTest = () => {
     }
 
     if (formData.selectedTopics.length > 1) {
-      const total = Object.values(formData.topicQuestionCounts).reduce((a, b) => a + b, 0);
-      if (total !== parseInt(formData.questionsPerStudent, 10)) {
-        toast.error(`Per-topic question counts add up to ${total}, but Questions Per Student is ${formData.questionsPerStudent}. They must match.`);
-        return;
-      }
-    }
+  if (topicCountsTotal !== parseInt(formData.questionsPerStudent, 10)) {
+    toast.error(`Per-topic question counts add up to ${topicCountsTotal}, but Questions Per Student is ${formData.questionsPerStudent}. They must match.`);
+    return;
+  }
+}
 
     setLoading(true);
 
@@ -594,7 +615,9 @@ const CreateTest = () => {
         maxMarks: formData.maxMarks ? parseInt(formData.maxMarks) : 100,
         scheduledDate: new Date(formData.scheduledDate).toISOString(),
         topicSelections: examMode === 'regular' ? buildTopicSelections() : undefined,
-        topicQuestionCounts: formData.selectedTopics.length > 1 ? formData.topicQuestionCounts : undefined
+        topicQuestionCounts: formData.selectedTopics.length > 1
+  ? Object.fromEntries(formData.selectedTopics.map(t => [t, formData.topicQuestionCounts[t] || 0]))
+  : undefined
       };
 
       if (!submitData.batchIds || submitData.batchIds.length === 0) {
