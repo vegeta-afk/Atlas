@@ -501,10 +501,8 @@ exports.importQuestions = async (req, res) => {
 // @access  Private (Admin/Faculty)
 exports.bulkAddQuestions = async (req, res) => {
   try {
-    console.log('📦 BULK ADD QUESTIONS CALLED');
-    console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
-    
     const { questions } = req.body;
+    console.log(`📦 Bulk add called with ${Array.isArray(questions) ? questions.length : 0} questions`);
 
     if (!questions || !Array.isArray(questions) || questions.length === 0) {
       console.log('❌ Invalid questions array:', questions);
@@ -571,16 +569,17 @@ exports.bulkAddQuestions = async (req, res) => {
     }
 
     // Insert valid questions
-    const inserted = await Question.insertMany(validQuestions);
+    const inserted = await Question.insertMany(validQuestions, { ordered: false });
 
-    console.log(`🎯 Successfully inserted ${inserted.length} questions`);
+console.log(`🎯 Successfully inserted ${inserted.length} questions`);
 
     res.status(201).json({
-      success: true,
-      message: `Added ${inserted.length} questions successfully`,
-      data: inserted,
-      errors: errors.length > 0 ? errors : undefined
-    });
+  success: true,
+  message: `Added ${inserted.length} questions successfully`,
+  insertedCount: inserted.length,
+  skippedCount: errors.length,
+  errors: errors.length > 0 ? errors : undefined
+});
 
   } catch (error) {
     console.error("Bulk add questions error:", error);

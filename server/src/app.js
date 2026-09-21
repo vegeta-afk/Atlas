@@ -9,26 +9,23 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 
-// ========== CRITICAL: Add these lines ==========
-// Body parsing middleware MUST come before routes
-app.use(express.json()); // Parse JSON request bodies
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
-// ===============================================
-
-// CORS middleware
+// CORS must come FIRST so even error responses (413, 400 etc.) carry CORS headers
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://atlas-green-two.vercel.app"], // Your React app URL
+    origin: ["http://localhost:5173", "https://atlas-green-two.vercel.app"],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS" , "PATCH"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept"],
   })
 );
 
+// Body parsing, after CORS, with a bigger limit for bulk question imports
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
+
 // Request logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
-  console.log("Request body:", { ...req.body, password: "[REDACTED]" }); // Add this to see what's being received
   next();
 });
 
@@ -128,10 +125,10 @@ app.use((req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error("Server error:", err.stack);
-  res.status(500).json({
+  console.error("Server error:", err.message);
+  res.status(err.status || 500).json({
     success: false,
-    message: "Internal server error",
+    message: err.type === "entity.too.large" ? "Request too large" : "Internal server error",
     error: process.env.NODE_ENV === "development" ? err.message : undefined,
   });
 });
