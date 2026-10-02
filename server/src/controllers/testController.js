@@ -30,6 +30,40 @@ function seededShuffle(arr, seedVal) {
   return copy;
 }
 
+// ── Schedule-driven status ──
+// scheduledDate + startTime/endTime are treated as IST (server may run in UTC on Render).
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+function computeTestStatus(test) {
+  // Manual states stay as they are
+  if (test.status === 'draft' || test.status === 'cancelled' || test.status === 'completed') {
+    return test.status;
+  }
+  // Shift into IST first so the calendar day is right whether the date was
+  // saved as UTC midnight or IST midnight
+  const day = new Date(new Date(test.scheduledDate).getTime() + IST_OFFSET_MS)
+    .toISOString().slice(0, 10);
+  const start = new Date(`${day}T${test.startTime || '00:00'}:00+05:30`);
+  const end = new Date(`${day}T${test.endTime || '23:59'}:00+05:30`);
+  const now = new Date();
+
+  if (now < start) return 'scheduled';
+  if (now <= end) return 'active';
+  return 'completed';
+}
+
+// Flip stale statuses in the DB (only touches scheduled/active tests)
+async function syncTestStatuses() {
+  const pending = await Test.find({ status: { $in: ['scheduled', 'active'] } })
+    .select('status scheduledDate startTime endTime');
+  await Promise.all(pending.map(async (t) => {
+    const live = computeTestStatus(t);
+    if (live !== t.status) {
+      await Test.updateOne({ _id: t._id }, { $set: { status: live } });
+    }
+  }));
+}
+
 /// @desc    Create a new test (AUTO-GENERATES question pool immediately)
 // @route   POST /api/exam/tests
 // @access  Private (Admin/Faculty)
@@ -239,7 +273,7 @@ exports.createTest = async (req, res) => {
       questionPool: questionIds,
       questionPoolCount: questionIds.length,
       topicQuestionCounts: topicQuestionCounts || {},
-      status: 'active'
+      status: computeTestStatus({ status: 'scheduled', scheduledDate, startTime: startTime || '00:00', endTime: endTime || '23:59' })
     });
 
     await Question.updateMany(
@@ -355,6 +389,7 @@ exports.generateQuestionPool = async (req, res) => {
 // @access  Private (Admin/Faculty)
 exports.getTests = async (req, res) => {
   try {
+    await syncTestStatuses();
     const { 
       page = 1, 
       limit = 10, 
@@ -545,8 +580,21 @@ exports.startTest = async (req, res) => {
       return res.status(404).json({ success: false, message: "Test not found" });
     }
 
+    // Re-check against the schedule so students can't start early/late
+    // even if the DB status hasn't been synced yet
+    const liveStatus = computeTestStatus(test);
+    if (liveStatus !== test.status) {
+      test.status = liveStatus;
+      await Test.updateOne({ _id: test._id }, { $set: { status: liveStatus } });
+    }
+
     if (test.status !== 'active') {
-      return res.status(400).json({ success: false, message: "Test is not active" });
+      return res.status(400).json({
+        success: false,
+        message: test.status === 'scheduled'
+          ? "This test hasn't started yet"
+          : "This test is not active"
+      });
     }
 
     // Semester-mode: must be manually activated by admin
@@ -1082,6 +1130,7 @@ exports.getAvailableQuestions = async (req, res) => {
 
 exports.getStudentTests = async (req, res) => {
   try {
+    await syncTestStatuses();
     const Student = require('../models/Student');
     const User = require('../models/user');
 
