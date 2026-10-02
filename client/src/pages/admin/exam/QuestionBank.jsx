@@ -69,15 +69,9 @@ const QuestionBank = () => {
         setQuestions(response.data);
         setTotalPages(response.totalPages);
         
-        // totalQuestions uses the backend's actual match count (response.total), not
-        // response.data.length — that's only the current page (capped at filters.limit).
-        // totalMarks still only sums THIS page's questions — a true across-all-pages sum
-        // would need the backend to return an aggregate; see note below if you want that.
-        const totalM = response.data.reduce((sum, q) => sum + (q.marks || 0), 0);
-        
-        setSummary({
-          totalQuestions: response.total ?? response.data.length,
-          totalMarks: totalM
+                setSummary({
+          totalQuestions: response.uniqueTotal ?? response.total ?? response.data.length,
+          totalMarks: response.uniqueMarks ?? response.data.reduce((s, q) => s + (q.marks || 0), 0)
         });
         
         if (response.filters) {
@@ -192,7 +186,7 @@ const QuestionBank = () => {
                     summary.totalQuestions
                   )}
                 </p>
-                <span className="text-xs text-gray-500">on current page</span>
+                <span className="text-xs text-gray-500">unique questions</span>
               </div>
             </div>
           </div>
@@ -213,7 +207,7 @@ const QuestionBank = () => {
                     summary.totalMarks
                   )}
                 </p>
-                <span className="text-xs text-gray-500">on current page</span>
+                <span className="text-xs text-gray-500">unique, all pages</span>
               </div>
             </div>
           </div>

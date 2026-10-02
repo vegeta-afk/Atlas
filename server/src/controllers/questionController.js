@@ -1,5 +1,6 @@
 const Question = require('../models/Question');
 const Course = require('../models/Course');
+const mongoose = require("mongoose");
 
 // @desc    Add a new question
 // @route   POST /api/exam/questions
@@ -113,7 +114,9 @@ exports.getQuestions = async (req, res) => {
     } = req.query;
 
     // Build filter
-    const filter = { isActive: isActive === "true" };
+    const filter = {};
+    if (isActive === "true") filter.isActive = true;
+    else if (isActive === "false") filter.isActive = false;
 
     if (search) {
       filter.questionText = { $regex: search, $options: 'i' };
@@ -134,6 +137,31 @@ exports.getQuestions = async (req, res) => {
 
     const total = await Question.countDocuments(filter);
 
+    // Unique count (same question text imported into multiple courses counts once)
+    const aggMatch = { ...filter };
+    if (aggMatch.courseId) {
+      aggMatch.courseId = new mongoose.Types.ObjectId(aggMatch.courseId);
+    }
+
+    const uniqueStats = await Question.aggregate([
+      { $match: aggMatch },
+      {
+        $group: {
+          _id: { $toLower: { $trim: { input: "$questionText" } } },
+          marks: { $first: "$marks" }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          uniqueTotal: { $sum: 1 },
+          uniqueMarks: { $sum: { $ifNull: ["$marks", 0] } }
+        }
+      }
+    ]);
+
+    const { uniqueTotal = 0, uniqueMarks = 0 } = uniqueStats[0] || {};
+
     // Get available filters
     const courses = await Course.find({ isActive: true })
       .select('_id courseFullName')
@@ -153,6 +181,8 @@ exports.getQuestions = async (req, res) => {
       success: true,
       count: questions.length,
       total,
+      uniqueTotal,
+      uniqueMarks,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
       data: questions,
