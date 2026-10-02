@@ -320,41 +320,42 @@ const CreateTest = () => {
     }
   }, [examMode, formData.selectedCourseIds, formData.selectedTopics, formData.subtopicSelections]);
 
-  // ── Auto-distribute questionsPerStudent evenly across selected topics whenever
-  // the topic set or the per-student count changes — mode-agnostic, works for both.
-  // User can then override individual topic values by hand.
-  useEffect(() => {
-    if (formData.selectedTopics.length < 2 || !formData.questionsPerStudent) return;
-    const perStudent = parseInt(formData.questionsPerStudent, 10);
-    if (!perStudent) return;
 
-    setFormData(prev => {
-      const currentTopics = Object.keys(prev.topicQuestionCounts);
-      const sameTopics = currentTopics.length === prev.selectedTopics.length &&
-        currentTopics.every(t => prev.selectedTopics.includes(t));
-      if (sameTopics) return prev; // don't clobber manual edits when topic set hasn't actually changed
-
-      const base = Math.floor(perStudent / prev.selectedTopics.length);
-      const remainder = perStudent % prev.selectedTopics.length;
-      const counts = {};
-      prev.selectedTopics.forEach((t, i) => {
-        counts[t] = base + (i < remainder ? 1 : 0);
-      });
-      return { ...prev, topicQuestionCounts: counts };
-    });
-  }, [formData.selectedTopics, formData.questionsPerStudent]);
 
   const handleTopicCountChange = (topicName, value) => {
-    const num = Math.max(0, parseInt(value, 10) || 0);
+    let num = Math.max(0, parseInt(value, 10) || 0);
+    const perStudent = parseInt(formData.questionsPerStudent, 10) || 0;
+
+    if (num > 0 && perStudent === 0) {
+      toast.error('Enter Questions Per Student first', { id: 'topic-cap' });
+      num = 0;
+    } else {
+      const max = getTopicMax(topicName);
+      if (num > max) {
+        toast.error(`Max ${max} for this topic — total can't go above ${perStudent}`, { id: 'topic-cap' });
+        num = max;
+      }
+    }
+
     setFormData(prev => ({
       ...prev,
       topicQuestionCounts: { ...prev.topicQuestionCounts, [topicName]: num }
     }));
   };
 
-const topicCountsTotal = formData.selectedTopics.reduce(
-  (sum, t) => sum + (formData.topicQuestionCounts[t] || 0), 0
-);
+  const topicCountsTotal = formData.selectedTopics.reduce(
+    (sum, t) => sum + (formData.topicQuestionCounts[t] || 0), 0
+  );
+
+  // Most this topic can take = what's left of Questions Per Student (after the other
+  // topics), and never more than the questions actually available in that topic
+  const getTopicMax = (topicName) => {
+    const perStudent = parseInt(formData.questionsPerStudent, 10) || 0;
+    const othersTotal = topicCountsTotal - (formData.topicQuestionCounts[topicName] || 0);
+    const remaining = Math.max(0, perStudent - othersTotal);
+    const avail = availableByTopic[topicName];
+    return avail !== undefined ? Math.min(avail, remaining) : remaining;
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -1344,7 +1345,7 @@ const selectAllTopics = () => {
                       <input
                         type="number"
                         min="0"
-                        max={availableByTopic[topicName] ?? undefined}
+                        max={getTopicMax(topicName)}
                         value={formData.topicQuestionCounts[topicName] ?? 0}
                         onChange={(e) => handleTopicCountChange(topicName, e.target.value)}
                         className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
