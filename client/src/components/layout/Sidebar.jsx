@@ -140,7 +140,6 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
         { path: "/admin/students/course-extension",  label: "Course Extension",  icon: <Plus size={15} /> },
         { path: "/admin/students/bridge-batch",      label: "Bridge Batch",      icon: <GitBranch size={15} /> },
         { path: "/admin/students/material-issue", label: "Material Issue", icon: <Package size={15} /> },
-        { path: "/admin/students/exams",             label: "Exam Results",      icon: <FileText size={15} /> },
       ],
     },
     {
@@ -161,7 +160,6 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
       isDropdown: true,
       subItems: [
         { path: "/admin/reports/countdown",      label: "Course Countdown", icon: <TrendingUp size={15} /> },
-        { path: "/admin/reports/exams/upcoming", label: "Upcoming Exams",   icon: <Calendar size={15} /> },
         { path: "/admin/reports/cancel-list",    label: "Cancel List",      icon: <XCircle size={15} /> },
         { path: "/admin/reports/hold-list",      label: "Hold List",        icon: <PauseCircle size={15} /> },
         { path: "/admin/reports/complete-list",  label: "Complete List",    icon: <CheckCircle size={15} /> },
@@ -172,7 +170,6 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
         { path: "/admin/reports/batch-course-progress",  label: "Batch Course Progress",     icon: <BookOpen size={15} /> },
         { path: "/admin/reports/batch-topic-board", label: "Batch Topic Board", icon: <BookOpen size={15} /> },
         { divider: true },
-        { path: "/admin/reports/test-eligibility", label: "Test Eligibility Report", icon: <ClipboardCheck size={15} /> },
         { path: "/admin/reports/leave-batch-report", label: "Leave Batch Report", icon: <ClipboardCheck size={15} /> },
       ],
     },
@@ -185,6 +182,9 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
         { path: "/admin/exam/create-test",    label: "Create Test",    icon: <FilePlus size={15} /> },
         { path: "/admin/exam/question-bank",  label: "Question Bank",  icon: <BookOpen size={15} /> },
         { path: "/admin/exam/manage-tests",   label: "Manage Tests",   icon: <ClipboardList size={15} /> },
+        { path: "/admin/students/exams",             label: "Exam Results",      icon: <FileText size={15} /> },
+        { path: "/admin/reports/test-eligibility", label: "Test Eligibility Report", icon: <ClipboardCheck size={15} /> },
+        { path: "/admin/reports/exams/upcoming", label: "Upcoming Exams",   icon: <Calendar size={15} /> },
       ],
     },
 
