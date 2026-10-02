@@ -51,6 +51,11 @@ const AddQuestion = () => {
   const [checkingSimilar, setCheckingSimilar] = useState(false);
   const [importingKey, setImportingKey] = useState(null); // courseId_semester currently importing, or null
 
+  // How many questions this course already has under the selected topic
+  const [existingCount, setExistingCount] = useState(null); // null = not selected / unknown
+  const [checkingExisting, setCheckingExisting] = useState(false);
+  const [existingRefresh, setExistingRefresh] = useState(0); // bump to re-check after an import
+
   // Load courses on mount
   useEffect(() => {
     loadCourses();
@@ -63,6 +68,41 @@ const AddQuestion = () => {
       const course = courses.find(c => c._id === courseSelection.courseId);
     }
   }, [courseSelection.courseId, courses]);
+
+
+    // Count questions already in THIS course under the selected semester + topic
+  useEffect(() => {
+    if (!courseSelection.courseId || !courseSelection.semester || !courseSelection.topic) {
+      setExistingCount(null);
+      return;
+    }
+
+    let cancelled = false;
+    const run = async () => {
+      setCheckingExisting(true);
+      try {
+        const response = await questionAPI.getQuestions({
+          page: 1,
+          limit: 1,
+          courseId: courseSelection.courseId,
+          semester: courseSelection.semester,
+          topic: courseSelection.topic,
+          isActive: 'true'
+        });
+        if (!cancelled && response.success) {
+          setExistingCount(response.total ?? response.data.length);
+        }
+      } catch (error) {
+        console.error('Check existing questions error:', error);
+        if (!cancelled) setExistingCount(null);
+      } finally {
+        if (!cancelled) setCheckingExisting(false);
+      }
+    };
+
+    run();
+    return () => { cancelled = true; };
+  }, [courseSelection.courseId, courseSelection.semester, courseSelection.topic, existingRefresh]);
 
   // Check for the same topic/subtopic already having questions in OTHER courses
   useEffect(() => {
@@ -96,6 +136,15 @@ const AddQuestion = () => {
   }, [courseSelection.courseId, courseSelection.topic, courseSelection.subtopic]);
 
   const handleImportFromCourse = async (match) => {
+    if (
+      existingCount > 0 &&
+      !window.confirm(
+        `This course already has ${existingCount} question(s) under "${courseSelection.topic}". Importing again may create duplicates. Continue?`
+      )
+    ) {
+      return;
+    }
+
     const key = `${match.courseId}_${match.semester}`;
     setImportingKey(key);
     try {
@@ -111,6 +160,7 @@ const AddQuestion = () => {
       });
       if (response.success) {
         toast.success(response.message || 'Questions imported');
+        setExistingRefresh(n => n + 1);
         setSimilarMatches(prev => prev.filter(m => `${m.courseId}_${m.semester}` !== key));
       } else {
         toast.error(response.message || 'Import failed');
@@ -682,6 +732,23 @@ const AddQuestion = () => {
                   </span>
                 </div>
               </div>
+
+              {courseSelection.topic && (
+                checkingExisting ? (
+                  <div className="text-xs text-gray-400 text-center py-1">Checking existing questions...</div>
+                ) : existingCount > 0 ? (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-2">
+                    <CheckCircle size={16} className="text-green-600 mt-0.5 shrink-0" />
+                    <p className="text-sm text-green-900">
+                      <span className="font-semibold">{existingCount} question{existingCount !== 1 ? 's' : ''}</span> already in this course under "{courseSelection.topic}".
+                    </p>
+                  </div>
+                ) : existingCount === 0 ? (
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
+                    No questions yet under this topic in this course.
+                  </div>
+                ) : null
+              )}
 
               {checkingSimilar && (
                 <div className="text-xs text-gray-400 text-center py-1">Checking other courses for this topic...</div>
