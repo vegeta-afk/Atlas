@@ -6,7 +6,7 @@ A full-stack **MERN** application built for **IIT Computer Institute** to run da
  
 ## 🚀 Live Demo
  
-🔗 **Live URL:** `<add-your-render-url-here>`
+🔗 **Live URL:** `https://atlas-green-two.vercel.app/login`
  
 ### 🔑 Demo Login
  
