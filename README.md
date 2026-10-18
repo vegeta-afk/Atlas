@@ -75,60 +75,6 @@ ims/
 └── server/        # Express + MongoDB backend
 ```
  
----
- 
-## ⚙️ Run Locally
- 
-### 1. Clone the repo
-```bash
-git clone <your-repo-url>
-cd ims
-```
- 
-### 2. Backend setup
-```bash
-cd server
-npm install
-```
- 
-Create a `.env` file in `server/`:
-```env
-PORT=5000
-MONGO_URI=your_mongodb_atlas_uri
-JWT_SECRET=your_jwt_secret
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-R2_ACCOUNT_ID=your_r2_account_id
-R2_ACCESS_KEY_ID=your_r2_access_key
-R2_SECRET_ACCESS_KEY=your_r2_secret
-R2_BUCKET_NAME=your_bucket
-GOOGLE_CLIENT_ID=your_google_client_id
-```
- 
-Start the server:
-```bash
-npm run dev
-```
- 
-### 3. Frontend setup
-```bash
-cd client
-npm install
-```
- 
-Create a `.env` file in `client/`:
-```env
-VITE_API_URL=http://localhost:5000/api
-VITE_GOOGLE_CLIENT_ID=your_google_client_id
-```
- 
-Start the app:
-```bash
-npm run dev
-```
- 
----
  
 ## 👤 Roles
  
